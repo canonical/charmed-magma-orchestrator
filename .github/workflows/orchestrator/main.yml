@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  orchestrator-lint-report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install tox
+        run: pip install tox
+
+      - name: Run tests using tox
+        run: |
+          charms=$(find . -name tox.ini)
+          for charm in ${charms}; do
+            tox -c ${charm} -e lint
+          done
+
+  orchestrator-static-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: |
+          charms=$(find . -name tox.ini)
+          for charm in ${charms}; do
+            tox -c ${charm} -e static
+          done
+
+  orchestrator-unit-tests-with-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: |
+          charms=$(find . -name tox.ini)
+          for charm in ${charms}; do
+            tox -c ${charm} -e unit
+          done
