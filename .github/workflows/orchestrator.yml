@@ -15,7 +15,7 @@ jobs:
         run: pip install tox
       - name: Run tests using tox
         run: |
-          charms=$(find . -name tox.ini)
+          charms=$(find ./orchestrator-bundle/ -name tox.ini)
           for charm in ${charms}; do
             tox -c ${charm} -e lint
           done
@@ -28,7 +28,7 @@ jobs:
         run: pip install tox
       - name: Run tests using tox
         run: |
-          charms=$(find . -name tox.ini)
+          charms=$(find ./orchestrator-bundle/ -name tox.ini)
           for charm in ${charms}; do
             tox -c ${charm} -e static
           done
@@ -41,7 +41,7 @@ jobs:
         run: pip install tox
       - name: Run tests using tox
         run: |
-          charms=$(find . -name tox.ini)
+          charms=$(find ./orchestrator-bundle/ -name tox.ini)
           for charm in ${charms}; do
             tox -c ${charm} -e unit
           done
