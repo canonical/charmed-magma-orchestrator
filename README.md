@@ -1,4 +1,4 @@
-# Magma Orchestrator
+# Charmed Magma
 
 ## Summary
 
