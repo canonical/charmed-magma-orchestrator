@@ -11,10 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-
       - name: Install tox
         run: pip install tox
-
       - name: Run tests using tox
         run: |
           charms=$(find . -name tox.ini)
