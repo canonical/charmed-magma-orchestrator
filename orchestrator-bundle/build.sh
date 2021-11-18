@@ -1,12 +1,15 @@
 #!/bin/bash
 
+set -euo pipefail
+
 function build() {
-    charm=$1
-    cd $charm/
+  charm="$1"
+    pushd "${charm}-operator/"
     charmcraft pack
-    mv ${charm}_ubuntu-20.04-amd64.charm $charm.charm
-    cd ..
+    mv "magma-${charm}_ubuntu-20.04-amd64.charm" "${charm}.charm"
+    popd
 }
+
 
 charms="
 fluentd-elasticsearch
@@ -37,7 +40,8 @@ orc8r-subscriberdb
 orc8r-subscriberdb-cache
 orc8r-tenants
 "
-for charm in $charms; do
+
+for charm in "$charms"; do
     build $charm &
 done
 
