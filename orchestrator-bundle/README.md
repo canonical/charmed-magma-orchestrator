@@ -95,7 +95,7 @@ charmcraft pack
 After the packages have been built you can deploy orchestrator using juju:
 
 ```bash
-juju deploy ./bundle.yaml --trust
+juju deploy ./bundle-local.yaml --trust
 ```
 
 Or you can also run the `deploy.sh` bash script (which does the exact same Juju command):

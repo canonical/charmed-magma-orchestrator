@@ -1,3 +1,3 @@
 #!/bin/bash
 
-juju deploy ./bundle.yaml --trust
+juju deploy ./bundle-local.yaml --trust
