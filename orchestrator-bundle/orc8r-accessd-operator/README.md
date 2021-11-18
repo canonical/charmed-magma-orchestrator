@@ -1,7 +1,7 @@
-# magma-orc8r-accessd
+# orc8r-accessd
 
 ## Description
-accessd stores, manages and verifies operator identity objects and their rights to access 
+orc8r-accessd stores, manages and verifies operator identity objects and their rights to access 
 (read/write) entities. magma-orc8r-accessd is one of the building blocks of magma orchestrator 
 service.
 
