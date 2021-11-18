@@ -2,8 +2,10 @@
 
 ## Summary
 
-This current project contains a set of Juju charms with the purpose of driving the lifecycle 
-management, configuration, integration and daily actions for Magma's **orchestrator** component.
+This current project contains a set of Juju charms for Magma's **orchestrator** component.
+
+### Useful links
+- [Orchestrator documentation](https://docs.magmacore.org/docs/orc8r/architecture_overview)
 
 ## Hardware requirements
 - CPU: 8 vCPU's
