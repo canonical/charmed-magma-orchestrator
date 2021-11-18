@@ -1,0 +1,206 @@
+bundle: kubernetes
+applications:
+  postgresql-k8s:
+    charm: postgresql-k8s
+    trust: true
+    scale: 1
+  fluentd-elasticsearch:
+    charm: ./fluentd-elasticsearch-operator/fluentd-elasticsearch.charm
+    scale: 1
+    trust: true
+    resources:
+      fluentd-elasticsearch-image: gcr.io/google-containers/fluentd-elasticsearch:v2.4.0
+  nms-magmalte:
+    charm: ./nms-magmalte-operator/nms-magmalte.charm
+    scale: 1
+    trust: true
+    resources:
+      nms-magmalte-image: docker.artifactory.magmacore.org/magmalte:1.6.0
+  nms-nginx-proxy:
+    charm: ./nms-nginx-proxy-operator/nms-nginx-proxy.charm
+    scale: 1
+    trust: true
+    resources:
+      nms-nginx-proxy-image: nginx:latest
+  orc8r-accessd:
+    charm: ./orc8r-accessd-operator/orc8r-accessd.charm
+    scale: 1
+    trust: true
+    resources:
+      orc8r-accessd-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-analytics:
+    charm: ./orc8r-analytics-operator/orc8r-analytics.charm
+    scale: 1
+    trust: true
+    resources:
+      orc8r-analytics-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-bootstrapper:
+    charm: ./orc8r-bootstrapper-operator/orc8r-bootstrapper.charm
+    scale: 1
+    trust: true
+    resources:
+      orc8r-bootstrapper-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-certifier:
+    charm: ./orc8r-certifier-operator/orc8r-certifier.charm
+    scale: 1
+    trust: true
+    resources:
+      orc8r-certifier-image: docker.artifactory.magmacore.org/controller:1.6.0
+    options:
+      use-self-signed-ssl-certs: true
+      admin-operator-key-pem:
+      admin-operator-pem:
+      controller-crt:
+      controller-key:
+      domain: example.com
+  orc8r-configurator:
+    charm: ./orc8r-configurator-operator/orc8r-configurator.charm
+    scale: 1
+    trust: true
+    resources:
+      orc8r-configurator-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-ctraced:
+    charm: ./orc8r-ctraced-operator/orc8r-ctraced.charm
+    scale: 1
+    trust: true
+    resources:
+      orc8r-ctraced-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-device:
+    charm: ./orc8r-device-operator/orc8r-device.charm
+    scale: 1
+    trust: true
+    resources:
+      orc8r-device-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-directoryd:
+    charm: ./orc8r-directoryd-operator/orc8r-directoryd.charm
+    scale: 1
+    trust: true
+    resources:
+      orc8r-directoryd-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-dispatcher:
+    charm: ./orc8r-dispatcher-operator/orc8r-dispatcher.charm
+    scale: 1
+    trust: true
+    resources:
+      orc8r-dispatcher-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-eventd:
+    charm: ./orc8r-eventd-operator/orc8r-eventd.charm
+    scale: 1
+    trust: true
+    resources:
+      orc8r-eventd-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-ha:
+    charm: ./orc8r-ha-operator/orc8r-ha.charm
+    scale: 1
+    trust: true
+    resources:
+      orc8r-ha-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-lte:
+    charm: ./orc8r-lte-operator/orc8r-lte.charm
+    scale: 1
+    trust: true
+    resources:
+      orc8r-lte-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-metricsd:
+    charm: ./orc8r-metricsd-operator/orc8r-metricsd.charm
+    scale: 1
+    trust: true
+    resources:
+      orc8r-metricsd-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-nginx:
+    charm: ./orc8r-nginx-operator/orc8r-nginx.charm
+    scale: 1
+    trust: true
+    resources:
+      orc8r-nginx-image: docker.artifactory.magmacore.org/nginx:1.6.0
+  orc8r-obsidian:
+    charm: ./orc8r-obsidian-operator/orc8r-obsidian.charm
+    scale: 1
+    trust: true
+    resources:
+      orc8r-obsidian-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-orchestrator:
+    charm: ./orc8r-orchestrator-operator/orc8r-orchestrator.charm
+    scale: 1
+    trust: true
+    resources:
+      orc8r-orchestrator-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-service-registry:
+    charm: ./orc8r-service-registry-operator/orc8r-service-registry.charm
+    scale: 1
+    trust: true
+    resources:
+      orc8r-service-registry-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-smsd:
+    charm: ./orc8r-smsd-operator/orc8r-smsd.charm
+    scale: 1
+    trust: true
+    resources:
+      orc8r-smsd-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-state:
+    charm: ./orc8r-state-operator/orc8r-state.charm
+    scale: 1
+    trust: true
+    resources:
+      orc8r-state-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-streamer:
+    charm: ./orc8r-streamer-operator/orc8r-streamer.charm
+    scale: 1
+    trust: true
+    resources:
+      orc8r-streamer-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-subscriberdb:
+    charm: ./orc8r-subscriberdb-operator/orc8r-subscriberdb.charm
+    scale: 1
+    trust: true
+    resources:
+      orc8r-subscriberdb-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-subscriberdb-cache:
+    charm: ./orc8r-subscriberdb-cache-operator/orc8r-subscriberdb-cache.charm
+    scale: 1
+    trust: true
+    resources:
+      orc8r-subscriberdb-cache-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-tenants:
+    charm: ./orc8r-tenants-operator/orc8r-tenants.charm
+    scale: 1
+    trust: true
+    resources:
+      orc8r-tenants-image: docker.artifactory.magmacore.org/controller:1.6.0
+relations:
+  - - nms-magmalte
+    - postgresql-k8s:db
+  - - nms-nginx-proxy:certifier
+    - orc8r-certifier:certifier
+  - - nms-nginx-proxy:magmalte
+    - nms-magmalte:magmalte
+  - - orc8r-accessd
+    - postgresql-k8s:db
+  - - orc8r-bootstrapper
+    - orc8r-certifier:certifier
+  - - orc8r-certifier
+    - postgresql-k8s:db
+  - - orc8r-configurator
+    - postgresql-k8s:db
+  - - orc8r-ctraced
+    - postgresql-k8s:db
+  - - orc8r-device
+    - postgresql-k8s:db
+  - - orc8r-directoryd
+    - postgresql-k8s:db
+  - - orc8r-lte
+    - postgresql-k8s:db
+  - - orc8r-nginx:bootstrapper
+    - orc8r-bootstrapper:bootstrapper
+  - - orc8r-nginx:certifier
+    - orc8r-certifier:certifier
+  - - orc8r-nginx:obsidian
+    - orc8r-obsidian:obsidian
+  - - orc8r-smsd
+    - postgresql-k8s:db
+  - - orc8r-state
+    - postgresql-k8s:db
+  - - orc8r-subscriberdb
+    - postgresql-k8s:db
+  - - orc8r-subscriberdb-cache
+    - postgresql-k8s:db
