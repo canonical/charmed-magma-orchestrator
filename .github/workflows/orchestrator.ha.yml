@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    paths:
+    - 'orchestrator-bundle/orc8r-ha-operator/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'orchestrator-bundle/orc8r-ha-operator/**'
+
+jobs:
+  integration-test-orc8r-ha:
+    name: Integration tests (orc8r-ha)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+      - name: Run integration tests
+        run: cd orchestrator-bundle/orc8r-ha-operator && tox -e integration
