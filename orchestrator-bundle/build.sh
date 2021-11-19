@@ -40,6 +40,7 @@ nms-magmalte
 nms-nginx-proxy
 orc8r-accessd
 orc8r-analytics
+orc8r-bootstrapper
 "
 
 
