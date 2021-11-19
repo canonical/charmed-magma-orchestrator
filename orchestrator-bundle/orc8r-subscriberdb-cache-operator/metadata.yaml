@@ -1,0 +1,21 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: magma-orc8r-subscriberdb-cache
+description: |
+  magma-orc8r-subscriberdb-cache is a cache for the subscriberdb service.
+summary: |
+  magma-orc8r-subscriberdb-cache is a cache for the subscriberdb service.
+
+containers:
+  magma-orc8r-subscriberdb-cache:
+    resource: magma-orc8r-subscriberdb-cache-image
+
+resources:
+  magma-orc8r-subscriberdb-cache-image:
+    type: oci-image
+    description: OCI image for magma-orc8r-subscriberdb-cache (docker.artifactory.magmacore.org/controller:1.6.0)
+
+requires:
+  db:
+    interface: pgsql

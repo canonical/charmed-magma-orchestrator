@@ -1,0 +1,21 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: magma-orc8r-state
+description: |
+  magma-orc8r-state maintains reported state from devices in the network.
+summary: |
+  magma-orc8r-state maintains reported state from devices in the network.
+
+containers:
+  magma-orc8r-state:
+    resource: magma-orc8r-state-image
+
+resources:
+  magma-orc8r-state-image:
+    type: oci-image
+    description: OCI image for magma-orc8r-state (docker.artifactory.magmacore.org/controller:1.6.0)
+
+requires:
+  db:
+    interface: pgsql

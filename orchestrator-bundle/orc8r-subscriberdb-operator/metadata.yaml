@@ -1,0 +1,21 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: magma-orc8r-subscriberdb
+description: |
+  magma-orc8r-subscriberdb manages subscribers via a northbound CRUD API and a southbound subscriber stream.
+summary: |
+  magma-orc8r-subscriberdb manages subscribers via a northbound CRUD API and a southbound subscriber stream.
+
+containers:
+  magma-orc8r-subscriberdb:
+    resource: magma-orc8r-subscriberdb-image
+
+resources:
+  magma-orc8r-subscriberdb-image:
+    type: oci-image
+    description: OCI image for magma-orc8r-subscriberdb (docker.artifactory.magmacore.org/controller:1.6.0)
+
+requires:
+  db:
+    interface: pgsql

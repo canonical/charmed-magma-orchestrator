@@ -1,0 +1,20 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: magma-orc8r-orchestrator
+description: |
+  magma-orc8r-orchestrator provides Mconfigs for configuration of core gateway service configurations
+  (e.g. magmad, eventd, state), Metrics exporting to Prometheus and CRUD API for core Orchestrator
+  network entities (networks, gateways, upgrade tiers, events, etc.)
+summary: |
+  magma-orc8r-orchestrator provides data for configure of core gateway service configuration, metrics
+  and CRUD API.
+
+containers:
+  magma-orc8r-orchestrator:
+    resource: magma-orc8r-orchestrator-image
+
+resources:
+  magma-orc8r-orchestrator-image:
+    type: oci-image
+    description: OCI image for magma-orc8r-orchestrator (docker.artifactory.magmacore.org/controller:1.6.0)

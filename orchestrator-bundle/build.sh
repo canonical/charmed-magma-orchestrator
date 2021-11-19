@@ -26,6 +26,17 @@ orc8r-eventd
 orc8r-ha
 orc8r-lte
 orc8r-metricsd
+orc8r-nginx
+orc8r-obsidian
+orc8r-orchestrator
+orc8r-policydb
+orc8r-service-registry
+orc8r-smsd
+orc8r-state
+orc8r-streamer
+orc8r-subscriberdb-cache
+orc8r-subscriberdb
+orc8r-tenants
 "
 
 

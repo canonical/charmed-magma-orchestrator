@@ -1,0 +1,24 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: magma-orc8r-obsidian
+description: |
+  obsidian verifies API request access control and reverse proxies requests to Orchestrator 
+  services with the appropriate API handlers
+
+summary: |
+  obsidian verifies API request access control and reverse proxies requests to Orchestrator 
+  services with the appropriate API handlers
+
+containers:
+  magma-orc8r-obsidian:
+    resource: magma-orc8r-obsidian-image
+
+resources:
+  magma-orc8r-obsidian-image:
+    type: oci-image
+    description: OCI image for magma-orc8r-nginx (docker.artifactory.magmacore.org/nginx:1.6.0)
+
+provides:
+  obsidian:
+    interface: magma-orc8r-obsidian

@@ -165,36 +165,36 @@ relations:
   - - nms-magmalte
     - postgresql-k8s:db
   - - nms-nginx-proxy:certifier
-    - orc8r-certifier:certifier
+    - magma-orc8r-certifier:certifier
   - - nms-nginx-proxy:magmalte
     - nms-magmalte:magmalte
-  - - orc8r-accessd
+  - - magma-orc8r-accessd
     - postgresql-k8s:db
-  - - orc8r-bootstrapper
-    - orc8r-certifier:certifier
-  - - orc8r-certifier
+  - - magma-orc8r-bootstrapper
+    - magma-orc8r-certifier:certifier
+  - - magma-orc8r-certifier
     - postgresql-k8s:db
-  - - orc8r-configurator
+  - - magma-orc8r-configurator
     - postgresql-k8s:db
-  - - orc8r-ctraced
+  - - magma-orc8r-ctraced
     - postgresql-k8s:db
-  - - orc8r-device
+  - - magma-orc8r-device
     - postgresql-k8s:db
-  - - orc8r-directoryd
+  - - magma-orc8r-directoryd
     - postgresql-k8s:db
-  - - orc8r-lte
+  - - magma-orc8r-lte
     - postgresql-k8s:db
-  - - orc8r-nginx:bootstrapper
-    - orc8r-bootstrapper:bootstrapper
-  - - orc8r-nginx:certifier
-    - orc8r-certifier:certifier
-  - - orc8r-nginx:obsidian
-    - orc8r-obsidian:obsidian
-  - - orc8r-smsd
+  - - magma-orc8r-nginx:bootstrapper
+    - magma-orc8r-bootstrapper:bootstrapper
+  - - magma-orc8r-nginx:certifier
+    - magma-orc8r-certifier:certifier
+  - - magma-orc8r-nginx:obsidian
+    - magma-orc8r-obsidian:obsidian
+  - - magma-orc8r-smsd
     - postgresql-k8s:db
-  - - orc8r-state
+  - - magma-orc8r-state
     - postgresql-k8s:db
-  - - orc8r-subscriberdb
+  - - magma-orc8r-subscriberdb
     - postgresql-k8s:db
-  - - orc8r-subscriberdb-cache
+  - - magma-orc8r-subscriberdb-cache
     - postgresql-k8s:db
