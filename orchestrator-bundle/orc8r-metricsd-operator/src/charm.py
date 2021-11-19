@@ -13,7 +13,7 @@ from ops.pebble import ConnectionError, Layer
 logger = logging.getLogger(__name__)
 
 
-class MagmaOrc8rHACharm(CharmBase):
+class MagmaOrc8rMetricsdCharm(CharmBase):
     """Charm the service."""
 
     def __init__(self, *args):
@@ -21,14 +21,16 @@ class MagmaOrc8rHACharm(CharmBase):
         An instance of this object everytime an event occurs
         """
         super().__init__(*args)
-        self._container_name = self._service_name = "magma-orc8r-ha"
+        self._container_name = self._service_name = "magma-orc8r-metricsd"
         self._container = self.unit.get_container(self._container_name)
         self.framework.observe(
-            self.on.magma_orc8r_ha_pebble_ready, self._on_magma_orc8r_ha_pebble_ready
+            self.on.magma_orc8r_metricsd_pebble_ready, self._on_magma_orc8r_metricsd_pebble_ready
         )
-        self._service_patcher = KubernetesServicePatch(self, [("grpc", 9180, 9119)])
+        self._service_patcher = KubernetesServicePatch(
+            self, [("grpc", 9180, 9084), ("http", 8080, 10084)]
+        )
 
-    def _on_magma_orc8r_ha_pebble_ready(self, event):
+    def _on_magma_orc8r_metricsd_pebble_ready(self, event):
         """
         Triggered when pebble is ready
         """
@@ -47,8 +49,13 @@ class MagmaOrc8rHACharm(CharmBase):
                         "startup": "enabled",
                         "command": "/usr/bin/envdir "
                         "/var/opt/magma/envdir "
-                        "/var/opt/magma/bin/ha "
-                        "-logtostderr=true -v=0",
+                        "/var/opt/magma/bin/metricsd "
+                        "-run_echo_server=true "
+                        "-logtostderr=true "
+                        "-v=0",
+                        "environment": {
+                            "SERVICE_HOSTNAME": self._service_name,
+                        },
                     }
                 },
             }
@@ -74,4 +81,4 @@ class MagmaOrc8rHACharm(CharmBase):
 
 
 if __name__ == "__main__":
-    main(MagmaOrc8rHACharm)
+    main(MagmaOrc8rMetricsdCharm)

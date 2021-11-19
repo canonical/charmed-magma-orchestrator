@@ -23,6 +23,9 @@ orc8r-device
 orc8r-directoryd
 orc8r-dispatcher
 orc8r-eventd
+orc8r-ha
+orc8r-lte
+orc8r-metricsd
 "
 
 
