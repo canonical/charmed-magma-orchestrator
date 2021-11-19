@@ -21,7 +21,8 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         self.namespace = self.model.name
         self._container = self.unit.get_container(self._container_name)
         self.framework.observe(
-            self.on.magma_orc8r_orchestrator_pebble_ready, self._on_magma_orc8r_orchestrator_pebble_ready
+            self.on.magma_orc8r_orchestrator_pebble_ready,
+            self._on_magma_orc8r_orchestrator_pebble_ready,
         )
         self._service_patcher = KubernetesServicePatch(
             self, [("grpc", 9180, 9112), ("http", 8080, 10112)]
