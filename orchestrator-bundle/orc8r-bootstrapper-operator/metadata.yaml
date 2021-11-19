@@ -1,0 +1,29 @@
+# Copyright 2021 Ubuntu
+# See LICENSE file for licensing details.
+
+name: magma-orc8r-bootstrapper
+description: |
+  bootstrapper manages the certificate bootstrapping process for newly registered gateways and
+  gateways whose cert has expired
+summary: |
+  bootstrapper manages the certificate bootstrapping process for newly registered gateways and
+  gateways whose cert has expired
+
+containers:
+  magma-orc8r-bootstrapper:
+    resource: magma-orc8r-bootstrapper-image
+
+resources:
+  magma-orc8r-bootstrapper-image:
+    type: oci-image
+    description: OCI image for magma-orc8r-bootstrapper (docker.artifactory.magmacore.org/controller:1.6.0)
+
+provides:
+  bootstrapper:
+    interface: magma-orc8r-bootstrapper
+
+requires:
+  certifier:
+    interface: certs
+  db:
+    interface: pgsql
