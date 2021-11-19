@@ -16,31 +16,30 @@ logger = logging.getLogger(__name__)
 pgsql = ops.lib.use("pgsql", 1, "postgresql-charmers@lists.launchpad.net")
 
 
-class MagmaOrc8rAccessdCharm(CharmBase):
-    """Charm the service."""
-
+class MagmaOrc8rConfiguratorCharm(CharmBase):
     DB_NAME = "magma_dev"
 
     def __init__(self, *args):
         """Creates a new instance of this object for each event."""
         super().__init__(*args)
-        self._container_name = self._service_name = "magma-orc8r-accessd"
+        self._container_name = self._service_name = "magma-orc8r-configurator"
         self._container = self.unit.get_container(self._container_name)
         self._db = pgsql.PostgreSQLClient(self, "db")  # type: ignore[attr-defined]
         self.framework.observe(
-            self.on.magma_orc8r_accessd_pebble_ready, self._on_magma_orc8r_accessd_pebble_ready
+            self.on.magma_orc8r_configurator_pebble_ready,
+            self._on_magma_orc8r_configurator_pebble_ready,
         )
         self.framework.observe(
             self._db.on.database_relation_joined, self._on_database_relation_joined
         )
-        self._service_patcher = KubernetesServicePatch(self, [("grpc", 9180, 9091)])
+        self._service_patcher = KubernetesServicePatch(self, [("grpc", 9180, 9108)])
 
-    def _on_magma_orc8r_accessd_pebble_ready(self, event):
+    def _on_magma_orc8r_configurator_pebble_ready(self, event):
         if not self._check_db_relation_has_been_established():
             self.unit.status = BlockedStatus("Waiting for database relation to be established...")
             event.defer()
             return
-        self._configure_magma_orc8r_accessd()
+        self._configure_magma_orc8r_configurator()
 
     def _on_database_relation_joined(self, event):
         """Event handler for database relation change.
@@ -57,7 +56,7 @@ class MagmaOrc8rAccessdCharm(CharmBase):
             event.defer()
             return
 
-    def _configure_magma_orc8r_accessd(self):
+    def _configure_magma_orc8r_configurator(self):
         """Adds layer to pebble config if the proposed config is different from the current one."""
         self.unit.status = MaintenanceStatus("Configuring pod")
         plan = self._container.get_plan()
@@ -90,7 +89,7 @@ class MagmaOrc8rAccessdCharm(CharmBase):
                         "startup": "enabled",
                         "command": "/usr/bin/envdir "
                         "/var/opt/magma/envdir "
-                        "/var/opt/magma/bin/accessd "
+                        "/var/opt/magma/bin/configurator "
                         "-logtostderr=true "
                         "-v=0",
                         "environment": {
@@ -122,4 +121,4 @@ class MagmaOrc8rAccessdCharm(CharmBase):
 
 
 if __name__ == "__main__":
-    main(MagmaOrc8rAccessdCharm)
+    main(MagmaOrc8rConfiguratorCharm)

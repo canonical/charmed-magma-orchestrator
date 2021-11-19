@@ -8,7 +8,7 @@ from ops.model import ActiveStatus
 from ops.testing import Harness
 from pgconnstr import ConnectionString  # type: ignore[import]
 
-from charm import MagmaOrc8rAccessdCharm
+from charm import MagmaOrc8rConfiguratorCharm
 
 
 class TestCharm(unittest.TestCase):
@@ -26,7 +26,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("charm.KubernetesServicePatch", lambda x, y: None)
     def setUp(self):
-        self.harness = Harness(MagmaOrc8rAccessdCharm)
+        self.harness = Harness(MagmaOrc8rConfiguratorCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
 
@@ -48,7 +48,7 @@ class TestCharm(unittest.TestCase):
         return db_event
 
     def test_given_initial_status_when_get_pebble_plan_then_content_is_empty(self):
-        initial_plan = self.harness.get_container_pebble_plan("magma-orc8r-accessd")
+        initial_plan = self.harness.get_container_pebble_plan("magma-orc8r-configurator")
         self.assertEqual(initial_plan.to_yaml(), "{}\n")
 
     @patch("ops.model.Unit.is_leader")
@@ -61,7 +61,7 @@ class TestCharm(unittest.TestCase):
         postgres_password = "water"
         postgres_username = "yeast"
         postgres_port = self.TEST_DB_PORT
-        with patch.object(MagmaOrc8rAccessdCharm, "DB_NAME", self.TEST_DB_NAME):
+        with patch.object(MagmaOrc8rConfiguratorCharm, "DB_NAME", self.TEST_DB_NAME):
             db_event = self._fake_db_event(
                 postgres_db_name,
                 postgres_username,
@@ -72,26 +72,27 @@ class TestCharm(unittest.TestCase):
             self.harness.charm._on_database_relation_joined(db_event)
         self.assertEqual(db_event.database, self.TEST_DB_NAME)
 
-    @patch("charm.MagmaOrc8rAccessdCharm._check_db_relation_has_been_established")
-    def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_orc8r_accessd_service_content(  # noqa: E501
+    @patch("charm.MagmaOrc8rConfiguratorCharm._check_db_relation_has_been_established")
+    def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_orc8r_configurator_service_content(  # noqa: E501
         self, db_relation_established
     ):
         event = Mock()
         db_relation_established.return_value = True
         with patch(
-            "charm.MagmaOrc8rAccessdCharm._get_db_connection_string", new_callable=PropertyMock
+            "charm.MagmaOrc8rConfiguratorCharm._get_db_connection_string",
+            new_callable=PropertyMock,
         ) as get_db_connection_string:
             get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
-            self.harness.charm.on.magma_orc8r_accessd_pebble_ready.emit(event)
+            self.harness.charm.on.magma_orc8r_configurator_pebble_ready.emit(event)
         expected_plan = {
             "services": {
-                "magma-orc8r-accessd": {
-                    "override": "replace",
-                    "summary": "magma-orc8r-accessd",
+                "magma-orc8r-configurator": {
                     "startup": "enabled",
+                    "summary": "magma-orc8r-configurator",
+                    "override": "replace",
                     "command": "/usr/bin/envdir "
                     "/var/opt/magma/envdir "
-                    "/var/opt/magma/bin/accessd "
+                    "/var/opt/magma/bin/configurator "
                     "-logtostderr=true "
                     "-v=0",
                     "environment": {
@@ -102,7 +103,7 @@ class TestCharm(unittest.TestCase):
                         f"sslmode=disable",
                         "SQL_DRIVER": "postgres",
                         "SQL_DIALECT": "psql",
-                        "SERVICE_HOSTNAME": "magma-orc8r-accessd",
+                        "SERVICE_HOSTNAME": "magma-orc8r-configurator",
                         "SERVICE_REGISTRY_MODE": "k8s",
                         "HELM_RELEASE_NAME": "orc8r",
                         "SERVICE_REGISTRY_NAMESPACE": "orc8r",
@@ -110,18 +111,19 @@ class TestCharm(unittest.TestCase):
                 },
             },
         }
-        updated_plan = self.harness.get_container_pebble_plan("magma-orc8r-accessd").to_dict()
+        updated_plan = self.harness.get_container_pebble_plan("magma-orc8r-configurator").to_dict()
         self.assertEqual(expected_plan, updated_plan)
 
-    @patch("charm.MagmaOrc8rAccessdCharm._check_db_relation_has_been_established")
+    @patch("charm.MagmaOrc8rConfiguratorCharm._check_db_relation_has_been_established")
     def test_db_relation_added_when_get_status_then_status_is_active(
         self, db_relation_established
     ):
         event = Mock()
         db_relation_established.return_value = True
         with patch(
-            "charm.MagmaOrc8rAccessdCharm._get_db_connection_string", new_callable=PropertyMock
+            "charm.MagmaOrc8rConfiguratorCharm._get_db_connection_string",
+            new_callable=PropertyMock,
         ) as get_db_connection_string:
             get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
-            self.harness.charm.on.magma_orc8r_accessd_pebble_ready.emit(event)
+            self.harness.charm.on.magma_orc8r_configurator_pebble_ready.emit(event)
             self.assertEqual(self.harness.charm.unit.status, ActiveStatus())

@@ -38,7 +38,7 @@ To deploy **postgresql-k8s** from Juju command line:
 
 ```bash
 juju deploy postgresql-k8s
-juju relate magma-nms-magmalte postgresql-k8s:db-admin
+juju relate magma-nms-magmalte postgresql-k8s:db
 ```
 
 Before running **juju deploy** commands for **magma-nms-magmalte** and **magma-orc8r-certifier**, make sure 
