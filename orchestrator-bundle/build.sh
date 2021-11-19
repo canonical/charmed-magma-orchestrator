@@ -42,6 +42,9 @@ orc8r-accessd
 orc8r-analytics
 orc8r-bootstrapper
 orc8r-certifier
+orc8r-configurator
+orc8r-ctraced
+orc8r-device
 "
 
 

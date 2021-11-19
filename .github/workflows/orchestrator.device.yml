@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    paths:
+    - 'orchestrator-bundle/orc8r-device-operator/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'orchestrator-bundle/orc8r-device-operator/**'
+
+jobs:
+  integration-test-orc8r-device:
+    name: Integration tests (orc8r-device)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+      - name: Run integration tests
+        run: cd orchestrator-bundle/orc8r-device-operator && tox -e integration
