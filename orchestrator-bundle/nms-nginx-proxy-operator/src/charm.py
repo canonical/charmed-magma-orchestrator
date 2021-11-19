@@ -97,7 +97,8 @@ class MagmaNmsNginxProxyCharm(CharmBase):
             )
         except ApiError as e:
             logger.debug(
-                "Failed to mount additional volumes required by the magma-nms-nginx-proxy container!"
+                "Failed to mount additional volumes required by the magma-nms-nginx-proxy "
+                "container!"
             )
             raise e
         logger.info("Additional K8s resources for magma-nms-nginx-proxy container applied!")
