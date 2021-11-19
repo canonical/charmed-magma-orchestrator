@@ -10,7 +10,7 @@ structures
 juju deploy postgresql-k8s
 juju deploy ./magma-orc8r-configurator_ubuntu-20.04-amd64.charm \
   --resource magma-orc8r-configurator-image=docker.artifactory.magmacore.org/controller:1.6.0
-juju relate magma-orc8r-configurator postgresql-k8s:db-admin
+juju relate magma-orc8r-configurator postgresql-k8s:db
 ```
 
 ## Relations

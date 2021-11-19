@@ -113,7 +113,9 @@ class TestCharm(unittest.TestCase):
                     }
                 },
             }
-            updated_plan = self.harness.get_container_pebble_plan("magma-orc8r-certifier").to_dict()
+            updated_plan = self.harness.get_container_pebble_plan(
+                "magma-orc8r-certifier"
+            ).to_dict()
             self.assertEqual(expected_plan, updated_plan)
 
     def test_given_charm_when_remove_event_emitted_then_on_remove_action_called(self):
