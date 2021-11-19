@@ -1,0 +1,31 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: magma-nms-magmalte
+description: |
+  Magmalte is a microservice built using express framework. It contains set of application and
+  router level middlewares. It uses sequelize ORM to connect to the NMS DB for servicing any
+  routes involving DB interaction.
+summary: |
+  Magmalte is a microservice built using express framework. It contains set of application and
+  router level middlewares. It uses sequelize ORM to connect to the NMS DB for servicing any
+  routes involving DB interaction.
+
+containers:
+  magma-nms-magmalte:
+    resource: magma-nms-magmalte-image
+
+resources:
+  magma-nms-magmalte-image:
+    type: oci-image
+    description: OCI image for magma-nms-magmalte (docker.artifactory.magmacore.org/magmalte:1.6.0)
+
+provides:
+  magmalte:
+    interface: nms-magmalte
+
+requires:
+  db:
+    interface: pgsql
+  certifier:
+    interface: certs
