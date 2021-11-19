@@ -26,7 +26,8 @@ class MagmaOrc8rDirectorydCharm(CharmBase):
         self._container = self.unit.get_container(self._container_name)
         self._db = pgsql.PostgreSQLClient(self, "db")  # type: ignore[attr-defined]
         self.framework.observe(
-            self.on.magma_orc8r_directoryd_pebble_ready, self._on_magma_orc8r_directoryd_pebble_ready
+            self.on.magma_orc8r_directoryd_pebble_ready,
+            self._on_magma_orc8r_directoryd_pebble_ready,
         )
         self.framework.observe(
             self._db.on.database_relation_joined, self._on_database_relation_joined

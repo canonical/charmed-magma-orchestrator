@@ -73,7 +73,7 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(db_event.database, self.TEST_DB_NAME)
 
     @patch("charm.MagmaOrc8rDirectorydCharm._check_db_relation_has_been_established")
-    def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_orc8r_directoryd_service_content(
+    def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_orc8r_directoryd_service_content(  # noqa: E501
         self, db_relation_established
     ):
         event = Mock()
