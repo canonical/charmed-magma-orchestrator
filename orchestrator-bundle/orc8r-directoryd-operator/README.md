@@ -7,7 +7,7 @@ magma-orc8r-directoryd stores subscriber identity (e.g. IMSI, IP address, MAC ad
 
 ```bash
 juju deploy postgresql-k8s
-juju deploy ./magma-orc8r-directoryd_ubuntu-20.04-amd64.charm 
+juju deploy ./magma-orc8r-directoryd_ubuntu-20.04-amd64.charm \
   --resource magma-orc8r-directoryd-image=docker.artifactory.magmacore.org/controller:1.6.0
 juju relate magma-orc8r-directoryd postgresql-k8s:db
 ```
