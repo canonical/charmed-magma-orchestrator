@@ -1,0 +1,19 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: magma-orc8r-analytics
+description: |
+  magma-orc8r-analytics periodically fetches and aggregates metrics for all deployed Orchestrator
+  modules, exporting the aggregations to Prometheus.
+  magma-orc8r-analytics is one of the building blocks of of magma orchestrator service
+summary: |
+  magma-orc8r-analytics is one of the building blocks of of magma orchestrator service
+
+containers:
+  magma-orc8r-analytics:
+    resource: magma-orc8r-analytics-image
+
+resources:
+  magma-orc8r-analytics-image:
+    type: oci-image
+    description: OCI image for magma-orc8r-analytics (docker.artifactory.magmacore.org/controller:1.6.0)

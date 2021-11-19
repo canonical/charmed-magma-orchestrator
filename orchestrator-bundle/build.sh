@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-function build_magma_charm() {
+function build() {
   charm="$1"
     pushd "${charm}-operator/"
     charmcraft pack
@@ -11,15 +11,6 @@ function build_magma_charm() {
 }
 
 
-function build_generic_charm() {
-  charm="$1"
-    pushd "${charm}-operator/"
-    charmcraft pack
-    mv "${charm}_ubuntu-20.04-amd64.charm" "${charm}.charm"
-    popd
-}
-
-#orc8r-analytics
 #orc8r-bootstrapper
 #orc8r-certifier
 #orc8r-configurator
@@ -44,17 +35,16 @@ function build_generic_charm() {
 #orc8r-tenants
 #"
 
-magma_charms="
-orc8r-accessd
+charms="
 nms-magmalte
 nms-nginx-proxy
+orc8r-accessd
+orc8r-analytics
 "
 
 
-for magma_charm in $magma_charms; do
-    build_magma_charm $magma_charm &
+for charm in $charms; do
+    build $charm &
 done
-
-build_generic_charm "fluentd-elasticsearch" &
 
 wait
