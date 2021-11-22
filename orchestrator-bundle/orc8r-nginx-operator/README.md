@@ -60,7 +60,7 @@ Currently supported relations are:
 - [magma-orc8r-certifier](https://github.com/canonical/charmed-magma/tree/main/orchestrator-bundle/orc8r-certifier-operator) - 
   magma-orc8r-certifier maintains and verifies signed client certificates and their associated
   identities.
-- [magma-orc8r-bootstrapper](https://github.com/canonical/magma-orc8r-dev/tree/main/magma-orc8r-bootstrapper) -
+- [magma-orc8r-bootstrapper](https://github.com/canonical/charmed-magma/tree/main/orchestrator-bundle/orc8r-bootstrapper-operator) -
   magma-orc8r-bootstrapper manages the certificate bootstrapping process for newly registered gateways 
   and gateways whose cert has expired.
 - [magma-orc8r-obsidian](https://github.com/canonical/magma-orc8r-dev/tree/main/magma-orc8r-obsidian) -
