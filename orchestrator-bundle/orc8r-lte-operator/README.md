@@ -1,4 +1,4 @@
-# orc8r-lte
+# magma-orc8r-lte
 
 ## Description
 magma-orc8r-lte provides
