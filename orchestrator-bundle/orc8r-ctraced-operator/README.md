@@ -1,4 +1,4 @@
-# orc8r-ctraced
+# magma-orc8r-ctraced
 
 ## Description
 magma-orc8r-ctraced handles gateway call traces, exposing this functionality via a CRUD API.
