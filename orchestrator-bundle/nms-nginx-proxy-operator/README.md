@@ -1,4 +1,4 @@
-# nms-nginx-proxy
+# magma-nms-nginx-proxy
 
 ## Description
 
