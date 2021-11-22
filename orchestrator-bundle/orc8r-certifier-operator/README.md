@@ -1,4 +1,4 @@
-# orc8r-certifier
+# magma-orc8r-certifier
 
 ## Description
 magma-orc8r-certifier maintains and verifies signed client certificates and their associated
