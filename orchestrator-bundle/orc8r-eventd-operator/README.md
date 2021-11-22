@@ -1,4 +1,4 @@
-# orc8r-eventd
+# magmga-orc8r-eventd
 
 ## Description
 
