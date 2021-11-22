@@ -1,4 +1,4 @@
-# orc8r-analytics
+# magma-orc8r-analytics
 
 ## Description
 analytics periodically fetches and aggregates metrics for all deployed Orchestrator modules, 
