@@ -43,7 +43,7 @@ juju relate magma-orc8r-nginx:magma-orc8r-bootstrapper magma-orc8r-bootstrapper:
 To deploy **magma-orc8r-obsidian** from Juju command line:
 
 ```bash
-juju deploy ../magma-orc8r-obsidian/magma-orc8r-obsidian_ubuntu-20.04-amd64.charm \
+juju deploy ../orc8r-obsidian-operator/magma-orc8r-obsidian_ubuntu-20.04-amd64.charm \
   --resource magma-orc8r-obsidian-image=docker.artifactory.magmacore.org/controller:1.6.0
 juju relate magma-orc8r-nginx:obsidian magma-orc8r-obsidian:obsidian
 ```
