@@ -1,4 +1,4 @@
-# orc8r-configurator
+# magma-orc8r-configurator
 
 ## Description
 magma-orc8r-configurator maintains configurations and metadata for networks and network entity
