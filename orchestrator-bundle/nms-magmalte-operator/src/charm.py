@@ -7,13 +7,9 @@ from typing import List
 
 import ops.lib
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
-from lightkube import Client  # type: ignore[import]
-from lightkube.models.core_v1 import (  # type: ignore[import]
-    SecretVolumeSource,
-    Volume,
-    VolumeMount,
-)
-from lightkube.resources.apps_v1 import StatefulSet  # type: ignore[import]
+from lightkube import Client
+from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
+from lightkube.resources.apps_v1 import StatefulSet
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
@@ -93,8 +89,8 @@ class MagmaNmsMagmalteCharm(CharmBase):
         )
         client = Client()
         stateful_set = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
-        stateful_set.spec.template.spec.volumes.extend(self._magma_nms_magmalte_volumes)
-        stateful_set.spec.template.spec.containers[1].volumeMounts.extend(
+        stateful_set.spec.template.spec.volumes.extend(self._magma_nms_magmalte_volumes)  # type: ignore[attr-defined]  # noqa: E501
+        stateful_set.spec.template.spec.containers[1].volumeMounts.extend(  # type: ignore[attr-defined]  # noqa: E501
             self._magma_nms_magmalte_volume_mounts
         )
         client.patch(StatefulSet, name=self.app.name, obj=stateful_set, namespace=self._namespace)
@@ -186,7 +182,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         client = Client()
         statefulset = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
         return all(
-            volume_mount in statefulset.spec.template.spec.containers[1].volumeMounts
+            volume_mount in statefulset.spec.template.spec.containers[1].volumeMounts  # type: ignore[attr-defined]  # noqa: E501
             for volume_mount in self._magma_nms_magmalte_volume_mounts
         )
 

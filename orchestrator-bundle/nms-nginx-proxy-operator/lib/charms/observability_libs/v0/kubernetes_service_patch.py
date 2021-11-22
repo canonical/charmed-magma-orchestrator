@@ -84,11 +84,11 @@ import logging
 from types import MethodType
 from typing import Literal, Sequence, Tuple, Union
 
-from lightkube import ApiError, Client  # type: ignore[import]
-from lightkube.models.core_v1 import ServicePort, ServiceSpec  # type: ignore[import]
-from lightkube.models.meta_v1 import ObjectMeta  # type: ignore[import]
-from lightkube.resources.core_v1 import Service  # type: ignore[import]
-from lightkube.types import PatchType  # type: ignore[import]
+from lightkube import ApiError, Client
+from lightkube.models.core_v1 import ServicePort, ServiceSpec
+from lightkube.models.meta_v1 import ObjectMeta
+from lightkube.resources.core_v1 import Service
+from lightkube.types import PatchType
 from ops.charm import CharmBase
 from ops.framework import Object
 
@@ -166,7 +166,7 @@ class KubernetesServicePatch(Object):
                         name=p[0],
                         port=p[1],
                         targetPort=p[2] if len(p) > 2 else p[1],  # type: ignore[misc]
-                        nodePort=p[3] if len(p) > 3 else None,  # type: ignore[misc]
+                        nodePort=p[3] if len(p) > 3 else None,  # type: ignore[misc,arg-type]
                     )
                     for p in ports
                 ],
@@ -206,7 +206,7 @@ class KubernetesServicePatch(Object):
         # Construct a list of expected ports, should the patch be applied
         expected_ports = [(p.port, p.targetPort) for p in self.service.spec.ports]
         # Construct a list in the same manner, using the fetched service
-        fetched_ports = [(p.port, p.targetPort) for p in service.spec.ports]
+        fetched_ports = [(p.port, p.targetPort) for p in service.spec.ports]  # type: ignore[attr-defined]  # noqa: E501
         return expected_ports == fetched_ports
 
     @property

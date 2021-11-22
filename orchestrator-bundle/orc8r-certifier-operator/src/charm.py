@@ -7,15 +7,11 @@ import logging
 
 import ops.lib
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
-from lightkube import Client, codecs  # type: ignore[import]
-from lightkube.core.exceptions import ApiError  # type: ignore[import]
-from lightkube.models.core_v1 import (  # type: ignore[import]  # noqa: E501
-    SecretVolumeSource,
-    Volume,
-    VolumeMount,
-)
-from lightkube.resources.apps_v1 import StatefulSet  # type: ignore[import]
-from lightkube.resources.core_v1 import Secret as SecretRes  # type: ignore[import]
+from lightkube import Client, codecs
+from lightkube.core.exceptions import ApiError
+from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
+from lightkube.resources.apps_v1 import StatefulSet
+from lightkube.resources.core_v1 import Secret as SecretRes
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
@@ -100,8 +96,8 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         )
         client = Client()
         stateful_set = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
-        stateful_set.spec.template.spec.volumes.extend(self._magma_orc8r_certifier_volumes)
-        stateful_set.spec.template.spec.containers[1].volumeMounts.extend(
+        stateful_set.spec.template.spec.volumes.extend(self._magma_orc8r_certifier_volumes)  # type: ignore[attr-defined]  # noqa: E501
+        stateful_set.spec.template.spec.containers[1].volumeMounts.extend(  # type: ignore[attr-defined]  # noqa: E501
             self._magma_orc8r_certifier_volume_mounts
         )
         client.patch(StatefulSet, name=self.app.name, obj=stateful_set, namespace=self._namespace)

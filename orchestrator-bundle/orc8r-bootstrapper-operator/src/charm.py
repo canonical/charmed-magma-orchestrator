@@ -5,14 +5,10 @@
 import logging
 
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
-from lightkube import Client  # type: ignore[import]
-from lightkube.core.exceptions import ApiError  # type: ignore[import]
-from lightkube.models.core_v1 import (  # type: ignore[import]
-    SecretVolumeSource,
-    Volume,
-    VolumeMount,
-)
-from lightkube.resources.apps_v1 import StatefulSet  # type: ignore[import]
+from lightkube import Client
+from lightkube.core.exceptions import ApiError
+from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
+from lightkube.resources.apps_v1 import StatefulSet
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
@@ -75,8 +71,8 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         client = Client()
         try:
             stateful_set = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
-            stateful_set.spec.template.spec.volumes.extend(self._bootstrapper_volumes)
-            stateful_set.spec.template.spec.containers[1].volumeMounts.extend(
+            stateful_set.spec.template.spec.volumes.extend(self._bootstrapper_volumes)  # type: ignore[attr-defined]  # noqa: E501
+            stateful_set.spec.template.spec.containers[1].volumeMounts.extend(  # type: ignore[attr-defined]  # noqa: E501
                 self._bootstrapper_volume_mounts
             )
             client.patch(
@@ -126,7 +122,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         client = Client()
         statefulset = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
         return all(
-            volume_mount in statefulset.spec.template.spec.containers[1].volumeMounts
+            volume_mount in statefulset.spec.template.spec.containers[1].volumeMounts  # type: ignore[attr-defined]  # noqa: E501
             for volume_mount in self._bootstrapper_volume_mounts
         )
 
