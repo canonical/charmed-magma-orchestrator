@@ -1,4 +1,4 @@
-# orc8r-smsd
+# magma-orc8r-smsd
 
 ## Description
 magma-orc8r-smsd provides CRUD support for SMS messages to be fetched by LTE gateways.
