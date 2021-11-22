@@ -1,4 +1,4 @@
-# orc8r-device
+# magma-orc8r-device
 
 ## Description
 device maintains configurations and metadata for devices in the network (e.g. gateways)
