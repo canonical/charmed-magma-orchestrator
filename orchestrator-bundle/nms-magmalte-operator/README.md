@@ -1,4 +1,4 @@
-# nms-magmalte
+# magma-nms-magmalte
 
 ## Description
 
