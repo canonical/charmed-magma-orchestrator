@@ -30,7 +30,7 @@ details, check the _Relations_ section below).
 To deploy **magma-orc8r-certifier** from Juju command line:
 
 ```bash
-juju deploy ../magma-orc8r-certifier/magma-orc8r-certifier_ubuntu-20.04-amd64.charm --resource magma-orc8r-certifier-image=docker.artifactory.magmacore.org/controller:1.6.0 --config domain=example.com
+juju deploy ../orc8r-certifier-operator/magma-orc8r-certifier_ubuntu-20.04-amd64.charm --resource magma-orc8r-certifier-image=docker.artifactory.magmacore.org/controller:1.6.0 --config domain=example.com
 juju relate magma-nms-magmalte magma-orc8r-certifier
 ```
 
