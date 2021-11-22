@@ -10,7 +10,7 @@ Visit [Magma NMS Overview](https://docs.magmacore.org/docs/nms/nms_arch_overview
 
 This [Juju](https://juju.is/) Charm deploys an **nginx** web server that proxies communication
 between NMS UI and MagmaLTE.<br>
-This charm is part of the [Charmed Magma bundle](https://github.com/canonical/magma-orc8r-dev).
+This charm is part of the [Charmed Magma bundle](https://github.com/canonical/charmed-magma).
 
 ## Usage
 
