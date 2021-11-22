@@ -1,4 +1,4 @@
-# orc8r-subscriberdb
+# magma-orc8r-subscriberdb
 
 ## Description
 magma-orc8r-subscriberdb manages subscribers via a northbound CRUD API and a southbound subscriber stream.
