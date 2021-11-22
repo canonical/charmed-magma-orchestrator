@@ -57,7 +57,7 @@ charmcraft pack
 
 Currently supported relations are:
 
-- [magma-orc8r-certifier](https://github.com/canonical/magma-orc8r-dev/tree/main/magma-orc8r-certifier) - 
+- [magma-orc8r-certifier](https://github.com/canonical/charmed-magma/tree/main/orchestrator-bundle/orc8r-certifier-operator) - 
   magma-orc8r-certifier maintains and verifies signed client certificates and their associated
   identities.
 - [magma-orc8r-bootstrapper](https://github.com/canonical/magma-orc8r-dev/tree/main/magma-orc8r-bootstrapper) -
