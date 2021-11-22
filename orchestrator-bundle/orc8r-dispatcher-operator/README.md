@@ -1,4 +1,4 @@
-# orc8r-dispatcher
+# magma-orc8r-dispatcher
 
 ## Description
 magma-orc8r-dispatcher maintains SyncRPC connections (HTTP2 bidirectional streams) with gateways.
