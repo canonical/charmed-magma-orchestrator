@@ -164,7 +164,7 @@ applications:
 relations:
   - - nms-magmalte
     - postgresql-k8s:db
-  - - nms-nginx-proxy:certifier
+  - - magma-nms-nginx-proxy:certifier
     - magma-orc8r-certifier:certifier
   - - nms-nginx-proxy:magmalte
     - nms-magmalte:magmalte
