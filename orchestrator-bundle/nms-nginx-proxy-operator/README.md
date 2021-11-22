@@ -34,7 +34,7 @@ juju relate magma-nms-nginx-proxy magma-orc8r-certifier
 To deploy **magma-nms-magmalte** from Juju command line:
 
 ```bash
-juju deploy ../magma-nms-magmalte/magma-nms-magmalte_ubuntu-20.04-amd64.charm --resource magma-nms-magmalte-image=docker.artifactory.magmacore.org/magmalte:1.6.0
+juju deploy ../nms-magmalte-operator/magma-nms-magmalte_ubuntu-20.04-amd64.charm --resource magma-nms-magmalte-image=docker.artifactory.magmacore.org/magmalte:1.6.0
 juju relate magma-nms-nginx-proxy magma-nms-magmalte
 ```
 
