@@ -1,4 +1,4 @@
-# orc8r-policydb
+# magma-orc8r-policydb
 
 ## Description
 
