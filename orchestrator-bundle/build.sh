@@ -40,8 +40,8 @@ orc8r-tenants
 "
 
 
-for charm in $charms; do
-    build $charm &
+for charm in ${charms}; do
+    build ${charm} &
 done
 
 wait
