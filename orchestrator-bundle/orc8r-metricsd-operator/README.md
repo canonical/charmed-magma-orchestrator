@@ -1,4 +1,4 @@
-# orc8r-metricsd
+# magma-orc8r-metricsd
 
 ## Description
 magma-orc8r-metricsd collects runtime metrics from gateways and Orchestrator services
