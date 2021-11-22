@@ -1,4 +1,4 @@
-# orc8r-state
+# magma-orc8r-state
 
 ## Description
 magma-orc8r-state maintains reported state from devices in the network.
