@@ -1,4 +1,4 @@
-# orc8r-subscriberdb-cache
+# magma-orc8r-subscriberdb-cache
 
 ## Description
 magma-orc8r-subscriberdb-cache is a cache for the subscriberdb service.
