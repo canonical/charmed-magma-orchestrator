@@ -34,8 +34,8 @@ orc8r-service-registry
 orc8r-smsd
 orc8r-state
 orc8r-streamer
-orc8r-subscriberdb-cache
 orc8r-subscriberdb
+orc8r-subscriberdb-cache
 orc8r-tenants
 "
 
