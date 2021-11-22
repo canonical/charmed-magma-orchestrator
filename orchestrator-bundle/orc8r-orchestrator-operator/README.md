@@ -1,4 +1,4 @@
-# orc8r-orchestrator
+# magma-orc8r-orchestrator
 
 ## Description
 - Mconfigs for configuration of core gateway service configurations (e.g. magmad, eventd, state)
