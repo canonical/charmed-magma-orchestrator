@@ -1,4 +1,4 @@
-# orc8r-ha
+# magma-orc8r-ha
 
 ## Description
 ha provides interface for secondary gateways in an HA deployment to find offload status for UEs
