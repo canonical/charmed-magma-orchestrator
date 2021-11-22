@@ -1,4 +1,4 @@
-# orc8r-service-registry
+# magma-orc8r-service-registry
 
 ## Description
 service_registry provides service discovery for all services in the Orchestrator by querying Kubernetes's API server
