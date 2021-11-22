@@ -9,7 +9,7 @@ Visit [Magma Architecture Overview](https://docs.magmacore.org/docs/orc8r/archit
 to learn more.
 
 This [Juju](https://juju.is/) Charm deploys **magma-orc8r-policydb** service.<br>
-This charm is part of the [Charmed Magma bundle](https://github.com/canonical/magma-orc8r-dev).
+This charm is part of the [Charmed Magma bundle](https://github.com/canonical/charmed-magma).
 
 ## Usage
 
