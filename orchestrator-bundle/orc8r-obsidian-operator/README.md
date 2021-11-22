@@ -1,4 +1,4 @@
-# orc8r-obsidian
+# magma-orc8r-obsidian
 
 ## Description
 obsidian verifies API request access control and reverse proxies requests to Orchestrator services with the appropriate API handlers.
