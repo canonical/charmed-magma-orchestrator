@@ -63,7 +63,7 @@ Currently supported relations are:
 - [magma-orc8r-bootstrapper](https://github.com/canonical/charmed-magma/tree/main/orchestrator-bundle/orc8r-bootstrapper-operator) -
   magma-orc8r-bootstrapper manages the certificate bootstrapping process for newly registered gateways 
   and gateways whose cert has expired.
-- [magma-orc8r-obsidian](https://github.com/canonical/magma-orc8r-dev/tree/main/magma-orc8r-obsidian) -
+- [magma-orc8r-obsidian](https://github.com/canonical/charmed-magma/tree/main/orchestrator-bundle/orc8r-obsidian-operator) -
   magma-orc8r-obsidian verifies API request access control and reverse proxies requests to Orchestrator 
   services with the appropriate API handlers.
 
