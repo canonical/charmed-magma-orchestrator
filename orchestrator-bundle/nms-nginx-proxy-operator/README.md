@@ -47,7 +47,7 @@ charmcraft pack
 
 Currently supported relations are:
 
-- [magma-nms-magmalte](https://github.com/canonical/magma-orc8r-dev/tree/main/magma-nms-magmalte) - Magmalte is
+- [magma-nms-magmalte](https://github.com/canonical/charmed-magma/tree/main/orchestrator-bundle/nms-magmalte-operator) - Magmalte is
   a microservice built using express framework. It contains set of application and router level
   middlewares. It uses sequelize ORM to connect to the NMS DB for servicing any routes involving DB
   interaction.
