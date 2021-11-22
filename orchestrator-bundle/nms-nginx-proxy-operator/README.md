@@ -51,7 +51,7 @@ Currently supported relations are:
   a microservice built using express framework. It contains set of application and router level
   middlewares. It uses sequelize ORM to connect to the NMS DB for servicing any routes involving DB
   interaction.
-- [magma-orc8r-certifier](https://github.com/canonical/magma-orc8r-dev/tree/main/magma-orc8r-certifier) -
+- [magma-orc8r-certifier](https://github.com/canonical/charmed-magma/tree/main/orchestrator-bundle/orc8r-certifier-operator) -
   magma-orc8r-certifier maintains and verifies signed client certificates and their associated
   identities.
 
