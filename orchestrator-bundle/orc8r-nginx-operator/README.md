@@ -1,4 +1,4 @@
-# orc8r-nginx
+# magma-orc8r-nginx
 
 ## Description
 
