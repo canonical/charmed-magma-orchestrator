@@ -13,7 +13,7 @@ This [Juju](https://juju.is/) Charm deploys
 built using express framework. It contains set of application and router level middlewares. It uses
 sequelize ORM to connect to the NMS DB for servicing any routes involving DB interaction.
 
-This charm is part of the [Charmed Magma bundle](https://github.com/canonical/magma-orc8r-dev).
+This charm is part of the [Charmed Magma bundle](https://github.com/canonical/charmed-magma).
 
 ## Usage
 
