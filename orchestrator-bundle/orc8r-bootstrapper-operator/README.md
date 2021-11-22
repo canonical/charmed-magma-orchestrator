@@ -1,4 +1,4 @@
-# orc8r-bootstrapper
+# magma-orc8r-bootstrapper
 
 ## Description
 
