@@ -1,4 +1,4 @@
-# orc8r-directoryd
+# magma-orc8r-directoryd
 
 ## Description
 magma-orc8r-directoryd stores subscriber identity (e.g. IMSI, IP address, MAC address) and location (gateway hardware ID).
