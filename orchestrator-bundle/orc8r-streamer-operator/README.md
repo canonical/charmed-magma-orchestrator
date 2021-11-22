@@ -1,4 +1,4 @@
-# orc8r-streamer
+# magma-orc8r-streamer
 
 ## Description
 magma-orc8r-streamer fetches updates for various data streams (e.g. mconfig, subscribers, etc.) from the appropriate Orchestrator service, returning these to the gateways.
