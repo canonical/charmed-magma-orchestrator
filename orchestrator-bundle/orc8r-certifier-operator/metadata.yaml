@@ -1,0 +1,37 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: magma-orc8r-certifier
+description: |
+  magma-orc8r-certifier maintains and verifies signed client certificates and their associated
+  identities.
+summary: |
+  magma-orc8r-certifier maintains and verifies signed client certificates and their associated
+  identities.
+
+containers:
+  magma-orc8r-certifier:
+    resource: magma-orc8r-certifier-image
+    mounts:
+      - storage: certs
+        location: /tmp/certs
+
+resources:
+  magma-orc8r-certifier-image:
+    type: oci-image
+    description: OCI image for magma-orc8r-certifier (docker.artifactory.magmacore.org/controller:1.6.0)
+
+storage:
+  certs:
+    type: filesystem
+    description: Temp certs storage
+    minimum-size: 1M
+    location: /tmp/certs
+
+provides:
+  certifier:
+    interface: certs
+
+requires:
+  db:
+    interface: pgsql

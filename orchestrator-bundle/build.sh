@@ -10,9 +10,7 @@ function build() {
     popd
 }
 
-
 charms="
-fluentd-elasticsearch
 nms-magmalte
 nms-nginx-proxy
 orc8r-accessd
@@ -41,8 +39,9 @@ orc8r-subscriberdb-cache
 orc8r-tenants
 "
 
-for charm in "$charms"; do
-    build $charm &
+
+for charm in ${charms}; do
+    build ${charm} &
 done
 
 wait

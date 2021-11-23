@@ -1,0 +1,6 @@
+/venv
+*.py[cod]
+*.charm
+*.mypy*
+*.tox/
+

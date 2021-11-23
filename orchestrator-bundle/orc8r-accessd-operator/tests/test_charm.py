@@ -2,10 +2,11 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, PropertyMock, patch
 
 from ops.model import ActiveStatus
 from ops.testing import Harness
+from pgconnstr import ConnectionString  # type: ignore[import]
 
 from charm import MagmaOrc8rAccessdCharm
 
@@ -14,6 +15,14 @@ class TestCharm(unittest.TestCase):
 
     TEST_DB_NAME = "wheat"
     TEST_DB_PORT = "1234"
+    TEST_DB_CONNECTION_STRING = ConnectionString(
+        "dbname=test_db_name "
+        "fallback_application_name=whatever "
+        "host=123.456.789.012 "
+        "password=aaaBBBcccDDDeee "
+        "port=1234 "
+        "user=test_db_user"
+    )
 
     @patch("charm.KubernetesServicePatch", lambda x, y: None)
     def setUp(self):
@@ -63,32 +72,33 @@ class TestCharm(unittest.TestCase):
             self.harness.charm._on_database_relation_joined(db_event)
         self.assertEqual(db_event.database, self.TEST_DB_NAME)
 
-    @patch("ops.model.Unit.is_leader")
-    def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_orc8r_accessd_service_content(  # noqa E501
-        self, mock_is_leader
+    @patch("charm.MagmaOrc8rAccessdCharm._check_db_relation_has_been_established")
+    def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_orc8r_accessd_service_content(  # noqa: E501
+        self, db_relation_established
     ):
-        mock_is_leader.return_value = True
-        postgres_db_name = self.TEST_DB_NAME
-        postgres_host = "bread"
-        postgres_password = "water"
-        postgres_username = "yeast"
-        postgres_port = self.TEST_DB_PORT
+        event = Mock()
+        db_relation_established.return_value = True
+        with patch(
+            "charm.MagmaOrc8rAccessdCharm._get_db_connection_string", new_callable=PropertyMock
+        ) as get_db_connection_string:
+            get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
+            self.harness.charm.on.magma_orc8r_accessd_pebble_ready.emit(event)
         expected_plan = {
             "services": {
                 "magma-orc8r-accessd": {
-                    "startup": "enabled",
-                    "summary": "magma-orc8r-accessd",
                     "override": "replace",
+                    "summary": "magma-orc8r-accessd",
+                    "startup": "enabled",
                     "command": "/usr/bin/envdir "
                     "/var/opt/magma/envdir "
                     "/var/opt/magma/bin/accessd "
                     "-logtostderr=true "
                     "-v=0",
                     "environment": {
-                        "DATABASE_SOURCE": f"dbname={postgres_db_name} "
-                        f"user={postgres_username} "
-                        f"password={postgres_password} "
-                        f"host={postgres_host} "
+                        "DATABASE_SOURCE": f"dbname={self.TEST_DB_CONNECTION_STRING.dbname} "
+                        f"user={self.TEST_DB_CONNECTION_STRING.user} "
+                        f"password={self.TEST_DB_CONNECTION_STRING.password} "
+                        f"host={self.TEST_DB_CONNECTION_STRING.host} "
                         f"sslmode=disable",
                         "SQL_DRIVER": "postgres",
                         "SQL_DIALECT": "psql",
@@ -100,31 +110,18 @@ class TestCharm(unittest.TestCase):
                 },
             },
         }
-        db_event = self._fake_db_event(
-            postgres_db_name,
-            postgres_username,
-            postgres_password,
-            postgres_host,
-            postgres_port,
-        )
-        self.harness.charm._on_database_relation_joined(db_event)
         updated_plan = self.harness.get_container_pebble_plan("magma-orc8r-accessd").to_dict()
         self.assertEqual(expected_plan, updated_plan)
 
-    @patch("ops.model.Unit.is_leader")
-    def test_db_relation_added_when_get_status_then_status_is_active(self, mock_is_leader):
-        postgres_db_name = self.TEST_DB_NAME
-        postgres_host = "oatmeal"
-        postgres_password = "bread"
-        postgres_username = "wheat"
-        postgres_port = self.TEST_DB_PORT
-        mock_is_leader.return_value = True
-        db_event = self._fake_db_event(
-            postgres_db_name,
-            postgres_username,
-            postgres_password,
-            postgres_host,
-            postgres_port,
-        )
-        self.harness.charm._on_database_relation_joined(db_event)
-        self.assertEqual(self.harness.model.unit.status, ActiveStatus())
+    @patch("charm.MagmaOrc8rAccessdCharm._check_db_relation_has_been_established")
+    def test_db_relation_added_when_get_status_then_status_is_active(
+        self, db_relation_established
+    ):
+        event = Mock()
+        db_relation_established.return_value = True
+        with patch(
+            "charm.MagmaOrc8rAccessdCharm._get_db_connection_string", new_callable=PropertyMock
+        ) as get_db_connection_string:
+            get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
+            self.harness.charm.on.magma_orc8r_accessd_pebble_ready.emit(event)
+            self.assertEqual(self.harness.charm.unit.status, ActiveStatus())

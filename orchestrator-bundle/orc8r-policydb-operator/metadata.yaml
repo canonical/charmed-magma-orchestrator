@@ -1,0 +1,22 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: magma-orc8r-policydb
+description: |
+  policydb is an Orchestrator's service which manages subscriber policies via a northbound CRUD API
+    and a southbound policy stream
+summary: |
+  policydb is an Orchestrator's service which manages subscriber policies via a northbound CRUD API
+      and a southbound policy stream
+
+containers:
+  magma-orc8r-policydb:
+    resource: magma-orc8r-policydb-image
+
+resources:
+  magma-orc8r-policydb-image:
+    type: oci-image
+    description: OCI image for magma-orc8r-policydb (docker.artifactory.magmacore.org/controller:1.6.0)
+
+requires:
+  db:
+    interface: pgsql

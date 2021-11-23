@@ -1,0 +1,26 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: magma-orc8r-nginx
+description: |
+  Proxies traffic between nms and obsidian.
+  
+summary: |
+  Proxies traffic between nms and obsidian.
+
+containers:
+  magma-orc8r-nginx:
+    resource: magma-orc8r-nginx-image
+
+resources:
+  magma-orc8r-nginx-image:
+    type: oci-image
+    description: OCI image for magma-orc8r-nginx (docker.artifactory.magmacore.org/nginx:1.6.0)
+
+requires:
+  bootstrapper:
+    interface: orc8r-bootstrapper
+  certifier:
+    interface: certs
+  obsidian:
+    interface: orc8r-obsidian

@@ -1,0 +1,9 @@
+.mypy_cache/
+.tox/
+venv/
+build/
+*.charm
+
+.coverage
+__pycache__/
+*.py[cod]

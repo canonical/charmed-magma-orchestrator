@@ -1,0 +1,23 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: magma-orc8r-eventd
+description: |
+  Service that acts like an intermediary for different magma services, using the service303
+  interface, it will receive and push the generated registered events to the td-agent-bit service
+  on the gateway, so these can be then later sent to Orchestrator. These events will be sent
+  to ElasticSearch where they can be queried.
+summary: |
+  Service that acts like an intermediary for different magma services, using the service303
+  interface, it will receive and push the generated registered events to the td-agent-bit service
+  on the gateway, so these can be then later sent to Orchestrator. These events will be sent
+  to ElasticSearch where they can be queried.
+
+containers:
+  magma-orc8r-eventd:
+    resource: magma-orc8r-eventd-image
+
+resources:
+  magma-orc8r-eventd-image:
+    type: oci-image
+    description: OCI image for magma-orc8r-eventd (docker.artifactory.magmacore.org/controller:1.6.0)

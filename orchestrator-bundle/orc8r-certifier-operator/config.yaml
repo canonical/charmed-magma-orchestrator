@@ -1,0 +1,35 @@
+options:
+  use-self-signed-ssl-certs:
+    type: boolean
+    default: true
+    description: |
+      If set to true, set of self-signed SSL certs will be created.
+      For production deployments, trusted certs should be provided instead.
+  admin-operator-key-pem:
+    type: string
+    default:
+    description: |
+      Configuration item for production deployments. Shouldn't be used with use-self-signed-ssl-certs set to 'true'.
+      Use this item to provide Magma deployment with your trusted certs.
+  admin-operator-pem:
+    type: string
+    default:
+    description: |
+      Configuration item for production deployments. Shouldn't be used with use-self-signed-ssl-certs set to 'true'.
+      Use this item to provide Magma deployment with your trusted certs.
+  controller-crt:
+    type: string
+    default:
+    description: |
+      Configuration item for production deployments. Shouldn't be used with use-self-signed-ssl-certs set to 'true'.
+      Use this item to provide Magma deployment with your trusted certs.
+  controller-key:
+    type: string
+    default:
+    description: |
+      Configuration item for production deployments. Shouldn't be used with use-self-signed-ssl-certs set to 'true'.
+      Use this item to provide Magma deployment with your trusted certs.
+  domain:
+    type: string
+    default:
+    description: Orchestrator domain. Required when use-self-signed-ssl-certs set to true.

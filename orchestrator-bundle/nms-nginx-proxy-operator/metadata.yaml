@@ -1,0 +1,22 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: magma-nms-nginx-proxy
+description: |
+  This charm is an nginx web server that proxies communication between NMS UI and MagmaLTE.
+summary: |
+  This charm is an nginx web server that proxies communication between NMS UI and MagmaLTE.
+
+containers:
+  magma-nms-nginx-proxy:
+    resource: magma-nms-nginx-proxy-image
+
+resources:
+  magma-nms-nginx-proxy-image:
+    type: oci-image
+    description: OCI image for nginx-proxy (nginx:latest)
+
+requires:
+  certifier:
+    interface: certs
+  magmalte:
+    interface: nms-magmalte

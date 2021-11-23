@@ -37,11 +37,10 @@ class MagmaOrc8rAccessdCharm(CharmBase):
 
     def _on_magma_orc8r_accessd_pebble_ready(self, event):
         if not self._check_db_relation_has_been_established():
-            self.unit.status = BlockedStatus("Waiting for database relation to be established")
-        else:
-            self.unit.status = WaitingStatus(
-                "Database relation is valid, waiting on database to come up"
-            )
+            self.unit.status = BlockedStatus("Waiting for database relation to be established...")
+            event.defer()
+            return
+        self._configure_magma_orc8r_accessd()
 
     def _on_database_relation_joined(self, event):
         """Event handler for database relation change.
@@ -54,16 +53,15 @@ class MagmaOrc8rAccessdCharm(CharmBase):
         db_connection_string = event.master
         if self.unit.is_leader() and db_connection_string is not None:
             event.database = self.DB_NAME
-            self._configure_magma_orc8r_accessd(db_connection_string)
         elif event.database != self.DB_NAME or db_connection_string is None:
             event.defer()
             return
 
-    def _configure_magma_orc8r_accessd(self, db_conn_str):
+    def _configure_magma_orc8r_accessd(self):
         """Adds layer to pebble config if the proposed config is different from the current one."""
         self.unit.status = MaintenanceStatus("Configuring pod")
         plan = self._container.get_plan()
-        layer = self._pebble_layer(db_conn_str)
+        layer = self._pebble_layer
         if plan.services != layer.services:
             self._container.add_layer(self._container_name, layer, combine=True)
             self._container.restart(self._service_name)
@@ -73,11 +71,13 @@ class MagmaOrc8rAccessdCharm(CharmBase):
     def _check_db_relation_has_been_established(self):
         """Validates that database relation is ready (that there is a relation and that credentials
         have been passed)."""
-        if not self.model.get_relation("db"):
+        if not self._get_db_connection_string:
+            self.unit.status = WaitingStatus("Waiting for db relation to be ready...")
             return False
         return True
 
-    def _pebble_layer(self, conn_str: ConnectionString) -> Layer:
+    @property
+    def _pebble_layer(self) -> Layer:
         """Returns pebble layer for the charm."""
         return Layer(
             {
@@ -94,10 +94,10 @@ class MagmaOrc8rAccessdCharm(CharmBase):
                         "-logtostderr=true "
                         "-v=0",
                         "environment": {
-                            "DATABASE_SOURCE": f"dbname={conn_str.dbname} "
-                            f"user={conn_str.user} "
-                            f"password={conn_str.password} "
-                            f"host={conn_str.host} "
+                            "DATABASE_SOURCE": f"dbname={self._get_db_connection_string.dbname} "
+                            f"user={self._get_db_connection_string.user} "
+                            f"password={self._get_db_connection_string.password} "
+                            f"host={self._get_db_connection_string.host} "
                             f"sslmode=disable",
                             "SQL_DRIVER": "postgres",
                             "SQL_DIALECT": "psql",
@@ -110,6 +110,15 @@ class MagmaOrc8rAccessdCharm(CharmBase):
                 },
             },
         )
+
+    @property
+    def _get_db_connection_string(self):
+        """Returns DB connection string provided by the DB relation."""
+        try:
+            db_relation = self.model.get_relation("db")
+            return ConnectionString(db_relation.data[db_relation.app]["master"])
+        except (AttributeError, KeyError):
+            return None
 
 
 if __name__ == "__main__":
