@@ -33,7 +33,7 @@ class MagmaOrc8rSubscriberdbCharm(CharmBase):
             self._db.on.database_relation_joined, self._on_database_relation_joined
         )
         self._service_patcher = KubernetesServicePatch(
-            self, [("grpc", 9180, 9083), ("http", 8080, 10083)], service_name="orc8r-subscriberdb"
+            self, [("grpc", 9180, 9083), ("http", 8080, 10083)]
         )
 
     def _on_magma_orc8r_subscriberdb_pebble_ready(self, event):

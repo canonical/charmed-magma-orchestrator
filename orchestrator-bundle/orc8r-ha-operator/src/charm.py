@@ -26,9 +26,7 @@ class MagmaOrc8rHACharm(CharmBase):
         self.framework.observe(
             self.on.magma_orc8r_ha_pebble_ready, self._on_magma_orc8r_ha_pebble_ready
         )
-        self._service_patcher = KubernetesServicePatch(
-            self, [("grpc", 9180, 9119)], service_name="orc8r-ha"
-        )
+        self._service_patcher = KubernetesServicePatch(self, [("grpc", 9180, 9119)])
 
     def _on_magma_orc8r_ha_pebble_ready(self, event):
         """

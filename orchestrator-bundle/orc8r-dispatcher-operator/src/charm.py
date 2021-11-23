@@ -27,9 +27,7 @@ class MagmaOrc8rDispatcherCharm(CharmBase):
             self.on.magma_orc8r_dispatcher_pebble_ready,
             self._on_magma_orc8r_dispatcher_pebble_ready,
         )
-        self._service_patcher = KubernetesServicePatch(
-            self, [("grpc", 9180, 9096)], service_name="orc8r-dispatcher"
-        )
+        self._service_patcher = KubernetesServicePatch(self, [("grpc", 9180, 9096)])
 
     def _on_magma_orc8r_dispatcher_pebble_ready(self, event):
         """

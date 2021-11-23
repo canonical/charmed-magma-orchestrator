@@ -48,9 +48,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self._db.on.database_relation_joined, self._on_database_relation_joined
         )
         self.framework.observe(self.on.remove, self._on_remove)
-        self._service_patcher = KubernetesServicePatch(
-            self, [("grpc", 9180, 9086)], service_name="orc8r-certifier"
-        )
+        self._service_patcher = KubernetesServicePatch(self, [("grpc", 9180, 9086)])
 
     def _on_install(self, event):
         """Runs each time the charm is installed."""

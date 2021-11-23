@@ -40,9 +40,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         self.framework.observe(
             self.on.certifier_relation_changed, self._on_certifier_relation_changed
         )
-        self._service_patcher = KubernetesServicePatch(
-            self, [("magmalte", 8081, 8081)], service_name="magmalte"
-        )
+        self._service_patcher = KubernetesServicePatch(self, [("magmalte", 8081, 8081)])
 
     def _on_magma_nms_magmalte_pebble_ready(self, event):
         if not self._relations_ready:

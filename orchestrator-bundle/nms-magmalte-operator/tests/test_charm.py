@@ -24,7 +24,7 @@ class TestCharm(unittest.TestCase):
     )
     TEST_DOMAIN_NAME = "test.domain.com"
 
-    @patch("charm.KubernetesServicePatch", lambda x, y, service_name: None)
+    @patch("charm.KubernetesServicePatch", lambda x, y: None)
     def setUp(self):
         self.harness = Harness(MagmaNmsMagmalteCharm)
         self.addCleanup(self.harness.cleanup)

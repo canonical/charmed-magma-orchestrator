@@ -23,7 +23,7 @@ class TestCharm(unittest.TestCase):
         "user=test_db_user"
     )
 
-    @patch("charm.KubernetesServicePatch", lambda x, y, service_name: None)
+    @patch("charm.KubernetesServicePatch", lambda x, y: None)
     def setUp(self):
         self.harness = Harness(MagmaOrc8rCertifierCharm)
         self.addCleanup(self.harness.cleanup)

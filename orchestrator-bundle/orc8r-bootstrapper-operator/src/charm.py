@@ -30,9 +30,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         self.framework.observe(
             self.on.certifier_relation_joined, self._on_certifier_relation_joined
         )
-        self._service_patcher = KubernetesServicePatch(
-            self, [("grpc", 9180, 9088)], service_name="orc8r-bootstrapper"
-        )
+        self._service_patcher = KubernetesServicePatch(self, [("grpc", 9180, 9088)])
 
     def _on_magma_orc8r_bootstrapper_pebble_ready(self, event):
         """Triggered when pebble is ready."""

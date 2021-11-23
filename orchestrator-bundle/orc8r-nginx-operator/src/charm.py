@@ -47,8 +47,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
                 ("open", 8444, 8444, 31694),
                 ("api", 443, 9443, 30794),
             ],
-            service_name="orc8r-nginx-proxy",
-            service_type="LoadBalancer",
+            "LoadBalancer",
         )
 
     def _on_magma_orc8r_nginx_pebble_ready(self, event):

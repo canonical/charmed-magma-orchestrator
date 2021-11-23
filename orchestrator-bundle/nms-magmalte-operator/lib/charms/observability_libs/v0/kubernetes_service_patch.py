@@ -23,7 +23,6 @@ a port for the service, where each tuple contains:
 - port for the service to listen on
 - optionally: a targetPort for the service (the port in the container!)
 - optionally: a nodePort for the service (for NodePort or LoadBalancer services only!)
-- optionally: a name of the service (in case service name needs to be patched as well)
 
 ## Getting Started
 
@@ -103,7 +102,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 5
+LIBPATCH = 4
 
 PortDefinition = Union[Tuple[str, int], Tuple[str, int, int], Tuple[str, int, int, int]]
 ServiceType = Literal["ClusterIP", "LoadBalancer"]
@@ -116,7 +115,6 @@ class KubernetesServicePatch(Object):
         self,
         charm: CharmBase,
         ports: Sequence[PortDefinition],
-        service_name: str = None,
         service_type: ServiceType = "ClusterIP",
     ):
         """Constructor for KubernetesServicePatch.
@@ -124,15 +122,12 @@ class KubernetesServicePatch(Object):
         Args:
             charm: the charm that is instantiating the library.
             ports: a list of tuples (name, port, targetPort, nodePort) for every service port.
-            service_name: allows setting custom name to the patched service. If none given,
-                application name will be used.
             service_type: desired type of K8s service. Default value is in line with ServiceSpec's
                 default value.
         """
         super().__init__(charm, "kubernetes-service-patch")
         self.charm = charm
-        self.service_name = service_name if service_name else self._app
-        self.service = self._service_object(ports, service_name, service_type)
+        self.service = self._service_object(ports, service_type)
 
         # Make mypy type checking happy that self._patch is a method
         assert isinstance(self._patch, MethodType)
@@ -141,10 +136,7 @@ class KubernetesServicePatch(Object):
         self.framework.observe(charm.on.upgrade_charm, self._patch)
 
     def _service_object(
-        self,
-        ports: Sequence[PortDefinition],
-        service_name: str = None,
-        service_type: ServiceType = "ClusterIP",
+        self, ports: Sequence[PortDefinition], service_type: ServiceType = "ClusterIP"
     ) -> Service:
         """Creates a valid Service representation for Alertmanager.
 
@@ -153,32 +145,28 @@ class KubernetesServicePatch(Object):
                 or (name, port, targetPort, nodePort) for every service port. If the 'targetPort'
                 is omitted, it is assumed to be equal to 'port', with the exception of NodePort
                 and LoadBalancer services, where all port numbers have to be specified.
-            service_name: allows setting custom name to the patched service. If none given,
-                application name will be used.
             service_type: desired type of K8s service. Default value is in line with ServiceSpec's
                 default value.
 
         Returns:
             Service: A valid representation of a Kubernetes Service with the correct ports.
         """
-        if not service_name:
-            service_name = self._app
         return Service(
             apiVersion="v1",
             kind="Service",
             metadata=ObjectMeta(
                 namespace=self._namespace,
-                name=service_name,
-                labels={"app.kubernetes.io/name": service_name},
+                name=self._app,
+                labels={"app.kubernetes.io/name": self._app},
             ),
             spec=ServiceSpec(
-                selector={"app.kubernetes.io/name": service_name},
+                selector={"app.kubernetes.io/name": self._app},
                 ports=[
                     ServicePort(
                         name=p[0],
                         port=p[1],
                         targetPort=p[2] if len(p) > 2 else p[1],  # type: ignore[misc]
-                        nodePort=p[3] if len(p) > 3 else None,  # type: ignore[arg-type, misc]
+                        nodePort=p[3] if len(p) > 3 else None,  # type: ignore[misc,arg-type]
                     )
                     for p in ports
                 ],
@@ -214,7 +202,7 @@ class KubernetesServicePatch(Object):
         """
         client = Client()
         # Get the relevant service from the cluster
-        service = client.get(Service, name=self.service_name, namespace=self._namespace)
+        service = client.get(Service, name=self._app, namespace=self._namespace)
         # Construct a list of expected ports, should the patch be applied
         expected_ports = [(p.port, p.targetPort) for p in self.service.spec.ports]
         # Construct a list in the same manner, using the fetched service

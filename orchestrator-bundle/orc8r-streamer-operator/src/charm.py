@@ -26,9 +26,7 @@ class MagmaOrc8rStreamer(CharmBase):
         self.framework.observe(
             self.on.magma_orc8r_streamer_pebble_ready, self._on_magma_orc8r_streamer_pebble_ready
         )
-        self._service_patcher = KubernetesServicePatch(
-            self, [("grpc", 9180, 9082)], service_name="orc8r-streamer"
-        )
+        self._service_patcher = KubernetesServicePatch(self, [("grpc", 9180, 9082)])
 
     def _on_magma_orc8r_streamer_pebble_ready(self, event):
         """

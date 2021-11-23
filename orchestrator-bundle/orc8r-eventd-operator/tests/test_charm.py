@@ -10,7 +10,7 @@ from charm import MagmaOrc8rEventdCharm
 
 
 class TestCharm(unittest.TestCase):
-    @patch("charm.KubernetesServicePatch", lambda x, y, service_name: None)
+    @patch("charm.KubernetesServicePatch", lambda x, y: None)
     def setUp(self):
         self.harness = Harness(MagmaOrc8rEventdCharm)
         self.addCleanup(self.harness.cleanup)
