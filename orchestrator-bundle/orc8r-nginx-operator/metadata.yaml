@@ -19,8 +19,8 @@ resources:
 
 requires:
   bootstrapper:
-    interface: orc8r-bootstrapper
+    interface: magma-orc8r-bootstrapper
   certifier:
     interface: certs
   obsidian:
-    interface: orc8r-obsidian
+    interface: magma-orc8r-obsidian
