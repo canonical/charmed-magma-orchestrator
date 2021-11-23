@@ -162,8 +162,10 @@ applications:
     resources:
       magma-orc8r-tenants-image: docker.artifactory.magmacore.org/controller:1.6.0
 relations:
-  - - nms-magmalte
+  - - nms-magmalte:db
     - postgresql-k8s:db
+  - - nms-magmalte:certifier
+    - orc8r-certifier:certifier
   - - nms-nginx-proxy:certifier
     - orc8r-certifier:certifier
   - - nms-nginx-proxy:magmalte
@@ -197,4 +199,6 @@ relations:
   - - orc8r-subscriberdb
     - postgresql-k8s:db
   - - orc8r-subscriberdb-cache
+    - postgresql-k8s:db
+  - - orc8r-tenants
     - postgresql-k8s:db
