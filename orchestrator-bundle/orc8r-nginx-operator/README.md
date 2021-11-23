@@ -16,7 +16,8 @@ This charm is part of the [Charmed Magma bundle](https://github.com/canonical/ch
 
 ```bash
 juju deploy ./magma-orc8r-nginx_ubuntu-20.04-amd64.charm \
-  --resource magma-orc8r-nginx-image=docker.artifactory.magmacore.org/nginx:1.6.0
+  --resource magma-orc8r-nginx-image=docker.artifactory.magmacore.org/nginx:1.6.0 \
+  orc8r-nginx
 ```
 
 To work correctly, **magma-orc8r-nginx** requires **magma-orc8r-certifier**, 
@@ -28,24 +29,27 @@ To deploy **magma-orc8r-certifier** from Juju command line:
 ```bash
 juju deploy ../orc8r-certifier-operator/magma-orc8r-certifier_ubuntu-20.04-amd64.charm \
   --resource magma-orc8r-certifier-image=docker.artifactory.magmacore.org/controller:1.6.0 \
-  --config domain=example.com
-juju relate magma-orc8r-nginx:certifier magma-orc8r-certifier:certifier
+  --config domain=example.com \
+  orc8r-certifier
+juju relate orc8r-nginx:certifier orc8r-certifier:certifier
 ```
 
 To deploy **magma-orc8r-bootstrapper** from Juju command line:
 
 ```bash
 juju deploy ../orc8r-bootstrapper-operator/magma-orc8r-bootstrapper_ubuntu-20.04-amd64.charm \
-  --resource magma-orc8r-bootstrapper-image=docker.artifactory.magmacore.org/controller:1.6.0
-juju relate magma-orc8r-nginx:bootstrapper magma-orc8r-bootstrapper:bootstrapper
+  --resource magma-orc8r-bootstrapper-image=docker.artifactory.magmacore.org/controller:1.6.0 \
+  orc8r-bootstrapper
+juju relate orc8r-nginx:bootstrapper orc8r-bootstrapper:bootstrapper
 ```
 
 To deploy **magma-orc8r-obsidian** from Juju command line:
 
 ```bash
 juju deploy ../orc8r-obsidian-operator/magma-orc8r-obsidian_ubuntu-20.04-amd64.charm \
-  --resource magma-orc8r-obsidian-image=docker.artifactory.magmacore.org/controller:1.6.0
-juju relate magma-orc8r-nginx:obsidian magma-orc8r-obsidian:obsidian
+  --resource magma-orc8r-obsidian-image=docker.artifactory.magmacore.org/controller:1.6.0 \
+  orc8r-obsidian
+juju relate orc8r-nginx:obsidian orc8r-obsidian:obsidian
 ```
 
 Before running any **juju deploy** commands, make sure charm has been built using:

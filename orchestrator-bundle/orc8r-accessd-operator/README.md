@@ -10,8 +10,9 @@ service.
 ```bash
 juju deploy postgresql-k8s
 juju deploy ./magma-orc8r-accessd_ubuntu-20.04-amd64.charm \
-    --resource magma-orc8r-accessd-image=docker.artifactory.magmacore.org/controller:1.6.0
-juju relate magma-orc8r-accessd postgresql-k8s:db-admin
+  --resource magma-orc8r-accessd-image=docker.artifactory.magmacore.org/controller:1.6.0 \
+  orc8r-accessd
+juju relate orc8r-accessd postgresql-k8s:db-admin
 ```
 
 ## Relations

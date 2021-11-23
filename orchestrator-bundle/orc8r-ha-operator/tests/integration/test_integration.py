@@ -12,7 +12,7 @@ from pytest_operator.plugin import OpsTest  # type: ignore
 logger = logging.getLogger(__name__)
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 
-APPLICATION_NAME = "magma-orc8r-ha"
+APPLICATION_NAME = "orc8r-ha"
 
 
 @pytest.mark.abort_on_fail

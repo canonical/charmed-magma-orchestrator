@@ -8,8 +8,9 @@ magma-orc8r-tenants provides CRUD interface for managing NMS tenants.
 ```bash
 juju deploy postgresql-k8s
 juju deploy ./magma-orc8r-tenants_ubuntu-20.04-amd64.charm \
-  --resource magma-orc8r-tenants-image=docker.artifactory.magmacore.org/controller:1.6.0
-juju relate magma-orc8r-tenants postgresql-k8s:db
+  --resource magma-orc8r-tenants-image=docker.artifactory.magmacore.org/controller:1.6.0 \
+  orc8r-tenants
+juju relate orc8r-tenants postgresql-k8s:db
 ```
 
 ## Relations
