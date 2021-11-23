@@ -20,9 +20,7 @@ CHARM_NAME = "magma-orc8r-device"
 async def test_build_and_deploy(ops_test: OpsTest):
     charm = await ops_test.build_charm(".")
     resources = {
-        f"{CHARM_NAME}-image": METADATA["resources"][f"{CHARM_NAME}-image"][
-            "upstream-source"
-        ],
+        f"{CHARM_NAME}-image": METADATA["resources"][f"{CHARM_NAME}-image"]["upstream-source"],
     }
     await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
     await ops_test.model.deploy(

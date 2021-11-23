@@ -20,9 +20,7 @@ CHARM_NAME = "magma-orc8r-ha"
 async def test_build_and_deploy(ops_test: OpsTest):
     charm = await ops_test.build_charm(".")
     resources = {
-        f"{CHARM_NAME}-image": METADATA["resources"][f"{CHARM_NAME}-image"][
-            "upstream-source"
-        ],
+        f"{CHARM_NAME}-image": METADATA["resources"][f"{CHARM_NAME}-image"]["upstream-source"],
     }
     await ops_test.model.deploy(
         charm, resources=resources, application_name=APPLICATION_NAME, trust=True
