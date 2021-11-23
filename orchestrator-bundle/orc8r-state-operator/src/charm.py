@@ -31,7 +31,9 @@ class MagmaOrc8rStateCharm(CharmBase):
         self.framework.observe(
             self._db.on.database_relation_joined, self._on_database_relation_joined
         )
-        self._service_patcher = KubernetesServicePatch(self, [("grpc", 9180, 9105)])
+        self._service_patcher = KubernetesServicePatch(
+            self, [("grpc", 9180, 9105)], service_name="orc8r-state"
+        )
 
     def _on_magma_orc8r_state_pebble_ready(self, event):
         if not self._check_db_relation_has_been_established():

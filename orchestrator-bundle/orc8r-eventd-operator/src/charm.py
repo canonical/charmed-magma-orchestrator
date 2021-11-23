@@ -23,7 +23,7 @@ class MagmaOrc8rEventdCharm(CharmBase):
             self._on_magma_orc8r_eventd_pebble_ready,
         )
         self._service_patcher = KubernetesServicePatch(
-            self, [("grpc", 9180, 9121), ("http", 8080, 10121)]
+            self, [("grpc", 9180, 9121), ("http", 8080, 10121)], service_name="orc8r-eventd"
         )
 
     def _on_magma_orc8r_eventd_pebble_ready(self, event):

@@ -32,7 +32,7 @@ class MagmaOrc8rLteCharm(CharmBase):
             self._db.on.database_relation_joined, self._on_database_relation_joined
         )
         self._service_patcher = KubernetesServicePatch(
-            self, [("grpc", 9180, 9113), ("http", 8080, 10113)]
+            self, [("grpc", 9180, 9113), ("http", 8080, 10113)], service_name="orc8r-lte"
         )
 
     def _on_magma_orc8r_lte_pebble_ready(self, event):

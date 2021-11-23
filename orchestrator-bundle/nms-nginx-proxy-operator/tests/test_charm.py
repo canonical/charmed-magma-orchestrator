@@ -11,7 +11,7 @@ from charm import MagmaNmsNginxProxyCharm
 
 
 class TestCharm(unittest.TestCase):
-    @patch("charm.KubernetesServicePatch", lambda x, y, z: None)
+    @patch("charm.KubernetesServicePatch", lambda x, y, service_name, service_type: None)
     def setUp(self):
         self.harness = Harness(MagmaNmsNginxProxyCharm)
         self.addCleanup(self.harness.cleanup)

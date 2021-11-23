@@ -10,7 +10,7 @@ from charm import MagmaOrc8rStreamer
 
 
 class TestCharm(unittest.TestCase):
-    @patch("charm.KubernetesServicePatch", lambda x, y: None)
+    @patch("charm.KubernetesServicePatch", lambda x, y, service_name: None)
     def setUp(self):
         self.harness = Harness(MagmaOrc8rStreamer)
         self.addCleanup(self.harness.cleanup)

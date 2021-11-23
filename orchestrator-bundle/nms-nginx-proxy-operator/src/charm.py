@@ -38,7 +38,10 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         self.framework.observe(self.on.certifier_relation_changed, self._configure_nginx)
         self.framework.observe(self.on.remove, self._on_remove)
         self.service_patcher = KubernetesServicePatch(
-            self, [("https", 443, 443, 30760)], "LoadBalancer"
+            self,
+            [("https", 443, 443, 30760)],
+            service_name="nginx-proxy",
+            service_type="LoadBalancer",
         )
 
     def _on_magma_nms_nginx_proxy_pebble_ready(self, event):

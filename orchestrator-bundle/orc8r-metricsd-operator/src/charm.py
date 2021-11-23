@@ -27,7 +27,7 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
             self.on.magma_orc8r_metricsd_pebble_ready, self._on_magma_orc8r_metricsd_pebble_ready
         )
         self._service_patcher = KubernetesServicePatch(
-            self, [("grpc", 9180, 9084), ("http", 8080, 10084)]
+            self, [("grpc", 9180, 9084), ("http", 8080, 10084)], service_name="orc8r-metricsd"
         )
 
     def _on_magma_orc8r_metricsd_pebble_ready(self, event):

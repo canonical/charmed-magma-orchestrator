@@ -15,7 +15,7 @@ class TestCharm(unittest.TestCase):
     TEST_DB_NAME = "wheat"
     TEST_DB_PORT = "1234"
 
-    @patch("charm.KubernetesServicePatch", lambda x, y: None)
+    @patch("charm.KubernetesServicePatch", lambda x, y, service_name: None)
     def setUp(self):
         self.harness = Harness(MagmaOrc8rPolicydbCharm)
         self.addCleanup(self.harness.cleanup)

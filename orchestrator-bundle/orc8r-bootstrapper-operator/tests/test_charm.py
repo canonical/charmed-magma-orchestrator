@@ -11,7 +11,7 @@ from charm import MagmaOrc8rBootstrapperCharm
 
 
 class TestCharm(unittest.TestCase):
-    @patch("charm.KubernetesServicePatch", lambda x, y: None)
+    @patch("charm.KubernetesServicePatch", lambda x, y, service_name: None)
     def setUp(self):
         self.harness = Harness(MagmaOrc8rBootstrapperCharm)
         self.addCleanup(self.harness.cleanup)

@@ -27,7 +27,9 @@ class MagmaOrc8rServiceRegistry(CharmBase):
             self.on.magma_orc8r_service_registry_pebble_ready,
             self._on_magma_orc8r_service_registry_pebble_ready,
         )
-        self._service_patcher = KubernetesServicePatch(self, [("grpc", 9180, 9180)])
+        self._service_patcher = KubernetesServicePatch(
+            self, [("grpc", 9180, 9180)], service_name="orc8r-service-registry"
+        )
 
     def _on_magma_orc8r_service_registry_pebble_ready(self, event):
         """
