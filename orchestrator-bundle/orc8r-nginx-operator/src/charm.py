@@ -6,6 +6,7 @@ import logging
 from typing import List
 
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
+from httpx import HTTPStatusError
 from lightkube import Client
 from lightkube.models.core_v1 import (
     SecretVolumeSource,
@@ -37,6 +38,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
         self.framework.observe(
             self.on.certifier_relation_changed, self._on_certifier_relation_changed
         )
+        self.framework.observe(self.on.remove, self._on_remove)
         self.service_patcher = KubernetesServicePatch(
             self,
             [
@@ -94,6 +96,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
             return
 
     def _generate_nginx_config(self):
+        """Generates nginx config to /etc/nginx/nginx.conf."""
         logger.info("Generating nginx config file...")
         process = self._container.exec(
             command=["/usr/local/bin/generate_nginx_configs.py"],
@@ -108,11 +111,21 @@ class MagmaOrc8rNginxCharm(CharmBase):
         logger.info(stdout)
 
     def _create_additional_orc8r_nginx_services(self):
+        """Creates additional K8s services which are expected to be delivered by the
+        magma-orc8r-nginx.
+        """
         client = Client()
         logger.info("Creating additional magma-orc8r-nginx services...")
         for service in self._magma_orc8r_nginx_additional_services:
-            logger.info(f"Creating {service.metadata.name} service...")
-            client.create(service)
+            if not self._orc8r_nginx_service_created(service.metadata.name):
+                logger.info(f"Creating {service.metadata.name} service...")
+                client.create(service)
+
+    def _on_remove(self, event):
+        """Remove additional magma-orc8r-nginx services."""
+        client = Client()
+        for service in self._magma_orc8r_nginx_additional_services:
+            client.delete(Service, name=service.metadata.name, namespace=self._namespace)
 
     @property
     def _pebble_layer(self) -> Layer:
@@ -152,6 +165,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
 
     @property
     def _magma_orc8r_nginx_additional_services(self) -> List[Service]:
+        """Returns list of additional K8s services to be created by magma-orc8r-nginx."""
         return [
             Service(
                 apiVersion="v1",
@@ -191,7 +205,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
                 kind="Service",
                 metadata=ObjectMeta(
                     namespace=self._namespace,
-                    name="orc8r-bootstrap-nginx",
+                    name="orc8r-clientcert-nginx",
                     labels={"app.kubernetes.io/name": "orc8r-clientcert-nginx"},
                 ),
                 spec=ServiceSpec(
@@ -240,6 +254,15 @@ class MagmaOrc8rNginxCharm(CharmBase):
             return False
         return True
 
+    def _orc8r_nginx_service_created(self, service_name) -> bool:
+        """Checks whether given K8s service exists or not."""
+        client = Client()
+        try:
+            client.get(Service, name=service_name, namespace=self._namespace)
+            return True
+        except HTTPStatusError:
+            return False
+
     @property
     def _orc8r_certs_mounted(self) -> bool:
         """Check to see if the NMS certs have already been mounted."""
@@ -252,6 +275,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
 
     @property
     def _get_domain_name(self):
+        """Gets domain name for the data bucket sent by certifier relation."""
         certifier_relation = self.model.get_relation("certifier")
         units = certifier_relation.units
         try:
