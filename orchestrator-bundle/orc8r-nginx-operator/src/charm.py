@@ -7,8 +7,16 @@ from typing import List
 
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from lightkube import Client
-from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
+from lightkube.models.core_v1 import (
+    SecretVolumeSource,
+    ServicePort,
+    ServiceSpec,
+    Volume,
+    VolumeMount,
+)
+from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.apps_v1 import StatefulSet
+from lightkube.resources.core_v1 import Service
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
@@ -44,6 +52,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
         if not self._relations_ready:
             event.defer()
             return
+        self._create_additional_orc8r_nginx_services()
         self._configure_pebble_layer(event)
 
     def _on_certifier_relation_changed(self, event):
@@ -98,6 +107,13 @@ class MagmaOrc8rNginxCharm(CharmBase):
         stdout, _ = process.wait_output()
         logger.info(stdout)
 
+    def _create_additional_orc8r_nginx_services(self):
+        client = Client()
+        logger.info("Creating additional magma-orc8r-nginx services...")
+        for service in self._magma_orc8r_nginx_additional_services:
+            logger.info(f"Creating {service.metadata.name} service...")
+            client.create(service)
+
     @property
     def _pebble_layer(self) -> Layer:
         return Layer(
@@ -131,6 +147,77 @@ class MagmaOrc8rNginxCharm(CharmBase):
             VolumeMount(
                 mountPath="/var/opt/magma/certs",
                 name="certs",
+            ),
+        ]
+
+    @property
+    def _magma_orc8r_nginx_additional_services(self) -> List[Service]:
+        return [
+            Service(
+                apiVersion="v1",
+                kind="Service",
+                metadata=ObjectMeta(
+                    namespace=self._namespace,
+                    name="orc8r-bootstrap-nginx",
+                    labels={"app.kubernetes.io/name": "orc8r-bootstrap-nginx"},
+                ),
+                spec=ServiceSpec(
+                    selector={"app.kubernetes.io/name": "orc8r-bootstrap-nginx"},
+                    ports=[
+                        ServicePort(
+                            name="health",
+                            port=80,
+                            targetPort=80,
+                            nodePort=31200,
+                        ),
+                        ServicePort(
+                            name="open-legacy",
+                            port=443,
+                            targetPort=8444,
+                            nodePort=30747,
+                        ),
+                        ServicePort(
+                            name="open",
+                            port=8444,
+                            targetPort=8444,
+                            nodePort=30618,
+                        ),
+                    ],
+                    type="LoadBalancer",
+                ),
+            ),
+            Service(
+                apiVersion="v1",
+                kind="Service",
+                metadata=ObjectMeta(
+                    namespace=self._namespace,
+                    name="orc8r-bootstrap-nginx",
+                    labels={"app.kubernetes.io/name": "orc8r-clientcert-nginx"},
+                ),
+                spec=ServiceSpec(
+                    selector={"app.kubernetes.io/name": "orc8r-clientcert-nginx"},
+                    ports=[
+                        ServicePort(
+                            name="health",
+                            port=80,
+                            targetPort=80,
+                            nodePort=31641,
+                        ),
+                        ServicePort(
+                            name="clientcert-legacy",
+                            port=443,
+                            targetPort=8443,
+                            nodePort=31082,
+                        ),
+                        ServicePort(
+                            name="clientcert",
+                            port=8443,
+                            targetPort=8443,
+                            nodePort=31811,
+                        ),
+                    ],
+                    type="LoadBalancer",
+                ),
             ),
         ]
 
