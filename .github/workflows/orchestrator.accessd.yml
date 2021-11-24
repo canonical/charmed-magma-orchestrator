@@ -3,41 +3,41 @@ name: CI
 on:
   push:
     paths:
-    - 'orchestrator-bundle/orc8r-device-operator/**'
+    - 'orchestrator-bundle/orc8r-accessd-operator/**'
 
 jobs:
-  orc8r-device-lint-report:
-    name: Lint report (orc8r-device)
+  orc8r-accessd-lint-report:
+    name: Lint report (orc8r-accessd)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
         run: pip install tox
       - name: Run tests using tox
-        run: cd orchestrator-bundle/orc8r-device-operator && tox -e lint
+        run: cd orchestrator-bundle/orc8r-accessd-operator && tox -e lint
 
-  orc8r-device-static-analysis:
-    name: Static analysis (orc8r-device)
+  orc8r-accessd-static-analysis:
+    name: Static analysis (orc8r-accessd)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
         run: pip install tox
       - name: Run tests using tox
-        run: cd orchestrator-bundle/orc8r-device-operator && tox -e static
+        run: cd orchestrator-bundle/orc8r-accessd-operator && tox -e static
 
-  orc8r-device-unit-tests-with-coverage:
-    name: Unit tests (orc8r-device)
+  orc8r-accessd-unit-tests-with-coverage:
+    name: Unit tests (orc8r-accessd)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
         run: pip install tox
       - name: Run tests using tox
-        run: cd orchestrator-bundle/orc8r-device-operator && tox -e unit
+        run: cd orchestrator-bundle/orc8r-accessd-operator && tox -e unit
 
-  orc8r-device-integration-test:
-    name: Integration tests (orc8r-device)
+  orc8r-accessd-integration-test:
+    name: Integration tests (orc8r-accessd)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -47,4 +47,4 @@ jobs:
         with:
           provider: microk8s
       - name: Run integration tests
-        run: cd orchestrator-bundle/orc8r-device-operator && tox -e integration
+        run: cd orchestrator-bundle/orc8r-accessd-operator && tox -e integration
