@@ -57,7 +57,11 @@ class TestOrc8rDevice:
                 f"{CERTIFIER_CHARM_NAME}-image"]["upstream-source"],
         }
         await ops_test.model.deploy(
-            charm, resources=resources, application_name=CERTIFIER_APPLICATION_NAME, trust=True
+            charm,
+            resources=resources,
+            application_name=CERTIFIER_APPLICATION_NAME,
+            config={"domain": "example.com"},
+            trust=True
         )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
