@@ -12,18 +12,22 @@ from pytest_operator.plugin import OpsTest  # type: ignore[import]  # noqa: F401
 logger = logging.getLogger(__name__)
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 CERTIFIER_METADATA = yaml.safe_load(Path("../orc8r-certifier-operator/metadata.yaml").read_text())
+NMS_MAGMALTE_METADATA = yaml.safe_load(Path("../nms-magmalte-operator/metadata.yaml").read_text())
 
-APPLICATION_NAME = "nms-magmalte"
-CHARM_NAME = "magma-nms-magmalte"
+APPLICATION_NAME = "nms-nginx-proxy"
+CHARM_NAME = "magma-nms-nginx-proxy"
 CERTIFIER_APPLICATION_NAME = "orc8r-certifier"
 CERTIFIER_CHARM_NAME = "magma-orc8r-certifier"
+NMS_MAGMALTE_APPLICATION_NAME = "nms-magmalte"
+NMS_MAGMALTE_CHARM_NAME = "magma-nms-magmalte"
 
 
-class TestNmsMagmaLTE:
+class TestNmsNginxProxy:
     @pytest.fixture(scope="module")
     async def setup(self, ops_test):
         await self._deploy_postgresql(ops_test)
         await self._deploy_orc8r_certifier(ops_test)
+        await self._deploy_nms_magmalte(ops_test)
 
     @pytest.mark.abort_on_fail
     async def test_build_and_deploy(self, ops_test, setup):
@@ -35,10 +39,10 @@ class TestNmsMagmaLTE:
             charm, resources=resources, application_name=APPLICATION_NAME, trust=True
         )
         await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
+            relation1=APPLICATION_NAME, relation2="orc8r-certifier:certifier"
         )
         await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="orc8r-certifier:certifier"
+            relation1=APPLICATION_NAME, relation2="nms-magmalte:magmalte"
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
 
@@ -67,4 +71,25 @@ class TestNmsMagmaLTE:
         )
         await ops_test.model.wait_for_idle(
             apps=[CERTIFIER_APPLICATION_NAME], status="active", timeout=1000
+        )
+
+    @staticmethod
+    async def _deploy_nms_magmalte(ops_test):
+        charm = await ops_test.build_charm("../nms-magmalte-operator/")
+        resources = {
+            f"{NMS_MAGMALTE_CHARM_NAME}-image": NMS_MAGMALTE_METADATA["resources"][
+                f"{NMS_MAGMALTE_CHARM_NAME}-image"
+            ]["upstream-source"],
+        }
+        await ops_test.model.deploy(
+            charm, resources=resources, application_name=NMS_MAGMALTE_APPLICATION_NAME, trust=True
+        )
+        await ops_test.model.add_relation(
+            relation1=NMS_MAGMALTE_APPLICATION_NAME, relation2="postgresql-k8s:db"
+        )
+        await ops_test.model.add_relation(
+            relation1=NMS_MAGMALTE_APPLICATION_NAME, relation2="orc8r-certifier:certifier"
+        )
+        await ops_test.model.wait_for_idle(
+            apps=[NMS_MAGMALTE_APPLICATION_NAME], status="active", timeout=1000
         )

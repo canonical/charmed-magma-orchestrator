@@ -13,13 +13,13 @@ logger = logging.getLogger(__name__)
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 CERTIFIER_METADATA = yaml.safe_load(Path("../orc8r-certifier-operator/metadata.yaml").read_text())
 
-APPLICATION_NAME = "nms-magmalte"
-CHARM_NAME = "magma-nms-magmalte"
+APPLICATION_NAME = "orc8r-bootstrapper"
+CHARM_NAME = "magma-orc8r-bootstrapper"
 CERTIFIER_APPLICATION_NAME = "orc8r-certifier"
 CERTIFIER_CHARM_NAME = "magma-orc8r-certifier"
 
 
-class TestNmsMagmaLTE:
+class TestOrc8rBootstrapper:
     @pytest.fixture(scope="module")
     async def setup(self, ops_test):
         await self._deploy_postgresql(ops_test)

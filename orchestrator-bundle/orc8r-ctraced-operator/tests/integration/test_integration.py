@@ -12,11 +12,11 @@ from pytest_operator.plugin import OpsTest  # type: ignore[import]  # noqa: F401
 logger = logging.getLogger(__name__)
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 
-APPLICATION_NAME = "orc8r-device"
-CHARM_NAME = "magma-orc8r-device"
+APPLICATION_NAME = "orc8r-ctraced"
+CHARM_NAME = "magma-orc8r-ctraced"
 
 
-class TestOrc8rDevice:
+class TestOrc8rCtraced:
     @pytest.fixture(scope="module")
     async def setup(self, ops_test):
         await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
