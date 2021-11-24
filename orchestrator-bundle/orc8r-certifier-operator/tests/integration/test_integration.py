@@ -33,7 +33,7 @@ class TestOrc8rCertifier:
             resources=resources,
             application_name=APPLICATION_NAME,
             config={"domain": "example.com"},
-            trust=True
+            trust=True,
         )
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
