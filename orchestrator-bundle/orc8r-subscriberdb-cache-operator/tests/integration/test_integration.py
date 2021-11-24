@@ -34,6 +34,4 @@ class TestOrc8rSubscriberDBCache:
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
         )
-        await ops_test.model.wait_for_idle(
-            apps=[APPLICATION_NAME], status="active", timeout=1000
-        )
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)

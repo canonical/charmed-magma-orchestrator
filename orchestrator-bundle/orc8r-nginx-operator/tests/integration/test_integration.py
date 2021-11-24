@@ -12,9 +12,9 @@ from pytest_operator.plugin import OpsTest  # type: ignore[import]  # noqa: F401
 logger = logging.getLogger(__name__)
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 CERTIFIER_METADATA = yaml.safe_load(Path("../orc8r-certifier-operator/metadata.yaml").read_text())
-BOOTSTRAPPER_METADATA = yaml.safe_load(Path(
-    "../orc8r-bootstrapper-operator/metadata.yaml"
-).read_text())
+BOOTSTRAPPER_METADATA = yaml.safe_load(
+    Path("../orc8r-bootstrapper-operator/metadata.yaml").read_text()
+)
 OBSIDIAN_METADATA = yaml.safe_load(Path("../orc8r-obsidian-operator/metadata.yaml").read_text())
 
 APPLICATION_NAME = "nms-nginx-proxy"
@@ -115,7 +115,6 @@ class TestOrc8rNginx:
             charm,
             resources=resources,
             application_name=OBSIDIAN_APPLICATION_NAME,
-            config={"domain": "example.com"},
             trust=True,
         )
         await ops_test.model.wait_for_idle(
