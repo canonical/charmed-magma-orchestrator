@@ -17,8 +17,8 @@ BOOTSTRAPPER_METADATA = yaml.safe_load(
 )
 OBSIDIAN_METADATA = yaml.safe_load(Path("../orc8r-obsidian-operator/metadata.yaml").read_text())
 
-APPLICATION_NAME = "nms-nginx-proxy"
-CHARM_NAME = "magma-nms-nginx-proxy"
+APPLICATION_NAME = "orc8r-nginx"
+CHARM_NAME = "magma-orc8r-nginx"
 CERTIFIER_APPLICATION_NAME = "orc8r-certifier"
 CERTIFIER_CHARM_NAME = "magma-orc8r-certifier"
 BOOTSTRAPPER_APPLICATION_NAME = "orc8r-bootstrapper"
