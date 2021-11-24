@@ -9,7 +9,8 @@
 
 ```bash
 juju deploy ./magma-orc8r-orchestrator_ubuntu-20.04-amd64.charm \
-  --resource magma-orc8r-orchestrator-image=docker.artifactory.magmacore.org/controller:1.6.0
+  --resource magma-orc8r-orchestrator-image=docker.artifactory.magmacore.org/controller:1.6.0 \
+  orc8r-orchestrator
 ```
 
 ## OCI Images

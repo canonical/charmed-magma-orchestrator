@@ -17,7 +17,8 @@ This charm is part of the [Charmed Magma bundle](https://github.com/canonical/ch
 
 ```bash
 juju deploy ./magma-orc8r-policydb_ubuntu-20.04-amd64.charm \
-  --resource magma-orc8r-policydb-image=docker.artifactory.magmacore.org/controller:1.6.0
+  --resource magma-orc8r-policydb-image=docker.artifactory.magmacore.org/controller:1.6.0 \
+  orc8r-policydb
 ```
 
 To work correctly, **magma-orc8r-policydb** requires **postgresql-k8s** (for details, check the 
@@ -27,7 +28,7 @@ To deploy **postgresql-k8s** from Juju command line:
 
 ```bash
 juju deploy postgresql-k8s
-juju relate magma-orc8r-policydb postgresql-k8s:db
+juju relate orc8r-policydb postgresql-k8s:db
 ```
 
 Before running any **juju deploy** commands, make sure charm has been built using:

@@ -12,16 +12,15 @@ from pytest_operator.plugin import OpsTest  # type: ignore
 logger = logging.getLogger(__name__)
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 
-APPLICATION_NAME = "magma-orc8r-device"
+APPLICATION_NAME = "orc8r-device"
+CHARM_NAME = "magma-orc8r-device"
 
 
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest):
     charm = await ops_test.build_charm(".")
     resources = {
-        f"{APPLICATION_NAME}-image": METADATA["resources"][f"{APPLICATION_NAME}-image"][
-            "upstream-source"
-        ],
+        f"{CHARM_NAME}-image": METADATA["resources"][f"{CHARM_NAME}-image"]["upstream-source"],
     }
     await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
     await ops_test.model.deploy(

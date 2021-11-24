@@ -21,7 +21,8 @@ This charm is part of the [Charmed Magma bundle](https://github.com/canonical/ch
 
 ```bash
 juju deploy ./magma-nms-magmalte_ubuntu-20.04-amd64.charm \
-    --resource magma-nms-magmalte-image=docker.artifactory.magmacore.org/magmalte:1.6.0
+  --resource magma-nms-magmalte-image=docker.artifactory.magmacore.org/magmalte:1.6.0 \
+  nms-magmalte
 ```
 
 To work correctly, **magma-nms-magmalte** requires **magma-orc8r-certifier** and **postgresql-k8s** (for
@@ -30,15 +31,18 @@ details, check the _Relations_ section below).
 To deploy **magma-orc8r-certifier** from Juju command line:
 
 ```bash
-juju deploy ../orc8r-certifier-operator/magma-orc8r-certifier_ubuntu-20.04-amd64.charm --resource magma-orc8r-certifier-image=docker.artifactory.magmacore.org/controller:1.6.0 --config domain=example.com
-juju relate magma-nms-magmalte magma-orc8r-certifier
+juju deploy ../orc8r-certifier-operator/magma-orc8r-certifier_ubuntu-20.04-amd64.charm \
+  --resource magma-orc8r-certifier-image=docker.artifactory.magmacore.org/controller:1.6.0 \
+  --config domain=example.com \
+  orc8r-certifier
+juju relate nms-magmalte orc8r-certifier
 ```
 
 To deploy **postgresql-k8s** from Juju command line:
 
 ```bash
 juju deploy postgresql-k8s
-juju relate magma-nms-magmalte postgresql-k8s:db
+juju relate nms-magmalte postgresql-k8s:db
 ```
 
 Before running **juju deploy** commands for **magma-nms-magmalte** and **magma-orc8r-certifier**, make sure 
