@@ -92,6 +92,7 @@ class TestCharm(unittest.TestCase):
                     "command": "/usr/bin/envdir "
                     "/var/opt/magma/envdir "
                     "/var/opt/magma/bin/policydb "
+                    "-run_echo_server=true "
                     "-logtostderr=true "
                     "-v=0",
                     "environment": {
