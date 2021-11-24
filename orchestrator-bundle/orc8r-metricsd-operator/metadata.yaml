@@ -15,3 +15,4 @@ resources:
   magma-orc8r-metricsd-image:
     type: oci-image
     description: OCI image for magma-orc8r-metricsd (docker.artifactory.magmacore.org/controller:1.6.0)
+    upstream-source: docker.artifactory.magmacore.org/controller:1.6.0

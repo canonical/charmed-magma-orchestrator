@@ -17,3 +17,4 @@ resources:
   magma-orc8r-analytics-image:
     type: oci-image
     description: OCI image for magma-orc8r-analytics (docker.artifactory.magmacore.org/controller:1.6.0)
+    upstream-source: docker.artifactory.magmacore.org/controller:1.6.0

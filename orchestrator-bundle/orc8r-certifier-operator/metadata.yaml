@@ -20,6 +20,7 @@ resources:
   magma-orc8r-certifier-image:
     type: oci-image
     description: OCI image for magma-orc8r-certifier (docker.artifactory.magmacore.org/controller:1.6.0)
+    upstream-source: docker.artifactory.magmacore.org/controller:1.6.0
 
 storage:
   certs:

@@ -51,7 +51,7 @@ class TestOrc8rDevice:
 
     @staticmethod
     async def _deploy_orc8r_certifier(ops_test):
-        charm = await ops_test.build_charm("../orc8r-certifier-operator")
+        charm = await ops_test.build_charm("../orc8r-certifier-operator/")
         resources = {
             f"{CERTIFIER_CHARM_NAME}-image": CERTIFIER_METADATA["resources"][
                 f"{CERTIFIER_CHARM_NAME}-image"]["upstream-source"],

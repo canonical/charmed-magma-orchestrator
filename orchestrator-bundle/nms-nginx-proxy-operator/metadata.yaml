@@ -14,6 +14,7 @@ resources:
   magma-nms-nginx-proxy-image:
     type: oci-image
     description: OCI image for nginx-proxy (nginx:latest)
+    upstream-source: nginx:latest
 
 requires:
   certifier:
