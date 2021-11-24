@@ -112,7 +112,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self._container.add_layer(self._container_name, layer, combine=True)
             self._container.restart(self._service_name)
             logger.info(f"Restarted container {self._service_name}")
-        self.unit.status = ActiveStatus()
+            self.unit.status = ActiveStatus()
 
     def _on_remove(self, event):
         self.unit.status = MaintenanceStatus("Removing Magma Orc8r secrets...")

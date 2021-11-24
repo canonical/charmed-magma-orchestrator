@@ -40,7 +40,7 @@ class MagmaOrc8rPolicydbCharm(CharmBase):
             self.unit.status = BlockedStatus("Waiting for database relation to be established...")
             event.defer()
             return
-        self._configure_magma_orc8r_policydb()
+        self._configure_magma_orc8r_policydb(event)
 
     def _on_database_relation_joined(self, event):
         """Event handler for database relation change.
@@ -57,7 +57,7 @@ class MagmaOrc8rPolicydbCharm(CharmBase):
             event.defer()
             return
 
-    def _configure_magma_orc8r_policydb(self):
+    def _configure_magma_orc8r_policydb(self, event):
         """Adds layer to pebble config if the proposed config is different from the current one."""
         self.unit.status = MaintenanceStatus("Configuring pod")
         plan = self._container.get_plan()
@@ -66,7 +66,7 @@ class MagmaOrc8rPolicydbCharm(CharmBase):
             self._container.add_layer(self._container_name, layer, combine=True)
             self._container.restart(self._service_name)
             logger.info(f"Restarted container {self._service_name}")
-        self.unit.status = ActiveStatus()
+            self.unit.status = ActiveStatus()
 
     def _check_db_relation_has_been_established(self):
         """Validates that database relation is ready (that there is a relation and that credentials

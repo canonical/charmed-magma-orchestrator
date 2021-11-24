@@ -89,7 +89,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
                 self._container.add_layer(self._container_name, pebble_layer, combine=True)
                 self._container.restart(self._service_name)
                 logger.info(f"Restarted container {self._service_name}")
-            self.unit.status = ActiveStatus()
+                self.unit.status = ActiveStatus()
         else:
             self.unit.status = WaitingStatus(f"Waiting for {self._container} to be ready...")
             event.defer()
