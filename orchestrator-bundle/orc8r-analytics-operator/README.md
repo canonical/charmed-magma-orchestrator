@@ -8,7 +8,8 @@ exporting the aggregations to Prometheus.
 
 ```bash
 juju deploy ./magma-orc8r-analytics_ubuntu-20.04-amd64.charm \
-  --resource magma-orc8r-analytics-image=docker.artifactory.magmacore.org/controller:1.6.0
+  --resource magma-orc8r-analytics-image=docker.artifactory.magmacore.org/controller:1.6.0 \
+  orc8r-analytics
 ```
 
 ## OCI Images

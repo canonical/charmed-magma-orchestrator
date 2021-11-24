@@ -18,7 +18,8 @@ This charm is part of the [Charmed Magma bundle](https://github.com/canonical/ch
 
 ```bash
 juju deploy ./magma-nms-nginx-proxy_ubuntu-20.04-amd64.charm \
-  --resource magma-nms-nginx-proxy-image=nginx:latest
+  --resource magma-nms-nginx-proxy-image=nginx:latest \
+  nms-nginx-proxy
 ```
 
 To work correctly, **magma-nms-nginx-proxy** requires **magma-orc8r-certifier** and 
@@ -27,15 +28,20 @@ To work correctly, **magma-nms-nginx-proxy** requires **magma-orc8r-certifier** 
 To deploy **magma-orc8r-certifier** from Juju command line:
 
 ```bash
-juju deploy ../orc8r-certifier-operator/magma-orc8r-certifier_ubuntu-20.04-amd64.charm --resource magma-orc8r-certifier-image=docker.artifactory.magmacore.org/controller:1.6.0 --config domain=example.com
-juju relate magma-nms-nginx-proxy magma-orc8r-certifier
+juju deploy ../orc8r-certifier-operator/magma-orc8r-certifier_ubuntu-20.04-amd64.charm \
+  --resource magma-orc8r-certifier-image=docker.artifactory.magmacore.org/controller:1.6.0 \
+  --config domain=example.com \
+  orc8r-certifier
+juju relate nms-nginx-proxy orc8r-certifier
 ```
 
 To deploy **magma-nms-magmalte** from Juju command line:
 
 ```bash
-juju deploy ../nms-magmalte-operator/magma-nms-magmalte_ubuntu-20.04-amd64.charm --resource magma-nms-magmalte-image=docker.artifactory.magmacore.org/magmalte:1.6.0
-juju relate magma-nms-nginx-proxy magma-nms-magmalte
+juju deploy ../nms-magmalte-operator/magma-nms-magmalte_ubuntu-20.04-amd64.charm \
+  --resource magma-nms-magmalte-image=docker.artifactory.magmacore.org/magmalte:1.6.0 \
+  nms-magmalte
+juju relate nms-nginx-proxy nms-magmalte
 ```
 
 Before running any **juju deploy** commands, make sure charm has been built using:

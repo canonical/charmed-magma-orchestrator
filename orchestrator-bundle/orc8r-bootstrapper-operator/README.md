@@ -8,8 +8,9 @@
 
 ```bash
 juju deploy ./magma-orc8r-bootstrapper_ubuntu-20.04-amd64.charm \
-  --resource magma-orc8r-bootstrapper-image=docker.artifactory.magmacore.org/controller:1.6.0
-juju relate magma-orc8r-bootstrapper magma-orc8r-certifier
+  --resource magma-orc8r-bootstrapper-image=docker.artifactory.magmacore.org/controller:1.6.0 \
+  orc8r-bootstrapper
+juju relate orc8r-bootstrapper orc8r-certifier
 ```
 
 ## OCI Images

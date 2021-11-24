@@ -7,7 +7,8 @@ magma-orc8r-dispatcher maintains SyncRPC connections (HTTP2 bidirectional stream
 
 ```bash
 juju deploy ./magma-orc8r-dispatcher_ubuntu-20.04-amd64.charm \
-  --resource magma-orc8r-dispatcher-image=docker.artifactory.magmacore.org/controller:1.6.0
+  --resource magma-orc8r-dispatcher-image=docker.artifactory.magmacore.org/controller:1.6.0 \
+  orc8r-dispatcher
 ```
 
 ## OCI Images

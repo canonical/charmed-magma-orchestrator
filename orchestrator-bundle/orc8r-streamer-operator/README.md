@@ -8,7 +8,8 @@ magma-orc8r-streamer fetches updates for various data streams (e.g. mconfig, sub
 
 ```bash
 juju deploy ./magma-orc8r-streamer_ubuntu-20.04-amd64.charm \
-  --resource magma-orc8r-streamer-image=docker.artifactory.magmacore.org/controller:1.6.0
+  --resource magma-orc8r-streamer-image=docker.artifactory.magmacore.org/controller:1.6.0 \
+  orc8r-streamer
 ```
 
 ## OCI Images
