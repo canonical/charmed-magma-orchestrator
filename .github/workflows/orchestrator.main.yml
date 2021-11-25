@@ -51,20 +51,20 @@ jobs:
             tox -c "${charm}" -e unit
           done
 
-  orchestrator-integration-test:
-    name: Integration tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Setup operator environment
-        uses: charmed-kubernetes/actions-operator@main
-        with:
-          provider: microk8s
-      - name: Run integration tests
-        run: |
-          set -eux
-          charms="$(find ./orchestrator-bundle/ -name tox.ini)"
-          for charm in ${charms}; do
-            tox -c "${charm}" -e integration
-          done
+#  orchestrator-integration-test:
+#    name: Integration tests
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v2
+#      - name: Setup operator environment
+#        uses: charmed-kubernetes/actions-operator@main
+#        with:
+#          provider: microk8s
+#      - name: Run integration tests
+#        run: |
+#          set -eux
+#          charms="$(find ./orchestrator-bundle/ -name tox.ini)"
+#          for charm in ${charms}; do
+#            tox -c "${charm}" -e integration
+#          done
