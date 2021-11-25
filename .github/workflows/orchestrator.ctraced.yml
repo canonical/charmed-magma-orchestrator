@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     paths:
-    - 'orchestrator-bundle/orc8r-ctraced-operator/**'
+      - 'orchestrator-bundle/orc8r-ctraced-operator/**'
 
 jobs:
   orc8r-ctraced-lint-report:

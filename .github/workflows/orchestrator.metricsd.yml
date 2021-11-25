@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     paths:
-    - 'orchestrator-bundle/orc8r-metricsd-operator/**'
+      - 'orchestrator-bundle/orc8r-metricsd-operator/**'
 
 jobs:
   orc8r-metricsd-lint-report:

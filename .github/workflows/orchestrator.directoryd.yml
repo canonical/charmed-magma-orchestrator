@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     paths:
-    - 'orchestrator-bundle/orc8r-directoryd-operator/**'
+      - 'orchestrator-bundle/orc8r-directoryd-operator/**'
 
 jobs:
   orc8r-directoryd-lint-report:

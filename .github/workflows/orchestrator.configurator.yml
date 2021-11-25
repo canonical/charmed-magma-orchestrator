@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     paths:
-    - 'orchestrator-bundle/orc8r-configurator-operator/**'
+      - 'orchestrator-bundle/orc8r-configurator-operator/**'
 
 jobs:
   orc8r-configurator-lint-report:

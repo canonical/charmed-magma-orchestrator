@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     paths:
-    - 'orchestrator-bundle/orc8r-nginx-operator/**'
+      - 'orchestrator-bundle/orc8r-nginx-operator/**'
 
 jobs:
   orc8r-nginx-lint-report:

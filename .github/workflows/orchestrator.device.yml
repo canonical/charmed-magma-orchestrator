@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     paths:
-    - 'orchestrator-bundle/orc8r-device-operator/**'
+      - 'orchestrator-bundle/orc8r-device-operator/**'
 
 jobs:
   orc8r-device-lint-report:

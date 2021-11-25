@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     paths:
-    - 'orchestrator-bundle/nms-nginx-proxy-operator/**'
+      - 'orchestrator-bundle/nms-nginx-proxy-operator/**'
 
 jobs:
   nms-nginx-proxy-lint-report:

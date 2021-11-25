@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     paths:
-    - 'orchestrator-bundle/orc8r-bootstrapper-operator/**'
+      - 'orchestrator-bundle/orc8r-bootstrapper-operator/**'
 
 jobs:
   orc8r-bootstrapper-lint-report:

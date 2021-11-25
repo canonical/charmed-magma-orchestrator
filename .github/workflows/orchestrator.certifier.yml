@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     paths:
-    - 'orchestrator-bundle/orc8r-certifier-operator/**'
+      - 'orchestrator-bundle/orc8r-certifier-operator/**'
 
 jobs:
   orc8r-certifier-lint-report:

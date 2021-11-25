@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     paths:
-    - 'orchestrator-bundle/nms-magmalte-operator/**'
+      - 'orchestrator-bundle/nms-magmalte-operator/**'
 
 jobs:
   nms-magmalte-lint-report:

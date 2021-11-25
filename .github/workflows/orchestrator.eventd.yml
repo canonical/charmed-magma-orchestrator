@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     paths:
-    - 'orchestrator-bundle/orc8r-eventd-operator/**'
+      - 'orchestrator-bundle/orc8r-eventd-operator/**'
 
 jobs:
   orc8r-eventd-lint-report:
