@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 import yaml
-from pytest_operator.plugin import OpsTest  # type: ignore
+from pytest_operator.plugin import OpsTest  # type: ignore[import]  # noqa: F401
 
 logger = logging.getLogger(__name__)
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())

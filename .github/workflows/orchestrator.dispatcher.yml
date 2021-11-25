@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    paths:
+      - 'orchestrator-bundle/orc8r-dispatcher-operator/**'
+
+jobs:
+  orc8r-dispatcher-lint-report:
+    name: Lint report (orc8r-dispatcher)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/orc8r-dispatcher-operator && tox -e lint
+
+  orc8r-dispatcher-static-analysis:
+    name: Static analysis (orc8r-dispatcher)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/orc8r-dispatcher-operator && tox -e static
+
+  orc8r-dispatcher-unit-tests-with-coverage:
+    name: Unit tests (orc8r-dispatcher)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/orc8r-dispatcher-operator && tox -e unit
+
+  orc8r-dispatcher-integration-test:
+    name: Integration tests (orc8r-dispatcher)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+      - name: Run integration tests
+        run: cd orchestrator-bundle/orc8r-dispatcher-operator && tox -e integration

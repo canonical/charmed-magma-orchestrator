@@ -80,7 +80,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             self._container.add_layer(self._container_name, layer, combine=True)
             self._container.restart(self._service_name)
             logger.info(f"Restarted container {self._service_name}")
-        self.unit.status = ActiveStatus()
+            self.unit.status = ActiveStatus()
 
     def _mount_certifier_certs(self) -> None:
         """Patch the StatefulSet to include NMS certs secret mount."""

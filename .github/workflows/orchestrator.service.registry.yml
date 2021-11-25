@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    paths:
+      - 'orchestrator-bundle/orc8r-service-registry-operator/**'
+
+jobs:
+  orc8r-service-registry-lint-report:
+    name: Lint report (orc8r-service-registry)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/orc8r-service-registry-operator && tox -e lint
+
+  orc8r-service-registry-static-analysis:
+    name: Static analysis (orc8r-service-registry)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/orc8r-service-registry-operator && tox -e static
+
+  orc8r-service-registry-unit-tests-with-coverage:
+    name: Unit tests (orc8r-service-registry)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/orc8r-service-registry-operator && tox -e unit
+
+  orc8r-service-registry-integration-test:
+    name: Integration tests (orc8r-service-registry)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+      - name: Run integration tests
+        run: cd orchestrator-bundle/orc8r-service-registry-operator && tox -e integration

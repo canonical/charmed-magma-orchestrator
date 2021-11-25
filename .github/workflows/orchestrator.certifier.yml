@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    paths:
+      - 'orchestrator-bundle/orc8r-certifier-operator/**'
+
+jobs:
+  orc8r-certifier-lint-report:
+    name: Lint report (orc8r-certifier)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/orc8r-certifier-operator && tox -e lint
+
+  orc8r-certifier-static-analysis:
+    name: Static analysis (orc8r-certifier)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/orc8r-certifier-operator && tox -e static
+
+  orc8r-certifier-unit-tests-with-coverage:
+    name: Unit tests (orc8r-certifier)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/orc8r-certifier-operator && tox -e unit
+
+  orc8r-certifier-integration-test:
+    name: Integration tests (orc8r-certifier)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+      - name: Run integration tests
+        run: cd orchestrator-bundle/orc8r-certifier-operator && tox -e integration

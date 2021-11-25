@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    paths:
+      - 'orchestrator-bundle/nms-nginx-proxy-operator/**'
+
+jobs:
+  nms-nginx-proxy-lint-report:
+    name: Lint report (nms-nginx-proxy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/nms-nginx-proxy-operator && tox -e lint
+
+  nms-nginx-proxy-static-analysis:
+    name: Static analysis (nms-nginx-proxy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/nms-nginx-proxy-operator && tox -e static
+
+  nms-nginx-proxy-unit-tests-with-coverage:
+    name: Unit tests (nms-nginx-proxy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/nms-nginx-proxy-operator && tox -e unit
+
+  nms-nginx-proxy-integration-test:
+    name: Integration tests (nms-nginx-proxy)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+      - name: Run integration tests
+        run: cd orchestrator-bundle/nms-nginx-proxy-operator && tox -e integration

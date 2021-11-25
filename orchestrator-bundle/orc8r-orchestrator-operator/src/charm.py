@@ -38,11 +38,9 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             plan = self._container.get_plan()
             if plan.services != self._pebble_layer.services:
                 self._container.add_layer(self._container_name, self._pebble_layer, combine=True)
-
                 self._container.restart(self._service_name)
                 logger.info(f"Restarted container {self._service_name}")
-
-            self.unit.status = ActiveStatus()
+                self.unit.status = ActiveStatus()
         except ConnectionError:
             logger.error(
                 f"Could not restart {self._service_name} -- Pebble socket does "

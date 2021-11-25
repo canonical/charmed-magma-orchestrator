@@ -67,7 +67,7 @@ class MagmaOrc8rSubscriberdbCharm(CharmBase):
             self._container.add_layer(self._container_name, layer, combine=True)
             self._container.restart(self._service_name)
             logger.info(f"Restarted container {self._service_name}")
-        self.unit.status = ActiveStatus()
+            self.unit.status = ActiveStatus()
 
     def _check_db_relation_has_been_established(self):
         """Validates that database relation is ready (that there is a relation and that credentials

@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    paths:
+      - 'orchestrator-bundle/orc8r-tenants-operator/**'
+
+jobs:
+  orc8r-tenants-lint-report:
+    name: Lint report (orc8r-tenants)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/orc8r-tenants-operator && tox -e lint
+
+  orc8r-tenants-static-analysis:
+    name: Static analysis (orc8r-tenants)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/orc8r-tenants-operator && tox -e static
+
+  orc8r-tenants-unit-tests-with-coverage:
+    name: Unit tests (orc8r-tenants)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/orc8r-tenants-operator && tox -e unit
+
+  orc8r-tenants-integration-test:
+    name: Integration tests (orc8r-tenants)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+      - name: Run integration tests
+        run: cd orchestrator-bundle/orc8r-tenants-operator && tox -e integration

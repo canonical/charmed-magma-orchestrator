@@ -57,8 +57,7 @@ class MagmaNmsNginxProxyCharm(CharmBase):
             self._container.add_layer(self._container_name, self._pebble_layer, combine=True)
             self._container.restart(self._service_name)
             logger.info(f"Restarted container {self._service_name}")
-
-        self.unit.status = ActiveStatus()
+            self.unit.status = ActiveStatus()
 
     def _configure_nginx(self, event):
         if not self._nms_certs_mounted:
