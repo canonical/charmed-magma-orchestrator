@@ -1,4 +1,4 @@
-name: CI
+name: nms-magmalte
 
 on:
   push:
