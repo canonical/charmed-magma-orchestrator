@@ -53,7 +53,7 @@ jobs:
 
   orchestrator-integration-test:
     name: Integration tests
-    runs-on: self-hosted
+    runs-on: standalone
     steps:
       - name: Checkout
         uses: actions/checkout@v2
