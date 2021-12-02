@@ -10,17 +10,16 @@ Visit [Magma NMS Overview](https://docs.magmacore.org/docs/nms/nms_arch_overview
 
 This [Juju](https://juju.is/) Charm deploys an **nginx** web server that proxies communication
 between NMS UI and MagmaLTE.<br>
-This charm is part of the [Charmed Magma bundle](https://github.com/canonical/charmed-magma).
 
 ## Usage
 
 **magma-nms-nginx-proxy** can be deployed via Juju command line using below commands:
 
 ```bash
-juju deploy ./magma-nms-nginx-proxy_ubuntu-20.04-amd64.charm \
-  --resource magma-nms-nginx-proxy-image=nginx:latest \
-  nms-nginx-proxy
+juju deploy magma-nms-nginx nms-nginx-proxy
 ```
+
+**IMPORTANT**: For now, deploying this charm must be done with an alias as shown above.
 
 To work correctly, **magma-nms-nginx-proxy** requires **magma-orc8r-certifier** and 
 **magma-nms-magmalte** (for details, check the _Relations_ section below).
@@ -28,25 +27,15 @@ To work correctly, **magma-nms-nginx-proxy** requires **magma-orc8r-certifier** 
 To deploy **magma-orc8r-certifier** from Juju command line:
 
 ```bash
-juju deploy ../orc8r-certifier-operator/magma-orc8r-certifier_ubuntu-20.04-amd64.charm \
-  --resource magma-orc8r-certifier-image=docker.artifactory.magmacore.org/controller:1.6.0 \
-  --config domain=example.com \
-  orc8r-certifier
+juju deploy magma-orc8r-certifier --config domain=example.com orc8r-certifier
 juju relate nms-nginx-proxy orc8r-certifier
 ```
 
 To deploy **magma-nms-magmalte** from Juju command line:
 
 ```bash
-juju deploy ../nms-magmalte-operator/magma-nms-magmalte_ubuntu-20.04-amd64.charm \
-  --resource magma-nms-magmalte-image=docker.artifactory.magmacore.org/magmalte:1.6.0 \
-  nms-magmalte
+juju deploy magma-nms-magmalte nms-magmalte
 juju relate nms-nginx-proxy nms-magmalte
-```
-
-Before running any **juju deploy** commands, make sure charm has been built using:
-```bash
-charmcraft pack
 ```
 
 ## Relations
@@ -61,15 +50,6 @@ Currently supported relations are:
   magma-orc8r-certifier maintains and verifies signed client certificates and their associated
   identities.
 
-## TODO
-
-- [ ] Add relation to [NMS UI](https://docs.magmacore.org/docs/nms/nms_arch_overview#nms-ui) once
-  it's charmed.
-
 ## OCI Images
 
 Default: nginx:latest
-
-## Contributing
-
-Please see `CONTRIBUTING.md` for developer guidance.

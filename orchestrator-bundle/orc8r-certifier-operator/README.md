@@ -8,12 +8,11 @@ identities.
 
 ```bash
 juju deploy postgresql-k8s
-juju deploy ./magma-orc8r-certifier_ubuntu-20.04-amd64.charm \
-  --resource magma-orc8r-certifier-image=docker.artifactory.magmacore.org/controller:1.6.0 \
-  --config domain=example.com \
-  orc8r-certifier
+juju deploy magma-orc8r-certifier --config domain=example.com orc8r-certifier
 juju relate orc8r-certifier postgresql-k8s:db
 ```
+
+**IMPORTANT**: For now, deploying this charm must be done with an alias as shown above.
 
 
 ## Configuration
@@ -38,7 +37,3 @@ The current setup has only been tested with relation to the `postgresql-k8s` cha
 ## OCI Images
 
 Default: docker.artifactory.magmacore.org/controller:1.6.0
-
-## Contributing
-
-Please see [CONTRIBUTING](../CONTRIBUTING.md] for developer guidance.
