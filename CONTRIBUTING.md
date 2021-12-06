@@ -35,7 +35,7 @@ tox -e integration
 ```
 
 ## Building and publishing using charmcraft
-Building and publishing charms is done using charmcraft (official documentatio
+Building and publishing charms is done using charmcraft (official documentation
 [here](https://juju.is/docs/sdk/publishing)). You can install charmcraft using `snap`:
 
 ```bash

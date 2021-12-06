@@ -7,7 +7,7 @@ magma-orc8r-state maintains reported state from devices in the network.
 
 ```bash
 juju deploy postgresql-k8s
-juju deploy magma-orc8r-state_ubuntu-20.04-amd64.charm orc8r-state
+juju deploy magma-orc8r-state orc8r-state
 juju relate orc8r-state postgresql-k8s:db
 ```
 
