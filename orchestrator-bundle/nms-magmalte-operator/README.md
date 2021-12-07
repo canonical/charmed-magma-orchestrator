@@ -13,17 +13,15 @@ This [Juju](https://juju.is/) Charm deploys
 built using express framework. It contains set of application and router level middlewares. It uses
 sequelize ORM to connect to the NMS DB for servicing any routes involving DB interaction.
 
-This charm is part of the [Charmed Magma bundle](https://github.com/canonical/charmed-magma).
-
 ## Usage
 
 **magma-nms-magmalte** can be deployed via Juju command line using below commands:
 
 ```bash
-juju deploy ./magma-nms-magmalte_ubuntu-20.04-amd64.charm \
-  --resource magma-nms-magmalte-image=docker.artifactory.magmacore.org/magmalte:1.6.0 \
-  nms-magmalte
+juju deploy magma-nms-magmalte nms-magmalte
 ```
+
+**IMPORTANT**: For now, deploying this charm must be done with an alias as shown above.
 
 To work correctly, **magma-nms-magmalte** requires **magma-orc8r-certifier** and **postgresql-k8s** (for
 details, check the _Relations_ section below).
@@ -31,10 +29,7 @@ details, check the _Relations_ section below).
 To deploy **magma-orc8r-certifier** from Juju command line:
 
 ```bash
-juju deploy ../orc8r-certifier-operator/magma-orc8r-certifier_ubuntu-20.04-amd64.charm \
-  --resource magma-orc8r-certifier-image=docker.artifactory.magmacore.org/controller:1.6.0 \
-  --config domain=example.com \
-  orc8r-certifier
+juju deploy magma-orc8r-certifier --config domain=example.com orc8r-certifier
 juju relate nms-magmalte orc8r-certifier
 ```
 
@@ -43,12 +38,6 @@ To deploy **postgresql-k8s** from Juju command line:
 ```bash
 juju deploy postgresql-k8s
 juju relate nms-magmalte postgresql-k8s:db
-```
-
-Before running **juju deploy** commands for **magma-nms-magmalte** and **magma-orc8r-certifier**, make sure 
-charms have been built using:
-```bash
-charmcraft pack
 ```
 
 
@@ -62,9 +51,4 @@ Currently supported relations are:
 - [postgresql-k8s](https://charmhub.io/postgresql-k8s) - SQL store for magmalte service.
 
 ## OCI Images
-
 Default: docker.artifactory.magmacore.org/magmalte:1.6.0
-
-## Contributing
-
-Please see `CONTRIBUTING.md` for developer guidance.

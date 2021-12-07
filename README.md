@@ -1,6 +1,9 @@
-# Charmed Magma
+<h1> Charmed Magma </h1>
 
-## Summary
+<h1>
+    <a href="https://www.magmacore.org/"><img src="https://raw.githubusercontent.com/magma/magma/master/docs/docusaurus/static/img/magma-logo-purple.svg" alt="Magma" width="550"></a>
+</h1>
+
 
 Magma is an open-source software platform that gives network operators a mobile core network 
 solution. Magma has three major components:

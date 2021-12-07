@@ -6,15 +6,11 @@ magma-orc8r-metricsd collects runtime metrics from gateways and Orchestrator ser
 ## Usage
 
 ```bash
-juju deploy ./magma-orc8r-metricsd_ubuntu-20.04-amd64.charm \
-  --resource magma-orc8r-metricsd-image=docker.artifactory.magmacore.org/controller:1.6.0 \
-  orc8r-metricsd
+juju deploy magma-orc8r-metricsd orc8r-metricsd
 ```
+
+**IMPORTANT**: For now, deploying this charm must be done with an alias as shown above.
 
 ## OCI Images
 
 Default: docker.artifactory.magmacore.org/controller:1.6.0
-
-## Contributing
-
-Please see `CONTRIBUTING.md` for developer guidance.

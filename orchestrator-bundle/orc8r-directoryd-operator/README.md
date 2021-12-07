@@ -7,11 +7,11 @@ magma-orc8r-directoryd stores subscriber identity (e.g. IMSI, IP address, MAC ad
 
 ```bash
 juju deploy postgresql-k8s
-juju deploy ./magma-orc8r-directoryd_ubuntu-20.04-amd64.charm \
-  --resource magma-orc8r-directoryd-image=docker.artifactory.magmacore.org/controller:1.6.0 \
-  orc8r-directoryd
+juju deploy magma-orc8r-directoryd orc8r-directoryd
 juju relate orc8r-directoryd postgresql-k8s:db
 ```
+
+**IMPORTANT**: For now, deploying this charm must be done with an alias as shown above.
 
 ## Relations
 
@@ -22,7 +22,3 @@ The current setup has only been tested with relation to the `postgresql-k8s` cha
 ## OCI Images
 
 Default: docker.artifactory.magmacore.org/controller:1.6.0
-
-## Contributing
-
-Please see `CONTRIBUTING.md` for developer guidance.

@@ -9,11 +9,11 @@ magma-orc8r-lte provides
 
 ```bash
 juju deploy postgresql-k8s
-juju deploy ./magma-orc8r-lte_ubuntu-20.04-amd64.charm \
-  --resource magma-orc8r-lte-image=docker.artifactory.magmacore.org/controller:1.6.0 \
-  orc8r-lte
+juju deploy magma-orc8r-lte orc8r-lte
 juju relate orc8r-lte postgresql-k8s:db
 ```
+
+**IMPORTANT**: For now, deploying this charm must be done with an alias as shown above.
 
 ## Relations
 
@@ -24,7 +24,3 @@ The current setup has only been tested with relation to the `postgresql-k8s` cha
 ## OCI Images
 
 Default: docker.artifactory.magmacore.org/controller:1.6.0
-
-## Contributing
-
-Please see `CONTRIBUTING.md` for developer guidance.

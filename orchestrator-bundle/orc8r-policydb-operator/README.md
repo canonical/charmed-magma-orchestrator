@@ -2,7 +2,7 @@
 
 ## Description
 
-policydb is Magma Orchestrator's service which manages subscriber policies via a northbound 
+magma-orc8r-policydb is Magma Orchestrator's service which manages subscriber policies via a northbound 
 CRUD API and a southbound policy stream. It belongs to Magma's LTE module.
 <br>
 Visit [Magma Architecture Overview](https://docs.magmacore.org/docs/orc8r/architecture_overview) 
@@ -16,10 +16,10 @@ This charm is part of the [Charmed Magma bundle](https://github.com/canonical/ch
 **magma-orc8r-policydb** can be deployed via Juju command line using below commands:
 
 ```bash
-juju deploy ./magma-orc8r-policydb_ubuntu-20.04-amd64.charm \
-  --resource magma-orc8r-policydb-image=docker.artifactory.magmacore.org/controller:1.6.0 \
-  orc8r-policydb
+juju deploy magma-orc8r-policydb orc8r-policydb
 ```
+
+**IMPORTANT**: For now, deploying this charm must be done with an alias as shown above.
 
 To work correctly, **magma-orc8r-policydb** requires **postgresql-k8s** (for details, check the 
 _Relations_ section below).
@@ -45,7 +45,3 @@ Currently supported relations are:
 ## OCI Images
 
 Default: docker.artifactory.magmacore.org/controller:1.6.0
-
-## Contributing
-
-Please see `CONTRIBUTING.md` for developer guidance.
