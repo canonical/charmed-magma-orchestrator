@@ -29,8 +29,8 @@ sudo snap install microk8s --classic
 Update your user's permission to be added to the microk8s group
 
 ```bash
-sudo usermod -a -G microk8s ubuntu
-sudo chown -f -R ubuntu ~/.kube
+sudo usermod -a -G microk8s $USER
+sudo chown -f -R $USER ~/.kube
 newgrp microk8s
 ```
 
@@ -47,8 +47,7 @@ Install Juju using snap:
 sudo snap install juju --classic
 ```
 
-Create a Juju controller which is the management node of a Juju cloud environment. This will create
-a new 
+Create a Juju controller which is the management node of a Juju cloud environment:
 
 ```bash
 juju bootstrap microk8s microk8s-localhost

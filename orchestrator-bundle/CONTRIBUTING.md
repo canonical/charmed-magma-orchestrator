@@ -9,7 +9,9 @@ tox -e static    # static analysis
 tox -e unit      # unit tests
 ```
 
-tox creates virtual environment for every tox environment defined in
+**NOTE:** If you don't have `tox` installed yet, just run: `pip3 install tox`.
+
+Tox creates virtual environment for every tox environment defined in
 [tox.ini](tox.ini). Create and activate a virtualenv with the development requirements:
 
 ```bash
@@ -27,7 +29,13 @@ Building and publishing charms is done using charmcraft (official documentation
 [here](https://juju.is/docs/sdk/publishing)). You can install charmcraft using `snap`:
 
 ```bash
-sudo snap install charmcraft --channel=edge
+sudo snap install charmcraft --channel=classic
+```
+
+Initialize LXD:
+
+```bash
+lxd init --auto
 ```
 
 ### Specific Charm
@@ -41,16 +49,6 @@ charmcraft pack
 
 ### Bundle
 
-Building charms is done using [charmcraft](https://github.com/canonical/charmcraft). To install 
-charmcraft:
-```bash
-sudo snap install charmcraft --classic
-```
-Initialize LXD:
-
-```bash
-lxd init --auto
-```
 
 Since multiple charms are bundled here, the process is streamlined using a simple bash script:
 ```bash
