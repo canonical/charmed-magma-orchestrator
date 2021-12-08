@@ -13,48 +13,31 @@ allows you to see the analytics and traffic flows of the wireless users through 
 
 ## Pre-requisites
 This bundle of charms requires the following:
-- Ubuntu (20.04)
-- Microk8s (v1.22.4)
-- Juju (2.9.21)
+1. Ubuntu (20.04)
+2. Microk8s (v1.22.4)
+3. Juju (2.9.21)
 
-### Ubuntu
-For installing Ubuntu, please follow the [official documentation](https://releases.ubuntu.com/20.04/).
+### 1. Ubuntu
+- Install Ubuntu following the [official documentation](https://releases.ubuntu.com/20.04/).
 
-### Microk8s
-On your Ubuntu VM, install microk8s using snap:
-
-```bash
-sudo snap install microk8s --classic
-```
-Update your user's permission to be added to the microk8s group
-
-```bash
-sudo usermod -a -G microk8s $USER
-sudo chown -f -R $USER ~/.kube
-newgrp microk8s
-```
-
-Enable the following add-ons to your microk8s cluster:
+### 2. Microk8s
+- Install and configure Microk8s on your Ubuntu VM following the 
+[official documentation](https://microk8s.io/docs/getting-started).
+- Enable the following add-ons:
 
 ```bash
 microk8s enable ingress dns storage
 ```
 
-### Juju
-Install Juju using snap:
-
-```bash
-sudo snap install juju --classic
-```
-
-Create a Juju controller which is the management node of a Juju cloud environment:
+### 3. Juju
+- Install Juju following the [official documentation](https://juju.is/docs/olm/installing-juju).
+- Create a Juju controller:
 
 ```bash
 juju bootstrap microk8s microk8s-localhost
 ```
 
-Create a new Juju model. Generally speaking, a model is a workspace and in the case of Kubernetes, it
-is simply a new namespace.
+- Create a new Juju model:
 
 ```bash
 juju add-model orchestrator
@@ -96,5 +79,8 @@ Orchestrator is made up of multiple services and this bundle contains a charm pe
 - [magma-orc8r-tenants](https://charmhub.io/magma-orc8r-tenants)
 
 ## References
-- [Magma documentation](https://docs.magmacore.org/docs/basics/introduction.html)
-- [Orchestrator documentation](https://docs.magmacore.org/docs/orc8r/architecture_overview)
+- [Ubuntu](https://ubuntu.com/)
+- [Microk8s](https://microk8s.io/)
+- [Juju](https://juju.is/docs)
+- [Magma](https://docs.magmacore.org/docs/basics/introduction.html)
+- [Orchestrator](https://docs.magmacore.org/docs/orc8r/architecture_overview)
