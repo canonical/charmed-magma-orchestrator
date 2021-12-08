@@ -1,0 +1,268 @@
+bundle: kubernetes
+name: magma-orc8r
+description: |
+  Orchestrator is a Magma service that provides a simple and consistent way to 
+  configure and monitor the wireless network securely. The metrics acquired through the platform 
+  allows you to see the analytics and traffic flows of the wireless users through the Magma web UI.
+applications:
+  nms-magmalte:
+    charm: magma-nms-magmalte
+    series: kubernetes
+    channel: edge
+    revision: 3
+    resources:
+      magma-nms-magmalte-image: 1
+    scale: 1
+  nms-nginx-proxy:
+    charm: magma-nms-nginx-proxy
+    series: kubernetes
+    channel: edge
+    revision: 1
+    resources:
+      magma-nms-nginx-proxy-image: 1
+    scale: 1
+  orc8r-accessd:
+    charm: magma-orc8r-accessd
+    series: kubernetes
+    channel: edge
+    revision: 5
+    resources:
+      magma-orc8r-accessd-image: 1
+    scale: 1
+  orc8r-analytics:
+    charm: magma-orc8r-analytics
+    series: kubernetes
+    channel: edge
+    revision: 1
+    resources:
+      magma-orc8r-analytics-image: 1
+    scale: 1
+  orc8r-bootstrapper:
+    charm: magma-orc8r-bootstrapper
+    series: kubernetes
+    channel: edge
+    revision: 1
+    resources:
+      magma-orc8r-bootstrapper-image: 1
+    scale: 1
+  orc8r-certifier:
+    charm: magma-orc8r-certifier
+    series: kubernetes
+    channel: edge
+    revision: 1
+    resources:
+      magma-orc8r-certifier-image: 1
+    scale: 1
+    options:
+      domain: example.com
+  orc8r-configurator:
+    charm: magma-orc8r-configurator
+    series: kubernetes
+    channel: edge
+    revision: 1
+    resources:
+      magma-orc8r-configurator-image: 1
+    scale: 1
+  orc8r-ctraced:
+    charm: magma-orc8r-ctraced
+    series: kubernetes
+    channel: edge
+    revision: 1
+    resources:
+      magma-orc8r-ctraced-image: 1
+    scale: 1
+  orc8r-device:
+    charm: magma-orc8r-device
+    series: kubernetes
+    channel: edge
+    revision: 1
+    resources:
+      magma-orc8r-device-image: 1
+    scale: 1
+  orc8r-directoryd:
+    charm: magma-orc8r-directoryd
+    series: kubernetes
+    channel: edge
+    revision: 1
+    resources:
+      magma-orc8r-directoryd-image: 1
+    scale: 1
+  orc8r-dispatcher:
+    charm: magma-orc8r-dispatcher
+    series: kubernetes
+    channel: edge
+    revision: 1
+    resources:
+      magma-orc8r-dispatcher-image: 1
+    scale: 1
+  orc8r-eventd:
+    charm: magma-orc8r-eventd
+    series: kubernetes
+    channel: edge
+    revision: 1
+    resources:
+      magma-orc8r-eventd-image: 1
+    scale: 1
+  orc8r-ha:
+    charm: magma-orc8r-ha
+    series: kubernetes
+    channel: edge
+    revision: 1
+    resources:
+      magma-orc8r-ha-image: 1
+    scale: 1
+  orc8r-lte:
+    charm: magma-orc8r-lte
+    series: kubernetes
+    channel: edge
+    revision: 1
+    resources:
+      magma-orc8r-lte-image: 1
+    scale: 1
+  orc8r-metricsd:
+    charm: magma-orc8r-metricsd
+    series: kubernetes
+    channel: edge
+    revision: 1
+    resources:
+      magma-orc8r-metricsd-image: 1
+    scale: 1
+  orc8r-nginx:
+    charm: magma-orc8r-nginx
+    series: kubernetes
+    channel: edge
+    revision: 1
+    resources:
+      magma-orc8r-nginx-image: 1
+    scale: 1
+  orc8r-obsidian:
+    charm: magma-orc8r-obsidian
+    series: kubernetes
+    channel: edge
+    revision: 1
+    resources:
+      magma-orc8r-obsidian-image: 1
+    scale: 1
+  orc8r-orchestrator:
+    charm: magma-orc8r-orchestrator
+    series: kubernetes
+    channel: edge
+    revision: 1
+    resources:
+      magma-orc8r-orchestrator-image: 1
+    scale: 1
+  orc8r-policydb:
+    charm: magma-orc8r-policydb
+    series: kubernetes
+    channel: edge
+    revision: 1
+    resources:
+      magma-orc8r-policydb-image: 1
+    scale: 1
+  orc8r-service-registry:
+    charm: magma-orc8r-service-registry
+    series: kubernetes
+    channel: edge
+    revision: 1
+    resources:
+      magma-orc8r-service-registry-image: 1
+    scale: 1
+  orc8r-smsd:
+    charm: magma-orc8r-smsd
+    series: kubernetes
+    channel: edge
+    revision: 1
+    resources:
+      magma-orc8r-smsd-image: 1
+    scale: 1
+  orc8r-state:
+    charm: magma-orc8r-state
+    series: kubernetes
+    channel: edge
+    revision: 1
+    resources:
+      magma-orc8r-state-image: 1
+    scale: 1
+  orc8r-streamer:
+    charm: magma-orc8r-streamer
+    series: kubernetes
+    channel: edge
+    revision: 1
+    resources:
+      magma-orc8r-streamer-image: 1
+    scale: 1
+  orc8r-subscriberdb:
+    charm: magma-orc8r-subscriberdb
+    series: kubernetes
+    channel: edge
+    revision: 1
+    resources:
+      magma-orc8r-subscriberdb-image: 1
+    scale: 1
+  orc8r-subscriberdb-cache:
+    charm: magma-orc8r-subscriberdb-cache
+    series: kubernetes
+    channel: edge
+    revision: 1
+    resources:
+      magma-orc8r-subscriberdb-cache-image: 1
+    scale: 1
+  orc8r-tenants:
+    charm: magma-orc8r-tenants
+    series: kubernetes
+    channel: edge
+    revision: 1
+    resources:
+      magma-orc8r-tenants-image: 1
+    scale: 1
+  postgresql-k8s:
+    charm: postgresql-k8s
+    series: kubernetes
+    channel: stable
+    revision: 3
+    resources:
+      postgresql-image: 3
+    scale: 1
+relations:
+- - nms-magmalte:certifier
+  - orc8r-certifier:certifier
+- - nms-nginx-proxy:certifier
+  - orc8r-certifier:certifier
+- - orc8r-accessd:db
+  - postgresql-k8s:db
+- - orc8r-bootstrapper:certifier
+  - orc8r-certifier:certifier
+- - orc8r-certifier:db
+  - postgresql-k8s:db
+- - orc8r-configurator:db
+  - postgresql-k8s:db
+- - orc8r-ctraced:db
+  - postgresql-k8s:db
+- - orc8r-device:db
+  - postgresql-k8s:db
+- - orc8r-directoryd:db
+  - postgresql-k8s:db
+- - orc8r-lte:db
+  - postgresql-k8s:db
+- - orc8r-policydb:db
+  - postgresql-k8s:db
+- - orc8r-smsd:db
+  - postgresql-k8s:db
+- - orc8r-state:db
+  - postgresql-k8s:db
+- - orc8r-subscriberdb-cache:db
+  - postgresql-k8s:db
+- - orc8r-subscriberdb:db
+  - postgresql-k8s:db
+- - orc8r-tenants:db
+  - postgresql-k8s:db
+- - orc8r-nginx:certifier
+  - orc8r-certifier:certifier
+- - orc8r-nginx:bootstrapper
+  - orc8r-bootstrapper:bootstrapper
+- - orc8r-nginx:obsidian
+  - orc8r-obsidian:obsidian
+- - nms-magmalte:db
+  - postgresql-k8s:db
+- - nms-nginx-proxy:magmalte
+  - nms-magmalte:magmalte

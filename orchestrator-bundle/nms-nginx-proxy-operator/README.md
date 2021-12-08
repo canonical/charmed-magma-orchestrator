@@ -16,7 +16,7 @@ between NMS UI and MagmaLTE.<br>
 **magma-nms-nginx-proxy** can be deployed via Juju command line using below commands:
 
 ```bash
-juju deploy magma-nms-nginx nms-nginx-proxy
+juju deploy magma-nms-nginx-proxy nms-nginx-proxy
 ```
 
 **IMPORTANT**: For now, deploying this charm must be done with an alias as shown above.
