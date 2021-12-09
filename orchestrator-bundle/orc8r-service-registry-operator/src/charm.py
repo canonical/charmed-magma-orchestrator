@@ -49,9 +49,11 @@ class MagmaOrc8rServiceRegistry(CharmBase):
                         "command": "/usr/bin/envdir "
                         "/var/opt/magma/envdir "
                         "/var/opt/magma/bin/service_registry "
-                        "-logtostderr=true -v=0",
+                        "-logtostderr=true "
+                        "-v=0",
                         "environment": {
                             "SERVICE_REGISTRY_MODE": "k8s",
+                            "SERVICE_REGISTRY_NAMESPACE": self._namespace(),
                         },
                     }
                 },
@@ -76,6 +78,15 @@ class MagmaOrc8rServiceRegistry(CharmBase):
                 f"Could not restart {self._service_name} -- Pebble socket does "
                 f"not exist or is not responsive"
             )
+
+    def _namespace(self) -> str:
+        """The Kubernetes namespace we're running in.
+
+        Returns:
+            str: A string containing the name of the current Kubernetes namespace.
+        """
+        with open("/var/run/secrets/kubernetes.io/serviceaccount/namespace", "r") as f:
+            return f.read().strip()
 
 
 if __name__ == "__main__":
