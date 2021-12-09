@@ -80,46 +80,43 @@ Or you can also run the `deploy.sh` bash script (which does the exact same Juju 
 
 ### Specific Charm
 
-First `cd` into the charm directory
+First `cd` into the charm directory. 
 
-#### Register
-If the charm is new and not already registered, register it:
-
+- If the charm is new and not already registered, register it:
 ```bash
 charmcraft register magma-orc8r-<charm-name>
 ```
 
-#### Upload charm
-You can then upload the charm to charmhub:
+- Upload the charm charmhub:
 ```bash
 charmcraft upload magma-orc8r-<charm-name>_ubuntu-20.04-amd64.charm
 ```
 
-#### Upload resource
-Upload the OCI image to charmhub:
+- Upload the OCI image to charmhub:
 ```bash
-charmcraft upload-resource magma-orc8r-<charm-name> magma-orc8r-<charm-name>-image --image=docker.artifactory.magmacore.org/controller@sha256:28abd1764f7a1486af533d3a6caa3bfb23033a9786df68d0374447ba75ce5fae
+charmcraft upload-resource magma-orc8r-<charm-name> magma-orc8r-<charm-name>-image --image=<oci-image>
 ```
 
-#### Release
+- Release the charm:
 ```bash
 charmcraft release magma-orc8r-<charm-name> --revision=1 --channel=edge --resource=magma-orc8r-<charm-name>-image:1
 ```
 
 ### Bundle
-To publish the bundle, `cd` to the `orc8r-bundle` directory. Pack the bundle:
+To publish the bundle, `cd` to the `orc8r-bundle` directory.
 
+- Pack the bundle:
 ```bash
 charmcraft pack
 ```
 
-Upload it to charmhub:
+- Upload the bundle to charmhub:
 
 ```bash
 charmcraft upload magma-orc8r.zip
 ```
 
-And release it:
+- Release the bundle to charmhub:
 
 ```bash
 charmcraft release magma-orc8r --revision=2 --channel=edge

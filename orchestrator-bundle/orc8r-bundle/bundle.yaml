@@ -11,7 +11,7 @@ applications:
     channel: edge
     revision: 3
     resources:
-      magma-nms-magmalte-image: 1
+      magma-nms-magmalte-image: 3
     scale: 1
   nms-nginx-proxy:
     charm: magma-nms-nginx-proxy
@@ -19,7 +19,7 @@ applications:
     channel: edge
     revision: 1
     resources:
-      magma-nms-nginx-proxy-image: 1
+      magma-nms-nginx-proxy-image: 2
     scale: 1
   orc8r-accessd:
     charm: magma-orc8r-accessd
@@ -133,7 +133,7 @@ applications:
     channel: edge
     revision: 1
     resources:
-      magma-orc8r-nginx-image: 1
+      magma-orc8r-nginx-image: 2
     scale: 1
   orc8r-obsidian:
     charm: magma-orc8r-obsidian
