@@ -50,8 +50,12 @@ class MagmaOrc8rServiceRegistry(CharmBase):
                         "/var/opt/magma/envdir "
                         "/var/opt/magma/bin/service_registry "
                         "-logtostderr=true -v=0",
+                        "environment": {
+                            "SERVICE_REGISTRY_MODE": "k8s",
+                        },
                     }
                 },
+
             }
         )
 
