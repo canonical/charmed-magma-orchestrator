@@ -18,7 +18,7 @@ If you want to propose a new feature, a bug fix or a documentation improvement:
 - Commit and push your changes to this branch.
 - Validate that all Github actions pass.
 - Create a pull request in [github](https://github.com/canonical/charmed-magma/pulls).
-- Your pull request will be reviewed by one of the repository maintainer.
+- Your pull request will be reviewed by one of the repository maintainers.
 
 Note that each component has its own `CONTRIBURING.md` file that will detail how you can test, 
 deploy and publish this specific component. Please refer to that file.

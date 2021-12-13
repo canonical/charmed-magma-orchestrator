@@ -53,11 +53,10 @@ class MagmaOrc8rServiceRegistry(CharmBase):
                         "-v=0",
                         "environment": {
                             "SERVICE_REGISTRY_MODE": "k8s",
-                            "SERVICE_REGISTRY_NAMESPACE": self._namespace(),
+                            "SERVICE_REGISTRY_NAMESPACE": self._namespace,
                         },
                     }
                 },
-
             }
         )
 
@@ -79,14 +78,9 @@ class MagmaOrc8rServiceRegistry(CharmBase):
                 f"not exist or is not responsive"
             )
 
+    @property
     def _namespace(self) -> str:
-        """The Kubernetes namespace we're running in.
-
-        Returns:
-            str: A string containing the name of the current Kubernetes namespace.
-        """
-        with open("/var/run/secrets/kubernetes.io/serviceaccount/namespace", "r") as f:
-            return f.read().strip()
+        return self.model.name
 
 
 if __name__ == "__main__":
