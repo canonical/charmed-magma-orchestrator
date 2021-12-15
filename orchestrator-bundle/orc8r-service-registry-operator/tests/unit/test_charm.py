@@ -20,9 +20,12 @@ class TestCharm(unittest.TestCase):
         initial_plan = self.harness.get_container_pebble_plan("magma-orc8r-service-registry")
         self.assertEqual(initial_plan.to_yaml(), "{}\n")
 
+    @patch("charm.MagmaOrc8rServiceRegistry.model")
     def test_given_pebble_ready_when_get_pebble_plan_then_plan_is_filled_with_orc8r_service_content(  # noqa: E501
-        self,
+        self, mock_model_name
     ):
+        namespace = "whatever namespace"
+        mock_model_name.name = namespace
         expected_plan = {
             "services": {
                 "magma-orc8r-service-registry": {
@@ -34,6 +37,10 @@ class TestCharm(unittest.TestCase):
                     "/var/opt/magma/bin/service_registry "
                     "-logtostderr=true "
                     "-v=0",
+                    "environment": {
+                        "SERVICE_REGISTRY_MODE": "k8s",
+                        "SERVICE_REGISTRY_NAMESPACE": namespace,
+                    },
                 }
             },
         }

@@ -232,9 +232,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                             "SQL_DRIVER": "postgres",
                             "SQL_DIALECT": "psql",
                             "SERVICE_HOSTNAME": "magma-orc8r-certifier",
-                            "SERVICE_REGISTRY_MODE": "k8s",
                             "HELM_RELEASE_NAME": "orc8r",
-                            "SERVICE_REGISTRY_NAMESPACE": "orc8r",
                         },
                     }
                 },

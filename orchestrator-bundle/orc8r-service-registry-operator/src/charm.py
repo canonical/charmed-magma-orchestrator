@@ -49,7 +49,12 @@ class MagmaOrc8rServiceRegistry(CharmBase):
                         "command": "/usr/bin/envdir "
                         "/var/opt/magma/envdir "
                         "/var/opt/magma/bin/service_registry "
-                        "-logtostderr=true -v=0",
+                        "-logtostderr=true "
+                        "-v=0",
+                        "environment": {
+                            "SERVICE_REGISTRY_MODE": "k8s",
+                            "SERVICE_REGISTRY_NAMESPACE": self._namespace,
+                        },
                     }
                 },
             }
@@ -72,6 +77,10 @@ class MagmaOrc8rServiceRegistry(CharmBase):
                 f"Could not restart {self._service_name} -- Pebble socket does "
                 f"not exist or is not responsive"
             )
+
+    @property
+    def _namespace(self) -> str:
+        return self.model.name
 
 
 if __name__ == "__main__":
