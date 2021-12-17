@@ -4,11 +4,11 @@
 import unittest
 from unittest.mock import Mock, PropertyMock, patch
 
-from charms.magma_orc8r_libs.v0.orc8r_base import Orc8rBase
+from charms.magma_orc8r_libs.v0.orc8r_base_db import Orc8rBase
 from ops.model import ActiveStatus
 from ops.testing import Harness
 from pgconnstr import ConnectionString  # type: ignore[import]
-from test_with_db_charm.src.charm import (  # type: ignore[import]
+from test_orc8r_base_db_charm.src.charm import (  # type: ignore[import]
     MagmaOrc8rDirectorydCharm,
 )
 
@@ -26,7 +26,7 @@ class TestCharm(unittest.TestCase):
         "user=test_db_user"
     )
 
-    @patch("test_with_db_charm.src.charm.KubernetesServicePatch", lambda x, y: None)
+    @patch("test_orc8r_base_db_charm.src.charm.KubernetesServicePatch", lambda x, y: None)
     def setUp(self):
         self.harness = Harness(MagmaOrc8rDirectorydCharm)
         self.addCleanup(self.harness.cleanup)
@@ -74,16 +74,14 @@ class TestCharm(unittest.TestCase):
             self.harness.charm._orc8r_base._on_database_relation_joined(db_event)
         self.assertEqual(db_event.database, self.TEST_DB_NAME)
 
-    @patch(
-        "charms.magma_orc8r_libs.v0.orc8r_base.Orc8rBase._check_db_relation_has_been_established"
-    )
+    @patch("charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._db_relation_established")
     def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_orc8r_directoryd_service_content(  # noqa: E501
         self, db_relation_established
     ):
         event = Mock()
         db_relation_established.return_value = True
         with patch(
-            "charms.magma_orc8r_libs.v0.orc8r_base.Orc8rBase._get_db_connection_string",
+            "charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._get_db_connection_string",
             new_callable=PropertyMock,
         ) as get_db_connection_string:
             get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
@@ -116,16 +114,14 @@ class TestCharm(unittest.TestCase):
         updated_plan = self.harness.get_container_pebble_plan("magma-orc8r-directoryd").to_dict()
         self.assertEqual(expected_plan, updated_plan)
 
-    @patch(
-        "charms.magma_orc8r_libs.v0.orc8r_base.Orc8rBase._check_db_relation_has_been_established"
-    )
+    @patch("charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._db_relation_established")
     def test_db_relation_added_when_get_status_then_status_is_active(
         self, db_relation_established
     ):
         event = Mock()
         db_relation_established.return_value = True
         with patch(
-            "charms.magma_orc8r_libs.v0.orc8r_base.Orc8rBase._get_db_connection_string",
+            "charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._get_db_connection_string",
             new_callable=PropertyMock,
         ) as get_db_connection_string:
             get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING

@@ -5,11 +5,11 @@ import unittest
 from unittest.mock import patch
 
 from ops.testing import Harness
-from test_basic_charm.src.charm import MagmaOrc8rHACharm  # type: ignore[import]
+from test_orc8r_base_charm.src.charm import MagmaOrc8rHACharm  # type: ignore[import]
 
 
 class TestCharm(unittest.TestCase):
-    @patch("test_basic_charm.src.charm.KubernetesServicePatch", lambda x, y: None)
+    @patch("test_orc8r_base_charm.src.charm.KubernetesServicePatch", lambda x, y: None)
     def setUp(self):
         self.harness = Harness(MagmaOrc8rHACharm)
         self.addCleanup(self.harness.cleanup)

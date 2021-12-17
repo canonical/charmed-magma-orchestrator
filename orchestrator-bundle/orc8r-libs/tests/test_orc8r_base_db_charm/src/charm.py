@@ -1,7 +1,7 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-from charms.magma_orc8r_libs.v0.orc8r_base import Orc8rBase
+from charms.magma_orc8r_libs.v0.orc8r_base_db import Orc8rBase
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from ops.charm import CharmBase
 from ops.main import main
@@ -20,13 +20,7 @@ class MagmaOrc8rDirectorydCharm(CharmBase):
             "-v=0"
         )
 
-        self._orc8r_base = Orc8rBase(
-            self,
-            service_name="magma-orc8r-directoryd",
-            startup_command=startup_command,
-            database_relation_needed=True,
-            pebble_ready_event=self.on.magma_orc8r_directoryd_pebble_ready,
-        )
+        self._orc8r_base = Orc8rBase(self, startup_command=startup_command)
 
 
 if __name__ == "__main__":

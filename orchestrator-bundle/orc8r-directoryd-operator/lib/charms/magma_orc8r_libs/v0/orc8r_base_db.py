@@ -1,20 +1,14 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""# Orc8rBase Library.
-This library is designed to enable developers to easily create new charms for Magma orc8r. This
-library contains all the logic necessary to wait for necessary relations and be deployed.
-
-When initialised, this library binds a handler to the parent charm's `pebble_ready`
-event. This will ensure that the service is configured when this event is triggered.
-
-The constructor simply takes the following:
+"""# Orc8rBaseDB Library.
+This library is designed to enable developers to easily create new charms for Magma orc8r that
+require a relationship to a database. This library contains all the logic necessary to wait for
+necessary relations and be deployed. When initialised, this library binds a handler to the parent
+charm's `pebble_ready` event. This will ensure that the service is configured when this event is
+triggered. The constructor simply takes the following:
 - Reference to the parent charm (CharmBase)
-- The service name (str)
 - The startup command (str)
-- Whether a database relation is needed (bool)
-- The pebble Ready event method (ops.CharmEvent)
-
 ## Getting Started
 To get started using the library, you just need to fetch the library using `charmcraft`. **Note
 that you also need to add `ops-lib-pgsql` to your charm's `requirements.txt`.**
@@ -25,20 +19,16 @@ echo <<-EOF >> requirements.txt
 ops-lib-pgsql
 EOF
 ```
-
 Then, to initialise the library:
 For ClusterIP services:
-
 ```python
+from charms.magma_orc8r_libs.v0.orc8r_base_db import Orc8rBase
+from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from ops.charm import CharmBase
 from ops.main import main
 
-from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
-from charms.orc8r_libs.v0.orc8r_base import Orc8rBase
-
 
 class MagmaOrc8rDirectorydCharm(CharmBase):
-
     def __init__(self, *args):
         super().__init__(*args)
         self._service_patcher = KubernetesServicePatch(self, [("grpc", 9180, 9106)])
@@ -49,29 +39,22 @@ class MagmaOrc8rDirectorydCharm(CharmBase):
             "-logtostderr=true "
             "-v=0"
         )
-        self._orc8r_base = Orc8rBase(
-            self,
-            service_name="magma-orc8r-directoryd",
-            startup_command=startup_command,
-            database_relation_needed=True,
-            pebble_ready_event=self.on.magma_orc8r_directoryd_pebble_ready
-        )
+        self._orc8r_base = Orc8rBase(self, startup_command=startup_command)
+
 ```
-
 """
-
 
 import logging
 
 import ops.lib
-from ops.charm import CharmBase, CharmEvents
+from ops.charm import CharmBase
 from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import Layer
 from pgconnstr import ConnectionString  # type: ignore[import]
 
 # The unique Charmhub library identifier, never change it
-LIBID = "bb3ed1ffc47848b386301b42c94acac2"
+LIBID = "7e1096554dd649b78acd5f3187c017c8"
 
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
@@ -91,39 +74,36 @@ class Orc8rBase(Object):
     def __init__(
         self,
         charm: CharmBase,
-        service_name: str,
         startup_command: str,
-        pebble_ready_event: CharmEvents,
-        database_relation_needed: bool = False,
         additional_environment_variables: dict = None,
     ):
-        super().__init__(charm, "ocr8r-base")
-        self._container_name = self._service_name = service_name
+        super().__init__(charm, "orc8r-base")
         self.charm = charm
         self.startup_command = startup_command
-        self.database_relation_needed = database_relation_needed
+        self._container_name = self._service_name = self.charm.meta.name
         self._container = self.charm.unit.get_container(self._container_name)
-        self.framework.observe(pebble_ready_event, self._on_magma_orc8r_pebble_ready)  # type: ignore[arg-type]  # noqa: E501
+        pebble_ready_event = getattr(
+            self.charm.on, f"{self._service_name.replace('-', '_')}_pebble_ready"
+        )
+        self.framework.observe(pebble_ready_event, self._on_magma_orc8r_pebble_ready)
 
         if additional_environment_variables:
             self.additional_environment_variables = additional_environment_variables
         else:
             self.additional_environment_variables = {}
 
-        if self.database_relation_needed:
-            self._db = pgsql.PostgreSQLClient(self.charm, "db")  # type: ignore[attr-defined]
-            self.framework.observe(
-                self._db.on.database_relation_joined, self._on_database_relation_joined
-            )
+        self._db = pgsql.PostgreSQLClient(self.charm, "db")  # type: ignore[attr-defined]
+        self.framework.observe(
+            self._db.on.database_relation_joined, self._on_database_relation_joined
+        )
 
     def _on_magma_orc8r_pebble_ready(self, event):
-        if self.database_relation_needed:
-            if not self._check_db_relation_has_been_established():
-                self.charm.unit.status = BlockedStatus(
-                    "Waiting for database relation to be established..."
-                )
-                event.defer()
-                return
+        if not self._db_relation_established():
+            self.charm.unit.status = BlockedStatus(
+                "Waiting for database relation to be established..."
+            )
+            event.defer()
+            return
         self._configure_orc8r(event)
 
     def _configure_orc8r(self, event):
@@ -179,7 +159,7 @@ class Orc8rBase(Object):
             event.defer()
             return
 
-    def _check_db_relation_has_been_established(self):
+    def _db_relation_established(self):
         """Validates that database relation is ready (that there is a relation and that credentials
         have been passed)."""
         if not self._get_db_connection_string:
@@ -205,17 +185,16 @@ class Orc8rBase(Object):
         }
         environment_variables.update(self.additional_environment_variables)
         environment_variables.update(default_environment_variables)
-        if self.database_relation_needed:
-            sql_environment_variables = {
-                "DATABASE_SOURCE": f"dbname={self._get_db_connection_string.dbname} "
-                f"user={self._get_db_connection_string.user} "
-                f"password={self._get_db_connection_string.password} "
-                f"host={self._get_db_connection_string.host} "
-                f"sslmode=disable",
-                "SQL_DRIVER": "postgres",
-                "SQL_DIALECT": "psql",
-                "SERVICE_HOSTNAME": self._container_name,
-                "HELM_RELEASE_NAME": "orc8r",
-            }
-            environment_variables.update(sql_environment_variables)
+        sql_environment_variables = {
+            "DATABASE_SOURCE": f"dbname={self._get_db_connection_string.dbname} "
+            f"user={self._get_db_connection_string.user} "
+            f"password={self._get_db_connection_string.password} "
+            f"host={self._get_db_connection_string.host} "
+            f"sslmode=disable",
+            "SQL_DRIVER": "postgres",
+            "SQL_DIALECT": "psql",
+            "SERVICE_HOSTNAME": self._container_name,
+            "HELM_RELEASE_NAME": "orc8r",
+        }
+        environment_variables.update(sql_environment_variables)
         return environment_variables

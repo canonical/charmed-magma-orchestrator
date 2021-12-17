@@ -24,12 +24,7 @@ class MagmaOrc8rHACharm(CharmBase):
             "-logtostderr=true "
             "-v=0"
         )
-        self._orc8r_base = Orc8rBase(
-            self,
-            service_name="magma-orc8r-ha",
-            startup_command=startup_command,
-            pebble_ready_event=self.on.magma_orc8r_ha_pebble_ready,
-        )
+        self._orc8r_base = Orc8rBase(self, startup_command=startup_command)
 
 
 if __name__ == "__main__":
