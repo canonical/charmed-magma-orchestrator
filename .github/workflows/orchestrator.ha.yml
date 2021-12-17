@@ -26,16 +26,6 @@ jobs:
       - name: Run tests using tox
         run: cd orchestrator-bundle/orc8r-ha-operator && tox -e static
 
-  orc8r-ha-unit-tests-with-coverage:
-    name: Unit tests (orc8r-ha)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install tox
-        run: pip install tox
-      - name: Run tests using tox
-        run: cd orchestrator-bundle/orc8r-ha-operator && tox -e unit
-
   orc8r-ha-integration-test:
     name: Integration tests (orc8r-ha)
     runs-on: ubuntu-latest

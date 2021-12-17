@@ -1,0 +1,14 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: magma-orc8r-libs
+description: |
+  A placeholder charm that contains helpful charm libraries for the magma-orc8r charms.
+summary: Collection of Charm Libraries for the orc8r charms.
+containers:
+  placeholder:
+    resource: placeholder-image
+
+resources:
+  placeholder-image:
+    type: oci-image
+    description: OCI image for placeholder

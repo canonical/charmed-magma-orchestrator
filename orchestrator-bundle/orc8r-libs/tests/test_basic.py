@@ -5,12 +5,11 @@ import unittest
 from unittest.mock import patch
 
 from ops.testing import Harness
-
-from charm import MagmaOrc8rHACharm
+from test_basic_charm.src.charm import MagmaOrc8rHACharm  # type: ignore[import]
 
 
 class TestCharm(unittest.TestCase):
-    @patch("charm.KubernetesServicePatch", lambda x, y: None)
+    @patch("test_basic_charm.src.charm.KubernetesServicePatch", lambda x, y: None)
     def setUp(self):
         self.harness = Harness(MagmaOrc8rHACharm)
         self.addCleanup(self.harness.cleanup)
@@ -34,6 +33,10 @@ class TestCharm(unittest.TestCase):
                     "/var/opt/magma/bin/ha "
                     "-logtostderr=true "
                     "-v=0",
+                    "environment": {
+                        "HELM_RELEASE_NAME": "orc8r",
+                        "SERVICE_HOSTNAME": "magma-orc8r-ha",
+                    },
                 }
             },
         }

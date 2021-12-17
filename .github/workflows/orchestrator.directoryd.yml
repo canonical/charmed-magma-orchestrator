@@ -26,16 +26,6 @@ jobs:
       - name: Run tests using tox
         run: cd orchestrator-bundle/orc8r-directoryd-operator && tox -e static
 
-  orc8r-directoryd-unit-tests-with-coverage:
-    name: Unit tests (orc8r-directoryd)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install tox
-        run: pip install tox
-      - name: Run tests using tox
-        run: cd orchestrator-bundle/orc8r-directoryd-operator && tox -e unit
-
   orc8r-directoryd-integration-test:
     name: Integration tests (orc8r-directoryd)
     runs-on: ubuntu-latest
