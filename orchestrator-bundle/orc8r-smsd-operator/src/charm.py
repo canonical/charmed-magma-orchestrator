@@ -24,7 +24,7 @@ class MagmaOrc8rSmsdCharm(CharmBase):
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-smsd"
         self._container = self.unit.get_container(self._container_name)
-        self._db = pgsql.PostgreSQLClient(self, "db")  # type: ignore[attr-defined]
+        self._db = pgsql.PostgreSQLClient(self, "db")
         self.framework.observe(
             self.on.magma_orc8r_smsd_pebble_ready, self._on_magma_orc8r_smsd_pebble_ready
         )
