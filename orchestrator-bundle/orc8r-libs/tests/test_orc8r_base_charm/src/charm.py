@@ -9,6 +9,8 @@ from ops.main import main
 
 
 class MagmaOrc8rHACharm(CharmBase):
+    """Charm the service."""
+
     def __init__(self, *args):
         """
         An instance of this object everytime an event occurs

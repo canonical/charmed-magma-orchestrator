@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    paths:
+      - 'orchestrator-bundle/orc8r-libs/**'
+
+jobs:
+  orc8r-libs-lint-report:
+    name: Lint report (orc8r-libs)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/orc8r-libs && tox -e lint
+
+  orc8r-libs-static-analysis:
+    name: Static analysis (orc8r-libs)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/orc8r-libs && tox -e static
+
+  orc8r-libs-unit-tests-with-coverage:
+    name: Unit tests (orc8r-libs)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/orc8r-libs && tox -e unit
