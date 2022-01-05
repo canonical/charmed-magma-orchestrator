@@ -95,7 +95,6 @@ jobs:
           echo "# Bootstrap controller"
           juju bootstrap --debug --verbose microk8s integration-tests-${GITHUB_RUN_ID} --model-default test-mode=true --model-default automatically-retry-hooks=false --model-default logging-config="<root>=DEBUG"  --bootstrap-constraints=""
       - name: Run integration tests
-        continue-on-error: true
         run: |
           set -eux
           charms="$(find ./orchestrator-bundle/ -name tox.ini)"
@@ -103,5 +102,6 @@ jobs:
             tox -c "${charm}" -e integration
           done
       - name: Clean up
+        if: always()
         run: |
           yes | juju kill-controller integration-tests-${GITHUB_RUN_ID}
