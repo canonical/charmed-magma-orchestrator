@@ -92,8 +92,6 @@ jobs:
           microk8s enable storage rbac dns:185.125.188.1
           microk8s kubectl -n kube-system rollout status deployment/coredns
           microk8s kubectl -n kube-system rollout status deployment/hostpath-provisioner
-          microk8s kubectl create serviceaccount test-sa
-          microk8s kubectl delete serviceaccount test-sa
           echo "# Bootstrap controller"
           juju bootstrap --debug --verbose microk8s integration-tests-${GITHUB_RUN_ID} --model-default test-mode=true --model-default automatically-retry-hooks=false --model-default logging-config="<root>=DEBUG"  --bootstrap-constraints=""
       - name: Run integration tests
