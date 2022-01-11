@@ -87,7 +87,7 @@ jobs:
           /usr/bin/sudo snap install charmcraft --classic --channel=latest/stable
           /usr/bin/sudo snap install juju-bundle --classic --channel=latest/stable
           echo "# Install microk8s"
-          /usr/bin/sudo snap install microk8s --classic --channel=
+          /usr/bin/sudo snap install microk8s --classic
           echo "# Initialize microk8s"
           /usr/bin/sudo usermod -a -G microk8s $USER
           microk8s status --wait-ready
