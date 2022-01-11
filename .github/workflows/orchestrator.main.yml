@@ -78,6 +78,7 @@ jobs:
           /snap/bin/lxc network set lxdbr0 ipv6.address none
           /usr/bin/sudo usermod -a -G lxd $USER
           echo "# Configure LXD"
+          /usr/bin/sudo lxc --project charmcraft project create local:charmcraft
           /usr/bin/sudo lxc --project charmcraft profile set default environment.http_proxy http://squid.internal:3128/
           /usr/bin/sudo lxc --project charmcraft profile set default environment.https_proxy http://squid.internal:3128/
           /usr/bin/sudo lxc --project charmcraft profile set default environment.HTTP_PROXY http://squid.internal:3128/
