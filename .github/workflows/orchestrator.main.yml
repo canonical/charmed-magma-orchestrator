@@ -98,7 +98,7 @@ jobs:
           /usr/bin/sg microk8s -c "microk8s kubectl -n kube-system rollout status deployment/coredns"
           /usr/bin/sg microk8s -c "microk8s kubectl -n kube-system rollout status deployment/hostpath-provisioner"
           echo "# Bootstrap controller"
-          sleep 240  # Microk8s needs time to initialize properly
+          sleep 180  # Microk8s needs time to initialize properly
           /usr/bin/sg microk8s -c "juju bootstrap --debug --verbose microk8s integration-tests-${GITHUB_RUN_ID} --model-default test-mode=true --model-default automatically-retry-hooks=false --model-default logging-config='<root>=DEBUG'  --bootstrap-constraints=''"
       - name: Run integration tests
         run: |

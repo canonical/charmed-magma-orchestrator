@@ -158,7 +158,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         ):
             self.unit.status = WaitingStatus("Waiting for container to be ready...")
             time.sleep(5)
-        if waiting_time > self.WAIT_FOR_CONTAINER_TIMEOUT:
+        if waiting_time >= self.WAIT_FOR_CONTAINER_TIMEOUT:
             raise Exception("Timeout waiting for container!")
         else:
             self.unit.status = ActiveStatus()

@@ -3,8 +3,8 @@
 # See LICENSE file for licensing details.
 
 import logging
-from typing import List
 import time
+from typing import List
 
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from httpx import HTTPStatusError
@@ -297,7 +297,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
         ):
             self.unit.status = WaitingStatus("Waiting for container to be ready...")
             time.sleep(5)
-        if waiting_time > self.WAIT_FOR_CONTAINER_TIMEOUT:
+        if waiting_time >= self.WAIT_FOR_CONTAINER_TIMEOUT:
             raise Exception("Timeout waiting for container!")
         else:
             self.unit.status = ActiveStatus()
