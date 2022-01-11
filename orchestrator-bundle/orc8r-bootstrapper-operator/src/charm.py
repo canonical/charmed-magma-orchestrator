@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 
 import logging
-import time
 
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from lightkube import Client
@@ -43,7 +42,11 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
             event.defer()
             return
         self._configure_pebble(event)
-        self._set_active_status_when_container_ready()
+        if self._container.can_connect():
+            self.unit.status = ActiveStatus()
+        else:
+            self.unit.status = WaitingStatus("Waiting for container to become ready...")
+            event.defer()
 
     def _on_certifier_relation_joined(self, event):
         if not self._orc8r_certs_mounted:
@@ -150,18 +153,6 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
                 readOnly=True,
             ),
         ]
-
-    def _set_active_status_when_container_ready(self):
-        waiting_time = 0
-        while (
-            not self._container.can_connect() and waiting_time <= self.WAIT_FOR_CONTAINER_TIMEOUT
-        ):
-            self.unit.status = WaitingStatus("Waiting for container to be ready...")
-            time.sleep(5)
-        if waiting_time >= self.WAIT_FOR_CONTAINER_TIMEOUT:
-            raise Exception("Timeout waiting for container!")
-        else:
-            self.unit.status = ActiveStatus()
 
 
 if __name__ == "__main__":

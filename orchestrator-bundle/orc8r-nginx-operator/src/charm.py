@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 
 import logging
-import time
 from typing import List
 
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
@@ -60,7 +59,11 @@ class MagmaOrc8rNginxCharm(CharmBase):
             return
         self._create_additional_orc8r_nginx_services()
         self._configure_pebble_layer(event)
-        self._set_active_status_when_container_ready()
+        if self._container.can_connect():
+            self.unit.status = ActiveStatus()
+        else:
+            self.unit.status = WaitingStatus("Waiting for container to become ready...")
+            event.defer()
 
     def _on_certifier_relation_changed(self, event):
         """Mounts certificates required by the nms-magmalte."""
@@ -83,13 +86,13 @@ class MagmaOrc8rNginxCharm(CharmBase):
         logger.info("Additional K8s resources for magma-orc8r-nginx container applied!")
 
     def _configure_pebble_layer(self, event):
-        self.unit.status = MaintenanceStatus(
-            f"Configuring pebble layer for {self._service_name}..."
-        )
         pebble_layer = self._pebble_layer
         try:
             plan = self._container.get_plan()
             if plan.services != pebble_layer.services:
+                self.unit.status = MaintenanceStatus(
+                    f"Configuring pebble layer for {self._service_name}..."
+                )
                 self._generate_nginx_config()
                 self._container.add_layer(self._container_name, pebble_layer, combine=True)
                 self._container.restart(self._service_name)
@@ -289,18 +292,6 @@ class MagmaOrc8rNginxCharm(CharmBase):
             return certifier_relation.data[next(iter(units))]["domain"]
         except KeyError:
             return None
-
-    def _set_active_status_when_container_ready(self):
-        waiting_time = 0
-        while (
-            not self._container.can_connect() and waiting_time <= self.WAIT_FOR_CONTAINER_TIMEOUT
-        ):
-            self.unit.status = WaitingStatus("Waiting for container to be ready...")
-            time.sleep(5)
-        if waiting_time >= self.WAIT_FOR_CONTAINER_TIMEOUT:
-            raise Exception("Timeout waiting for container!")
-        else:
-            self.unit.status = ActiveStatus()
 
 
 if __name__ == "__main__":

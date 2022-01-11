@@ -4,7 +4,6 @@
 
 import base64
 import logging
-import time
 
 import ops.lib
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
@@ -41,7 +40,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._namespace = self.model.name
         self._container = self.unit.get_container(self._container_name)
         self.client_relations = ClientRelations(self, "client_relations")
-        self._db = pgsql.PostgreSQLClient(self, "db")  # type: ignore[attr-defined]
+        self._db = pgsql.PostgreSQLClient(self, "db")
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(
             self.on.magma_orc8r_certifier_pebble_ready, self._on_magma_orc8r_certifier_pebble_ready
@@ -69,7 +68,11 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             event.defer()
             return
         self._configure_magma_orc8r_certifier()
-        self._set_active_status_when_container_ready()
+        if self._container.can_connect():
+            self.unit.status = ActiveStatus()
+        else:
+            self.unit.status = WaitingStatus("Waiting for container to become ready...")
+            event.defer()
 
     def _on_database_relation_joined(self, event):
         db_connection_string = event.master
@@ -108,10 +111,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     def _configure_magma_orc8r_certifier(self):
         """Adds layer to pebble config if the proposed config is different from the current one."""
-        self.unit.status = MaintenanceStatus("Configuring pod")
         plan = self._container.get_plan()
         layer = self._pebble_layer
         if plan.services != layer.services:
+            self.unit.status = MaintenanceStatus("Configuring pod")
             self._container.add_layer(self._container_name, layer, combine=True)
             self._container.restart(self._service_name)
             logger.info(f"Restarted container {self._service_name}")
@@ -356,18 +359,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     def _encode_in_base64(byte_string: bytes):
         """Encodes given byte string in Base64"""
         return base64.b64encode(byte_string).decode("utf-8")
-
-    def _set_active_status_when_container_ready(self):
-        waiting_time = 0
-        while (
-            not self._container.can_connect() and waiting_time <= self.WAIT_FOR_CONTAINER_TIMEOUT
-        ):
-            self.unit.status = WaitingStatus("Waiting for container to be ready...")
-            time.sleep(5)
-        if waiting_time >= self.WAIT_FOR_CONTAINER_TIMEOUT:
-            raise Exception("Timeout waiting for container!")
-        else:
-            self.unit.status = ActiveStatus()
 
 
 if __name__ == "__main__":
