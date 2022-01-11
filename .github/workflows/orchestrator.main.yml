@@ -72,6 +72,8 @@ jobs:
           /usr/bin/sudo usermod -a -G lxd $USER
           echo "# Configure LXD"
           /usr/bin/sudo lxc --project charmcraft project create local:charmcraft || true
+          /usr/bin/sudo lxc --project charmcraft profile device add default root disk path=/ pool=default type=disk || true
+          lxc --project charmcraft profile device add default eth0 name=eth0 network=lxdbr0 type=nic || true
           /usr/bin/sudo lxc --project charmcraft profile set default environment.http_proxy http://squid.internal:3128/
           /usr/bin/sudo lxc --project charmcraft profile set default environment.https_proxy http://squid.internal:3128/
           /usr/bin/sudo lxc --project charmcraft profile set default environment.HTTP_PROXY http://squid.internal:3128/
