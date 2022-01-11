@@ -98,6 +98,7 @@ jobs:
           /usr/bin/sudo snap install microk8s --classic
           echo "# Initialize microk8s"
           /usr/bin/sudo usermod -a -G microk8s $USER
+          /usr/bin/sudo chown -f -R ubuntu ~/.kube
           microk8s status --wait-ready
           microk8s enable storage rbac dns:185.125.188.1
           microk8s kubectl -n kube-system rollout status deployment/coredns
