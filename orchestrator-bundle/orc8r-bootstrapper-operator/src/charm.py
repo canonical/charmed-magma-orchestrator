@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import logging
+import time
 
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from lightkube import Client
@@ -11,13 +12,16 @@ from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
 from lightkube.resources.apps_v1 import StatefulSet
 from ops.charm import CharmBase
 from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import ConnectionError, Layer
 
 logger = logging.getLogger(__name__)
 
 
 class MagmaOrc8rBootstrapperCharm(CharmBase):
+
+    WAIT_FOR_CONTAINER_TIMEOUT = 60
+
     def __init__(self, *args):
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-bootstrapper"
@@ -39,6 +43,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
             event.defer()
             return
         self._configure_pebble(event)
+        self._set_active_status_when_container_ready()
 
     def _on_certifier_relation_joined(self, event):
         if not self._orc8r_certs_mounted:
@@ -54,7 +59,6 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
                 self._container.add_layer(self._container_name, pebble_layer, combine=True)
                 self._container.restart(self._service_name)
                 logger.info(f"Restarted container {self._service_name}")
-                self.unit.status = ActiveStatus()
         except ConnectionError:
             logger.error(
                 f"Could not restart {self._service_name} -- Pebble socket does "
@@ -146,6 +150,18 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
                 readOnly=True,
             ),
         ]
+
+    def _set_active_status_when_container_ready(self):
+        waiting_time = 0
+        while (
+            not self._container.can_connect() and waiting_time <= self.WAIT_FOR_CONTAINER_TIMEOUT
+        ):
+            self.unit.status = WaitingStatus("Waiting for container to be ready...")
+            time.sleep(5)
+        if waiting_time > self.WAIT_FOR_CONTAINER_TIMEOUT:
+            raise Exception("Timeout waiting for container!")
+        else:
+            self.unit.status = ActiveStatus()
 
 
 if __name__ == "__main__":

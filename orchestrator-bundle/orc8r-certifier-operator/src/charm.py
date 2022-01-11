@@ -359,7 +359,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     def _set_active_status_when_container_ready(self):
         waiting_time = 0
-        while not self._container.can_connect() and waiting_time <= self.WAIT_FOR_CONTAINER_TIMEOUT:
+        while (
+            not self._container.can_connect() and waiting_time <= self.WAIT_FOR_CONTAINER_TIMEOUT
+        ):
             self.unit.status = WaitingStatus("Waiting for container to be ready...")
             time.sleep(5)
         if waiting_time > self.WAIT_FOR_CONTAINER_TIMEOUT:

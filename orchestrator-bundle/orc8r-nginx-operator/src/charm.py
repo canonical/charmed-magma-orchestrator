@@ -4,6 +4,7 @@
 
 import logging
 from typing import List
+import time
 
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from httpx import HTTPStatusError
@@ -27,6 +28,9 @@ logger = logging.getLogger(__name__)
 
 
 class MagmaOrc8rNginxCharm(CharmBase):
+
+    WAIT_FOR_CONTAINER_TIMEOUT = 60
+
     def __init__(self, *args):
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-nginx"
@@ -56,6 +60,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
             return
         self._create_additional_orc8r_nginx_services()
         self._configure_pebble_layer(event)
+        self._set_active_status_when_container_ready()
 
     def _on_certifier_relation_changed(self, event):
         """Mounts certificates required by the nms-magmalte."""
@@ -89,7 +94,6 @@ class MagmaOrc8rNginxCharm(CharmBase):
                 self._container.add_layer(self._container_name, pebble_layer, combine=True)
                 self._container.restart(self._service_name)
                 logger.info(f"Restarted container {self._service_name}")
-                self.unit.status = ActiveStatus()
         except ConnectionError:
             logger.error(
                 f"Could not restart {self._service_name} -- Pebble socket does "
@@ -285,6 +289,18 @@ class MagmaOrc8rNginxCharm(CharmBase):
             return certifier_relation.data[next(iter(units))]["domain"]
         except KeyError:
             return None
+
+    def _set_active_status_when_container_ready(self):
+        waiting_time = 0
+        while (
+            not self._container.can_connect() and waiting_time <= self.WAIT_FOR_CONTAINER_TIMEOUT
+        ):
+            self.unit.status = WaitingStatus("Waiting for container to be ready...")
+            time.sleep(5)
+        if waiting_time > self.WAIT_FOR_CONTAINER_TIMEOUT:
+            raise Exception("Timeout waiting for container!")
+        else:
+            self.unit.status = ActiveStatus()
 
 
 if __name__ == "__main__":
