@@ -104,7 +104,7 @@ jobs:
         run: |
           set -eux
           #charms="$(find ./orchestrator-bundle/ -name tox.ini | grep operator)"
-          charms="orc8r-bootstrapper-operator orc8r-nginx-operator"
+          charms="./orchestrator-bundle/orc8r-bootstrapper-operator ./orchestrator-bundle/orc8r-nginx-operator"
           for charm in ${charms}; do
             tox -c "${charm}" -e integration
           done
