@@ -59,13 +59,6 @@ jobs:
         uses: actions/checkout@v2
       - name: Setup operator environment
         run: |
-          echo "# Configure env"
-          export http_proxy=http://squid.internal:3128
-          export https_proxy=http://squid.internal:3128
-          export HTTP_PROXY=http://squid.internal:3128
-          export HTTPS_PROXY=http://squid.internal:3128
-          export no_proxy=localhost,127.0.0.1,127.0.0.0/8,10.0.0.0/8,10.130.0.0/16,192.168.0.0/16,10.152.0.0/16,telco-github-runner
-          export NO_PROXY=localhost,127.0.0.1,127.0.0.0/8,10.0.0.0/8,10.130.0.0/16,192.168.0.0/16,10.152.0.0/16,telco-github-runner
           echo "# Install core snap"
           /usr/bin/sudo snap install core
           echo "# Install LXD"
