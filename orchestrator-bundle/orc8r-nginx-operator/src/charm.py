@@ -82,7 +82,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
             f"Configuring pebble layer for {self._service_name}..."
         )
         pebble_layer = self._pebble_layer
-        if self._container.can_connect():
+        try:
             plan = self._container.get_plan()
             if plan.services != pebble_layer.services:
                 self._generate_nginx_config()
@@ -90,8 +90,11 @@ class MagmaOrc8rNginxCharm(CharmBase):
                 self._container.restart(self._service_name)
                 logger.info(f"Restarted container {self._service_name}")
                 self.unit.status = ActiveStatus()
-        else:
-            self.unit.status = WaitingStatus(f"Waiting for {self._container} to be ready...")
+        except ConnectionError:
+            logger.error(
+                f"Could not restart {self._service_name} -- Pebble socket does "
+                f"not exist or is not responsive"
+            )
             event.defer()
             return
 
