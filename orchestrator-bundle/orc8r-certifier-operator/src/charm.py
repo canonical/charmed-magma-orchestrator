@@ -4,6 +4,7 @@
 
 import base64
 import logging
+import time
 
 import ops.lib
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
@@ -31,6 +32,7 @@ pgsql = ops.lib.use("pgsql", 1, "postgresql-charmers@lists.launchpad.net")
 class MagmaOrc8rCertifierCharm(CharmBase):
 
     DB_NAME = "magma_dev"
+    WAIT_FOR_CONTAINER_TIMEOUT = 60
 
     def __init__(self, *args):
         """An instance of this object everytime an event occurs."""
@@ -67,6 +69,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             event.defer()
             return
         self._configure_magma_orc8r_certifier()
+        self._set_active_status_when_container_ready()
 
     def _on_database_relation_joined(self, event):
         db_connection_string = event.master
@@ -112,7 +115,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self._container.add_layer(self._container_name, layer, combine=True)
             self._container.restart(self._service_name)
             logger.info(f"Restarted container {self._service_name}")
-            self.unit.status = ActiveStatus()
 
     def _on_remove(self, event):
         self.unit.status = MaintenanceStatus("Removing Magma Orc8r secrets...")
@@ -354,6 +356,16 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     def _encode_in_base64(byte_string: bytes):
         """Encodes given byte string in Base64"""
         return base64.b64encode(byte_string).decode("utf-8")
+
+    def _set_active_status_when_container_ready(self):
+        waiting_time = 0
+        while not self._container.can_connect() or waiting_time <= self.WAIT_FOR_CONTAINER_TIMEOUT:
+            print("Waiting for container...")
+            time.sleep(5)
+        if waiting_time > self.WAIT_FOR_CONTAINER_TIMEOUT:
+            raise Exception("Timeout waiting for container!")
+        else:
+            self.unit.status = ActiveStatus()
 
 
 if __name__ == "__main__":
