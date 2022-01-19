@@ -5,6 +5,7 @@
 import logging
 from typing import List
 
+from charms.nginx_ingress_integrator.v0.ingress import IngressRequires
 import httpx
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from lightkube import Client, codecs
@@ -16,7 +17,7 @@ from lightkube.models.core_v1 import (
     VolumeMount,
 )
 from lightkube.resources.apps_v1 import StatefulSet
-from lightkube.resources.core_v1 import ConfigMap
+from lightkube.resources.core_v1 import ConfigMap, Service
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
@@ -38,7 +39,11 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         self.framework.observe(self.on.certifier_relation_changed, self._configure_nginx)
         self.framework.observe(self.on.remove, self._on_remove)
         self.service_patcher = KubernetesServicePatch(
-            self, [("https", 443, 443, 30760)], "LoadBalancer"
+            charm=self,
+            ports=[("https", 443, 443, 30760)],
+            service_type="LoadBalancer",
+            service_name="nginx-proxy",
+            additional_labels={"app.kubernetes.io/part-of": "magma"},
         )
 
     def _on_magma_nms_nginx_proxy_pebble_ready(self, event):

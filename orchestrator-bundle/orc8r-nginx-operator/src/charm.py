@@ -40,14 +40,17 @@ class MagmaOrc8rNginxCharm(CharmBase):
         )
         self.framework.observe(self.on.remove, self._on_remove)
         self.service_patcher = KubernetesServicePatch(
-            self,
-            [
+            charm=self,
+            ports=[
                 ("health", 80, 80, 32035),
                 ("clientcert", 8443, 8443, 30130),
                 ("open", 8444, 8444, 31694),
                 ("api", 443, 9443, 30794),
             ],
-            "LoadBalancer",
+            service_type="LoadBalancer",
+            service_name="orc8r-nginx-proxy",
+            additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
+            additional_selectors={"app.kubernetes.io/name": "orc8r-nginx"}
         )
 
     def _on_magma_orc8r_nginx_pebble_ready(self, event):
@@ -137,7 +140,10 @@ class MagmaOrc8rNginxCharm(CharmBase):
                         "override": "replace",
                         "startup": "enabled",
                         "command": "nginx",
-                        "environment": {},
+                        "environment": {
+                            "SERVICE_REGISTRY_MODE": "k8s",
+                            "SERVICE_REGISTRY_NAMESPACE": self._namespace,
+                        },
                     }
                 },
             }
@@ -173,10 +179,15 @@ class MagmaOrc8rNginxCharm(CharmBase):
                 metadata=ObjectMeta(
                     namespace=self._namespace,
                     name="orc8r-bootstrap-nginx",
-                    labels={"app.kubernetes.io/name": "orc8r-bootstrap-nginx"},
+                    labels={
+                        "app.kubernetes.io/component": "nginx-proxy",
+                        "app.kubernetes.io/part-of": "orc8r"
+                    },
                 ),
                 spec=ServiceSpec(
-                    selector={"app.kubernetes.io/name": "orc8r-bootstrap-nginx"},
+                    selector={
+                        "app.kubernetes.io/name": "orc8r-nginx",
+                    },
                     ports=[
                         ServicePort(
                             name="health",
@@ -206,10 +217,15 @@ class MagmaOrc8rNginxCharm(CharmBase):
                 metadata=ObjectMeta(
                     namespace=self._namespace,
                     name="orc8r-clientcert-nginx",
-                    labels={"app.kubernetes.io/name": "orc8r-clientcert-nginx"},
+                    labels={
+                        "app.kubernetes.io/component": "nginx-proxy",
+                        "app.kubernetes.io/part-of": "orc8r"
+                    },
                 ),
                 spec=ServiceSpec(
-                    selector={"app.kubernetes.io/name": "orc8r-clientcert-nginx"},
+                    selector={
+                        "app.kubernetes.io/name": "orc8r-nginx"
+                    },
                     ports=[
                         ServicePort(
                             name="health",

@@ -22,12 +22,15 @@ class MagmaOrc8rObsidianCharm(CharmBase):
         """
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-obsidian"
+        self._namespace = self.model.name
         self._container = self.unit.get_container(self._container_name)
         self.framework.observe(
             self.on.magma_orc8r_obsidian_pebble_ready, self._on_magma_orc8r_obsidian_pebble_ready
         )
         self._service_patcher = KubernetesServicePatch(
-            self, [("grpc", 9180, 9093), ("http", 8080, 9081)]
+            charm=self,
+            ports=[("grpc", 9180, 9093), ("http", 8080, 9081)],
+            additional_labels = {"app.kubernetes.io/part-of": "orc8r-app"}
         )
 
     def _on_magma_orc8r_obsidian_pebble_ready(self, event):
@@ -51,6 +54,11 @@ class MagmaOrc8rObsidianCharm(CharmBase):
                         "/var/opt/magma/envdir "
                         "/var/opt/magma/bin/obsidian "
                         "-logtostderr=true -v=0",
+                        "environment": {
+                            "SERVICE_HOSTNAME": self._container_name,
+                            "SERVICE_REGISTRY_MODE": "k8s",
+                            "SERVICE_REGISTRY_NAMESPACE": self._namespace,
+                        },
                     }
                 },
             }

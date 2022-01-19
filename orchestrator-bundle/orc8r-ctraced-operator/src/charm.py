@@ -32,7 +32,9 @@ class MagmaOrc8rCtracedCharm(CharmBase):
             self._db.on.database_relation_joined, self._on_database_relation_joined
         )
         self._service_patcher = KubernetesServicePatch(
-            self, [("grpc", 9180, 9118), ("http", 8080, 10118)]
+            charm=self,
+            ports=[("grpc", 9180, 9118), ("http", 8080, 10118)],
+            additional_labels={"app.kubernetes.io/part-of": "orc8r-app"}
         )
 
     def _on_magma_orc8r_ctraced_pebble_ready(self, event):

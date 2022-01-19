@@ -14,7 +14,11 @@ class MagmaOrc8rHACharm(CharmBase):
         An instance of this object everytime an event occurs
         """
         super().__init__(*args)
-        self._service_patcher = KubernetesServicePatch(self, [("grpc", 9180, 9119)])
+        self._service_patcher = KubernetesServicePatch(
+            charm=self,
+            ports=[("grpc", 9180, 9119)],
+            additional_labels={"app.kubernetes.io/part-of": "orc8r-app"}
+        )
         startup_command = (
             "/usr/bin/envdir "
             "/var/opt/magma/envdir "

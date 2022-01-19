@@ -21,7 +21,28 @@ juju relate orc8r-certifier postgresql-k8s:db
 - **admin-operator-pem** - Allows passing own trusted cert (see [magma](https://www.magmacore.org/) for details)
 - **controller-crt** - Allows passing own trusted cert (see [magma](https://www.magmacore.org/) for details)
 - **controller-key** - Allows passing own trusted cert (see [magma](https://www.magmacore.org/) for details)
+- **bootstrapper-key** - Allows passing own trusted cert (see [magma](https://www.magmacore.org/) for details)
 - **domain** - Domain for self-signed certs. Use only when **use-self-signed-ssl-certs** set to **True**
+
+### Example
+
+Here we created a set of certificates based on Magma's official documentation and placed them
+under the `/home/ubuntu/certs/` directory.
+
+```bash
+juju deploy ./magma-orc8r-certifier_ubuntu-20.04-amd64.charm orc8r-certifier \
+ --config use-self-signed-ssl-certs=False \
+ --config admin-operator-key-pem="$(cat /home/ubuntu/certs/admin_operator.key.pem)" \
+ --config admin-operator-pem="$(cat /home/ubuntu/certs/admin_operator.pem)" \
+ --config controller-crt="$(cat /home/ubuntu/certs/controller.crt)" \
+ --config controller-key="$(cat /home/ubuntu/certs/controller.key)" \
+ --config bootstrapper-key="$(cat /home/ubuntu/certs/bootstrapper.key)" \
+ --config certifier-key="$(cat /home/ubuntu/certs/certifier.key)" \
+ --config certifier-pem="$(cat /home/ubuntu/certs/certifier.pem)" \
+ --config rootCA-key="$(cat /home/ubuntu/certs/rootCA.key)" \
+ --config rootCA-pem="$(cat /home/ubuntu/certs/rootCA.pem)" \
+ --resource magma-orc8r-certifier-image=docker.artifactory.magmacore.org/controller:1.6.0
+```
 
 ## Relations
 

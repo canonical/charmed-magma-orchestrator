@@ -1,0 +1,13 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+create-nms-admin-user:
+  description: Create an admin user in NMS.
+  params:
+    email:
+      type: string
+      description: email (ex. admin@example.com)
+    password:
+      type: string
+      description: password (ex. password123)
+  required: [email, password]
