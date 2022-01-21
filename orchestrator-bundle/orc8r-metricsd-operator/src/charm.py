@@ -23,13 +23,26 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-metricsd"
         self._container = self.unit.get_container(self._container_name)
+        self._namespace = self.model.name
         self.framework.observe(
             self.on.magma_orc8r_metricsd_pebble_ready, self._on_magma_orc8r_metricsd_pebble_ready
         )
         self._service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[("grpc", 9180, 9084), ("http", 8080, 10084)],
-            additional_labels={"app.kubernetes.io/part-of": "orc8r-app"}
+            additional_labels={
+                "app.kubernetes.io/part-of": "orc8r-app",
+                "orc8r.io/obsidian_handlers": "true",
+                "orc8r.io/swagger_spec": "true",
+            },
+            additional_annotations={
+                "orc8r.io/obsidian_handlers_path_prefixes":
+                    "/magma/v1/networks/:network_id/alerts, "
+                    "/magma/v1/networks/:network_id/metrics, "
+                    "/magma/v1/networks/:network_id/prometheus, "
+                    "/magma/v1/tenants/:tenant_id/metrics, "
+                    "/magma/v1/tenants/targets_metadata,"
+            }
         )
 
     def _on_magma_orc8r_metricsd_pebble_ready(self, event):
@@ -57,6 +70,8 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
                         "-v=0",
                         "environment": {
                             "SERVICE_HOSTNAME": self._service_name,
+                            "SERVICE_REGISTRY_MODE": "k8s",
+                            "SERVICE_REGISTRY_NAMESPACE": self._namespace
                         },
                     }
                 },

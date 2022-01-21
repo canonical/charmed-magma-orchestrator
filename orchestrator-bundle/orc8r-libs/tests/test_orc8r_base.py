@@ -34,7 +34,6 @@ class TestCharm(unittest.TestCase):
                     "-logtostderr=true "
                     "-v=0",
                     "environment": {
-                        "HELM_RELEASE_NAME": "orc8r",
                         "SERVICE_HOSTNAME": "magma-orc8r-ha",
                     },
                 }

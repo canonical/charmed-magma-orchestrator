@@ -107,7 +107,6 @@ class MagmaOrc8rAccessdCharm(CharmBase):
                             "SQL_DRIVER": "postgres",
                             "SQL_DIALECT": "psql",
                             "SERVICE_HOSTNAME": self._container_name,
-                            "HELM_RELEASE_NAME": "orc8r",
                             "SERVICE_REGISTRY_MODE": "k8s",
                             "SERVICE_REGISTRY_NAMESPACE": self._namespace,
                         },

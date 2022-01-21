@@ -3,3 +3,14 @@
 
 create-orchestrator-admin-user:
   description: Create an admin user in Orchestrator.
+
+set-log-verbosity:
+  description: Set log verbosity
+  params:
+    level:
+      type: integer
+      description: Verbosity level (0 is default and 10 is full verbosity)
+    service:
+      type: string
+      description: Service name (ex. obsidian)
+  required: [level, service]

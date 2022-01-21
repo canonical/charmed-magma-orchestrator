@@ -23,6 +23,7 @@ class MagmaOrc8rStateCharm(CharmBase):
         """Creates a new instance of this object for each event."""
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-state"
+        self._namespace = self.model.name
         self._container = self.unit.get_container(self._container_name)
         self._db = pgsql.PostgreSQLClient(self, "db")
         self.framework.observe(
@@ -104,7 +105,8 @@ class MagmaOrc8rStateCharm(CharmBase):
                             "SQL_DRIVER": "postgres",
                             "SQL_DIALECT": "psql",
                             "SERVICE_HOSTNAME": self._container_name,
-                            "HELM_RELEASE_NAME": "orc8r",
+                            "SERVICE_REGISTRY_MODE": "k8s",
+                            "SERVICE_REGISTRY_NAMESPACE": self._namespace
                         },
                     },
                 },

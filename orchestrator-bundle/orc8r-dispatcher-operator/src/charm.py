@@ -22,6 +22,7 @@ class MagmaOrc8rDispatcherCharm(CharmBase):
         """
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-dispatcher"
+        self._namespace = self.model.name
         self._container = self.unit.get_container(self._container_name)
         self.framework.observe(
             self.on.magma_orc8r_dispatcher_pebble_ready,
@@ -57,6 +58,8 @@ class MagmaOrc8rDispatcherCharm(CharmBase):
                         "-v=0",
                         "environment": {
                             "SERVICE_HOSTNAME": self._service_name,
+                            "SERVICE_REGISTRY_MODE": "k8s",
+                            "SERVICE_REGISTRY_NAMESPACE": self._namespace
                         },
                     }
                 },

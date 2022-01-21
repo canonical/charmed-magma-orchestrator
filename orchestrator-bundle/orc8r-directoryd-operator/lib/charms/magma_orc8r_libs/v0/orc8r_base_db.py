@@ -80,6 +80,7 @@ class Orc8rBase(Object):
         super().__init__(charm, "orc8r-base")
         self.charm = charm
         self.startup_command = startup_command
+        self._namespace = self.charm.model.name
         self._container_name = self._service_name = self.charm.meta.name
         self._container = self.charm.unit.get_container(self._container_name)
         pebble_ready_event = getattr(
@@ -181,7 +182,8 @@ class Orc8rBase(Object):
         environment_variables = {}
         default_environment_variables = {
             "SERVICE_HOSTNAME": self._container_name,
-            "HELM_RELEASE_NAME": "orc8r",
+            "SERVICE_REGISTRY_MODE": "k8s",
+            "SERVICE_REGISTRY_NAMESPACE": self._namespace
         }
         environment_variables.update(self.additional_environment_variables)
         environment_variables.update(default_environment_variables)
@@ -193,8 +195,7 @@ class Orc8rBase(Object):
             f"sslmode=disable",
             "SQL_DRIVER": "postgres",
             "SQL_DIALECT": "psql",
-            "SERVICE_HOSTNAME": self._container_name,
-            "HELM_RELEASE_NAME": "orc8r",
+            "SERVICE_HOSTNAME": self._container_name
         }
         environment_variables.update(sql_environment_variables)
         return environment_variables

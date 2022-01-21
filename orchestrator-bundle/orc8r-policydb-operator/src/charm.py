@@ -23,6 +23,7 @@ class MagmaOrc8rPolicydbCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-policydb"
+        self._namespace = self.model.name
         self._container = self.unit.get_container(self._container_name)
         self._db = pgsql.PostgreSQLClient(self, "db")
         self.framework.observe(
@@ -34,7 +35,17 @@ class MagmaOrc8rPolicydbCharm(CharmBase):
         self._service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[("grpc", 9180, 9085), ("http", 8080, 10085)],
-            additional_labels={"app.kubernetes.io/part-of": "orc8r-app"}
+            additional_labels={
+                "app.kubernetes.io/part-of": "orc8r-app",
+                "orc8r.io/obsidian_handlers": "true",
+                "orc8r.io/swagger_spec": "true",
+            },
+            additional_annotations={
+                "orc8r.io/obsidian_handlers_path_prefixes":
+                    "/magma/v1/lte/:network_id/policy_qos_profiles, "
+                    "/magma/v1/networks/:network_id/policies, "
+                    "/magma/v1/networks/:network_id/rating_groups"
+            }
         )
 
     def _on_magma_orc8r_policydb_pebble_ready(self, event):
@@ -105,7 +116,8 @@ class MagmaOrc8rPolicydbCharm(CharmBase):
                             "SQL_DRIVER": "postgres",
                             "SQL_DIALECT": "psql",
                             "SERVICE_HOSTNAME": self._container_name,
-                            "HELM_RELEASE_NAME": "orc8r",
+                            "SERVICE_REGISTRY_MODE": "k8s",
+                            "SERVICE_REGISTRY_NAMESPACE": self._namespace
                         },
                     },
                 },

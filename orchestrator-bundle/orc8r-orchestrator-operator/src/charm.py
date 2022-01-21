@@ -37,10 +37,33 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             self.on.create_orchestrator_admin_user_action,
             self._create_orchestrator_admin_user_action
         )
+        self.framework.observe(
+            self.on.set_log_verbosity_action,
+            self._set_log_verbosity_action
+        )
         self._service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[("grpc", 9180, 9112), ("http", 8080, 10112)],
-            additional_labels={"app.kubernetes.io/part-of": "orc8r-app"}
+            additional_labels={
+                "app.kubernetes.io/part-of": "orc8r-app",
+                "orc8r.io/analytics_collector": "true",
+                "orc8r.io/mconfig_builder": "true",
+                "orc8r.io/metrics_exporter": "true",
+                "orc8r.io/obsidian_handlers": "true",
+                "orc8r.io/state_indexer": "true",
+                "orc8r.io/stream_provider": "true",
+                "orc8r.io/swagger_spec": "true"
+            },
+            additional_annotations={
+                "orc8r.io/state_indexer_types": "directory_record",
+                "orc8r.io/state_indexer_version": "1",
+                "orc8r.io/stream_provider_streams": "configs",
+                "orc8r.io/obsidian_handlers_path_prefixes":
+                    "/, "
+                    "/magma/v1/channels, "
+                    "/magma/v1/networks, "
+                    "/magma/v1/networks/:network_id,"
+            }
         )
 
     def _create_orchestrator_admin_user_action(self, event):
@@ -52,6 +75,26 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                 "-cert",
                 "/var/opt/magma/certs/admin_operator.pem",
                 "admin_operator"
+            ],
+            timeout=30,
+            environment=self._environment_variables,
+            working_dir="/"
+        )
+        try:
+            stdout, error = process.wait_output()
+            logger.info(f"Return message: {stdout}, {error}")
+        except ExecError as e:
+            logger.error('Exited with code %d. Stderr:', e.exit_code)
+            for line in e.stderr.splitlines():
+                logger.error('    %s', line)
+
+    def _set_log_verbosity_action(self, event):
+        process = self._container.exec(
+            [
+                "/var/opt/magma/bin/service303_cli",
+                "log_verbosity",
+                str(event.params["level"]),
+                event.params["service"],
             ],
             timeout=30,
             environment=self._environment_variables,

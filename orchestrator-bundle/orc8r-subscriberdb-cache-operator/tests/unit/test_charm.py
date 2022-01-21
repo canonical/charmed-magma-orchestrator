@@ -105,7 +105,6 @@ class TestCharm(unittest.TestCase):
                         "SQL_DRIVER": "postgres",
                         "SQL_DIALECT": "psql",
                         "SERVICE_HOSTNAME": "magma-orc8r-subscriberdb-cache",
-                        "HELM_RELEASE_NAME": "lte-orc8r",
                     },
                 },
             },

@@ -47,7 +47,10 @@ class MagmaNmsMagmalteCharm(CharmBase):
             charm=self,
             ports=[("magmalte", 8081, 8081)],
             service_name="magmalte",
-            additional_labels={"app.kubernetes.io/part-of": "orc8r-app"}
+            additional_labels={
+                "app.kubernetes.io/part-of": "magma",
+                "app.kubernetes.io/component": "magmalte"
+            }
         )
 
     def _on_magma_nms_magmalte_pebble_ready(self, event):

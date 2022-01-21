@@ -38,6 +38,15 @@ Currently supported relations are:
 juju run-action orc8r-orchestrator/0 create-orchestrator-admin-user
 ```
 
+### Set log level
+You can set the log level of any service using the `set-log-verbosity` action. The default log
+level is 0 and the full log level is 10. Here is an example of setting the log level to 10 for the 
+`obsidian` service:
+
+```bash
+juju run-action orc8r-orchestrator/0 set-log-verbosity level=10 service=obsidian
+```
+
 ## OCI Images
 
 Default: docker.artifactory.magmacore.org/controller:1.6.0

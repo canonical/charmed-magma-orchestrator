@@ -22,6 +22,7 @@ class MagmaOrc8rStreamer(CharmBase):
         """
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-streamer"
+        self._namespace = self.model.name
         self._container = self.unit.get_container(self._container_name)
         self.framework.observe(
             self.on.magma_orc8r_streamer_pebble_ready, self._on_magma_orc8r_streamer_pebble_ready
@@ -54,6 +55,10 @@ class MagmaOrc8rStreamer(CharmBase):
                         "/var/opt/magma/bin/streamer "
                         "-logtostderr=true "
                         "-v=0",
+                        "environment": {
+                            "SERVICE_REGISTRY_MODE": "k8s",
+                            "SERVICE_REGISTRY_NAMESPACE": self._namespace
+                        }
                     }
                 },
             }

@@ -51,7 +51,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[("grpc", 9180, 9086)],
-            additional_labels={"app.kubernetes.io/part-of": "orc8r-app"}
+            additional_labels={
+                "app.kubernetes.io/part-of": "orc8r-app",
+                "orc8r.io/analytics_collector": "true",
+            }
         )
 
     def _on_install(self, event):
@@ -236,7 +239,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                             "SQL_DRIVER": "postgres",
                             "SQL_DIALECT": "psql",
                             "SERVICE_HOSTNAME": "magma-orc8r-certifier",
-                            "HELM_RELEASE_NAME": "orc8r",
                             "SERVICE_REGISTRY_MODE": "k8s",
                             "SERVICE_REGISTRY_NAMESPACE": self._namespace,
                         },
