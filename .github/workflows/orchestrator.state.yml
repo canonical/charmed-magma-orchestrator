@@ -36,15 +36,15 @@ jobs:
       - name: Run tests using tox
         run: cd orchestrator-bundle/orc8r-state-operator && tox -e unit
 
-  orc8r-state-integration-test:
-    name: Integration tests (orc8r-state)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Setup operator environment
-        uses: charmed-kubernetes/actions-operator@main
-        with:
-          provider: microk8s
-      - name: Run integration tests
-        run: cd orchestrator-bundle/orc8r-state-operator && tox -e integration
+#  orc8r-state-integration-test:
+#    name: Integration tests (orc8r-state)
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v2
+#      - name: Setup operator environment
+#        uses: charmed-kubernetes/actions-operator@main
+#        with:
+#          provider: microk8s
+#      - name: Run integration tests
+#        run: cd orchestrator-bundle/orc8r-state-operator && tox -e integration
