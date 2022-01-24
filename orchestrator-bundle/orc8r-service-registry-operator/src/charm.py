@@ -22,7 +22,6 @@ class MagmaOrc8rServiceRegistry(CharmBase):
         """
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-service-registry"
-        self._namespace = self.model.name
         self._container = self.unit.get_container(self._container_name)
         self.framework.observe(
             self.on.magma_orc8r_service_registry_pebble_ready,
@@ -31,7 +30,7 @@ class MagmaOrc8rServiceRegistry(CharmBase):
         self._service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[("grpc", 9180, 9180)],
-            additional_labels={"app.kubernetes.io/part-of": "orc8r-app"}
+            additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
         )
 
     def _on_magma_orc8r_service_registry_pebble_ready(self, event):
@@ -82,6 +81,10 @@ class MagmaOrc8rServiceRegistry(CharmBase):
                 f"Could not restart {self._service_name} -- Pebble socket does "
                 f"not exist or is not responsive"
             )
+
+    @property
+    def _namespace(self) -> str:
+        return self.model.name
 
 
 if __name__ == "__main__":

@@ -30,7 +30,6 @@ class MagmaOrc8rNginxCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-nginx"
-        self._namespace = self.model.name
         self._container = self.unit.get_container(self._container_name)
         self.framework.observe(
             self.on.magma_orc8r_nginx_pebble_ready, self._on_magma_orc8r_nginx_pebble_ready
@@ -50,7 +49,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
             service_type="LoadBalancer",
             service_name="orc8r-nginx-proxy",
             additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
-            additional_selectors={"app.kubernetes.io/name": "orc8r-nginx"}
+            additional_selectors={"app.kubernetes.io/name": "orc8r-nginx"},
         )
 
     def _on_magma_orc8r_nginx_pebble_ready(self, event):
@@ -181,7 +180,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
                     name="orc8r-bootstrap-nginx",
                     labels={
                         "app.kubernetes.io/component": "nginx-proxy",
-                        "app.kubernetes.io/part-of": "orc8r"
+                        "app.kubernetes.io/part-of": "orc8r",
                     },
                 ),
                 spec=ServiceSpec(
@@ -219,13 +218,11 @@ class MagmaOrc8rNginxCharm(CharmBase):
                     name="orc8r-clientcert-nginx",
                     labels={
                         "app.kubernetes.io/component": "nginx-proxy",
-                        "app.kubernetes.io/part-of": "orc8r"
+                        "app.kubernetes.io/part-of": "orc8r",
                     },
                 ),
                 spec=ServiceSpec(
-                    selector={
-                        "app.kubernetes.io/name": "orc8r-nginx"
-                    },
+                    selector={"app.kubernetes.io/name": "orc8r-nginx"},
                     ports=[
                         ServicePort(
                             name="health",
@@ -298,6 +295,10 @@ class MagmaOrc8rNginxCharm(CharmBase):
             return certifier_relation.data[next(iter(units))]["domain"]
         except KeyError:
             return None
+
+    @property
+    def _namespace(self) -> str:
+        return self.model.name
 
 
 if __name__ == "__main__":

@@ -78,7 +78,6 @@ class Orc8rBase(Object):
         super().__init__(charm, "orc8r-base")
         self.charm = charm
         self.startup_command = startup_command
-        self._namespace = self.charm.model.name
         self._container_name = self._service_name = self.charm.meta.name
         pebble_ready_event = getattr(
             self.charm.on, f"{self._service_name.replace('-', '_')}_pebble_ready"
@@ -142,3 +141,7 @@ class Orc8rBase(Object):
         environment_variables.update(self.additional_environment_variables)
         environment_variables.update(default_environment_variables)
         return environment_variables
+
+    @property
+    def _namespace(self) -> str:
+        return self.charm.model.name

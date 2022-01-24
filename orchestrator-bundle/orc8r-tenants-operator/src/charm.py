@@ -23,7 +23,6 @@ class MagmaOrc8rTenantsCharm(CharmBase):
         """Creates a new instance of this object for each event."""
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-tenants"
-        self._namespace = self.model.name
         self._container = self.unit.get_container(self._container_name)
         self._db = pgsql.PostgreSQLClient(self, "db")
         self.framework.observe(
@@ -41,10 +40,9 @@ class MagmaOrc8rTenantsCharm(CharmBase):
                 "orc8r.io/swagger_spec": "true",
             },
             additional_annotations={
-                "orc8r.io/obsidian_handlers_path_prefixes":
-                    "/magma/v1/tenants, "
-                    "/magma/v1/tenants/:tenants_id,"
-            }
+                "orc8r.io/obsidian_handlers_path_prefixes": "/magma/v1/tenants, "
+                "/magma/v1/tenants/:tenants_id,"
+            },
         )
 
     def _on_magma_orc8r_tenants_pebble_ready(self, event):
@@ -131,6 +129,10 @@ class MagmaOrc8rTenantsCharm(CharmBase):
             return ConnectionString(db_relation.data[db_relation.app]["master"])
         except (AttributeError, KeyError):
             return None
+
+    @property
+    def _namespace(self) -> str:
+        return self.model.name
 
 
 if __name__ == "__main__":

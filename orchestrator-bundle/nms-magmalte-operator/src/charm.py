@@ -13,7 +13,7 @@ from lightkube.resources.apps_v1 import StatefulSet
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
-from ops.pebble import Layer, ExecError
+from ops.pebble import ExecError, Layer
 from pgconnstr import ConnectionString  # type: ignore[import]
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,6 @@ class MagmaNmsMagmalteCharm(CharmBase):
         """Creates a new instance of this object for each event."""
         super().__init__(*args)
         self._container_name = self._service_name = "magma-nms-magmalte"
-        self._namespace = self.model.name
         self._container = self.unit.get_container(self._container_name)
         self._db = pgsql.PostgreSQLClient(self, "db")
         self.framework.observe(
@@ -49,8 +48,8 @@ class MagmaNmsMagmalteCharm(CharmBase):
             service_name="magmalte",
             additional_labels={
                 "app.kubernetes.io/part-of": "magma",
-                "app.kubernetes.io/component": "magmalte"
-            }
+                "app.kubernetes.io/component": "magmalte",
+            },
         )
 
     def _on_magma_nms_magmalte_pebble_ready(self, event):
@@ -136,7 +135,10 @@ class MagmaNmsMagmalteCharm(CharmBase):
                     self._service_name: {
                         "override": "replace",
                         "startup": "enabled",
-                        "command": f"/usr/local/bin/wait-for-it.sh -s -t 30 {self._get_db_connection_string.host}:{self._get_db_connection_string.port} -- yarn run start:prod",
+                        "command": f"/usr/local/bin/wait-for-it.sh -s -t 30 "
+                        f"{self._get_db_connection_string.host}:"
+                        f"{self._get_db_connection_string.port} "
+                        f"-- yarn run start:prod",
                         "environment": self._environment_variables,
                     }
                 },
@@ -145,18 +147,24 @@ class MagmaNmsMagmalteCharm(CharmBase):
 
     def _create_nms_admin_user_action(self, event):
         process = self._container.exec(
-            ["/usr/local/bin/yarn", "setAdminPassword", "master", event.params["email"], event.params["password"]],
+            [
+                "/usr/local/bin/yarn",
+                "setAdminPassword",
+                "master",
+                event.params["email"],
+                event.params["password"],
+            ],
             timeout=30,
             environment=self._environment_variables,
-            working_dir="/usr/src/packages/magmalte"
+            working_dir="/usr/src/packages/magmalte",
         )
         try:
             stdout, error = process.wait_output()
             logger.info(f"Return message: {stdout}, {error}")
         except ExecError as e:
-            logger.error('Exited with code %d. Stderr:', e.exit_code)
+            logger.error("Exited with code %d. Stderr:", e.exit_code)
             for line in e.stderr.splitlines():
-                logger.error('    %s', line)
+                logger.error("    %s", line)
 
     @property
     def _magma_nms_magmalte_volumes(self) -> List[Volume]:
@@ -234,6 +242,10 @@ class MagmaNmsMagmalteCharm(CharmBase):
             return ConnectionString(db_relation.data[db_relation.app]["master"])
         except (AttributeError, KeyError):
             return None
+
+    @property
+    def _namespace(self) -> str:
+        return self.model.name
 
 
 if __name__ == "__main__":

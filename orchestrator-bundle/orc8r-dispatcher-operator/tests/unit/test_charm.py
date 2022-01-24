@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import PropertyMock, patch
 
 from ops.testing import Harness
 
@@ -10,7 +10,10 @@ from charm import MagmaOrc8rDispatcherCharm
 
 
 class TestCharm(unittest.TestCase):
-    @patch("charm.KubernetesServicePatch", lambda x, y: None)
+    @patch(
+        "charm.KubernetesServicePatch",
+        lambda charm, ports, additional_labels: None,
+    )
     def setUp(self):
         self.harness = Harness(MagmaOrc8rDispatcherCharm)
         self.addCleanup(self.harness.cleanup)
@@ -20,9 +23,12 @@ class TestCharm(unittest.TestCase):
         initial_plan = self.harness.get_container_pebble_plan("magma-orc8r-dispatcher")
         self.assertEqual(initial_plan.to_yaml(), "{}\n")
 
+    @patch("charm.MagmaOrc8rDispatcherCharm._namespace", new_callable=PropertyMock)
     def test_given_pebble_ready_when_get_pebble_plan_then_plan_is_filled_with_orc8r_service_content(  # noqa: E501
-        self,
+        self, patch_namespace
     ):
+        namespace = "whatever"
+        patch_namespace.return_value = namespace
         expected_plan = {
             "services": {
                 "magma-orc8r-dispatcher": {
@@ -36,6 +42,8 @@ class TestCharm(unittest.TestCase):
                     "-v=0",
                     "environment": {
                         "SERVICE_HOSTNAME": "magma-orc8r-dispatcher",
+                        "SERVICE_REGISTRY_MODE": "k8s",
+                        "SERVICE_REGISTRY_NAMESPACE": namespace,
                     },
                 }
             },

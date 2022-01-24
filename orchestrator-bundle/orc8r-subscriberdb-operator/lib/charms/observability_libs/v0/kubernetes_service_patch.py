@@ -200,7 +200,7 @@ class KubernetesServicePatch(Object):
                 namespace=self._namespace,
                 name=service_name,
                 labels=labels,
-                annotations=additional_annotations,
+                annotations=additional_annotations,  # type: ignore[arg-type]
             ),
             spec=ServiceSpec(
                 selector=selector,

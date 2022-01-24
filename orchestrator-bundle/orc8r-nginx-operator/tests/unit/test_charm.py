@@ -11,7 +11,10 @@ from charm import MagmaOrc8rNginxCharm
 
 
 class TestCharm(unittest.TestCase):
-    @patch("charm.KubernetesServicePatch", lambda x, y, z: None)
+    @patch(
+        "charm.KubernetesServicePatch",
+        lambda charm, ports, service_type, service_name, additional_labels, additional_selectors: None,  # noqa: E501
+    )
     def setUp(self):
         self.harness = Harness(MagmaOrc8rNginxCharm)
         self.addCleanup(self.harness.cleanup)

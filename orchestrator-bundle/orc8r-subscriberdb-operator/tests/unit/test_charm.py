@@ -24,7 +24,10 @@ class TestCharm(unittest.TestCase):
         "user=test_db_user"
     )
 
-    @patch("charm.KubernetesServicePatch", lambda x, y: None)
+    @patch(
+        "charm.KubernetesServicePatch",
+        lambda charm, ports, additional_labels, additional_annotations: None,
+    )
     def setUp(self):
         self.harness = Harness(MagmaOrc8rSubscriberdbCharm)
         self.addCleanup(self.harness.cleanup)
@@ -72,12 +75,15 @@ class TestCharm(unittest.TestCase):
             self.harness.charm._on_database_relation_joined(db_event)
         self.assertEqual(db_event.database, self.TEST_DB_NAME)
 
+    @patch("charm.MagmaOrc8rSubscriberdbCharm._namespace", new_callable=PropertyMock)
     @patch("charm.MagmaOrc8rSubscriberdbCharm._check_db_relation_has_been_established")
     def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_orc8r_subscriberdb_service_content(  # noqa: E501
-        self, db_relation_established
+        self, db_relation_established, patch_namespace
     ):
         event = Mock()
+        namespace = "whatever"
         db_relation_established.return_value = True
+        patch_namespace.return_value = namespace
         with patch(
             "charm.MagmaOrc8rSubscriberdbCharm._get_db_connection_string",
             new_callable=PropertyMock,
@@ -105,6 +111,8 @@ class TestCharm(unittest.TestCase):
                         "SQL_DRIVER": "postgres",
                         "SQL_DIALECT": "psql",
                         "SERVICE_HOSTNAME": "magma-orc8r-subscriberdb",
+                        "SERVICE_REGISTRY_MODE": "k8s",
+                        "SERVICE_REGISTRY_NAMESPACE": namespace,
                     },
                 },
             },

@@ -17,7 +17,7 @@ class MagmaOrc8rHACharm(CharmBase):
         self._service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[("grpc", 9180, 9119)],
-            additional_labels={"app.kubernetes.io/part-of": "orc8r-app"}
+            additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
         )
         startup_command = (
             "/usr/bin/envdir "

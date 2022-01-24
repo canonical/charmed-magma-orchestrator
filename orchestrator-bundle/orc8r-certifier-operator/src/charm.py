@@ -36,7 +36,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         """An instance of this object everytime an event occurs."""
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-certifier"
-        self._namespace = self.model.name
         self._container = self.unit.get_container(self._container_name)
         self.client_relations = ClientRelations(self, "client_relations")
         self._db = pgsql.PostgreSQLClient(self, "db")
@@ -54,7 +53,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             additional_labels={
                 "app.kubernetes.io/part-of": "orc8r-app",
                 "orc8r.io/analytics_collector": "true",
-            }
+            },
         )
 
     def _on_install(self, event):
@@ -360,6 +359,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     def _encode_in_base64(byte_string: bytes):
         """Encodes given byte string in Base64"""
         return base64.b64encode(byte_string).decode("utf-8")
+
+    @property
+    def _namespace(self) -> str:
+        return self.model.name
 
 
 if __name__ == "__main__":

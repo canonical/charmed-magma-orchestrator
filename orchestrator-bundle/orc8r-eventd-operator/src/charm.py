@@ -18,7 +18,6 @@ class MagmaOrc8rEventdCharm(CharmBase):
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-eventd"
         self._container = self.unit.get_container(self._container_name)
-        self._namespace = self.model.name
         self.framework.observe(
             self.on.magma_orc8r_eventd_pebble_ready,
             self._on_magma_orc8r_eventd_pebble_ready,
@@ -32,10 +31,9 @@ class MagmaOrc8rEventdCharm(CharmBase):
                 "orc8r.io/swagger_spec": "true",
             },
             additional_annotations={
-                "orc8r.io/obsidian_handlers_path_prefixes":
-                    "/magma/v1/networks/:network_id/logs, "
-                    "/magma/v1/events,"
-            }
+                "orc8r.io/obsidian_handlers_path_prefixes": "/magma/v1/networks/:network_id/logs, "
+                "/magma/v1/events,"
+            },
         )
 
     def _on_magma_orc8r_eventd_pebble_ready(self, event):
@@ -71,12 +69,16 @@ class MagmaOrc8rEventdCharm(CharmBase):
                         "-v=0",
                         "environment": {
                             "SERVICE_REGISTRY_MODE": "k8s",
-                            "SERVICE_REGISTRY_NAMESPACE": self._namespace
-                        }
+                            "SERVICE_REGISTRY_NAMESPACE": self._namespace,
+                        },
                     },
                 },
             },
         )
+
+    @property
+    def _namespace(self) -> str:
+        return self.model.name
 
 
 if __name__ == "__main__":

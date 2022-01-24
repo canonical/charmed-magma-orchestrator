@@ -5,15 +5,14 @@
 import logging
 from typing import List
 
+from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from lightkube import Client
 from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
 from lightkube.resources.apps_v1 import StatefulSet
 from ops.charm import CharmBase
 from ops.main import main
-from ops.model import ActiveStatus, MaintenanceStatus, BlockedStatus
-from ops.pebble import ConnectionError, Layer, ExecError
-
-from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
+from ops.pebble import ConnectionError, ExecError, Layer
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +22,6 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         """An instance of this object everytime an event occurs."""
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-orchestrator"
-        self._namespace = self.model.name
-        self.namespace = self.model.name
         self._container = self.unit.get_container(self._container_name)
         self.framework.observe(
             self.on.magma_orc8r_orchestrator_pebble_ready,
@@ -35,12 +32,9 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         )
         self.framework.observe(
             self.on.create_orchestrator_admin_user_action,
-            self._create_orchestrator_admin_user_action
+            self._create_orchestrator_admin_user_action,
         )
-        self.framework.observe(
-            self.on.set_log_verbosity_action,
-            self._set_log_verbosity_action
-        )
+        self.framework.observe(self.on.set_log_verbosity_action, self._set_log_verbosity_action)
         self._service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[("grpc", 9180, 9112), ("http", 8080, 10112)],
@@ -52,18 +46,17 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                 "orc8r.io/obsidian_handlers": "true",
                 "orc8r.io/state_indexer": "true",
                 "orc8r.io/stream_provider": "true",
-                "orc8r.io/swagger_spec": "true"
+                "orc8r.io/swagger_spec": "true",
             },
             additional_annotations={
                 "orc8r.io/state_indexer_types": "directory_record",
                 "orc8r.io/state_indexer_version": "1",
                 "orc8r.io/stream_provider_streams": "configs",
-                "orc8r.io/obsidian_handlers_path_prefixes":
-                    "/, "
-                    "/magma/v1/channels, "
-                    "/magma/v1/networks, "
-                    "/magma/v1/networks/:network_id,"
-            }
+                "orc8r.io/obsidian_handlers_path_prefixes": "/, "
+                "/magma/v1/channels, "
+                "/magma/v1/networks, "
+                "/magma/v1/networks/:network_id,",
+            },
         )
 
     def _create_orchestrator_admin_user_action(self, event):
@@ -74,19 +67,19 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                 "-admin",
                 "-cert",
                 "/var/opt/magma/certs/admin_operator.pem",
-                "admin_operator"
+                "admin_operator",
             ],
             timeout=30,
             environment=self._environment_variables,
-            working_dir="/"
+            working_dir="/",
         )
         try:
             stdout, error = process.wait_output()
             logger.info(f"Return message: {stdout}, {error}")
         except ExecError as e:
-            logger.error('Exited with code %d. Stderr:', e.exit_code)
+            logger.error("Exited with code %d. Stderr:", e.exit_code)
             for line in e.stderr.splitlines():
-                logger.error('    %s', line)
+                logger.error("    %s", line)
 
     def _set_log_verbosity_action(self, event):
         process = self._container.exec(
@@ -98,15 +91,15 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             ],
             timeout=30,
             environment=self._environment_variables,
-            working_dir="/"
+            working_dir="/",
         )
         try:
             stdout, error = process.wait_output()
             logger.info(f"Return message: {stdout}, {error}")
         except ExecError as e:
-            logger.error('Exited with code %d. Stderr:', e.exit_code)
+            logger.error("Exited with code %d. Stderr:", e.exit_code)
             for line in e.stderr.splitlines():
-                logger.error('    %s', line)
+                logger.error("    %s", line)
 
     def _on_magma_orc8r_orchestrator_pebble_ready(self, event):
         if not self._relations_ready:
@@ -122,7 +115,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             relation
             for relation in required_relations
             if not self.model.get_relation(relation)
-               or len(self.model.get_relation(relation).units) == 0  # noqa: W503
+            or len(self.model.get_relation(relation).units) == 0  # noqa: W503
         ]
         if missing_relations:
             msg = f"Waiting for relations: {', '.join(missing_relations)}"
@@ -142,7 +135,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         client = Client()
         statefulset = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
         return all(
-            volume_mount in statefulset.spec.template.spec.containers[1].volumeMounts # type: ignore[attr-defined]  # noqa: E501
+            volume_mount in statefulset.spec.template.spec.containers[1].volumeMounts  # type: ignore[attr-defined]  # noqa: E501
             for volume_mount in self._magma_orc8r_orchestrator_volume_mounts
         )
 
@@ -199,6 +192,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
     @property
     def _environment_variables(self) -> dict:
         return {
+            "SERVICE_HOSTNAME": self._container_name,
             "SERVICE_REGISTRY_MODE": "k8s",
             "SERVICE_REGISTRY_NAMESPACE": self._namespace,
         }
@@ -222,6 +216,10 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                 },
             }
         )
+
+    @property
+    def _namespace(self) -> str:
+        return self.model.name
 
 
 if __name__ == "__main__":

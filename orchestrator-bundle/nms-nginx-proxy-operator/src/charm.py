@@ -5,7 +5,6 @@
 import logging
 from typing import List
 
-from charms.nginx_ingress_integrator.v0.ingress import IngressRequires
 import httpx
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from lightkube import Client, codecs
@@ -17,7 +16,7 @@ from lightkube.models.core_v1 import (
     VolumeMount,
 )
 from lightkube.resources.apps_v1 import StatefulSet
-from lightkube.resources.core_v1 import ConfigMap, Service
+from lightkube.resources.core_v1 import ConfigMap
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
@@ -30,7 +29,6 @@ class MagmaNmsNginxProxyCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
         self._container_name = self._service_name = "magma-nms-nginx-proxy"
-        self._namespace = self.model.name
         self._container = self.unit.get_container(self._container_name)
         self._context = {"namespace": self._namespace, "app_name": self.app.name}
         self.framework.observe(
@@ -195,6 +193,10 @@ class MagmaNmsNginxProxyCharm(CharmBase):
     def _on_remove(self, event):
         client = Client()
         client.delete(ConfigMap, name="nginx-proxy-etc", namespace=self._namespace)
+
+    @property
+    def _namespace(self) -> str:
+        return self.model.name
 
 
 if __name__ == "__main__":

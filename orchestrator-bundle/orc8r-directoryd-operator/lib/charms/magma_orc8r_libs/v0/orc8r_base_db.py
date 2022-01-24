@@ -80,7 +80,6 @@ class Orc8rBase(Object):
         super().__init__(charm, "orc8r-base")
         self.charm = charm
         self.startup_command = startup_command
-        self._namespace = self.charm.model.name
         self._container_name = self._service_name = self.charm.meta.name
         self._container = self.charm.unit.get_container(self._container_name)
         pebble_ready_event = getattr(
@@ -93,7 +92,7 @@ class Orc8rBase(Object):
         else:
             self.additional_environment_variables = {}
 
-        self._db = pgsql.PostgreSQLClient(self.charm, "db")
+        self._db = pgsql.PostgreSQLClient(self.charm, "db")  # type: ignore[attr-defined]
         self.framework.observe(
             self._db.on.database_relation_joined, self._on_database_relation_joined
         )
@@ -199,3 +198,7 @@ class Orc8rBase(Object):
         }
         environment_variables.update(sql_environment_variables)
         return environment_variables
+
+    @property
+    def _namespace(self) -> str:
+        return self.charm.model.name

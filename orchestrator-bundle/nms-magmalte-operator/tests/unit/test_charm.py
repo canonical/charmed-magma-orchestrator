@@ -24,7 +24,9 @@ class TestCharm(unittest.TestCase):
     )
     TEST_DOMAIN_NAME = "test.domain.com"
 
-    @patch("charm.KubernetesServicePatch", lambda x, y: None)
+    @patch(
+        "charm.KubernetesServicePatch", lambda charm, ports, service_name, additional_labels: None
+    )
     def setUp(self):
         self.harness = Harness(MagmaNmsMagmalteCharm)
         self.addCleanup(self.harness.cleanup)
@@ -113,12 +115,15 @@ class TestCharm(unittest.TestCase):
                     "magma-nms-magmalte": {
                         "startup": "enabled",
                         "override": "replace",
-                        "command": "yarn run start:prod",
+                        "command": f"/usr/local/bin/wait-for-it.sh -s -t 30 "
+                        f"{self.TEST_DB_CONNECTION_STRING.host}:"
+                        f"{self.TEST_DB_CONNECTION_STRING.port} -- "
+                        f"yarn run start:prod",
                         "environment": {
                             "API_CERT_FILENAME": "/run/secrets/admin_operator.pem",
                             "API_PRIVATE_KEY_FILENAME": "/run/secrets/admin_operator.key.pem",
                             "API_HOST": f"api.{self.TEST_DOMAIN_NAME}",
-                            "PORT": 8081,
+                            "PORT": "8081",
                             "HOST": "0.0.0.0",
                             "MYSQL_HOST": self.TEST_DB_CONNECTION_STRING.host,
                             "MYSQL_PORT": self.TEST_DB_CONNECTION_STRING.port,

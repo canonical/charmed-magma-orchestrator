@@ -120,6 +120,7 @@ class KubernetesServicePatch(Object):
         service_type: ServiceType = "ClusterIP",
         additional_labels: dict = None,
         additional_selectors: dict = None,
+        additional_annotations: dict = None,
     ):
         """Constructor for KubernetesServicePatch.
 
@@ -134,12 +135,18 @@ class KubernetesServicePatch(Object):
                 "app.kubernetes.io/name" is set to the service name)
             additional_selectors: Selectors to be added to the kubernetes service (by default only
                 "app.kubernetes.io/name" is set to the service name)
+            additional_annotations: Annotations to be added to the kubernetes service.
         """
         super().__init__(charm, "kubernetes-service-patch")
         self.charm = charm
         self.service_name = service_name if service_name else self._app
         self.service = self._service_object(
-            ports, service_name, service_type, additional_labels, additional_selectors
+            ports,
+            service_name,
+            service_type,
+            additional_labels,
+            additional_selectors,
+            additional_annotations,
         )
 
         # Make mypy type checking happy that self._patch is a method
@@ -156,6 +163,7 @@ class KubernetesServicePatch(Object):
         service_type: ServiceType = "ClusterIP",
         additional_labels: dict = None,
         additional_selectors: dict = None,
+        additional_annotations: dict = None,
     ) -> Service:
         """Creates a valid Service representation.
 
@@ -172,6 +180,7 @@ class KubernetesServicePatch(Object):
                 "app.kubernetes.io/name" is set to the service name)
             additional_selectors: Selectors to be added to the kubernetes service (by default only
                 "app.kubernetes.io/name" is set to the service name)
+            additional_annotations: Annotations to be added to the kubernetes service.
 
         Returns:
             Service: A valid representation of a Kubernetes Service with the correct ports.
@@ -191,6 +200,7 @@ class KubernetesServicePatch(Object):
                 namespace=self._namespace,
                 name=service_name,
                 labels=labels,
+                annotations=additional_annotations,  # type: ignore[arg-type]
             ),
             spec=ServiceSpec(
                 selector=selector,

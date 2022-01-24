@@ -23,7 +23,6 @@ class MagmaOrc8rSmsdCharm(CharmBase):
         """Creates a new instance of this object for each event."""
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-smsd"
-        self._namespace = self.model.name
         self._container = self.unit.get_container(self._container_name)
         self._db = pgsql.PostgreSQLClient(self, "db")
         self.framework.observe(
@@ -42,7 +41,7 @@ class MagmaOrc8rSmsdCharm(CharmBase):
             },
             additional_annotations={
                 "orc8r.io/obsidian_handlers_path_prefixes": "/magma/v1/lte/:network_id/sms"
-            }
+            },
         )
 
     def _on_magma_orc8r_smsd_pebble_ready(self, event):
@@ -114,7 +113,7 @@ class MagmaOrc8rSmsdCharm(CharmBase):
                             "SQL_DIALECT": "psql",
                             "SERVICE_HOSTNAME": self._container_name,
                             "SERVICE_REGISTRY_MODE": "k8s",
-                            "SERVICE_REGISTRY_NAMESPACE": self._namespace
+                            "SERVICE_REGISTRY_NAMESPACE": self._namespace,
                         },
                     },
                 },
@@ -129,6 +128,10 @@ class MagmaOrc8rSmsdCharm(CharmBase):
             return ConnectionString(db_relation.data[db_relation.app]["master"])
         except (AttributeError, KeyError):
             return None
+
+    @property
+    def _namespace(self) -> str:
+        return self.model.name
 
 
 if __name__ == "__main__":

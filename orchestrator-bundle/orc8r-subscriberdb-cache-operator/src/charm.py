@@ -23,7 +23,6 @@ class MagmaOrc8rSubscriberdbcacheCharm(CharmBase):
         """Creates a new instance of this object for each event."""
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-subscriberdb-cache"
-        self._namespace = self.model.name
         self._container = self.unit.get_container(self._container_name)
         self._db = pgsql.PostgreSQLClient(self, "db")
         self.framework.observe(
@@ -36,7 +35,7 @@ class MagmaOrc8rSubscriberdbcacheCharm(CharmBase):
         self._service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[("grpc", 9180, 9105), ("http", 8080, 10087)],
-            additional_labels={"app.kubernetes.io/part-of": "orc8r-app"}
+            additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
         )
 
     def _on_magma_orc8r_subscriberdb_cache_pebble_ready(self, event):
@@ -123,6 +122,10 @@ class MagmaOrc8rSubscriberdbcacheCharm(CharmBase):
             return ConnectionString(db_relation.data[db_relation.app]["master"])
         except (AttributeError, KeyError):
             return None
+
+    @property
+    def _namespace(self) -> str:
+        return self.model.name
 
 
 if __name__ == "__main__":

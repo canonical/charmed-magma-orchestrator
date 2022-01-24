@@ -23,7 +23,6 @@ class MagmaOrc8rSubscriberdbCharm(CharmBase):
         """Creates a new instance of this object for each event."""
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-subscriberdb"
-        self._namespace = self.model.name
         self._container = self.unit.get_container(self._container_name)
         self._db = pgsql.PostgreSQLClient(self, "db")
         self.framework.observe(
@@ -45,12 +44,11 @@ class MagmaOrc8rSubscriberdbCharm(CharmBase):
             additional_annotations={
                 "orc8r.io/state_indexer_types": "mobilityd_ipdesc_record",
                 "orc8r.io/state_indexer_version": "1",
-                "orc8r.io/obsidian_handlers_path_prefixes":
-                    "/magma/v1/lte/:network_id/msisdns, "
-                    "/magma/v1/lte/:network_id/subscriber_state, "
-                    "/magma/v1/lte/:network_id/subscribers, "
-                    "/magma/v1/lte/:network_id/subscribers_v2,"
-            }
+                "orc8r.io/obsidian_handlers_path_prefixes": "/magma/v1/lte/:network_id/msisdns, "
+                "/magma/v1/lte/:network_id/subscriber_state, "
+                "/magma/v1/lte/:network_id/subscribers, "
+                "/magma/v1/lte/:network_id/subscribers_v2,",
+            },
         )
 
     def _on_magma_orc8r_subscriberdb_pebble_ready(self, event):
@@ -137,6 +135,10 @@ class MagmaOrc8rSubscriberdbCharm(CharmBase):
             return ConnectionString(db_relation.data[db_relation.app]["master"])
         except (AttributeError, KeyError):
             return None
+
+    @property
+    def _namespace(self) -> str:
+        return self.model.name
 
 
 if __name__ == "__main__":

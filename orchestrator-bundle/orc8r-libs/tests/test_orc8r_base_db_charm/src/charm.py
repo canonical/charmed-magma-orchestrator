@@ -11,7 +11,12 @@ class MagmaOrc8rDirectorydCharm(CharmBase):
     def __init__(self, *args):
         """Creates a new instance of this object for each event."""
         super().__init__(*args)
-        self._service_patcher = KubernetesServicePatch(self, [("grpc", 9180, 9106)])
+        self._service_patcher = KubernetesServicePatch(
+            charm=self,
+            ports=[("grpc", 9180, 9106)],
+            additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
+        )
+
         startup_command = (
             "/usr/bin/envdir "
             "/var/opt/magma/envdir "

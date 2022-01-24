@@ -23,7 +23,6 @@ class MagmaOrc8rPolicydbCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-policydb"
-        self._namespace = self.model.name
         self._container = self.unit.get_container(self._container_name)
         self._db = pgsql.PostgreSQLClient(self, "db")
         self.framework.observe(
@@ -41,11 +40,10 @@ class MagmaOrc8rPolicydbCharm(CharmBase):
                 "orc8r.io/swagger_spec": "true",
             },
             additional_annotations={
-                "orc8r.io/obsidian_handlers_path_prefixes":
-                    "/magma/v1/lte/:network_id/policy_qos_profiles, "
-                    "/magma/v1/networks/:network_id/policies, "
-                    "/magma/v1/networks/:network_id/rating_groups"
-            }
+                "orc8r.io/obsidian_handlers_path_prefixes": "/magma/v1/lte/:network_id/policy_qos_profiles, "  # noqa: E501
+                "/magma/v1/networks/:network_id/policies, "
+                "/magma/v1/networks/:network_id/rating_groups"
+            },
         )
 
     def _on_magma_orc8r_policydb_pebble_ready(self, event):
@@ -117,7 +115,7 @@ class MagmaOrc8rPolicydbCharm(CharmBase):
                             "SQL_DIALECT": "psql",
                             "SERVICE_HOSTNAME": self._container_name,
                             "SERVICE_REGISTRY_MODE": "k8s",
-                            "SERVICE_REGISTRY_NAMESPACE": self._namespace
+                            "SERVICE_REGISTRY_NAMESPACE": self._namespace,
                         },
                     },
                 },
@@ -132,6 +130,10 @@ class MagmaOrc8rPolicydbCharm(CharmBase):
             return ConnectionString(db_relation.data[db_relation.app]["master"])
         except (AttributeError, KeyError):
             return None
+
+    @property
+    def _namespace(self) -> str:
+        return self.model.name
 
 
 if __name__ == "__main__":
