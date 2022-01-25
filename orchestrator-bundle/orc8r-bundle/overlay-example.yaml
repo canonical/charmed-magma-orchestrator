@@ -1,0 +1,14 @@
+applications:
+  orc8r-certifier:
+    options:
+      use-self-signed-ssl-certs: False
+      admin-operator-key-pem: "$(cat ~/certs/admin_operator.key.pem)"
+      admin-operator-pem: "$(cat ~/certs/admin_operator.pem)"
+      controller-crt: "$(cat ~/certs/controller.crt)"
+      controller-key: "$(cat ~/certs/controller.key)"
+      bootstrapper-key: "$(cat ~/certs/bootstrapper.key)"
+      certifier-key: "$(cat ~/certs/certifier.key)"
+      certifier-pem: "$(cat ~/certs/certifier.pem)"
+      rootCA-key: "$(cat ~/certs/rootCA.key)"
+      rootCA-pem: "$(cat ~/certs/rootCA.pem)"
+      domain: example.com
