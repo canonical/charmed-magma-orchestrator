@@ -1,1 +1,0 @@
-# Charmhub Upload Bundle Test
