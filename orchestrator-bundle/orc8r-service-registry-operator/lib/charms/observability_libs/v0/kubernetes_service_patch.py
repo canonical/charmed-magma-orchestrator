@@ -154,7 +154,6 @@ class KubernetesServicePatch(Object):
         # Ensure this patch is applied during the 'install' and 'upgrade-charm' events
         self.framework.observe(charm.on.install, self._patch)
         self.framework.observe(charm.on.upgrade_charm, self._patch)
-        self.framework.observe(charm.on.remove, self._on_remove)
 
     def _service_object(
         self,
@@ -187,7 +186,7 @@ class KubernetesServicePatch(Object):
         """
         if not service_name:
             service_name = self._app
-        labels = {"app.kubernetes.io/name": service_name}
+        labels = {"app.kubernetes.io/name": self._app}
         if additional_labels:
             labels.update(additional_labels)
         selector = {"app.kubernetes.io/name": self._app}
@@ -260,10 +259,6 @@ class KubernetesServicePatch(Object):
         # Construct a list in the same manner, using the fetched service
         fetched_ports = [(p.port, p.targetPort) for p in service.spec.ports]  # type: ignore[attr-defined]  # noqa: E501
         return expected_ports == fetched_ports
-
-    def _on_remove(self, event):
-        client = Client()
-        client.delete(Service, self.service_name, namespace=self._namespace)
 
     @property
     def _app(self) -> str:
