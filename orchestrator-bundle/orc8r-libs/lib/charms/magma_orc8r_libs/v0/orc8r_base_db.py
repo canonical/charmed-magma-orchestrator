@@ -92,7 +92,7 @@ class Orc8rBase(Object):
         else:
             self.additional_environment_variables = {}
 
-        self._db = pgsql.PostgreSQLClient(self.charm, "db")  # type: ignore[attr-defined]
+        self._db = pgsql.PostgreSQLClient(self.charm, "db")
         self.framework.observe(
             self._db.on.database_relation_joined, self._on_database_relation_joined
         )
