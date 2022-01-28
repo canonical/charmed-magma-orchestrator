@@ -2,14 +2,10 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import logging
-
 from charms.magma_orc8r_libs.v0.orc8r_base import Orc8rBase
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from ops.charm import CharmBase
 from ops.main import main
-
-logger = logging.getLogger(__name__)
 
 
 class MagmaOrc8rStreamer(CharmBase):
