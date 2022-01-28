@@ -38,6 +38,17 @@ juju deploy magma-nms-magmalte nms-magmalte
 juju relate nms-nginx-proxy nms-magmalte
 ```
 
+## Load Balancer
+
+For NMS to be accessible from outside the Kubernetes cluster, you must enable the `metallb` loadbalancer
+in your microk8s cluster.
+```bash
+microk8s enable metallb
+```
+
+You will be asked to provide a range of IP's that can be used by metallb.
+
+
 ## Relations
 
 Currently supported relations are:
@@ -49,6 +60,9 @@ Currently supported relations are:
 - [magma-orc8r-certifier](https://github.com/canonical/charmed-magma/tree/main/orchestrator-bundle/orc8r-certifier-operator) -
   magma-orc8r-certifier maintains and verifies signed client certificates and their associated
   identities.
+- [nginx-ingress-ingegrator](https://charmhub.io/nginx-ingress-integrator) - Nginx Ingress Integrator
+  generates an Nginx Ingress resource for sidecar charms using the Operator Framework. This 
+  resource can then be used by an Nginx Ingress Controller in a Kubernetes cluster to expose HTTP and HTTPS routes from outside the cluster to a charm running within the cluster.
 
 ## OCI Images
 

@@ -26,7 +26,11 @@ class MagmaOrc8rAnalyticsCharm(CharmBase):
         self.framework.observe(
             self.on.magma_orc8r_analytics_pebble_ready, self._on_magma_orc8r_analytics_pebble_ready
         )
-        self._service_patcher = KubernetesServicePatch(self, [("grpc", 9180, 9200)])
+        self._service_patcher = KubernetesServicePatch(
+            charm=self,
+            ports=[("grpc", 9180, 9200)],
+            additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
+        )
 
     def _on_magma_orc8r_analytics_pebble_ready(self, event):
         """
@@ -49,6 +53,10 @@ class MagmaOrc8rAnalyticsCharm(CharmBase):
                         "/var/opt/magma/envdir "
                         "/var/opt/magma/bin/analytics "
                         "-logtostderr=true -v=0",
+                        "environment": {
+                            "SERVICE_REGISTRY_MODE": "k8s",
+                            "SERVICE_REGISTRY_NAMESPACE": self._namespace,
+                        },
                     }
                 },
             }
@@ -71,6 +79,10 @@ class MagmaOrc8rAnalyticsCharm(CharmBase):
                 f"Could not restart {self._service_name} -- Pebble socket does "
                 f"not exist or is not responsive"
             )
+
+    @property
+    def _namespace(self) -> str:
+        return self.model.name
 
 
 if __name__ == "__main__":

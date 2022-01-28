@@ -135,8 +135,13 @@ class Orc8rBase(Object):
         environment_variables = {}
         default_environment_variables = {
             "SERVICE_HOSTNAME": self._container_name,
-            "HELM_RELEASE_NAME": "orc8r",
+            "SERVICE_REGISTRY_MODE": "k8s",
+            "SERVICE_REGISTRY_NAMESPACE": self._namespace
         }
         environment_variables.update(self.additional_environment_variables)
         environment_variables.update(default_environment_variables)
         return environment_variables
+
+    @property
+    def _namespace(self) -> str:
+        return self.charm.model.name

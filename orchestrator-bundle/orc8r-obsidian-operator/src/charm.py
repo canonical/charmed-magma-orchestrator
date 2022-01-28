@@ -27,7 +27,9 @@ class MagmaOrc8rObsidianCharm(CharmBase):
             self.on.magma_orc8r_obsidian_pebble_ready, self._on_magma_orc8r_obsidian_pebble_ready
         )
         self._service_patcher = KubernetesServicePatch(
-            self, [("grpc", 9180, 9093), ("http", 8080, 9081)]
+            charm=self,
+            ports=[("grpc", 9180, 9093), ("http", 8080, 9081)],
+            additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
         )
 
     def _on_magma_orc8r_obsidian_pebble_ready(self, event):
@@ -51,6 +53,11 @@ class MagmaOrc8rObsidianCharm(CharmBase):
                         "/var/opt/magma/envdir "
                         "/var/opt/magma/bin/obsidian "
                         "-logtostderr=true -v=0",
+                        "environment": {
+                            "SERVICE_HOSTNAME": self._container_name,
+                            "SERVICE_REGISTRY_MODE": "k8s",
+                            "SERVICE_REGISTRY_NAMESPACE": self._namespace,
+                        },
                     }
                 },
             }
@@ -73,6 +80,10 @@ class MagmaOrc8rObsidianCharm(CharmBase):
                 f"Could not restart {self._service_name} -- Pebble socket does "
                 f"not exist or is not responsive"
             )
+
+    @property
+    def _namespace(self) -> str:
+        return self.model.name
 
 
 if __name__ == "__main__":

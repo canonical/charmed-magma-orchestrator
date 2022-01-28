@@ -29,7 +29,37 @@ options:
     description: |
       Configuration item for production deployments. Shouldn't be used with use-self-signed-ssl-certs set to 'true'.
       Use this item to provide Magma deployment with your trusted certs.
+  bootstrapper-key:
+    type: string
+    default:
+    description: |
+      Configuration item for production deployments. Shouldn't be used with use-self-signed-ssl-certs set to 'true'.
+      Use this item to provide Magma deployment with your trusted certs.
+  certifier-key:
+    type: string
+    default:
+    description: |
+      Configuration item for production deployments. Shouldn't be used with use-self-signed-ssl-certs set to 'true'.
+      Use this item to provide Magma deployment with your trusted certs.
+  certifier-pem:
+    type: string
+    default:
+    description: |
+      Configuration item for production deployments. Shouldn't be used with use-self-signed-ssl-certs set to 'true'.
+      Use this item to provide Magma deployment with your trusted certs.
+  rootCA-key:
+    type: string
+    default:
+    description: |
+      Configuration item for production deployments. Shouldn't be used with use-self-signed-ssl-certs set to 'true'.
+      Use this item to provide Magma deployment with your trusted certs.
+  rootCA-pem:
+    type: string
+    default:
+    description: |
+      Configuration item for production deployments. Shouldn't be used with use-self-signed-ssl-certs set to 'true'.
+      Use this item to provide Magma deployment with your trusted certs.
   domain:
     type: string
     default:
-    description: Orchestrator domain. Required when use-self-signed-ssl-certs set to true.
+    description: Orchestrator domain.

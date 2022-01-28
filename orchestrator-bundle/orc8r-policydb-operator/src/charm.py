@@ -32,7 +32,18 @@ class MagmaOrc8rPolicydbCharm(CharmBase):
             self._db.on.database_relation_joined, self._on_database_relation_joined
         )
         self._service_patcher = KubernetesServicePatch(
-            self, [("grpc", 9180, 9085), ("http", 8080, 10085)]
+            charm=self,
+            ports=[("grpc", 9180, 9085), ("http", 8080, 10085)],
+            additional_labels={
+                "app.kubernetes.io/part-of": "orc8r-app",
+                "orc8r.io/obsidian_handlers": "true",
+                "orc8r.io/swagger_spec": "true",
+            },
+            additional_annotations={
+                "orc8r.io/obsidian_handlers_path_prefixes": "/magma/v1/lte/:network_id/policy_qos_profiles, "  # noqa: E501
+                "/magma/v1/networks/:network_id/policies, "
+                "/magma/v1/networks/:network_id/rating_groups"
+            },
         )
 
     def _on_magma_orc8r_policydb_pebble_ready(self, event):
@@ -103,7 +114,8 @@ class MagmaOrc8rPolicydbCharm(CharmBase):
                             "SQL_DRIVER": "postgres",
                             "SQL_DIALECT": "psql",
                             "SERVICE_HOSTNAME": self._container_name,
-                            "HELM_RELEASE_NAME": "orc8r",
+                            "SERVICE_REGISTRY_MODE": "k8s",
+                            "SERVICE_REGISTRY_NAMESPACE": self._namespace,
                         },
                     },
                 },
@@ -118,6 +130,10 @@ class MagmaOrc8rPolicydbCharm(CharmBase):
             return ConnectionString(db_relation.data[db_relation.app]["master"])
         except (AttributeError, KeyError):
             return None
+
+    @property
+    def _namespace(self) -> str:
+        return self.model.name
 
 
 if __name__ == "__main__":

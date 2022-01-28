@@ -21,7 +21,6 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-bootstrapper"
-        self._namespace = self.model.name
         self._container = self.unit.get_container(self._container_name)
         self.framework.observe(
             self.on.magma_orc8r_bootstrapper_pebble_ready,
@@ -30,7 +29,11 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         self.framework.observe(
             self.on.certifier_relation_joined, self._on_certifier_relation_joined
         )
-        self._service_patcher = KubernetesServicePatch(self, [("grpc", 9180, 9088)])
+        self._service_patcher = KubernetesServicePatch(
+            charm=self,
+            ports=[("grpc", 9180, 9088)],
+            additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
+        )
 
     def _on_magma_orc8r_bootstrapper_pebble_ready(self, event):
         """Triggered when pebble is ready."""
@@ -111,6 +114,10 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
                         "-cak=/var/opt/magma/certs/bootstrapper.key "
                         "-logtostderr=true "
                         "-v=0",
+                        "environment": {
+                            "SERVICE_REGISTRY_MODE": "k8s",
+                            "SERVICE_REGISTRY_NAMESPACE": self._namespace,
+                        },
                     }
                 },
             }
@@ -146,6 +153,10 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
                 readOnly=True,
             ),
         ]
+
+    @property
+    def _namespace(self) -> str:
+        return self.model.name
 
 
 if __name__ == "__main__":

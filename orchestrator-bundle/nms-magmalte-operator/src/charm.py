@@ -13,7 +13,7 @@ from lightkube.resources.apps_v1 import StatefulSet
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
-from ops.pebble import Layer
+from ops.pebble import ExecError, Layer
 from pgconnstr import ConnectionString  # type: ignore[import]
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,6 @@ class MagmaNmsMagmalteCharm(CharmBase):
         """Creates a new instance of this object for each event."""
         super().__init__(*args)
         self._container_name = self._service_name = "magma-nms-magmalte"
-        self._namespace = self.model.name
         self._container = self.unit.get_container(self._container_name)
         self._db = pgsql.PostgreSQLClient(self, "db")
         self.framework.observe(
@@ -40,7 +39,18 @@ class MagmaNmsMagmalteCharm(CharmBase):
         self.framework.observe(
             self.on.certifier_relation_changed, self._on_certifier_relation_changed
         )
-        self._service_patcher = KubernetesServicePatch(self, [("magmalte", 8081, 8081)])
+        self.framework.observe(
+            self.on.create_nms_admin_user_action, self._create_nms_admin_user_action
+        )
+        self._service_patcher = KubernetesServicePatch(
+            charm=self,
+            ports=[("magmalte", 8081, 8081)],
+            service_name="magmalte",
+            additional_labels={
+                "app.kubernetes.io/part-of": "magma",
+                "app.kubernetes.io/component": "magmalte",
+            },
+        )
 
     def _on_magma_nms_magmalte_pebble_ready(self, event):
         if not self._relations_ready:
@@ -97,6 +107,25 @@ class MagmaNmsMagmalteCharm(CharmBase):
         logger.info("Additional K8s resources for magma-nms-magmalte container applied!")
 
     @property
+    def _environment_variables(self) -> dict:
+        return {
+            "API_CERT_FILENAME": "/run/secrets/admin_operator.pem",
+            "API_PRIVATE_KEY_FILENAME": "/run/secrets/admin_operator.key.pem",
+            "API_HOST": f"orc8r-nginx-proxy.{self._namespace}.svc.cluster.local",
+            "PORT": str(8081),
+            "HOST": "0.0.0.0",
+            "MYSQL_HOST": str(self._get_db_connection_string.host),
+            "MYSQL_PORT": str(self._get_db_connection_string.port),
+            "MYSQL_DB": str(self._get_db_connection_string.dbname),
+            "MYSQL_USER": str(self._get_db_connection_string.user),
+            "MYSQL_PASS": str(self._get_db_connection_string.password),
+            "MAPBOX_ACCESS_TOKEN": "",
+            "MYSQL_DIALECT": "postgres",
+            "PUPPETEER_SKIP_DOWNLOAD": "true",
+            "USER_GRAFANA_ADDRESS": "orc8r-user-grafana:3000",
+        }
+
+    @property
     def _pebble_layer(self) -> Layer:
         """Returns pebble layer for the charm."""
         return Layer(
@@ -106,27 +135,36 @@ class MagmaNmsMagmalteCharm(CharmBase):
                     self._service_name: {
                         "override": "replace",
                         "startup": "enabled",
-                        "command": "yarn run start:prod",
-                        "environment": {
-                            "API_CERT_FILENAME": "/run/secrets/admin_operator.pem",
-                            "API_PRIVATE_KEY_FILENAME": "/run/secrets/admin_operator.key.pem",
-                            "API_HOST": f"api.{self._get_domain_name}",
-                            "PORT": 8081,
-                            "HOST": "0.0.0.0",
-                            "MYSQL_HOST": self._get_db_connection_string.host,
-                            "MYSQL_PORT": self._get_db_connection_string.port,
-                            "MYSQL_DB": self._get_db_connection_string.dbname,
-                            "MYSQL_USER": self._get_db_connection_string.user,
-                            "MYSQL_PASS": self._get_db_connection_string.password,
-                            "MAPBOX_ACCESS_TOKEN": "",
-                            "MYSQL_DIALECT": "postgres",
-                            "PUPPETEER_SKIP_DOWNLOAD": "true",
-                            "USER_GRAFANA_ADDRESS": "orc8r-user-grafana:3000",
-                        },
+                        "command": f"/usr/local/bin/wait-for-it.sh -s -t 30 "
+                        f"{self._get_db_connection_string.host}:"
+                        f"{self._get_db_connection_string.port} "
+                        f"-- yarn run start:prod",
+                        "environment": self._environment_variables,
                     }
                 },
             }
         )
+
+    def _create_nms_admin_user_action(self, event):
+        process = self._container.exec(
+            [
+                "/usr/local/bin/yarn",
+                "setAdminPassword",
+                "master",
+                event.params["email"],
+                event.params["password"],
+            ],
+            timeout=30,
+            environment=self._environment_variables,
+            working_dir="/usr/src/packages/magmalte",
+        )
+        try:
+            stdout, error = process.wait_output()
+            logger.info(f"Return message: {stdout}, {error}")
+        except ExecError as e:
+            logger.error("Exited with code %d. Stderr:", e.exit_code)
+            for line in e.stderr.splitlines():
+                logger.error("    %s", line)
 
     @property
     def _magma_nms_magmalte_volumes(self) -> List[Volume]:
@@ -204,6 +242,10 @@ class MagmaNmsMagmalteCharm(CharmBase):
             return ConnectionString(db_relation.data[db_relation.app]["master"])
         except (AttributeError, KeyError):
             return None
+
+    @property
+    def _namespace(self) -> str:
+        return self.model.name
 
 
 if __name__ == "__main__":

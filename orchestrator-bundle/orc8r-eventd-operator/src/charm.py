@@ -23,7 +23,17 @@ class MagmaOrc8rEventdCharm(CharmBase):
             self._on_magma_orc8r_eventd_pebble_ready,
         )
         self._service_patcher = KubernetesServicePatch(
-            self, [("grpc", 9180, 9121), ("http", 8080, 10121)]
+            charm=self,
+            ports=[("grpc", 9180, 9121), ("http", 8080, 10121)],
+            additional_labels={
+                "app.kubernetes.io/part-of": "orc8r-app",
+                "orc8r.io/obsidian_handlers": "true",
+                "orc8r.io/swagger_spec": "true",
+            },
+            additional_annotations={
+                "orc8r.io/obsidian_handlers_path_prefixes": "/magma/v1/networks/:network_id/logs, "
+                "/magma/v1/events,"
+            },
         )
 
     def _on_magma_orc8r_eventd_pebble_ready(self, event):
@@ -57,10 +67,18 @@ class MagmaOrc8rEventdCharm(CharmBase):
                         "-run_echo_server=true "
                         "-logtostderr=true "
                         "-v=0",
+                        "environment": {
+                            "SERVICE_REGISTRY_MODE": "k8s",
+                            "SERVICE_REGISTRY_NAMESPACE": self._namespace,
+                        },
                     },
                 },
             },
         )
+
+    @property
+    def _namespace(self) -> str:
+        return self.model.name
 
 
 if __name__ == "__main__":

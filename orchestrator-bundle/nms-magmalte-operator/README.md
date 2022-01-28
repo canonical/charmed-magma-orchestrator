@@ -40,6 +40,13 @@ juju deploy postgresql-k8s
 juju relate nms-magmalte postgresql-k8s:db
 ```
 
+## Actions
+
+### Create an NMS Admin User
+
+```bash
+juju run-action nms-magmalte/0 create-nms-admin-user email=admin@example.com password=password123
+```
 
 ## Relations
 

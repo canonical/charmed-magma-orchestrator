@@ -33,7 +33,11 @@ class MagmaOrc8rAccessdCharm(CharmBase):
         self.framework.observe(
             self._db.on.database_relation_joined, self._on_database_relation_joined
         )
-        self._service_patcher = KubernetesServicePatch(self, [("grpc", 9180, 9091)])
+        self._service_patcher = KubernetesServicePatch(
+            charm=self,
+            ports=[("grpc", 9180, 9091)],
+            additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
+        )
 
     def _on_magma_orc8r_accessd_pebble_ready(self, event):
         if not self._check_db_relation_has_been_established():
@@ -102,7 +106,8 @@ class MagmaOrc8rAccessdCharm(CharmBase):
                             "SQL_DRIVER": "postgres",
                             "SQL_DIALECT": "psql",
                             "SERVICE_HOSTNAME": self._container_name,
-                            "HELM_RELEASE_NAME": "orc8r",
+                            "SERVICE_REGISTRY_MODE": "k8s",
+                            "SERVICE_REGISTRY_NAMESPACE": self._namespace,
                         },
                     },
                 },
@@ -117,6 +122,10 @@ class MagmaOrc8rAccessdCharm(CharmBase):
             return ConnectionString(db_relation.data[db_relation.app]["master"])
         except (AttributeError, KeyError):
             return None
+
+    @property
+    def _namespace(self) -> str:
+        return self.model.name
 
 
 if __name__ == "__main__":

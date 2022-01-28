@@ -151,7 +151,7 @@ class CertificateSigningRequestCreator:
                 Name field of the certificate. The first name in the list will be
                 used as the Common Name, Subject and Issuer field.
             signing_key: A private key used to sign the certificate. If none given, new key will
-                be generate.
+                be generated.
 
         Raises:
             ValueError: is raised if an empty list of names is provided to the

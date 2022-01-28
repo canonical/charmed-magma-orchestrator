@@ -33,7 +33,22 @@ class MagmaOrc8rSubscriberdbCharm(CharmBase):
             self._db.on.database_relation_joined, self._on_database_relation_joined
         )
         self._service_patcher = KubernetesServicePatch(
-            self, [("grpc", 9180, 9083), ("http", 8080, 10083)]
+            charm=self,
+            ports=[("grpc", 9180, 9083), ("http", 8080, 10083)],
+            additional_labels={
+                "app.kubernetes.io/part-of": "orc8r-app",
+                "orc8r.io/obsidian_handlers": "true",
+                "orc8r.io/state_indexer": "true",
+                "orc8r.io/swagger_spec": "true",
+            },
+            additional_annotations={
+                "orc8r.io/state_indexer_types": "mobilityd_ipdesc_record",
+                "orc8r.io/state_indexer_version": "1",
+                "orc8r.io/obsidian_handlers_path_prefixes": "/magma/v1/lte/:network_id/msisdns, "
+                "/magma/v1/lte/:network_id/subscriber_state, "
+                "/magma/v1/lte/:network_id/subscribers, "
+                "/magma/v1/lte/:network_id/subscribers_v2,",
+            },
         )
 
     def _on_magma_orc8r_subscriberdb_pebble_ready(self, event):
@@ -104,7 +119,8 @@ class MagmaOrc8rSubscriberdbCharm(CharmBase):
                             "SQL_DRIVER": "postgres",
                             "SQL_DIALECT": "psql",
                             "SERVICE_HOSTNAME": self._container_name,
-                            "HELM_RELEASE_NAME": "lte-orc8r",
+                            "SERVICE_REGISTRY_MODE": "k8s",
+                            "SERVICE_REGISTRY_NAMESPACE": self._namespace,
                         },
                     },
                 },
@@ -119,6 +135,10 @@ class MagmaOrc8rSubscriberdbCharm(CharmBase):
             return ConnectionString(db_relation.data[db_relation.app]["master"])
         except (AttributeError, KeyError):
             return None
+
+    @property
+    def _namespace(self) -> str:
+        return self.model.name
 
 
 if __name__ == "__main__":

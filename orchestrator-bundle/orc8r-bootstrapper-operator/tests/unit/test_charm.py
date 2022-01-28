@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, PropertyMock, patch
 
 from ops.model import BlockedStatus
 from ops.testing import Harness
@@ -11,7 +11,7 @@ from charm import MagmaOrc8rBootstrapperCharm
 
 
 class TestCharm(unittest.TestCase):
-    @patch("charm.KubernetesServicePatch", lambda x, y: None)
+    @patch("charm.KubernetesServicePatch", lambda charm, ports, additional_labels: None)
     def setUp(self):
         self.harness = Harness(MagmaOrc8rBootstrapperCharm)
         self.addCleanup(self.harness.cleanup)
@@ -32,11 +32,14 @@ class TestCharm(unittest.TestCase):
         initial_plan = self.harness.get_container_pebble_plan("magma-orc8r-bootstrapper")
         self.assertEqual(initial_plan.to_yaml(), "{}\n")
 
+    @patch("charm.MagmaOrc8rBootstrapperCharm._namespace", new_callable=PropertyMock)
     @patch("charm.MagmaOrc8rBootstrapperCharm._certifier_relation_ready")
     def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_orc8r_bootstrapper_service_content(  # noqa: E501
-        self, certifier_relation_ready
+        self, certifier_relation_ready, patch_namespace
     ):
+        namespace = "whatever"
         certifier_relation_ready.return_value = True
+        patch_namespace.return_value = namespace
         expected_plan = {
             "services": {
                 "magma-orc8r-bootstrapper": {
@@ -48,6 +51,10 @@ class TestCharm(unittest.TestCase):
                     "-cak=/var/opt/magma/certs/bootstrapper.key "
                     "-logtostderr=true "
                     "-v=0",
+                    "environment": {
+                        "SERVICE_REGISTRY_MODE": "k8s",
+                        "SERVICE_REGISTRY_NAMESPACE": namespace,
+                    },
                 },
             },
         }

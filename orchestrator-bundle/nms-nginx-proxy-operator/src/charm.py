@@ -29,7 +29,6 @@ class MagmaNmsNginxProxyCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
         self._container_name = self._service_name = "magma-nms-nginx-proxy"
-        self._namespace = self.model.name
         self._container = self.unit.get_container(self._container_name)
         self._context = {"namespace": self._namespace, "app_name": self.app.name}
         self.framework.observe(
@@ -38,7 +37,11 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         self.framework.observe(self.on.certifier_relation_changed, self._configure_nginx)
         self.framework.observe(self.on.remove, self._on_remove)
         self.service_patcher = KubernetesServicePatch(
-            self, [("https", 443, 443, 30760)], "LoadBalancer"
+            charm=self,
+            ports=[("https", 443, 443, 30760)],
+            service_type="LoadBalancer",
+            service_name="nginx-proxy",
+            additional_labels={"app.kubernetes.io/part-of": "magma"},
         )
 
     def _on_magma_nms_nginx_proxy_pebble_ready(self, event):
@@ -190,6 +193,10 @@ class MagmaNmsNginxProxyCharm(CharmBase):
     def _on_remove(self, event):
         client = Client()
         client.delete(ConfigMap, name="nginx-proxy-etc", namespace=self._namespace)
+
+    @property
+    def _namespace(self) -> str:
+        return self.model.name
 
 
 if __name__ == "__main__":
