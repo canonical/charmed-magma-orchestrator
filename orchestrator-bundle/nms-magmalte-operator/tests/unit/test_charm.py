@@ -96,12 +96,15 @@ class TestCharm(unittest.TestCase):
             self.harness.charm._on_database_relation_joined(db_event)
         self.assertEqual(db_event.database, self.TEST_DB_NAME)
 
-    @patch("charm.MagmaNmsMagmalteCharm._relations_ready")
+    @patch("charm.MagmaNmsMagmalteCharm._namespace", new_callable=PropertyMock)
+    @patch("charm.MagmaNmsMagmalteCharm._relations_ready", new_callable=PropertyMock)
     def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_nms_magmalte_service_content(
-        self, relations_ready
+        self, relations_ready, patch_namespace
     ):
         event = Mock()
+        namespace = "whatever"
         relations_ready.return_value = True
+        patch_namespace.return_value = namespace
         with patch(
             "charm.MagmaNmsMagmalteCharm._get_domain_name", new_callable=PropertyMock
         ) as get_domain_name, patch(
@@ -122,7 +125,7 @@ class TestCharm(unittest.TestCase):
                         "environment": {
                             "API_CERT_FILENAME": "/run/secrets/admin_operator.pem",
                             "API_PRIVATE_KEY_FILENAME": "/run/secrets/admin_operator.key.pem",
-                            "API_HOST": f"api.{self.TEST_DOMAIN_NAME}",
+                            "API_HOST": f"orc8r-nginx-proxy.{namespace}.svc.cluster.local",
                             "PORT": "8081",
                             "HOST": "0.0.0.0",
                             "MYSQL_HOST": self.TEST_DB_CONNECTION_STRING.host,
