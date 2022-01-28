@@ -111,7 +111,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         return {
             "API_CERT_FILENAME": "/run/secrets/admin_operator.pem",
             "API_PRIVATE_KEY_FILENAME": "/run/secrets/admin_operator.key.pem",
-            "API_HOST": f"api.{self._get_domain_name}",
+            "API_HOST": f"orc8r-nginx-proxy.{self._namespace}.svc.cluster.local",
             "PORT": str(8081),
             "HOST": "0.0.0.0",
             "MYSQL_HOST": str(self._get_db_connection_string.host),
