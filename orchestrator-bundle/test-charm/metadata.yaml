@@ -1,0 +1,11 @@
+name: charmhub-upload-test
+summary: Charm for testing charmhub-upload-action
+description: Charm for testing charmhub-upload-action
+containers:
+  noop:
+    resource: noop
+resources:
+  noop:
+    type: oci-image
+    description: ''
+    upstream-source: ubuntu:20.04

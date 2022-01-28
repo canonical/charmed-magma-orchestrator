@@ -8,23 +8,24 @@ name: Charm upload
 on:
   push:
     branches:
-      - main
+      - "edge-releasing-to-CI" # TODO: change this to master when ready
+    paths:
+      - 'orchestrator-bundle/test-charm/**'
 
 jobs:
 
   charmhub-upload:
-    if: ${{ github.event.pull_request.merged }} # Avoids the action from being triggered when the PR is discarded
     runs-on: ubuntu-latest
-    name: Charmhub upload orchestrator-obsidian
+    name: Charmhub upload test-charm
     steps:
       - uses: actions/checkout@v2
 
-      - uses: ./charmhub-upload-action # TODO: Check if this path if from the runner's root
+      - uses: ./charmhub-upload-action # TODO: change to the public action when merged
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
-          charm-path: ./orchestrator-bundle/orchestrator-obsidian-operator
+          charm-path: ./orchestrator-bundle/test-charm
 
-      - uses: ./charmhub-upload-action # TODO: Same as above
+      - uses: ./charmhub-upload-action # TODO: change to the public action when merged
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
-          bundle-path: ./orchestrator-bundle
+          bundle-path: ./orchestrator-bundle/test-bundle # TODO: change path to main bundle
