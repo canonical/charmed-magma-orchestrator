@@ -1,0 +1,30 @@
+name: Charm upload
+
+# on:
+#   pull_request:
+#     branches: 
+#       - main
+#     types: [closed]
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  charmhub-upload:
+    if: ${{ github.event.pull_request.merged }} # Avoids the action from being triggered when the PR is discarded
+    runs-on: ubuntu-latest
+    name: Charmhub upload orchestrator-obsidian
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: ./charmhub-upload-action # TODO: Check if this path if from the runner's root
+        with:
+          credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
+          charm-path: ./orchestrator-bundle/orchestrator-obsidian-operator
+
+      - uses: ./charmhub-upload-action # TODO: Same as above
+        with:
+          credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
+          bundle-path: ./orchestrator-bundle
