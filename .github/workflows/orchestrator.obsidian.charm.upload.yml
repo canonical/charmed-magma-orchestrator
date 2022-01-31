@@ -1,19 +1,13 @@
 name: Charm upload
 
-# on:
-#   pull_request:
-#     branches: 
-#       - main
-#     types: [closed]
 on:
   push:
     branches:
       - "edge-releasing-to-CI" # TODO: change this to master when ready
     paths:
-      - 'orchestrator-bundle/test-charm/**'
+      - "orchestrator-bundle/test-charm/**"
 
 jobs:
-
   charmhub-upload:
     runs-on: ubuntu-latest
     name: Charmhub upload test-charm
