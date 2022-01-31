@@ -6,7 +6,7 @@ from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus
 
-# change
+# change, change
 class Operator(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
