@@ -1,4 +1,4 @@
-name: CI
+name: nms-nginx-proxy
 
 on:
   push:
