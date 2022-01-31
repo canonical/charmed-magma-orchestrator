@@ -14,12 +14,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: ./charmhub-upload-action # TODO: change to the public action when merged
+      - uses: canonical/charmhub-upload-action@0.2.1 # TODO: change to the public action when merged
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
           charm-path: ./orchestrator-bundle/test-charm
 
-      - uses: ./charmhub-upload-action # TODO: change to the public action when merged
+      - uses: canonical/charmhub-upload-action@0.2.1 # TODO: change to the public action when merged
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
           bundle-path: ./orchestrator-bundle/test-bundle # TODO: change path to main bundle
