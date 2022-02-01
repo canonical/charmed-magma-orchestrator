@@ -5,19 +5,19 @@ on:
     branches:
       - "main"
     paths:
-      - "orchestrator-bundle/orc8r-obsidian-operator/**"
+      - "orchestrator-bundle/orc8r-ctraced-operator/**"
 
 jobs:
-  orc8r-obsidian-charmhub-upload:
+  orc8r-ctraced-charmhub-upload:
     runs-on: ubuntu-latest
-    name: Charmhub upload orc8r-obsidian-operator
+    name: Charmhub upload orc8r-ctraced-operator
     steps:
       - uses: actions/checkout@v2
 
       - uses: canonical/charmhub-upload-action@0.2.1
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
-          charm-path: ./orchestrator-bundle/orc8r-obsidian-operator
+          charm-path: ./orchestrator-bundle/orc8r-ctraced-operator
           upload-image: "false"
 
       - uses: canonical/charmhub-upload-action@0.2.1

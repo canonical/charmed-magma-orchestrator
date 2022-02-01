@@ -1,0 +1,21 @@
+name: Upload charm to Charmhub
+
+on:
+  push:
+    branches:
+      - "main"
+    paths:
+      - "orchestrator-bundle/orc8r-libs/**"
+
+jobs:
+  orc8r-libs-charmhub-upload:
+    runs-on: ubuntu-latest
+    name: Charmhub upload orc8r-libs
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: canonical/charmhub-upload-action@0.2.1
+        with:
+          credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
+          charm-path: ./orchestrator-bundle/orc8r-libs
+          upload-image: "false"
