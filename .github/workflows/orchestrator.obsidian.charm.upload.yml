@@ -1,11 +1,11 @@
-name: Charm upload
+name: Upload charm to Charmhub
 
 on:
   push:
     branches:
-      - "edge-releasing-to-CI" # TODO: change this to master when ready
+      - "main"
     paths:
-      - "orchestrator-bundle/test-charm/**"
+      - "orchestrator-bundle/orc8r-obsidian-operator/**"
 
 jobs:
   charmhub-upload:
@@ -14,12 +14,13 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: canonical/charmhub-upload-action@0.2.1 # TODO: change to the public action when merged
+      - uses: canonical/charmhub-upload-action@0.2.1
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
           charm-path: ./orchestrator-bundle/test-charm
+          upload-image: "false"
 
-      - uses: canonical/charmhub-upload-action@0.2.1 # TODO: change to the public action when merged
+      - uses: canonical/charmhub-upload-action@0.2.1
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
           bundle-path: ./orchestrator-bundle/test-bundle # TODO: change path to main bundle
