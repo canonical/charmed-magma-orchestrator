@@ -20,8 +20,11 @@ from pgconnstr import ConnectionString  # type: ignore[import]
 
 from client_relations import ClientRelations
 from self_signed_certs_creator import (
-    CertificateSigningRequestCreator,
-    SelfSignedCertsCreator,
+    generate_ca,
+    generate_certificate,
+    generate_csr,
+    generate_pfx_package,
+    generate_private_key,
 )
 
 logger = logging.getLogger(__name__)
@@ -157,59 +160,80 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._generate_bootstrapper_cert()
 
     def _generate_admin_operator_cert(self):
-        # Generate Certifier certificate to sign AdminOperator certificate
-        certifier_cert = SelfSignedCertsCreator([f"certifier.{self.model.config['domain']}"], [])
-        self._container.push("/tmp/certs/certifier.key", certifier_cert.private_key)  # type: ignore[arg-type]  # noqa: E501
-        self._container.push("/tmp/certs/certifier.pem", certifier_cert.cert)  # type: ignore[arg-type]  # noqa: E501
+        """
+        Generates admin operator certificates and pushes them to the "/tmp/certs" directory.
+        List of certificates:
+            1. Generates Certifier certificate to sign AdminOperator certificate
+            2. Generate AdminOperator private key to create CSR
+            3. Generate AdminOperator CSR (Certificate Signing Request)
+            4. Generate AdminOperator certificate
+        """
 
-        # Generate AdminOperator private key to create CSR
-        admin_operator_private_key = SelfSignedCertsCreator(["admin_operator"], [])
-        self._container.push(
-            "/tmp/certs/admin_operator.key.pem", admin_operator_private_key.private_key  # type: ignore[arg-type]  # noqa: E501
+        certifier_key = generate_private_key()
+        certifier_pem = generate_ca(
+            private_key=certifier_key,
+            subject=f"certifier.{self.model.config['domain']}",
         )
-        # Generate AdminOperator CSR (Certificate Signing Request)
-        admin_operator_csr = CertificateSigningRequestCreator(
-            [f"certifier.{self.model.config['domain']}"],
-            signing_key=admin_operator_private_key.private_key,
+        admin_operator_key_pem = generate_private_key()
+        admin_operator_csr = generate_csr(
+            private_key=admin_operator_key_pem,
+            subject="admin_operator",
         )
-        self._container.push("/tmp/certs/admin_operator.csr", admin_operator_csr.csr)  # type: ignore[arg-type]  # noqa: E501
-        # Generate AdminOperator certificate
-        admin_operator_cert = SelfSignedCertsCreator(
-            ["admin_operator"],
-            csr=admin_operator_csr.csr,
-            signing_cert=certifier_cert.cert,
-            signing_key=certifier_cert.private_key,
+        admin_operator_pem = generate_certificate(
+            csr=admin_operator_csr,
+            ca=certifier_pem,
+            ca_key=certifier_key,
         )
-        self._container.push("/tmp/certs/admin_operator.pem", admin_operator_cert.cert)  # type: ignore[arg-type]  # noqa: E501
+        admin_operator_pfx = generate_pfx_package(
+            private_key=admin_operator_key_pem,
+            certificate=admin_operator_pem,
+            password=self.model.config["passphrase"],
+        )
+
+        self._container.push("/tmp/certs/certifier.key", certifier_key)
+        self._container.push("/tmp/certs/certifier.pem", certifier_pem)
+        self._container.push("/tmp/certs/admin_operator.key.pem", admin_operator_key_pem)
+        self._container.push("/tmp/certs/admin_operator.csr", admin_operator_csr)
+        self._container.push("/tmp/certs/admin_operator.pem", admin_operator_pem)
+        self._container.push("/tmp/certs/admin_operator.pfx", admin_operator_pfx)
 
     def _generate_bootstrapper_cert(self):
-        bootstrapper_cert = SelfSignedCertsCreator(
-            [f"bootstrapper.{self.model.config['domain']}"], []
-        )
-        self._container.push("/tmp/certs/bootstrapper.key", bootstrapper_cert.private_key)  # type: ignore[arg-type]  # noqa: E501
+        """
+        Generates bootstrapper certificate and pushes it to the "/tmp/certs" directory.
+        """
+        bootstrapper_key = generate_private_key()
+        self._container.push("/tmp/certs/bootstrapper.key", bootstrapper_key)
 
     def _generate_controller_cert(self):
-        # Generate rootCA certificate to sign AdminOperator certificate
-        rootca_cert = SelfSignedCertsCreator([f"rootca.{self.model.config['domain']}"], [])
-        self._container.push("/tmp/certs/rootCA.key", rootca_cert.private_key)  # type: ignore[arg-type]  # noqa: E501
-        self._container.push("/tmp/certs/rootCA.pem", rootca_cert.cert)  # type: ignore[arg-type]
+        """
+        Generates controller certificates and pushes them to the "/tmp/certs" directory. List of
+        certificates:
+            1. Generate rootCA certificate to sign AdminOperator certificate
+            2. Generate Controller private key to create CSR
+            3. Generate Controller CSR (Certificate Signing Request)
+            4. Generate Controller certificate
+        """
 
-        # Generate Controller private key to create CSR
-        controller_private_key = SelfSignedCertsCreator([f"*.{self.model.config['domain']}"], [])
-        self._container.push("/tmp/certs/controller.key", controller_private_key.private_key)  # type: ignore[arg-type]  # noqa: E501
-        # Generate Controller CSR (Certificate Signing Request)
-        controller_csr = CertificateSigningRequestCreator(
-            [f"*.{self.model.config['domain']}"], signing_key=controller_private_key.private_key
+        rootca_key = generate_private_key()
+        rootca_pem = generate_ca(
+            private_key=rootca_key,
+            subject=f"rootca.{self.model.config['domain']}",
         )
-        self._container.push("/tmp/certs/controller.csr", controller_csr.csr)  # type: ignore[arg-type]  # noqa: E501
-        # Generate Controller certificate
-        controller_cert = SelfSignedCertsCreator(
-            [f"*.{self.model.config['domain']}", f"*.nms.{self.model.config['domain']}"],
-            csr=controller_csr.csr,
-            signing_cert=rootca_cert.cert,
-            signing_key=rootca_cert.private_key,
+        controller_key = generate_private_key()
+        controller_csr = generate_csr(
+            private_key=controller_key, subject=f"*.{self.model.config['domain']}"
         )
-        self._container.push("/tmp/certs/controller.crt", controller_cert.cert)  # type: ignore[arg-type]  # noqa: E501
+        controller_crt = generate_certificate(
+            csr=controller_csr,
+            ca=rootca_pem,
+            ca_key=rootca_key,
+        )
+
+        self._container.push("/tmp/certs/rootCA.key", rootca_key)
+        self._container.push("/tmp/certs/rootCA.pem", rootca_pem)
+        self._container.push("/tmp/certs/controller.key", controller_key)
+        self._container.push("/tmp/certs/controller.csr", controller_csr)
+        self._container.push("/tmp/certs/controller.crt", controller_crt)
 
     @property
     def _pebble_layer(self) -> Layer:

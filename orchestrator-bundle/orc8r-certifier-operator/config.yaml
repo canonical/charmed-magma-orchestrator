@@ -5,6 +5,11 @@ options:
     description: |
       If set to true, set of self-signed SSL certs will be created.
       For production deployments, trusted certs should be provided instead.
+  passphrase:
+    type: string
+    default: password123
+    description: |
+      Passphrase used to open the admin_operator.pfx certificate
   admin-operator-key-pem:
     type: string
     default:

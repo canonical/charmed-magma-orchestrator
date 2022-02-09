@@ -91,7 +91,6 @@ fluentd.pem
 rootCA.key
 rootCA.pem
 ```
-### Deploy via bundle
 
 In order for the bundle to be deployed with the above-mentioned certificates and domain, we need
 to create an overlay bundle file. This file should contain the following:
@@ -121,73 +120,6 @@ Deploy the `magma-orc8r` bundle specifying your overlay bundle file.
 juju deploy magma-orc8r --overlay ~/overlay-example.yaml
 ```
 
-### Deploy via individual charms
-
-```bash
-juju deploy postgresql-k8s
-juju deploy magma-orc8r-certifier orc8r-certifier \
- --config use-self-signed-ssl-certs=False \
- --config admin-operator-key-pem="$(cat /home/ubuntu/certs/admin_operator.key.pem)" \
- --config admin-operator-pem="$(cat /home/ubuntu/certs/admin_operator.pem)" \
- --config controller-crt="$(cat /home/ubuntu/certs/controller.crt)" \
- --config controller-key="$(cat /home/ubuntu/certs/controller.key)" \
- --config bootstrapper-key="$(cat /home/ubuntu/certs/bootstrapper.key)" \
- --config certifier-key="$(cat /home/ubuntu/certs/certifier.key)" \
- --config certifier-pem="$(cat /home/ubuntu/certs/certifier.pem)" \
- --config rootCA-key="$(cat /home/ubuntu/certs/rootCA.key)" \
- --config rootCA-pem="$(cat /home/ubuntu/certs/rootCA.pem)" \
- --config domain=example.com \
-  --channel=edge
-juju deploy magma-orc8r-obsidian orc8r-obsidian --channel=edge
-juju deploy magma-orc8r-bootstrapper orc8r-bootstrapper --channel=edge
-juju deploy magma-orc8r-nginx orc8r-nginx --channel=edge
-juju deploy magma-nms-magmalte nms-magmalte --channel=edge
-juju deploy magma-nms-nginx-proxy nms-nginx-proxy --channel=edge
-juju deploy magma-orc8r-service-registry orc8r-service-registry --channel=edge
-juju deploy magma-orc8r-orchestrator orc8r-orchestrator --channel=edge
-juju deploy magma-orc8r-accessd orc8r-accessd --channel=edge
-juju deploy magma-orc8r-configurator orc8r-configurator --channel=edge
-juju deploy magma-orc8r-lt orc8r-lte --channel=edge
-juju deploy magma-orc8r-directoryd orc8r-directoryd --channel=edge
-juju deploy magma-orc8r-dispatcher orc8r-dispatcher --channel=edge
-juju deploy magma-orc8r-ctraced orc8r-ctraced --channel=edge
-juju deploy magma-orc8r-device orc8r-device --channel=edge
-juju deploy magma-orc8r-eventd orc8r-eventd --channel=edge
-juju deploy magma-orc8r-ha orc8r-ha --channel=edge
-juju deploy magma-orc8r-metricsd orc8r-metricsd --channel=edge
-juju deploy magma-orc8r-policydb orc8r-policydb --channel=edge
-juju deploy magma-orc8r-smsd orc8r-smsd --channel=edge
-juju deploy magma-orc8r-state orc8r-state --channel=edge
-juju deploy magma-orc8r-streamer orc8r-streamer --channel=edge
-juju deploy magma-orc8r-subscriberdb-cache orc8r-subscriberdb-cache --channel=edge
-juju deploy magma-orc8r-subscriberdb orc8r-subscriberdb --channel=edge
-juju deploy magma-orc8r-tenants orc8r-tenants --channel=edge
-juju deploy prometheus-k8s orc8r-prometheus --channel=edge
-juju deploy prometheus-edge-hub prometheus-cache--channel=edge
-
-juju relate orc8r-bootstrapper orc8r-certifier
-juju relate orc8r-certifier postgresql-k8s:db
-juju relate orc8r-nginx:certifier orc8r-certifier:certifier
-juju relate orc8r-nginx:bootstrapper orc8r-bootstrapper:bootstrapper
-juju relate orc8r-nginx:obsidian orc8r-obsidian:obsidian
-juju relate nms-magmalte postgresql-k8s:db
-juju relate nms-magmalte orc8r-certifier
-juju relate nms-nginx-proxy orc8r-certifier
-juju relate nms-nginx-proxy nms-magmalte
-juju relate orc8r-orchestrator orc8r-certifier
-juju relate orc8r-accessd postgresql-k8s:db
-juju relate orc8r-configurator postgresql-k8s:db
-juju relate orc8r-lte postgresql-k8s:db
-juju relate orc8r-directoryd postgresql-k8s:db
-juju relate orc8r-ctraced postgresql-k8s:db
-juju relate orc8r-device postgresql-k8s:db
-juju relate orc8r-smsd postgresql-k8s:db
-juju relate orc8r-policydb postgresql-k8s:db
-juju relate orc8r-state postgresql-k8s:db
-juju relate orc8r-tenants postgresql-k8s:db
-juju relate orc8r-subscriberdb-cache postgresql-k8s:db
-juju relate orc8r-subscriberdb postgresql-k8s:db
-```
 
 ## DNS Resolution
 
