@@ -1,0 +1,26 @@
+name: Upload charm to Charmhub
+
+on:
+  push:
+    branches:
+      - "main"
+    paths:
+      - "orchestrator-bundle/orc8r-lte-operator/**"
+
+jobs:
+  orc8r-lte-charmhub-upload:
+    runs-on: ubuntu-latest
+    name: Charmhub upload orc8r-lte-operator
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: canonical/charmhub-upload-action@0.2.1
+        with:
+          credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
+          charm-path: ./orchestrator-bundle/orc8r-lte-operator
+          upload-image: "false"
+
+      - uses: canonical/charmhub-upload-action@0.2.1
+        with:
+          credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
+          bundle-path: ./orchestrator-bundle/orc8r-bundle

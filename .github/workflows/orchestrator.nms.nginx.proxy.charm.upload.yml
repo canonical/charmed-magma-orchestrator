@@ -1,0 +1,21 @@
+name: Upload charm to Charmhub
+
+on:
+  push:
+    branches:
+      - "main"
+    paths:
+      - "orchestrator-bundle/nms-nginx-proxy-operator/**"
+
+jobs:
+  nms-nginx-proxy-operator-charmhub-upload:
+    runs-on: ubuntu-latest
+    name: Charmhub upload nms-nginx-proxy-operator
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: canonical/charmhub-upload-action@0.2.1
+        with:
+          credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
+          charm-path: ./orchestrator-bundle/nms-nginx-proxy-operator
+          upload-image: "false"
