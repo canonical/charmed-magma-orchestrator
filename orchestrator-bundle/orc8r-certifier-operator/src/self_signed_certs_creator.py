@@ -47,8 +47,8 @@ def generate_certificate(
             x509.SubjectAlternativeName(names),
             critical=False,
         )
+    certificate_builder._version = x509.Version.v1
     cert = certificate_builder.sign(private_key, hashes.SHA256())
-
     return cert.public_bytes(serialization.Encoding.PEM)
 
 
@@ -104,8 +104,10 @@ def generate_ca(
     subject_identifier_object = x509.SubjectKeyIdentifier.from_public_key(
         private_key_object.public_key()
     )
-    key_identifier = key_identifier_object.key_identifier
-    subject_identifier = subject_identifier_object.public_bytes()
+    # print(key_identifier_object)
+    # raise
+    # key_identifier = key_identifier_object.key_identifier
+    subject_identifier = key_identifier = subject_identifier_object.public_bytes()
     cert = (
         x509.CertificateBuilder()
         .subject_name(subject)

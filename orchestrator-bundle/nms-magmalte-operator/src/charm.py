@@ -210,7 +210,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for certifier relation to be ready...")
             return False
         if not self._get_db_connection_string:
-            self.unit.status = WaitingStatus("Waiting for db relation to be ready...")
+            self.unit.status = WaitingStatus("Waiting for database relation to be established...")
             return False
         return True
 

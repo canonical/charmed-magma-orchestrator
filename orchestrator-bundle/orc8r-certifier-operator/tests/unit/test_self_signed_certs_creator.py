@@ -58,190 +58,228 @@ def validate_induced_data_from_pfx_is_equal_to_initial_data(
     assert initial_private_key == induced_private_key
 
 
-def test_given_key_size_provided_when_generate_private_key_then_private_key_is_generated():
-    key_size = 1234
+# def test_given_key_size_provided_when_generate_private_key_then_private_key_is_generated():
+#     key_size = 1234
+#
+#     private_key = generate_private_key(key_size=key_size)
+#
+#     private_key_object = serialization.load_pem_private_key(private_key, password=None)
+#     assert isinstance(private_key_object, rsa.RSAPrivateKeyWithSerialization)
+#     assert private_key_object.key_size == key_size
+#
+#
+# def test_given_private_key_and_subject_when_generate_ca_then_ca_is_generated_correctly():
+#     subject = "certifier.example.com"
+#     private_key = generate_private_key()
+#
+#     certifier_pem = generate_ca(private_key=private_key, subject=subject)
+#
+#     cert = x509.load_pem_x509_certificate(certifier_pem)
+#     private_key_object = serialization.load_pem_private_key(private_key, password=None)
+#     certificate_public_key = cert.public_key().public_bytes(
+#         encoding=serialization.Encoding.PEM,
+#         format=serialization.PublicFormat.PKCS1,
+#     )
+#     initial_public_key = private_key_object.public_key().public_bytes(
+#         encoding=serialization.Encoding.PEM,
+#         format=serialization.PublicFormat.PKCS1,
+#     )
+#
+#     assert cert.issuer == x509.Name(
+#         [
+#             x509.NameAttribute(x509.NameOID.COUNTRY_NAME, "US"),
+#             x509.NameAttribute(x509.NameOID.COMMON_NAME, subject),
+#         ]
+#     )
+#     assert cert.subject == x509.Name(
+#         [
+#             x509.NameAttribute(x509.NameOID.COUNTRY_NAME, "US"),
+#             x509.NameAttribute(x509.NameOID.COMMON_NAME, subject),
+#         ]
+#     )
+#     assert certificate_public_key == initial_public_key
+#
+#
+# def test_given_private_key_and_subject_when_generate_csr_then_csr_is_created():
+#     private_key = generate_private_key()
+#     subject = "whatever.com"
+#
+#     csr = generate_csr(private_key=private_key, subject=subject)
+#
+#     csr_object = x509.load_pem_x509_csr(csr)
+#     assert csr_object.is_signature_valid is True
+#     assert csr_object.subject == x509.Name(
+#         [
+#             x509.NameAttribute(x509.NameOID.COUNTRY_NAME, "US"),
+#             x509.NameAttribute(x509.NameOID.COMMON_NAME, subject),
+#         ]
+#     )
+#
+#
+# def test_given_csr_and_ca_when_generate_certificate_then_certificate_is_generated_with_correct_subject_and_issuer():  # noqa: E501
+#     ca_subject = "whatever.ca.subject"
+#     csr_subject = "whatever.csr.subject"
+#     ca_key = generate_private_key()
+#     ca = generate_ca(
+#         private_key=ca_key,
+#         subject=ca_subject,
+#     )
+#     csr_private_key = generate_private_key()
+#     csr = generate_csr(
+#         private_key=csr_private_key,
+#         subject=csr_subject,
+#     )
+#     certificate = generate_certificate(
+#         csr=csr,
+#         ca=ca,
+#         ca_key=ca_key,
+#     )
+#     certificate_object = x509.load_pem_x509_certificate(certificate)
+#     assert certificate_object.issuer == x509.Name(
+#         [
+#             x509.NameAttribute(x509.NameOID.COUNTRY_NAME, "US"),
+#             x509.NameAttribute(x509.NameOID.COMMON_NAME, ca_subject),
+#         ]
+#     )
+#     assert certificate_object.subject == x509.Name(
+#         [
+#             x509.NameAttribute(x509.NameOID.COUNTRY_NAME, "US"),
+#             x509.NameAttribute(x509.NameOID.COMMON_NAME, csr_subject),
+#         ]
+#     )
+#
+#
+# def test_given_alt_names_when_generate_certificate_then_alt_names_are_correctly_populated():
+#     ca_subject = "whatever.ca.subject"
+#     csr_subject = "whatever.csr.subject"
+#     alt_name_1 = "*.example.com"
+#     alt_name_2 = "*.nms.example.com"
+#     ca_key = generate_private_key()
+#     ca = generate_ca(
+#         private_key=ca_key,
+#         subject=ca_subject,
+#     )
+#     csr_private_key = generate_private_key()
+#     csr = generate_csr(
+#         private_key=csr_private_key,
+#         subject=csr_subject,
+#     )
+#     certificate = generate_certificate(
+#         csr=csr, ca=ca, ca_key=ca_key, alt_names=[alt_name_1, alt_name_2]
+#     )
+#     certificate_object = x509.load_pem_x509_certificate(certificate)
+#     alt_names = certificate_object.extensions.get_extension_for_class(
+#         x509.extensions.SubjectAlternativeName
+#     )
+#     alt_name_strings = [alt_name.value for alt_name in alt_names.value]
+#     assert len(alt_name_strings) == 2
+#     assert alt_name_1 in alt_name_strings
+#     assert alt_name_2 in alt_name_strings
+#
+#
+# def test_given_basic_constraint_is_false_when_generate_certificate_then_extensions_are_correctly_populated():  # noqa: E501
+#     ca_subject = "whatever.ca.subject"
+#     csr_subject = "whatever.csr.subject"
+#     ca_key = generate_private_key()
+#     ca = generate_ca(
+#         private_key=ca_key,
+#         subject=ca_subject,
+#     )
+#     csr_private_key = generate_private_key()
+#     csr = generate_csr(
+#         private_key=csr_private_key,
+#         subject=csr_subject,
+#     )
+#     certificate = generate_certificate(csr=csr, ca=ca, ca_key=ca_key)
+#     certificate_object = x509.load_pem_x509_certificate(certificate)
+#     basic_constraints = certificate_object.extensions.get_extension_for_class(
+#         x509.extensions.BasicConstraints
+#     )
+#     assert basic_constraints.value.ca is False
+#
+#
+# def test_given_certificate_created_when_verify_public_key_then_no_exception_is_thrown():
+#     ca_subject = "whatever.ca.subject"
+#     csr_subject = "whatever.csr.subject"
+#     ca_key = generate_private_key()
+#     ca = generate_ca(
+#         private_key=ca_key,
+#         subject=ca_subject,
+#     )
+#     csr_private_key = generate_private_key()
+#     csr = generate_csr(
+#         private_key=csr_private_key,
+#         subject=csr_subject,
+#     )
+#     certificate = generate_certificate(
+#         csr=csr,
+#         ca=ca,
+#         ca_key=ca_key,
+#     )
+#
+#     certificate_object = x509.load_pem_x509_certificate(certificate)
+#     private_key_object = serialization.load_pem_private_key(ca_key, password=None)
+#     public_key = private_key_object.public_key()
+#
+#     public_key.verify(  # type: ignore[call-arg]
+#         certificate_object.signature,
+#         certificate_object.tbs_certificate_bytes,
+#         padding.PKCS1v15(),  # type: ignore[arg-type]
+#         certificate_object.signature_hash_algorithm,  # type: ignore[arg-type]
+#     )
+#
+#
+# def test_given_cert_and_private_key_when_generate_pfx_package_then_pfx_file_is_generated():
+#     password = "whatever"
+#     ca_subject = "whatever.ca.subject"
+#     csr_subject = "whatever.csr.subject"
+#     certifier_key = generate_private_key()
+#     certifier_pem = generate_ca(
+#         private_key=certifier_key,
+#         subject=ca_subject,
+#     )
+#     admin_operator_key_pem = generate_private_key()
+#     admin_operator_csr = generate_csr(
+#         private_key=admin_operator_key_pem,
+#         subject=csr_subject,
+#     )
+#     admin_operator_pem = generate_certificate(
+#         csr=admin_operator_csr,
+#         ca=certifier_pem,
+#         ca_key=certifier_key,
+#     )
+#     admin_operator_pfx = generate_pfx_package(
+#         private_key=admin_operator_key_pem,
+#         certificate=admin_operator_pem,
+#         password=password,
+#     )
+#
+#     validate_induced_data_from_pfx_is_equal_to_initial_data(
+#         pfx_file=admin_operator_pfx,
+#         password=password,
+#         initial_certificate=admin_operator_pem,
+#         initial_private_key=admin_operator_key_pem,
+#     )
 
-    private_key = generate_private_key(key_size=key_size)
 
-    private_key_object = serialization.load_pem_private_key(private_key, password=None)
-    assert isinstance(private_key_object, rsa.RSAPrivateKeyWithSerialization)
-    assert private_key_object.key_size == key_size
-
-
-def test_given_private_key_and_subject_when_generate_ca_then_ca_is_generated_correctly():
-    subject = "certifier.example.com"
-    private_key = generate_private_key()
-
-    certifier_pem = generate_ca(private_key=private_key, subject=subject)
-
-    cert = x509.load_pem_x509_certificate(certifier_pem)
-    private_key_object = serialization.load_pem_private_key(private_key, password=None)
-    certificate_public_key = cert.public_key().public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.PKCS1,
-    )
-    initial_public_key = private_key_object.public_key().public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.PKCS1,
-    )
-
-    assert cert.issuer == x509.Name(
-        [
-            x509.NameAttribute(x509.NameOID.COUNTRY_NAME, "US"),
-            x509.NameAttribute(x509.NameOID.COMMON_NAME, subject),
-        ]
-    )
-    assert cert.subject == x509.Name(
-        [
-            x509.NameAttribute(x509.NameOID.COUNTRY_NAME, "US"),
-            x509.NameAttribute(x509.NameOID.COMMON_NAME, subject),
-        ]
-    )
-    assert certificate_public_key == initial_public_key
+def write_to_file(file_name, file_content):
+    file = open(f"/home/guillaume/blou5/{file_name}", "xb")
+    file.write(file_content)
 
 
-def test_given_private_key_and_subject_when_generate_csr_then_csr_is_created():
-    private_key = generate_private_key()
-    subject = "whatever.com"
+def test_2_delete():
 
-    csr = generate_csr(private_key=private_key, subject=subject)
-
-    csr_object = x509.load_pem_x509_csr(csr)
-    assert csr_object.is_signature_valid is True
-    assert csr_object.subject == x509.Name(
-        [
-            x509.NameAttribute(x509.NameOID.COUNTRY_NAME, "US"),
-            x509.NameAttribute(x509.NameOID.COMMON_NAME, subject),
-        ]
-    )
-
-
-def test_given_csr_and_ca_when_generate_certificate_then_certificate_is_generated_with_correct_subject_and_issuer():  # noqa: E501
-    ca_subject = "whatever.ca.subject"
-    csr_subject = "whatever.csr.subject"
-    ca_key = generate_private_key()
-    ca = generate_ca(
-        private_key=ca_key,
-        subject=ca_subject,
-    )
-    csr_private_key = generate_private_key()
-    csr = generate_csr(
-        private_key=csr_private_key,
-        subject=csr_subject,
-    )
-    certificate = generate_certificate(
-        csr=csr,
-        ca=ca,
-        ca_key=ca_key,
-    )
-    certificate_object = x509.load_pem_x509_certificate(certificate)
-    assert certificate_object.issuer == x509.Name(
-        [
-            x509.NameAttribute(x509.NameOID.COUNTRY_NAME, "US"),
-            x509.NameAttribute(x509.NameOID.COMMON_NAME, ca_subject),
-        ]
-    )
-    assert certificate_object.subject == x509.Name(
-        [
-            x509.NameAttribute(x509.NameOID.COUNTRY_NAME, "US"),
-            x509.NameAttribute(x509.NameOID.COMMON_NAME, csr_subject),
-        ]
-    )
-
-
-def test_given_alt_names_when_generate_certificate_then_alt_names_are_correctly_populated():
-    ca_subject = "whatever.ca.subject"
-    csr_subject = "whatever.csr.subject"
-    alt_name_1 = "*.example.com"
-    alt_name_2 = "*.nms.example.com"
-    ca_key = generate_private_key()
-    ca = generate_ca(
-        private_key=ca_key,
-        subject=ca_subject,
-    )
-    csr_private_key = generate_private_key()
-    csr = generate_csr(
-        private_key=csr_private_key,
-        subject=csr_subject,
-    )
-    certificate = generate_certificate(
-        csr=csr, ca=ca, ca_key=ca_key, alt_names=[alt_name_1, alt_name_2]
-    )
-    certificate_object = x509.load_pem_x509_certificate(certificate)
-    alt_names = certificate_object.extensions.get_extension_for_class(
-        x509.extensions.SubjectAlternativeName
-    )
-    alt_name_strings = [alt_name.value for alt_name in alt_names.value]
-    assert len(alt_name_strings) == 2
-    assert alt_name_1 in alt_name_strings
-    assert alt_name_2 in alt_name_strings
-
-
-def test_given_basic_constraint_is_false_when_generate_certificate_then_extensions_are_correctly_populated():  # noqa: E501
-    ca_subject = "whatever.ca.subject"
-    csr_subject = "whatever.csr.subject"
-    ca_key = generate_private_key()
-    ca = generate_ca(
-        private_key=ca_key,
-        subject=ca_subject,
-    )
-    csr_private_key = generate_private_key()
-    csr = generate_csr(
-        private_key=csr_private_key,
-        subject=csr_subject,
-    )
-    certificate = generate_certificate(csr=csr, ca=ca, ca_key=ca_key)
-    certificate_object = x509.load_pem_x509_certificate(certificate)
-    basic_constraints = certificate_object.extensions.get_extension_for_class(
-        x509.extensions.BasicConstraints
-    )
-    assert basic_constraints.value.ca is False
-
-
-def test_given_certificate_created_when_verify_public_key_then_no_exception_is_thrown():
-    ca_subject = "whatever.ca.subject"
-    csr_subject = "whatever.csr.subject"
-    ca_key = generate_private_key()
-    ca = generate_ca(
-        private_key=ca_key,
-        subject=ca_subject,
-    )
-    csr_private_key = generate_private_key()
-    csr = generate_csr(
-        private_key=csr_private_key,
-        subject=csr_subject,
-    )
-    certificate = generate_certificate(
-        csr=csr,
-        ca=ca,
-        ca_key=ca_key,
-    )
-
-    certificate_object = x509.load_pem_x509_certificate(certificate)
-    private_key_object = serialization.load_pem_private_key(ca_key, password=None)
-    public_key = private_key_object.public_key()
-
-    public_key.verify(  # type: ignore[call-arg]
-        certificate_object.signature,
-        certificate_object.tbs_certificate_bytes,
-        padding.PKCS1v15(),  # type: ignore[arg-type]
-        certificate_object.signature_hash_algorithm,  # type: ignore[arg-type]
-    )
-
-
-def test_given_cert_and_private_key_when_generate_pfx_package_then_pfx_file_is_generated():
-    password = "whatever"
-    ca_subject = "whatever.ca.subject"
-    csr_subject = "whatever.csr.subject"
+    domain = "poulah.com"
+    password = "password123"
     certifier_key = generate_private_key()
     certifier_pem = generate_ca(
         private_key=certifier_key,
-        subject=ca_subject,
+        subject=f"certifier.{domain}",
     )
     admin_operator_key_pem = generate_private_key()
     admin_operator_csr = generate_csr(
         private_key=admin_operator_key_pem,
-        subject=csr_subject,
+        subject="admin_operator",
     )
     admin_operator_pem = generate_certificate(
         csr=admin_operator_csr,
@@ -254,9 +292,9 @@ def test_given_cert_and_private_key_when_generate_pfx_package_then_pfx_file_is_g
         password=password,
     )
 
-    validate_induced_data_from_pfx_is_equal_to_initial_data(
-        pfx_file=admin_operator_pfx,
-        password=password,
-        initial_certificate=admin_operator_pem,
-        initial_private_key=admin_operator_key_pem,
-    )
+    write_to_file("certifier.key", certifier_key)
+    write_to_file("certifier.pem", certifier_pem)
+    write_to_file("admin_operator.key.pem", admin_operator_key_pem)
+    write_to_file("admin_operator.csr", admin_operator_csr)
+    write_to_file("admin_operator.pem", admin_operator_pem)
+    write_to_file("admin_operator.pfx", admin_operator_pfx)

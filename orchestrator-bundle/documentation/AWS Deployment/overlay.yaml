@@ -1,0 +1,4 @@
+applications:
+  orc8r-certifier:
+    options:
+      domain: <your domain name>

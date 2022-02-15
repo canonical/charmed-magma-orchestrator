@@ -51,73 +51,25 @@ juju add-model <your model name>
 
 ## Usage
 
-### Assemble certificates
-
-First choose a domain name. Here we will use `example.com`. Create a local directory to hold the 
-certificates you will use for your Orchestrator deployment.
-
-```bash
-mkdir -p ~/certs
-cd ~/certs
-```
-
-You will need the following certificates and private keys placed in this directory
-
-1. The public SSL certificate for your Orchestrator domain, with `CN=*.yourdomain.com`. 
-This can be an SSL certificate chain, but it must be in one file.
-2. The private key which corresponds to the above SSL certificate.
-3. The root CA certificate which verifies your SSL certificate.
-
-If you aren't worried about a browser warning, you can generate self-signed versions of these 
-certs. Though please note that using trusted certs in production deployments is encouraged.
-
-If you want to use self-signed certificates, you can generate certificates by following the 
-guidelines on the official magma website [here](https://docs.magmacore.org/docs/orc8r/deploy_install).
-
-At the end, the certs directory should now look like this:
-
-```bash
-ubuntu@thinkpad:~$ ls -1 ~/certs/
-admin_operator.key.pem
-admin_operator.pem
-admin_operator.pfx
-bootstrapper.key
-certifier.key
-certifier.pem
-controller.crt
-controller.key
-fluentd.key
-fluentd.pem
-rootCA.key
-rootCA.pem
-```
-
-In order for the bundle to be deployed with the above-mentioned certificates and domain, we need
-to create an overlay bundle file. This file should contain the following:
+In order for the bundle to be deployed with your domain, we need to create an overlay bundle file. 
+This file should contain the following:
 
 ```yaml
 applications:
   orc8r-certifier:
     options:
-      use-self-signed-ssl-certs: False
-      admin-operator-key-pem: "$(cat ~/certs/admin_operator.key.pem)"
-      admin-operator-pem: "$(cat ~/certs/admin_operator.pem)"
-      controller-crt: "$(cat ~/certs/controller.crt)"
-      controller-key: "$(cat ~/certs/controller.key)"
-      bootstrapper-key: "$(cat ~/certs/bootstrapper.key)"
-      certifier-key: "$(cat ~/certs/certifier.key)"
-      certifier-pem: "$(cat ~/certs/certifier.pem)"
-      rootCA-key: "$(cat ~/certs/rootCA.key)"
-      rootCA-pem: "$(cat ~/certs/rootCA.pem)"
-      domain: example.com
+      domain: <your domain>
+
 ```
-An example with the same content is provided in `overlay-example.yaml` and you can read more about 
-overlay bundles 
+
+An example with the same content is provided in `overlay_examples/self_signed_certs.yaml` and you 
+can read more about overlay bundles 
 [here](https://discourse.charmhub.io/t/how-to-manage-charm-bundles/1058#heading--overlay-bundles).
+An example for the case where you'd want to provide your own certificates is also presented.
 
 Deploy the `magma-orc8r` bundle specifying your overlay bundle file.
 ```bash
-juju deploy magma-orc8r --overlay ~/overlay-example.yaml
+juju deploy magma-orc8r --overlay ~/self_signed_certs.yaml --trust
 ```
 
 
@@ -146,13 +98,13 @@ update your `/etc/hosts` file so that you can reach orc8r via its domain name. A
 entries to your `/etc/hosts` file (your actual IP's may differ)
 
 ```text
-10.0.0.1 bootstrapper-controller.example.com
-10.0.0.2 api.example.com
-10.0.0.3 controller.example.com
-10.0.0.4 master.nms.example.com
-10.0.0.4 magma-test.nms.example.com
+10.0.0.1 bootstrapper-controller.<your domain>
+10.0.0.2 api.<your domain>
+10.0.0.3 controller.<your domain>
+10.0.0.4 master.nms.<your domain>
+10.0.0.4 magma-test.nms.<your domain>
 ```
-Here replace `example.com` with your actual domain name.
+Here replace `<your domain>` with your actual domain name.
 
 
 ## Create admin users
@@ -170,21 +122,21 @@ Create an admin user for the master organization on the NMS. Here specify an ema
 you will want to use when connecting to NMS as an admin.
 
 ```bash
-ubuntu@thinkpad:~$ juju run-action nms-magmalte/0 create-nms-admin-user email=admin@example.com password=password123
+ubuntu@thinkpad:~$ juju run-action nms-magmalte/0 create-nms-admin-user email=admin@<your domain> password=<your password>
 ```
 
 ## Verify the Deployment
 ### NMS 
 You can confirm successful deployment by visiting the master NMS organization at e.g. 
-https://master.nms.example.com and logging in with your email and password provided above 
-(admin@example.com and password123 in this example). NOTE: the https:// is required. 
+`https://master.nms.<your domain>` and logging in with your email and password provided above 
+(`admin@<your domain>` and `<your password>` in this example). NOTE: the `https://` is required. 
 If you self-signed certs above, the browser will rightfully complain. 
 Either ignore the browser warnings at your own risk (some versions of Chrome won't 
 allow this at all), or e.g. import the root CA from above on a per-browser basis.
 
 ### Orchestrator
 For interacting with the Orchestrator REST API, a good starting point is the Swagger UI available 
-at https://api.example.com/swagger/v1/ui/.
+at `https://api.<your domain>/swagger/v1/ui/`.
 
 ### Juju
 You can run `juju status` and you should see all charms are in the `Active-Idle`status.
