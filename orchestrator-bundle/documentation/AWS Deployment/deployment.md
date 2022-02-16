@@ -189,7 +189,7 @@ Here is the association between the record names and Kubernetes service that we 
 | `orc8r-nginx-proxy`      | `api.<your domain>`                     | `aa63d9dbebba644a49f8f149e2f72c78-40891796.us-east-1.elb.amazonaws.com`   |
 
 
-Let's created those A records in route53. Navigate to Route53 -> Hosted Zones -> `<your domain` 
+Let's created those A records in route53. Navigate to Route53 -> Hosted Zones -> `<your domain>` 
 and click on **Create record**. Move the `Alias` toggle to `ON` and fill in these fields:
 - Record name: `*.nms.<your domain>`
 - Record type: A
