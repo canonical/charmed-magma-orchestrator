@@ -2,13 +2,13 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-
 import datetime
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import pkcs12
+
 
 def generate_certificate(
     csr: bytes,
