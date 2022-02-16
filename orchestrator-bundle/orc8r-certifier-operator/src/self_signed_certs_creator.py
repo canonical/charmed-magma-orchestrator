@@ -98,15 +98,9 @@ def generate_ca(
             x509.NameAttribute(x509.NameOID.COMMON_NAME, subject),
         ]
     )
-    key_identifier_object = x509.AuthorityKeyIdentifier.from_issuer_public_key(
-        private_key_object.public_key()
-    )
     subject_identifier_object = x509.SubjectKeyIdentifier.from_public_key(
         private_key_object.public_key()
     )
-    # print(key_identifier_object)
-    # raise
-    # key_identifier = key_identifier_object.key_identifier
     subject_identifier = key_identifier = subject_identifier_object.public_bytes()
     cert = (
         x509.CertificateBuilder()
