@@ -1,5 +1,5 @@
 
-# AWS Deployment
+# Deploying Magma on: AWS
 
 The goal of this document is to detail how to deploy Magma's Orchestrator on AWS. To do so,
 we will deploy charmed Kubernetes on AWS, deploy Magma Orchestrator on Kubernetes and create
@@ -135,8 +135,6 @@ by deploying the certifier charm using the Juju config `passphrase`.
 
 ## 5. Setup Orchestrator
 
-### i. Create an Orchestrator Admin User
-
 The NMS requires some basic certificate-based authentication when making calls to the Orchestrator 
 API. To support this, we need to add the relevant certificate as an admin user to the controller.
 
@@ -144,7 +142,6 @@ API. To support this, we need to add the relevant certificate as an admin user t
 juju run-action orc8r-orchestrator/0 create-orchestrator-admin-user
 ```
 
-### ii. Create an NMS Admin User
 Create an admin user for the master organization on the NMS:
 
 ```bash

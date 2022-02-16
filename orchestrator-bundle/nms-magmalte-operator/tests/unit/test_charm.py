@@ -12,7 +12,7 @@ from charm import MagmaNmsMagmalteCharm
 
 
 class TestCharm(unittest.TestCase):
-    TEST_DB_NAME = "wheat"
+    TEST_DB_NAME = MagmaNmsMagmalteCharm.DB_NAME
     TEST_DB_PORT = "1234"
     TEST_DB_CONNECTION_STRING = ConnectionString(
         "dbname=test_db_name "
@@ -130,7 +130,7 @@ class TestCharm(unittest.TestCase):
                             "HOST": "0.0.0.0",
                             "MYSQL_HOST": self.TEST_DB_CONNECTION_STRING.host,
                             "MYSQL_PORT": self.TEST_DB_CONNECTION_STRING.port,
-                            "MYSQL_DB": self.TEST_DB_CONNECTION_STRING.dbname,
+                            "MYSQL_DB": self.TEST_DB_NAME,
                             "MYSQL_USER": self.TEST_DB_CONNECTION_STRING.user,
                             "MYSQL_PASS": self.TEST_DB_CONNECTION_STRING.password,
                             "MAPBOX_ACCESS_TOKEN": "",

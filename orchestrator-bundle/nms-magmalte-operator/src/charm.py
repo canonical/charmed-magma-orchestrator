@@ -116,7 +116,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             "HOST": "0.0.0.0",
             "MYSQL_HOST": str(self._get_db_connection_string.host),
             "MYSQL_PORT": str(self._get_db_connection_string.port),
-            "MYSQL_DB": str(self._get_db_connection_string.dbname),
+            "MYSQL_DB": self.DB_NAME,
             "MYSQL_USER": str(self._get_db_connection_string.user),
             "MYSQL_PASS": str(self._get_db_connection_string.password),
             "MAPBOX_ACCESS_TOKEN": "",

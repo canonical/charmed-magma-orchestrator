@@ -254,7 +254,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                         "-logtostderr=true "
                         "-v=0",
                         "environment": {
-                            "DATABASE_SOURCE": f"dbname={self._get_db_connection_string.dbname} "
+                            "DATABASE_SOURCE": f"dbname={self.DB_NAME} "
                             f"user={self._get_db_connection_string.user} "
                             f"password={self._get_db_connection_string.password} "
                             f"host={self._get_db_connection_string.host} "

@@ -5,50 +5,6 @@ Orchestrator is a Magma service that provides a simple and consistent way to
 configure and monitor the wireless network securely. The metrics acquired through the platform 
 allows you to see the analytics and traffic flows of the wireless users through the Magma web UI.
 
-
-## Hardware requirements
-- CPU: 8 vCPU's
-- Memory: 32 GB
-- Storage: 100 GB
-
-## Pre-requisites
-This bundle of charms requires the following:
-1. Ubuntu (20.04)
-2. Microk8s (v1.22.4)
-3. Juju (2.9.21)
-
-### 1. Ubuntu
-- Install Ubuntu following the [official documentation](https://releases.ubuntu.com/20.04/).
-
-### 2. Microk8s
-- Install and configure Microk8s on your Ubuntu VM following the 
-[official documentation](https://microk8s.io/docs/getting-started).
-- Enable the following add-ons:
-
-```bash
-microk8s enable ingress dns storage
-```
-- Enable MetalLB. You need to provide an IP address pool that MetalLB will hand out IPs from. A 
-pool of four will be enough.
-
-```bash
-microk8s enable metallb 10.0.0.1-10.0.0.5
-```
-
-### 3. Juju
-- Install Juju following the [official documentation](https://juju.is/docs/olm/installing-juju).
-- Create a Juju controller:
-
-```bash
-juju bootstrap microk8s microk8s-localhost
-```
-
-- Create a new Juju model:
-
-```bash
-juju add-model <your model name>
-```
-
 ## Usage
 
 In order for the bundle to be deployed with your domain, we need to create an overlay bundle file. 
@@ -72,44 +28,10 @@ Deploy the `magma-orc8r` bundle specifying your overlay bundle file.
 juju deploy magma-orc8r --overlay ~/self_signed_certs.yaml --trust
 ```
 
+## Configure
 
-## DNS Resolution
+### Create Orchestrator admin user
 
-Services are to be accessed via domain names. To do so, you will need to map certain addresses to 
-their LoadBalancer IP addresses. Retrieve the IP addresses given to your services.
-
-```bash
-ubuntu@thinkpad:~$ kubectl get services -n <your model name> | grep LoadBalancer
-```
-
-The output should look like this (but with different IP's):
-
-```bash
-orc8r-bootstrap-nginx          LoadBalancer   10.152.183.151   10.0.0.1      80:31200/TCP,443:30747/TCP,8444:30618/TCP                  5h41m
-orc8r-nginx-proxy              LoadBalancer   10.152.183.75    10.0.0.2      80:32035/TCP,8443:30130/TCP,8444:31694/TCP,443:30794/TCP   22h
-orc8r-clientcert-nginx         LoadBalancer   10.152.183.181   10.0.0.3      80:31641/TCP,443:31082/TCP,8443:31811/TCP                  5h41m
-nginx-proxy                    LoadBalancer   10.152.183.249   10.0.0.4      443:30760/TCP                                              44s
-```
-
-### Self-hosted
-
-If you self-host magma and you don't want to make changes to your DNS server, you will have to
-update your `/etc/hosts` file so that you can reach orc8r via its domain name. Add the following 
-entries to your `/etc/hosts` file (your actual IP's may differ)
-
-```text
-10.0.0.1 bootstrapper-controller.<your domain>
-10.0.0.2 api.<your domain>
-10.0.0.3 controller.<your domain>
-10.0.0.4 master.nms.<your domain>
-10.0.0.4 magma-test.nms.<your domain>
-```
-Here replace `<your domain>` with your actual domain name.
-
-
-## Create admin users
-
-### Orchestrator
 The NMS requires some basic certificate-based authentication when making calls to the Orchestrator 
 API. To support this, we need to add the relevant certificate as an admin user to the controller.
 
@@ -117,19 +39,47 @@ API. To support this, we need to add the relevant certificate as an admin user t
 juju run-action orc8r-orchestrator/0 create-orchestrator-admin-user
 ```
 
-### NMS
+### Create NMS admin user
+
 Create an admin user for the master organization on the NMS. Here specify an email and password that 
 you will want to use when connecting to NMS as an admin.
 
 ```bash
-ubuntu@thinkpad:~$ juju run-action nms-magmalte/0 create-nms-admin-user email=admin@<your domain> password=<your password>
+juju run-action nms-magmalte/0 create-nms-admin-user email=<your email> password=<your password>
 ```
+
+### Change log verbosity
+You can set the log level of any service using the `set-log-verbosity` action. The default log
+level is 0 and the full log level is 10. Here is an example of setting the log level to 10 for the 
+`obsidian` service:
+
+```bash
+juju run-action orc8r-orchestrator/0 set-log-verbosity level=10 service=obsidian
+```
+
+
+## DNS Resolution
+Some services will have to be exposed to outside of the Kubernetes cluster. This is done by 
+associating LoadBalancer addresses to resolvable domains. Here is the association of Kubernetes 
+service to record that you will have to implement:
+
+
+| Kubernetes service       | Record name                             | 
+|:-------------------------|:----------------------------------------|
+| `nginx-proxy`            | `*.nms.<your domain>`                   |
+| `orc8r-bootstrap-nginx`  | `bootstrapper-controller.<your domain>` |
+| `orc8r-clientcert-nginx` | `controller.<your domain>`              |
+| `orc8r-nginx-proxy`      | `api.<your domain>`                     | 
+
+For more details, please refer to the documentation provided for your specific 
+cloud provider.
+
 
 ## Verify the Deployment
 ### NMS 
 You can confirm successful deployment by visiting the master NMS organization at e.g. 
 `https://master.nms.<your domain>` and logging in with your email and password provided above 
-(`admin@<your domain>` and `<your password>` in this example). NOTE: the `https://` is required. 
+(`<your email>` and `<your password>` in this example).
 If you self-signed certs above, the browser will rightfully complain. 
 Either ignore the browser warnings at your own risk (some versions of Chrome won't 
 allow this at all), or e.g. import the root CA from above on a per-browser basis.
@@ -149,17 +99,9 @@ running.
 Logs can be found by querying each individual pod. Example:
 
 ```bash
-ubuntu@thinkpad:~$ kubectl logs nms-magmalte-0 -c magma-nms-magmalte -n <your model> --follow
+kubectl logs nms-magmalte-0 -c magma-nms-magmalte -n <your model> --follow
 ```
 
-#### Change log verbosity
-You can set the log level of any service using the `set-log-verbosity` action. The default log
-level is 0 and the full log level is 10. Here is an example of setting the log level to 10 for the 
-`obsidian` service:
-
-```bash
-ubuntu@thinkpad:~$ juju run-action orc8r-orchestrator/0 set-log-verbosity level=10 service=obsidian
-```
 
 ## Detailed content
 Orchestrator is made up of multiple services and this bundle contains a charm per service:
@@ -191,8 +133,6 @@ Orchestrator is made up of multiple services and this bundle contains a charm pe
 - [magma-orc8r-tenants](https://charmhub.io/magma-orc8r-tenants)
 
 ## References
-- [Ubuntu](https://ubuntu.com/)
-- [Microk8s](https://microk8s.io/)
 - [Juju](https://juju.is/docs)
 - [Magma](https://docs.magmacore.org/docs/basics/introduction.html)
 - [Orchestrator](https://docs.magmacore.org/docs/orc8r/architecture_overview)
