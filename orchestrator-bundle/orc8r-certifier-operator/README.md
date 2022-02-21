@@ -22,12 +22,18 @@ juju relate orc8r-certifier postgresql-k8s:db
 - **controller-crt** - Allows passing own trusted cert (see [magma](https://www.magmacore.org/) for details)
 - **controller-key** - Allows passing own trusted cert (see [magma](https://www.magmacore.org/) for details)
 - **bootstrapper-key** - Allows passing own trusted cert (see [magma](https://www.magmacore.org/) for details)
+- **certifier-key** - Allows passing own trusted cert (see [magma](https://www.magmacore.org/) for details)
+- **certifier-pem** - Allows passing own trusted cert (see [magma](https://www.magmacore.org/) for details)
+- **rootCA-key** - Allows passing own trusted cert (see [magma](https://www.magmacore.org/) for details)
+- **rootCA-pem** - Allows passing own trusted cert (see [magma](https://www.magmacore.org/) for details)
 - **domain** - Domain for self-signed certs. Use only when **use-self-signed-ssl-certs** set to **True**
 
-### Example
 
-Here we created a set of certificates based on Magma's official documentation and placed them
-under the `/home/ubuntu/certs/` directory.
+### Usage
+
+
+#### With existing certificates
+Here we use a set of certificates based and placed them under the `/home/ubuntu/certs/` directory.
 
 ```bash
 juju deploy ./magma-orc8r-certifier_ubuntu-20.04-amd64.charm orc8r-certifier \
@@ -44,11 +50,31 @@ juju deploy ./magma-orc8r-certifier_ubuntu-20.04-amd64.charm orc8r-certifier \
  --resource magma-orc8r-certifier-image=docker.artifactory.magmacore.org/controller:1.6.0
 ```
 
+#### With self-signed certificates
+
+```bash
+juju deploy ./magma-orc8r-certifier_ubuntu-20.04-amd64.charm orc8r-certifier \
+  --config domain=example.com \
+  --resource magma-orc8r-certifier-image=docker.artifactory.magmacore.org/controller:1.6.0
+```
+
+By default, the passphrase to open the `admin_operator.pfx` file is `password123`. This can be 
+changed by deploying the certifier charm using the Juju config `passphrase`.
+
+You can retrieve the `admin_operator.pfx` file using the following command:
+
+```bash
+juju scp orc8r-certifier/0:/tmp/certs/admin_operator.pfx admin_operator.pfx
+```
+
+The cert can now be loaded in your browser.
+
 ## Relations
 
 ### Provides
 
-The magma-orc8r-certifier charm provides SSL certificates for charms through the **certs** interface of a **certifier** relation.
+The magma-orc8r-certifier charm provides SSL certificates for charms through the **certs** 
+interface of a **certifier** relation.
 
 ### Requires
 The magma-orc8r-certifier service relies on a relation to a Database. 

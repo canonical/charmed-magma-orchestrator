@@ -5,227 +5,33 @@ Orchestrator is a Magma service that provides a simple and consistent way to
 configure and monitor the wireless network securely. The metrics acquired through the platform 
 allows you to see the analytics and traffic flows of the wireless users through the Magma web UI.
 
-
-## Hardware requirements
-- CPU: 8 vCPU's
-- Memory: 32 GB
-- Storage: 100 GB
-
-## Pre-requisites
-This bundle of charms requires the following:
-1. Ubuntu (20.04)
-2. Microk8s (v1.22.4)
-3. Juju (2.9.21)
-
-### 1. Ubuntu
-- Install Ubuntu following the [official documentation](https://releases.ubuntu.com/20.04/).
-
-### 2. Microk8s
-- Install and configure Microk8s on your Ubuntu VM following the 
-[official documentation](https://microk8s.io/docs/getting-started).
-- Enable the following add-ons:
-
-```bash
-microk8s enable ingress dns storage
-```
-- Enable MetalLB. You need to provide an IP address pool that MetalLB will hand out IPs from. A 
-pool of four will be enough.
-
-```bash
-microk8s enable metallb 10.0.0.1-10.0.0.5
-```
-
-### 3. Juju
-- Install Juju following the [official documentation](https://juju.is/docs/olm/installing-juju).
-- Create a Juju controller:
-
-```bash
-juju bootstrap microk8s microk8s-localhost
-```
-
-- Create a new Juju model:
-
-```bash
-juju add-model <your model name>
-```
-
 ## Usage
 
-### Assemble certificates
-
-First choose a domain name. Here we will use `example.com`. Create a local directory to hold the 
-certificates you will use for your Orchestrator deployment.
-
-```bash
-mkdir -p ~/certs
-cd ~/certs
-```
-
-You will need the following certificates and private keys placed in this directory
-
-1. The public SSL certificate for your Orchestrator domain, with `CN=*.yourdomain.com`. 
-This can be an SSL certificate chain, but it must be in one file.
-2. The private key which corresponds to the above SSL certificate.
-3. The root CA certificate which verifies your SSL certificate.
-
-If you aren't worried about a browser warning, you can generate self-signed versions of these 
-certs. Though please note that using trusted certs in production deployments is encouraged.
-
-If you want to use self-signed certificates, you can generate certificates by following the 
-guidelines on the official magma website [here](https://docs.magmacore.org/docs/orc8r/deploy_install).
-
-At the end, the certs directory should now look like this:
-
-```bash
-ubuntu@thinkpad:~$ ls -1 ~/certs/
-admin_operator.key.pem
-admin_operator.pem
-admin_operator.pfx
-bootstrapper.key
-certifier.key
-certifier.pem
-controller.crt
-controller.key
-fluentd.key
-fluentd.pem
-rootCA.key
-rootCA.pem
-```
-### Deploy via bundle
-
-In order for the bundle to be deployed with the above-mentioned certificates and domain, we need
-to create an overlay bundle file. This file should contain the following:
+In order for the bundle to be deployed with your domain, we need to create an overlay bundle file. 
+This file should contain the following:
 
 ```yaml
 applications:
   orc8r-certifier:
     options:
-      use-self-signed-ssl-certs: False
-      admin-operator-key-pem: "$(cat ~/certs/admin_operator.key.pem)"
-      admin-operator-pem: "$(cat ~/certs/admin_operator.pem)"
-      controller-crt: "$(cat ~/certs/controller.crt)"
-      controller-key: "$(cat ~/certs/controller.key)"
-      bootstrapper-key: "$(cat ~/certs/bootstrapper.key)"
-      certifier-key: "$(cat ~/certs/certifier.key)"
-      certifier-pem: "$(cat ~/certs/certifier.pem)"
-      rootCA-key: "$(cat ~/certs/rootCA.key)"
-      rootCA-pem: "$(cat ~/certs/rootCA.pem)"
-      domain: example.com
+      domain: <your domain>
+
 ```
-An example with the same content is provided in `overlay-example.yaml` and you can read more about 
-overlay bundles 
+
+An example with the same content is provided in `overlay_examples/self_signed_certs.yaml` and you 
+can read more about overlay bundles 
 [here](https://discourse.charmhub.io/t/how-to-manage-charm-bundles/1058#heading--overlay-bundles).
+An example for the case where you'd want to provide your own certificates is also presented.
 
 Deploy the `magma-orc8r` bundle specifying your overlay bundle file.
 ```bash
-juju deploy magma-orc8r --overlay ~/overlay-example.yaml
+juju deploy magma-orc8r --overlay ~/self_signed_certs.yaml --trust
 ```
 
-### Deploy via individual charms
+## Configure
 
-```bash
-juju deploy postgresql-k8s
-juju deploy magma-orc8r-certifier orc8r-certifier \
- --config use-self-signed-ssl-certs=False \
- --config admin-operator-key-pem="$(cat /home/ubuntu/certs/admin_operator.key.pem)" \
- --config admin-operator-pem="$(cat /home/ubuntu/certs/admin_operator.pem)" \
- --config controller-crt="$(cat /home/ubuntu/certs/controller.crt)" \
- --config controller-key="$(cat /home/ubuntu/certs/controller.key)" \
- --config bootstrapper-key="$(cat /home/ubuntu/certs/bootstrapper.key)" \
- --config certifier-key="$(cat /home/ubuntu/certs/certifier.key)" \
- --config certifier-pem="$(cat /home/ubuntu/certs/certifier.pem)" \
- --config rootCA-key="$(cat /home/ubuntu/certs/rootCA.key)" \
- --config rootCA-pem="$(cat /home/ubuntu/certs/rootCA.pem)" \
- --config domain=example.com \
-  --channel=edge
-juju deploy magma-orc8r-obsidian orc8r-obsidian --channel=edge
-juju deploy magma-orc8r-bootstrapper orc8r-bootstrapper --channel=edge
-juju deploy magma-orc8r-nginx orc8r-nginx --channel=edge
-juju deploy magma-nms-magmalte nms-magmalte --channel=edge
-juju deploy magma-nms-nginx-proxy nms-nginx-proxy --channel=edge
-juju deploy magma-orc8r-service-registry orc8r-service-registry --channel=edge
-juju deploy magma-orc8r-orchestrator orc8r-orchestrator --channel=edge
-juju deploy magma-orc8r-accessd orc8r-accessd --channel=edge
-juju deploy magma-orc8r-configurator orc8r-configurator --channel=edge
-juju deploy magma-orc8r-lt orc8r-lte --channel=edge
-juju deploy magma-orc8r-directoryd orc8r-directoryd --channel=edge
-juju deploy magma-orc8r-dispatcher orc8r-dispatcher --channel=edge
-juju deploy magma-orc8r-ctraced orc8r-ctraced --channel=edge
-juju deploy magma-orc8r-device orc8r-device --channel=edge
-juju deploy magma-orc8r-eventd orc8r-eventd --channel=edge
-juju deploy magma-orc8r-ha orc8r-ha --channel=edge
-juju deploy magma-orc8r-metricsd orc8r-metricsd --channel=edge
-juju deploy magma-orc8r-policydb orc8r-policydb --channel=edge
-juju deploy magma-orc8r-smsd orc8r-smsd --channel=edge
-juju deploy magma-orc8r-state orc8r-state --channel=edge
-juju deploy magma-orc8r-streamer orc8r-streamer --channel=edge
-juju deploy magma-orc8r-subscriberdb-cache orc8r-subscriberdb-cache --channel=edge
-juju deploy magma-orc8r-subscriberdb orc8r-subscriberdb --channel=edge
-juju deploy magma-orc8r-tenants orc8r-tenants --channel=edge
-juju deploy prometheus-k8s orc8r-prometheus --channel=edge
-juju deploy prometheus-edge-hub prometheus-cache--channel=edge
+### Create Orchestrator admin user
 
-juju relate orc8r-bootstrapper orc8r-certifier
-juju relate orc8r-certifier postgresql-k8s:db
-juju relate orc8r-nginx:certifier orc8r-certifier:certifier
-juju relate orc8r-nginx:bootstrapper orc8r-bootstrapper:bootstrapper
-juju relate orc8r-nginx:obsidian orc8r-obsidian:obsidian
-juju relate nms-magmalte postgresql-k8s:db
-juju relate nms-magmalte orc8r-certifier
-juju relate nms-nginx-proxy orc8r-certifier
-juju relate nms-nginx-proxy nms-magmalte
-juju relate orc8r-orchestrator orc8r-certifier
-juju relate orc8r-accessd postgresql-k8s:db
-juju relate orc8r-configurator postgresql-k8s:db
-juju relate orc8r-lte postgresql-k8s:db
-juju relate orc8r-directoryd postgresql-k8s:db
-juju relate orc8r-ctraced postgresql-k8s:db
-juju relate orc8r-device postgresql-k8s:db
-juju relate orc8r-smsd postgresql-k8s:db
-juju relate orc8r-policydb postgresql-k8s:db
-juju relate orc8r-state postgresql-k8s:db
-juju relate orc8r-tenants postgresql-k8s:db
-juju relate orc8r-subscriberdb-cache postgresql-k8s:db
-juju relate orc8r-subscriberdb postgresql-k8s:db
-```
-
-## DNS Resolution
-
-Services are to be accessed via domain names. To do so, you will need to map certain addresses to 
-their LoadBalancer IP addresses. Retrieve the IP addresses given to your services.
-
-```bash
-ubuntu@thinkpad:~$ kubectl get services -n <your model name> | grep LoadBalancer
-```
-
-The output should look like this (but with different IP's):
-
-```bash
-orc8r-bootstrap-nginx          LoadBalancer   10.152.183.151   10.0.0.1      80:31200/TCP,443:30747/TCP,8444:30618/TCP                  5h41m
-orc8r-nginx-proxy              LoadBalancer   10.152.183.75    10.0.0.2      80:32035/TCP,8443:30130/TCP,8444:31694/TCP,443:30794/TCP   22h
-orc8r-clientcert-nginx         LoadBalancer   10.152.183.181   10.0.0.3      80:31641/TCP,443:31082/TCP,8443:31811/TCP                  5h41m
-nginx-proxy                    LoadBalancer   10.152.183.249   10.0.0.4      443:30760/TCP                                              44s
-```
-
-### Self-hosted
-
-If you self-host magma and you don't want to make changes to your DNS server, you will have to
-update your `/etc/hosts` file so that you can reach orc8r via its domain name. Add the following 
-entries to your `/etc/hosts` file (your actual IP's may differ)
-
-```text
-10.0.0.1 bootstrapper-controller.example.com
-10.0.0.2 api.example.com
-10.0.0.3 controller.example.com
-10.0.0.4 master.nms.example.com
-10.0.0.4 magma-test.nms.example.com
-```
-Here replace `example.com` with your actual domain name.
-
-
-## Create admin users
-
-### Orchestrator
 The NMS requires some basic certificate-based authentication when making calls to the Orchestrator 
 API. To support this, we need to add the relevant certificate as an admin user to the controller.
 
@@ -233,26 +39,54 @@ API. To support this, we need to add the relevant certificate as an admin user t
 juju run-action orc8r-orchestrator/0 create-orchestrator-admin-user
 ```
 
-### NMS
+### Create NMS admin user
+
 Create an admin user for the master organization on the NMS. Here specify an email and password that 
 you will want to use when connecting to NMS as an admin.
 
 ```bash
-ubuntu@thinkpad:~$ juju run-action nms-magmalte/0 create-nms-admin-user email=admin@example.com password=password123
+juju run-action nms-magmalte/0 create-nms-admin-user email=<your email> password=<your password>
 ```
+
+### Change log verbosity
+You can set the log level of any service using the `set-log-verbosity` action. The default log
+level is 0 and the full log level is 10. Here is an example of setting the log level to 10 for the 
+`obsidian` service:
+
+```bash
+juju run-action orc8r-orchestrator/0 set-log-verbosity level=10 service=obsidian
+```
+
+
+## DNS Resolution
+Some services will have to be exposed to outside of the Kubernetes cluster. This is done by 
+associating LoadBalancer addresses to resolvable domains. Here is the association of Kubernetes 
+service to record that you will have to implement:
+
+
+| Kubernetes service       | Record name                             | 
+|:-------------------------|:----------------------------------------|
+| `nginx-proxy`            | `*.nms.<your domain>`                   |
+| `orc8r-bootstrap-nginx`  | `bootstrapper-controller.<your domain>` |
+| `orc8r-clientcert-nginx` | `controller.<your domain>`              |
+| `orc8r-nginx-proxy`      | `api.<your domain>`                     | 
+
+For more details, please refer to the documentation provided for your specific 
+cloud provider.
+
 
 ## Verify the Deployment
 ### NMS 
 You can confirm successful deployment by visiting the master NMS organization at e.g. 
-https://master.nms.example.com and logging in with your email and password provided above 
-(admin@example.com and password123 in this example). NOTE: the https:// is required. 
+`https://master.nms.<your domain>` and logging in with your email and password provided above 
+(`<your email>` and `<your password>` in this example).
 If you self-signed certs above, the browser will rightfully complain. 
 Either ignore the browser warnings at your own risk (some versions of Chrome won't 
 allow this at all), or e.g. import the root CA from above on a per-browser basis.
 
 ### Orchestrator
 For interacting with the Orchestrator REST API, a good starting point is the Swagger UI available 
-at https://api.example.com/swagger/v1/ui/.
+at `https://api.<your domain>/swagger/v1/ui/`.
 
 ### Juju
 You can run `juju status` and you should see all charms are in the `Active-Idle`status.
@@ -265,17 +99,9 @@ running.
 Logs can be found by querying each individual pod. Example:
 
 ```bash
-ubuntu@thinkpad:~$ kubectl logs nms-magmalte-0 -c magma-nms-magmalte -n <your model> --follow
+kubectl logs nms-magmalte-0 -c magma-nms-magmalte -n <your model> --follow
 ```
 
-#### Change log verbosity
-You can set the log level of any service using the `set-log-verbosity` action. The default log
-level is 0 and the full log level is 10. Here is an example of setting the log level to 10 for the 
-`obsidian` service:
-
-```bash
-ubuntu@thinkpad:~$ juju run-action orc8r-orchestrator/0 set-log-verbosity level=10 service=obsidian
-```
 
 ## Detailed content
 Orchestrator is made up of multiple services and this bundle contains a charm per service:
@@ -307,8 +133,6 @@ Orchestrator is made up of multiple services and this bundle contains a charm pe
 - [magma-orc8r-tenants](https://charmhub.io/magma-orc8r-tenants)
 
 ## References
-- [Ubuntu](https://ubuntu.com/)
-- [Microk8s](https://microk8s.io/)
 - [Juju](https://juju.is/docs)
 - [Magma](https://docs.magmacore.org/docs/basics/introduction.html)
 - [Orchestrator](https://docs.magmacore.org/docs/orc8r/architecture_overview)

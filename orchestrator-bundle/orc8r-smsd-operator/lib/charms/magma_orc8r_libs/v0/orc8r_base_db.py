@@ -61,7 +61,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 4
+LIBPATCH = 5
 
 
 logger = logging.getLogger(__name__)
@@ -187,7 +187,7 @@ class Orc8rBase(Object):
         environment_variables.update(self.additional_environment_variables)
         environment_variables.update(default_environment_variables)
         sql_environment_variables = {
-            "DATABASE_SOURCE": f"dbname={self._get_db_connection_string.dbname} "
+            "DATABASE_SOURCE": f"dbname={self.DB_NAME} "
             f"user={self._get_db_connection_string.user} "
             f"password={self._get_db_connection_string.password} "
             f"host={self._get_db_connection_string.host} "

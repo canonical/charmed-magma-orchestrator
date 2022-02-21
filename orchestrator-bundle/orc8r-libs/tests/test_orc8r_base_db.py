@@ -15,7 +15,7 @@ from test_orc8r_base_db_charm.src.charm import (  # type: ignore[import]
 
 class TestCharm(unittest.TestCase):
 
-    TEST_DB_NAME = "wheat"
+    TEST_DB_NAME = Orc8rBase.DB_NAME
     TEST_DB_PORT = "1234"
     TEST_DB_CONNECTION_STRING = ConnectionString(
         "dbname=test_db_name "
@@ -106,7 +106,7 @@ class TestCharm(unittest.TestCase):
                     "-logtostderr=true "
                     "-v=0",
                     "environment": {
-                        "DATABASE_SOURCE": f"dbname={self.TEST_DB_CONNECTION_STRING.dbname} "
+                        "DATABASE_SOURCE": f"dbname={self.TEST_DB_NAME} "
                         f"user={self.TEST_DB_CONNECTION_STRING.user} "
                         f"password={self.TEST_DB_CONNECTION_STRING.password} "
                         f"host={self.TEST_DB_CONNECTION_STRING.host} "
