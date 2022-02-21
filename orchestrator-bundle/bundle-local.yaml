@@ -66,11 +66,9 @@ applications:
     scale: 1
     trust: true
   orc8r-certifier:
-    charm: ./orc8r-certifier-operator/magma-orc8r-certifier_ubuntu-20.04-amd64.charm
+    charm: magma-orc8r-certifier
     scale: 1
     trust: true
-    resources:
-      magma-orc8r-certifier-image: docker.artifactory.magmacore.org/controller:1.6.0
     options:
       domain: example.com
   orc8r-lte:

@@ -56,7 +56,7 @@ the domain name that you will be using. Once you replaced `<your domain name>` w
 name, you can deploy orchestrator:
 
 ```bash
-juju deploy magma-orc8r --overlay overlay.yaml --trust
+juju deploy magma-orc8r --overlay overlay.yaml --trust --channel=edge
 ```
 
 ## DNS Resolution

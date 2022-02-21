@@ -113,7 +113,7 @@ the domain name that you will be using. Once you replaced `<your domain name>` w
 name, you can deploy orchestrator:
 
 ```bash
-juju deploy magma-orc8r --overlay ./overlay.yaml --trust
+juju deploy magma-orc8r --overlay overlay.yaml --trust --channel=edge
 ```
 
 You can retrieve the deployment status using `juju status`. The deployment is completed when
@@ -154,7 +154,7 @@ Replace `<admin email>` and `<admin password>` with your email and password of c
 
 ### i. Configure Route53
 
-Route53 is a AWS's domain name service. We will use it to create A records for the following 4 
+Route53 is AWS's domain name service. We will use it to create A records for the following 4 
 subdomains:
 - `api.<your domain>`
 - `bootstrapper-controller.<your domain>`
