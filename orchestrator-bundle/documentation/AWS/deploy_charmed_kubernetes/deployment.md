@@ -1,5 +1,5 @@
 
-# Deploying Magma on: AWS
+# Deploying Magma on: AWS with Charmed Kubernetes
 
 The goal of this document is to detail how to deploy Magma's Orchestrator on AWS. To do so,
 we will deploy charmed Kubernetes on AWS, deploy Magma Orchestrator on Kubernetes and create
@@ -108,9 +108,18 @@ juju add-model <model name>
 
 ## 3. Deploy charmed magma orchestrator
 
-To deploy magma-orc8r, you will first need to create an `overlay.yaml` file that will contain
-the domain name that you will be using. Once you replaced `<your domain name>` with your domain 
-name, you can deploy orchestrator:
+
+To deploy magma-orc8r, you will first need to create an `overlay.yaml` file that contains the following:
+
+```yaml
+applications:
+  orc8r-certifier:
+    options:
+      domain: <your domain name>
+```
+Replace `<your domain name>` with your domain name.
+
+Deploy orchestrator:
 
 ```bash
 juju deploy magma-orc8r --overlay overlay.yaml --trust --channel=edge
@@ -154,67 +163,31 @@ Replace `<admin email>` and `<admin password>` with your email and password of c
 
 ### i. Configure Route53
 
-Route53 is AWS's domain name service. We will use it to create A records for the following 4 
-subdomains:
-- `api.<your domain>`
+Route53 is AWS's domain name service. We will use it to create a hosted zone for our domain name
+and four A records for the following subdomains:
+- `*.nms.<your domain>` 
 - `bootstrapper-controller.<your domain>`
 - `controller.<your domain>`
-- `*.nms.<your domain>`
+- `api.<your domain>`
 
-First we need to create a hosted zone for our domain. Navigate to Route53 -> Hosted Zones -> 
-Create Hosted Zone. Write down your domain name and click **Create Hosted Zone**.
-
-These 4 subdomains will need to be associated to 4 LoadBalancer services that were just created. 
-Retrieve them using `kubectl`:
+This can easily be done using the provided script. Navigate to the 
+`documentation/AWS/utils/route53_integrator` directory and run:
 
 ```bash
-$ kubectl get services -n <your model> | grep LoadBalancer
-NAME                                 TYPE           CLUSTER-IP       EXTERNAL-IP                                                              PORT(S)                                                    AGE
-nginx-proxy                          LoadBalancer   10.152.183.247   aed45502648b048388bdec5bddb9a64d-490688296.us-east-1.elb.amazonaws.com   443:30760/TCP                                              24h
-orc8r-bootstrap-nginx                LoadBalancer   10.152.183.29    a56ff6f8432f444edbc46f32ea281f92-213939155.us-east-1.elb.amazonaws.com   80:31200/TCP,443:30747/TCP,8444:30618/TCP                  24h
-orc8r-clientcert-nginx               LoadBalancer   10.152.183.201   a93a2c577f36543f494648dba7b0ae6d-507889073.us-east-1.elb.amazonaws.com   80:31641/TCP,443:31082/TCP,8443:31811/TCP                  24h
-orc8r-nginx-proxy                    LoadBalancer   10.152.183.110   aa63d9dbebba644a49f8f149e2f72c78-40891796.us-east-1.elb.amazonaws.com    80:32035/TCP,8443:30130/TCP,8444:31694/TCP,443:30794/TCP   24h
+pip3 install -r requirements.txt
+python3 route53_integrator --hosted_zone=<your domain> --namespace <your model>
 ```
 
-The `CLUSTER-IP` and `EXTERNAL-IP` fields you'll see will be different from those here. 
-
-Here is the association between the record names and Kubernetes service that we will need to create.
-
-
-| Kubernetes service       | Record name                             | External IP*                                                              |
-|:-------------------------|:----------------------------------------|:--------------------------------------------------------------------------|
-| `nginx-proxy`            | `*.nms.<your domain>`                   | `aed45502648b048388bdec5bddb9a64d-490688296.us-east-1.elb.amazonaws.com`  |
-| `orc8r-bootstrap-nginx`  | `bootstrapper-controller.<your domain>` | `a56ff6f8432f444edbc46f32ea281f92-213939155.us-east-1.elb.amazonaws.com ` |
-| `orc8r-clientcert-nginx` | `controller.<your domain>`              | `a93a2c577f36543f494648dba7b0ae6d-507889073.us-east-1.elb.amazonaws.com`  |
-| `orc8r-nginx-proxy`      | `api.<your domain>`                     | `aa63d9dbebba644a49f8f149e2f72c78-40891796.us-east-1.elb.amazonaws.com`   |
-
-
-Let's created those A records in route53. Navigate to Route53 -> Hosted Zones -> `<your domain>` 
-and click on **Create record**. Move the `Alias` toggle to `ON` and fill in these fields:
-- Record name: `*.nms.<your domain>`
-- Record type: A
-- Routing policy: Simple routing
-- Route traffic to: Alias to Application and Classic Load Balancer
-- Choose Region: `<your aws regions>`
-- Value: `aed45502648b048388bdec5bddb9a64d-490688296.us-east-1.elb.amazonaws.com`
-
-And do the same for the other records.
-
+Note the nameservers provided at the end of the script.
 
 ### ii. Configure DNS records
 
 You will need to configure your DNS records on your managed domain name to use the Route53 
-nameservers in order to resolve these subdomains. Navigate to Route53 -> Hosted Zones -> 
-`<your domain>` and note the values associated to your domain's NS record. You should have 4 values
-that look something like:
-- `ns-1703.awsdns-20.co.uk`
-- `ns-1233.awsdns-26.org`
-- `ns-509.awsdns-63.com`
-- `ns-516.awsdns-00.net`
+nameservers in order to resolve these subdomains. 
 
 In this example, our domain is registered with Google Domains. To configure our DNS records, 
 head to Google Domains ->DNS -> Custom Name Servers. Fill in 4 Name Server boxes with the domains 
-retrieved from route53. Make sure that your domain is using these settings. If it isn't, you will
+retrieved from the `route53_integrator` script. Make sure that your domain is using these settings. If it isn't, you will
 be prompted with a warning telling you "Your domain isn't using these settings". If that's the 
 case click on **Switch to these settings**.
 
