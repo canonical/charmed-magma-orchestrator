@@ -1,4 +1,4 @@
-name: Upload charm to Charmhub
+name: Upload orc8r-libs
 
 on:
   push:
