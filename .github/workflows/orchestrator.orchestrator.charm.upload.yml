@@ -1,4 +1,4 @@
-name: Upload charm to Charmhub
+name: Upload charm orc8r-orchestrator-operator
 
 on:
   push:

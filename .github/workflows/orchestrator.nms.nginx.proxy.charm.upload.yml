@@ -1,4 +1,4 @@
-name: Upload charm to Charmhub
+name: Upload charm nms-nginx-proxy-operator
 
 on:
   push:
