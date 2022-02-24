@@ -1,5 +1,5 @@
 
-# Deploying Magma on: AWS with EKS
+# Deploying Magma Orc8r on: AWS with EKS
 
 The goal of this document is to detail how to deploy Magma's Orchestrator on AWS. To do so,
 we will deploy charmed Kubernetes on AWS, deploy Magma Orchestrator on Kubernetes and create
