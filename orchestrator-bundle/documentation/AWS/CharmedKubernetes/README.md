@@ -186,7 +186,7 @@ You will need to configure your DNS records on your managed domain name to use t
 nameservers in order to resolve these subdomains. 
 
 In this example, our domain is registered with Google Domains. To configure our DNS records, 
-head to Google Domains ->DNS -> Custom Name Servers. Fill in 4 Name Server boxes with the domains 
+head to Google Domains -> DNS -> Custom Name Servers. Fill in 4 Name Server boxes with the domains 
 retrieved from the `route53_integrator` script. Make sure that your domain is using these settings. If it isn't, you will
 be prompted with a warning telling you "Your domain isn't using these settings". If that's the 
 case click on **Switch to these settings**.

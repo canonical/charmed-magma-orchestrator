@@ -53,8 +53,7 @@ class Route53:
         :return: Zone
         """
         logging.info(f"Getting hosted zone {zone_id}")
-        hosted_zone = self.client.get_hosted_zone(Id=zone_id)
-        return hosted_zone
+        return self.client.get_hosted_zone(Id=zone_id)
 
     def get_zone_by_name(self, name: str) -> dict:
         """
