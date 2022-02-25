@@ -1,4 +1,4 @@
-# Deploying Magma on: Microk8s
+# Deploying Magma Orc8r on: Microk8s
 
 ## Overview
 Orchestrator is a Magma service that provides a simple and consistent way to 
