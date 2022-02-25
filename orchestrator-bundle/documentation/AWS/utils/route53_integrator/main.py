@@ -67,9 +67,7 @@ def print_disclaimer(hosted_zone: str, a_records: [ARecord]):
 
 
 def print_nameservers(nameservers: [str]):
-    nameserver_list = []
-    for nameserver in nameservers:
-        nameserver_list.append([nameserver])
+    nameserver_list = [[nameserver] for nameserver in nameservers]
     print("\nDone! Configure your domain registrar to use those nameservers:")
     print(tabulate(nameserver_list))
 
