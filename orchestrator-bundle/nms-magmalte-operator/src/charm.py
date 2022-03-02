@@ -59,19 +59,18 @@ class MagmaNmsMagmalteCharm(CharmBase):
         self._configure_pebble()
 
     def _on_database_relation_joined(self, event):
-        """Event handler for database relation change.
+        """
+        Event handler for database relation change.
         - Sets the event.database field on the database joined event.
         - Required because setting the database name is only possible
           from inside the event handler per https://github.com/canonical/ops-lib-pgsql/issues/2
         - Sets our database parameters based on what was provided
           in the relation event.
         """
-        db_connection_string = event.master
-        if self.unit.is_leader() and db_connection_string is not None:
+        if self.unit.is_leader():
             event.database = self.DB_NAME
-        elif event.database != self.DB_NAME or db_connection_string is None:
+        else:
             event.defer()
-            return
 
     def _on_certifier_relation_changed(self, event):
         """Mounts certificates required by the magma-nms-magmalte."""
