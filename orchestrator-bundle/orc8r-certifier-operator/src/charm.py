@@ -78,12 +78,18 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._configure_magma_orc8r_certifier()
 
     def _on_database_relation_joined(self, event):
-        db_connection_string = event.master
-        if self.unit.is_leader() and db_connection_string is not None:
+        """
+        Event handler for database relation change.
+        - Sets the event.database field on the database joined event.
+        - Required because setting the database name is only possible
+          from inside the event handler per https://github.com/canonical/ops-lib-pgsql/issues/2
+        - Sets our database parameters based on what was provided
+          in the relation event.
+        """
+        if self.unit.is_leader():
             event.database = self.DB_NAME
-        elif event.database != self.DB_NAME or db_connection_string is None:
+        else:
             event.defer()
-            return
 
     def _check_db_relation_has_been_established(self):
         """Validates that database relation is ready (that there is a relation and that credentials
