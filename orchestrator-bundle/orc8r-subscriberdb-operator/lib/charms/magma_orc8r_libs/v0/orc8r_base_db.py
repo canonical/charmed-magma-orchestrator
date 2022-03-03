@@ -61,7 +61,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 5
+LIBPATCH = 6
 
 
 logger = logging.getLogger(__name__)
@@ -152,12 +152,10 @@ class Orc8rBase(Object):
         - Sets our database parameters based on what was provided
           in the relation event.
         """
-        db_connection_string = event.master
-        if self.charm.unit.is_leader() and db_connection_string is not None:
+        if self.charm.unit.is_leader():
             event.database = self.DB_NAME
-        elif event.database != self.DB_NAME or db_connection_string is None:
+        else:
             event.defer()
-            return
 
     def _db_relation_established(self):
         """Validates that database relation is ready (that there is a relation and that credentials
