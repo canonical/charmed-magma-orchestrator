@@ -83,13 +83,19 @@ class MagmaNmsMagmalteCharm(CharmBase):
         self.unit.status = MaintenanceStatus(
             f"Configuring pebble layer for {self._service_name}..."
         )
-        plan = self._container.get_plan()
-        layer = self._pebble_layer
-        if plan.services != layer.services:
-            self._container.add_layer(self._container_name, layer, combine=True)
-            self._container.restart(self._service_name)
-            logger.info(f"Restarted container {self._service_name}")
-            self.unit.status = ActiveStatus()
+        try:
+            plan = self._container.get_plan()
+            layer = self._pebble_layer
+            if plan.services != layer.services:
+                self._container.add_layer(self._container_name, layer, combine=True)
+                self._container.restart(self._service_name)
+                logger.info(f"Restarted container {self._service_name}")
+                self.unit.status = ActiveStatus()
+        except ConnectionError:
+            logger.error(
+                f"Could not restart {self._service_name} -- Pebble socket does "
+                f"not exist or is not responsive"
+            )
 
     def _mount_certifier_certs(self) -> None:
         """Patch the StatefulSet to include NMS certs secret mount."""

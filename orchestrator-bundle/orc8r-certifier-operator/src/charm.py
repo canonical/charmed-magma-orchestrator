@@ -121,13 +121,19 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     def _configure_magma_orc8r_certifier(self):
         """Adds layer to pebble config if the proposed config is different from the current one."""
         self.unit.status = MaintenanceStatus("Configuring pod")
-        plan = self._container.get_plan()
-        layer = self._pebble_layer
-        if plan.services != layer.services:
-            self._container.add_layer(self._container_name, layer, combine=True)
-            self._container.restart(self._service_name)
-            logger.info(f"Restarted container {self._service_name}")
-            self.unit.status = ActiveStatus()
+        try:
+            plan = self._container.get_plan()
+            layer = self._pebble_layer
+            if plan.services != layer.services:
+                self._container.add_layer(self._container_name, layer, combine=True)
+                self._container.restart(self._service_name)
+                logger.info(f"Restarted container {self._service_name}")
+                self.unit.status = ActiveStatus()
+        except ConnectionError:
+            logger.error(
+                f"Could not restart {self._service_name} -- Pebble socket does "
+                f"not exist or is not responsive"
+            )
 
     def _on_remove(self, event):
         self.unit.status = MaintenanceStatus("Removing Magma Orc8r secrets...")
