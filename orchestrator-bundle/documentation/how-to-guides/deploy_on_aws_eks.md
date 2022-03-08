@@ -60,7 +60,7 @@ the Juju config `passphrase`.
 
 ## 5. Setup Orchestrator
 
-Add the relevant certificate as an admin user to the controller:
+Create the Orchestrator admin user:
 
 ```bash
 juju run-action orc8r-orchestrator/0 create-orchestrator-admin-user
@@ -76,13 +76,19 @@ Replace `<admin email>` and `<admin password>` with your email and password of c
 
 ## 6. Setup DNS
 
-To configure Route53, on your Ubuntu machine go to the `documentation/how-to-guides/utils/route53_integrator` directory and run:
+To configure Route53, on your Ubuntu machine clone the `charmed-magma` project:
 
 ```bash
+git clone https://github.com/canonical/charmed-magma.git
+```
+
+Navigate to the `route53_integrator` directory and run the main script:
+
+```bash
+cd charmed-magma/orchestrator-bundle/tools/route53_integrator
 pip3 install -r requirements.txt
 python3 route53_integrator --hosted_zone=<your domain> --namespace <your model>
 ```
-
 
 Configure DNS records on your managed domain name to use the Route53 nameservers outputted by the
 script.

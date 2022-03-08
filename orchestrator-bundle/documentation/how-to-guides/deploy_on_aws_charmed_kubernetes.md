@@ -16,7 +16,6 @@ From a Ubuntu 20.04 machine, install the following tools:
 - [Juju](https://juju.is/docs/olm/installing-juju)
 - [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/)
 - [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-- [eksctl](https://docs.aws.amazon.com/eks/latest/userguide/eksctl.html)
 
 Log in to your AWS account via the AWS CLI tool (instructions 
 [here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html)).
@@ -36,9 +35,6 @@ Create an `overlay.yaml` file that contains the following content:
 description: Charmed Kubernetes overlay to add native AWS support.
 applications:
   aws-integrator:
-    annotations:
-      gui-x: "600"
-      gui-y: "300"
     charm: cs:~containers/aws-integrator
     num_units: 1
     trust: true
@@ -126,7 +122,7 @@ the Juju config `passphrase`.
 
 ## 5. Setup Orchestrator
 
-Add the relevant certificate as an admin user to the controller:
+Create the Orchestrator admin user:
 
 ```bash
 juju run-action orc8r-orchestrator/0 create-orchestrator-admin-user
@@ -142,13 +138,19 @@ Replace `<admin email>` and `<admin password>` with your email and password of c
 
 ## 6. Setup DNS
 
-To configure Route53, on your Ubuntu machine go to the `documentation/how-to-guides/utils/route53_integrator` directory and run:
+To configure Route53, on your Ubuntu machine clone the `charmed-magma` project:
 
 ```bash
+git clone https://github.com/canonical/charmed-magma.git
+```
+
+Navigate to the `route53_integrator` directory and run the main script:
+
+```bash
+cd charmed-magma/orchestrator-bundle/tools/route53_integrator
 pip3 install -r requirements.txt
 python3 route53_integrator --hosted_zone=<your domain> --namespace <your model>
 ```
-
 
 Configure DNS records on your managed domain name to use the Route53 nameservers outputted by the
 script.

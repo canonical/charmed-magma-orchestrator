@@ -60,7 +60,7 @@ Replace `<your domain name>` with your domain name.
 
 ## 4. Setup Orchestrator
 
-Add the relevant certificate as an admin user to the controller:
+Create the Orchestrator admin user:
 
 ```bash
 juju run-action orc8r-orchestrator/0 create-orchestrator-admin-user
