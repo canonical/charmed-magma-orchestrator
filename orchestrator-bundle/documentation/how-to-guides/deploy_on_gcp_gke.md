@@ -14,12 +14,6 @@ records.
 From a Ubuntu 20.04 machine, install the following tools:
 - [Juju](https://juju.is/docs/olm/installing-juju)
 - [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/)
-- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-- [eksctl](https://docs.aws.amazon.com/eks/latest/userguide/eksctl.html)
-
-Log in to your AWS account via the AWS CLI tool (instructions 
-[here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html)).
-
 
 ## 2. Deploy Kubernetes on GCP using GKE
 
@@ -61,7 +55,7 @@ the Juju config `passphrase`.
 
 ## 5. Setup Orchestrator
 
-Add the relevant certificate as an admin user to the controller:
+Create the Orchestrator admin user:
 
 ```bash
 juju run-action orc8r-orchestrator/0 create-orchestrator-admin-user
