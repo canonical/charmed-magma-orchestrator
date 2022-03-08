@@ -62,7 +62,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 6
+LIBPATCH = 7
 
 
 logger = logging.getLogger(__name__)
@@ -136,7 +136,7 @@ class Orc8rBase(Object):
         default_environment_variables = {
             "SERVICE_HOSTNAME": self._container_name,
             "SERVICE_REGISTRY_MODE": "k8s",
-            "SERVICE_REGISTRY_NAMESPACE": self._namespace
+            "SERVICE_REGISTRY_NAMESPACE": self._namespace,
         }
         environment_variables.update(self.additional_environment_variables)
         environment_variables.update(default_environment_variables)

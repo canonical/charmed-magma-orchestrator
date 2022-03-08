@@ -71,11 +71,15 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     def _on_magma_orc8r_certifier_pebble_ready(self, event):
         """Triggered when pebble is ready."""
-        if not self._check_db_relation_has_been_established():
-            self.unit.status = BlockedStatus("Waiting for database relation to be established...")
+        if not self._db_relation_created:
+            self.unit.status = BlockedStatus("Waiting for database relation to be created")
             event.defer()
             return
-        self._configure_magma_orc8r_certifier()
+        if not self._db_relation_established:
+            self.unit.status = WaitingStatus("Waiting for database relation to be established...")
+            event.defer()
+            return
+        self._configure_magma_orc8r_certifier(event)
 
     def _on_database_relation_joined(self, event):
         """
@@ -91,8 +95,16 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         else:
             event.defer()
 
-    def _check_db_relation_has_been_established(self):
-        """Validates that database relation is ready (that there is a relation and that credentials
+    @property
+    def _db_relation_created(self) -> bool:
+        """Checks whether required relations are ready."""
+        if not self.model.get_relation("db"):
+            return False
+        return True
+
+    @property
+    def _db_relation_established(self) -> bool:
+        """Validates that database relation is established (that there is a relation and that credentials
         have been passed)."""
         if not self._get_db_connection_string:
             return False
@@ -118,10 +130,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         client.patch(StatefulSet, name=self.app.name, obj=stateful_set, namespace=self._namespace)
         logger.info("Additional K8s resources for magma-orc8r-certifier container applied!")
 
-    def _configure_magma_orc8r_certifier(self):
+    def _configure_magma_orc8r_certifier(self, event):
         """Adds layer to pebble config if the proposed config is different from the current one."""
-        self.unit.status = MaintenanceStatus("Configuring pod")
-        try:
+        if self._container.can_connect():
+            self.unit.status = MaintenanceStatus("Configuring pod")
             plan = self._container.get_plan()
             layer = self._pebble_layer
             if plan.services != layer.services:
@@ -129,11 +141,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                 self._container.restart(self._service_name)
                 logger.info(f"Restarted container {self._service_name}")
                 self.unit.status = ActiveStatus()
-        except ConnectionError:
-            logger.error(
-                f"Could not restart {self._service_name} -- Pebble socket does "
-                f"not exist or is not responsive"
-            )
+        else:
+            self.unit.status = WaitingStatus("Waiting for container to be ready...")
+            event.defer()
 
     def _on_remove(self, event):
         self.unit.status = MaintenanceStatus("Removing Magma Orc8r secrets...")

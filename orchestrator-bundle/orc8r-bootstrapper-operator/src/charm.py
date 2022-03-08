@@ -11,8 +11,8 @@ from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
 from lightkube.resources.apps_v1 import StatefulSet
 from ops.charm import CharmBase
 from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
-from ops.pebble import ConnectionError, Layer
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.pebble import Layer
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +41,10 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
             self.unit.status = BlockedStatus("Waiting for orc8r-certifier relation...")
             event.defer()
             return
+        if not self._orc8r_certs_mounted:
+            self.unit.status = WaitingStatus("Waiting for certs to be mounted")
+            event.defer()
+            return
         self._configure_pebble(event)
 
     def _on_certifier_relation_joined(self, event):
@@ -50,21 +54,17 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
 
     def _configure_pebble(self, event):
         """Adds layer to pebble config if the proposed config is different from the current one."""
-        pebble_layer = self._pebble_layer
-        try:
+        if self._container.can_connect():
+            pebble_layer = self._pebble_layer
             plan = self._container.get_plan()
             if plan.services != pebble_layer.services:
                 self._container.add_layer(self._container_name, pebble_layer, combine=True)
                 self._container.restart(self._service_name)
                 logger.info(f"Restarted container {self._service_name}")
                 self.unit.status = ActiveStatus()
-        except ConnectionError:
-            logger.error(
-                f"Could not restart {self._service_name} -- Pebble socket does "
-                f"not exist or is not responsive"
-            )
+        else:
+            self.unit.status = WaitingStatus("Waiting for container to be ready...")
             event.defer()
-            return
 
     def _mount_orc8r_certs(self) -> None:
         """Patch the StatefulSet to include Orchestrator certs secret mount."""
@@ -94,8 +94,6 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         """Checks whether certifier relation is ready."""
         certifier_relation = self.model.get_relation("certifier")
         if not certifier_relation or len(certifier_relation.units) == 0:
-            return False
-        if not self._orc8r_certs_mounted:
             return False
         return True
 
