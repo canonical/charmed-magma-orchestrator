@@ -104,8 +104,8 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     @property
     def _db_relation_established(self) -> bool:
-        """Validates that database relation is established (that there is a relation and that credentials
-        have been passed)."""
+        """Validates that database relation is established (that there is a relation and that
+        credentials have been passed)."""
         if not self._get_db_connection_string:
             return False
         return True

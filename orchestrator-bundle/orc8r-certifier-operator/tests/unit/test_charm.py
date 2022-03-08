@@ -73,12 +73,14 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(db_event.database, self.TEST_DB_NAME)
 
     @patch("charm.MagmaOrc8rCertifierCharm._namespace", new_callable=PropertyMock)
-    @patch("charm.MagmaOrc8rCertifierCharm._check_db_relation_has_been_established")
+    @patch("charm.MagmaOrc8rCertifierCharm._db_relation_created")
+    @patch("charm.MagmaOrc8rCertifierCharm._db_relation_established")
     def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_orc8r_certifier_service_content(  # noqa: E501
-        self, db_relation_has_been_established, patch_namespace
+        self, db_relation_established, db_relation_created, patch_namespace
     ):
         namespace = "whatever"
-        db_relation_has_been_established.return_value = True
+        db_relation_established.return_value = True
+        db_relation_created.return_value = True
         patch_namespace.return_value = namespace
         event = Mock()
         with patch(

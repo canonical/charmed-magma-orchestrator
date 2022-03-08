@@ -61,7 +61,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 7
+LIBPATCH = 8
 
 
 logger = logging.getLogger(__name__)
@@ -109,7 +109,7 @@ class Orc8rBase(Object):
             self.charm.unit.status = BlockedStatus("Waiting for database relation to be created")
             event.defer()
             return
-        if not self._db_relation_established():
+        if not self._db_relation_established:
             self.charm.unit.status = WaitingStatus(
                 "Waiting for database relation to be established..."
             )
@@ -166,7 +166,8 @@ class Orc8rBase(Object):
         else:
             event.defer()
 
-    def _db_relation_established(self):
+    @property
+    def _db_relation_established(self) -> bool:
         """Validates that database relation is ready (that there is a relation and that credentials
         have been passed)."""
         if not self._get_db_connection_string:
