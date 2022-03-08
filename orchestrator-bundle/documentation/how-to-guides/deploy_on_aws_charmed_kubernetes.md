@@ -1,25 +1,24 @@
-
 # How-to: Deploy Magma Orchestrator on AWS with Charmed Kubernetes
 
 The goal of this document is to detail how to deploy Magma's Orchestrator on AWS with Charmed
-Kubernetes. You will deploy charmed Kubernetes,  bootstrap a Juju controller, deploy Magma Orchestrator and configure A
+Kubernetes. You will deploy charmed Kubernetes, bootstrap a Juju controller, deploy Magma Orchestrator and configure A
 records.
 
-
 ### Pre-requisites
+
 - Ubuntu 20.04 machine with internet access
 - A public domain
 
 ## 1. Set up your management environment
 
 From a Ubuntu 20.04 machine, install the following tools:
+
 - [Juju](https://juju.is/docs/olm/installing-juju)
 - [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/)
 - [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 
-Log in to your AWS account via the AWS CLI tool (instructions 
+Log in to your AWS account via the AWS CLI tool (instructions
 [here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html)).
-
 
 ## 2. Deploy Charmed Kubernetes on AWS using Juju
 
@@ -44,6 +43,7 @@ relations:
 ```
 
 Deploy charmed-kubernetes:
+
 ```bash
 juju deploy charmed-kubernetes --overlay overlay.yaml --trust
 ```
@@ -84,7 +84,6 @@ juju add-model <model name>
 
 Replace `<model name>` with the Kubernetes namespace you want.
 
-
 ## 3. Deploy charmed magma orchestrator
 
 Create an `overlay.yaml` file that contains the following:
@@ -95,6 +94,7 @@ applications:
     options:
       domain: <your domain name>
 ```
+
 Replace `<your domain name>` with your domain name.
 
 Deploy orchestrator:
@@ -105,8 +105,8 @@ juju deploy magma-orc8r --overlay overlay.yaml --trust --channel=edge
 
 The deployment is completed when all services are in the `Active-Idle` state.
 
-
 ## 4. Import the HTTPS Certificate
+
 Retrieve the self-signed certificate:
 
 ```bash
@@ -115,10 +115,8 @@ juju scp orc8r-certifier/0:/tmp/certs/admin_operator.pfx admin_operator.pfx
 
 The default password is `password123`.
 
-
-> **_NOTE:_**  The default password can be changed by deploying the certifier charm using 
-the Juju config `passphrase`.
-
+> **_NOTE:_** The default password can be changed by deploying the certifier charm using
+> the Juju config `passphrase`.
 
 ## 5. Setup Orchestrator
 
@@ -155,10 +153,10 @@ python3 route53_integrator --hosted_zone=<your domain> --namespace <your model>
 Configure DNS records on your managed domain name to use the Route53 nameservers outputted by the
 script.
 
-> **_NOTE:_**  For Google domains, navigate to Google Domains -> DNS -> Custom Name Servers. Fill in 4 Name Server 
-boxes with the domains retrieved from the `route53_integrator` script.
+> **_NOTE:_** For Google domains, navigate to Google Domains -> DNS -> Custom Name Servers. Fill in 4 Name Server
+> boxes with the domains retrieved from the `route53_integrator` script.
 
 ## 7. Verify the deployment
 
-Confirm successful deployment by visiting `https://master.nms.<your domain>` and logging in 
+Confirm successful deployment by visiting `https://master.nms.<your domain>` and logging in
 with the `<admin email>` and `<admin password>` provided above.
