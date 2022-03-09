@@ -147,7 +147,7 @@ Navigate to the `route53_integrator` directory and run the main script:
 ```bash
 cd charmed-magma/orchestrator-bundle/tools/route53_integrator
 pip3 install -r requirements.txt
-python3 route53_integrator --hosted_zone=<your domain> --namespace <your model>
+python3 main.py --hosted_zone=<your domain> --namespace <your model>
 ```
 
 Configure DNS records on your managed domain name to use the Route53 nameservers outputted by the
