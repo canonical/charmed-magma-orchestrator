@@ -19,7 +19,7 @@ from lightkube.resources.apps_v1 import StatefulSet
 from lightkube.resources.core_v1 import ConfigMap
 from ops.charm import CharmBase
 from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import Layer
 
 logger = logging.getLogger(__name__)
@@ -49,18 +49,22 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         if not self._relations_ready:
             event.defer()
             return
-        self._configure_pebble()
+        self._configure_pebble(event)
 
-    def _configure_pebble(self):
-        self.unit.status = MaintenanceStatus(
-            f"Configuring pebble layer for {self._service_name}..."
-        )
-        plan = self._container.get_plan()
-        if plan.services != self._pebble_layer.services:
-            self._container.add_layer(self._container_name, self._pebble_layer, combine=True)
-            self._container.restart(self._service_name)
-            logger.info(f"Restarted container {self._service_name}")
-            self.unit.status = ActiveStatus()
+    def _configure_pebble(self, event):
+        if self._container.can_connect():
+            self.unit.status = MaintenanceStatus(
+                f"Configuring pebble layer for {self._service_name}..."
+            )
+            plan = self._container.get_plan()
+            if plan.services != self._pebble_layer.services:
+                self._container.add_layer(self._container_name, self._pebble_layer, combine=True)
+                self._container.restart(self._service_name)
+                logger.info(f"Restarted container {self._service_name}")
+                self.unit.status = ActiveStatus()
+        else:
+            self.unit.status = WaitingStatus("Waiting for container to be ready...")
+            event.defer()
 
     def _configure_nginx(self, event):
         if not self._nms_certs_mounted:

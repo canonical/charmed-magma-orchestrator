@@ -61,7 +61,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 6
+LIBPATCH = 8
 
 
 logger = logging.getLogger(__name__)
@@ -97,9 +97,20 @@ class Orc8rBase(Object):
             self._db.on.database_relation_joined, self._on_database_relation_joined
         )
 
+    @property
+    def _db_relation_created(self) -> bool:
+        """Checks whether required relations are ready."""
+        if not self.model.get_relation("db"):
+            return False
+        return True
+
     def _on_magma_orc8r_pebble_ready(self, event):
-        if not self._db_relation_established():
-            self.charm.unit.status = BlockedStatus(
+        if not self._db_relation_created:
+            self.charm.unit.status = BlockedStatus("Waiting for database relation to be created")
+            event.defer()
+            return
+        if not self._db_relation_established:
+            self.charm.unit.status = WaitingStatus(
                 "Waiting for database relation to be established..."
             )
             event.defer()
@@ -110,20 +121,18 @@ class Orc8rBase(Object):
         """
         Adds layer to pebble config if the proposed config is different from the current one
         """
-        self.charm.unit.status = MaintenanceStatus("Configuring pod")
-        pebble_layer = self._pebble_layer()
-        try:
+        if self._container.can_connect():
+            self.charm.unit.status = MaintenanceStatus("Configuring pod")
+            pebble_layer = self._pebble_layer()
             plan = self._container.get_plan()
             if plan.services != pebble_layer.services:
                 self._container.add_layer(self._container_name, pebble_layer, combine=True)
                 self._container.restart(self._service_name)
                 logger.info(f"Restarted container {self._service_name}")
                 self.charm.unit.status = ActiveStatus()
-        except ConnectionError:
-            logger.error(
-                f"Could not restart {self._service_name} -- Pebble socket does "
-                f"not exist or is not responsive"
-            )
+        else:
+            self.charm.unit.status = WaitingStatus("Waiting for container to be ready...")
+            event.defer()
 
     def _pebble_layer(self) -> Layer:
         """Returns pebble layer for the charm."""
@@ -157,11 +166,11 @@ class Orc8rBase(Object):
         else:
             event.defer()
 
-    def _db_relation_established(self):
+    @property
+    def _db_relation_established(self) -> bool:
         """Validates that database relation is ready (that there is a relation and that credentials
         have been passed)."""
         if not self._get_db_connection_string:
-            self.charm.unit.status = WaitingStatus("Waiting for db relation to be ready...")
             return False
         return True
 

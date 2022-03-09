@@ -192,8 +192,8 @@ relations:
   - orc8r-bootstrapper:bootstrapper
 - - orc8r-nginx:obsidian
   - orc8r-obsidian:obsidian
-- - orc8r-orchestrator
-  - orc8r-certifier
+- - orc8r-orchestrator:certifier
+  - orc8r-certifier:certifier
 - - nms-magmalte:db
   - postgresql-k8s:db
 - - nms-nginx-proxy:magmalte

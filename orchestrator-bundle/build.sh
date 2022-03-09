@@ -41,7 +41,7 @@ orc8r-tenants
 
 
 for charm in ${charms}; do
-    build ${charm} &
+    build ${charm}
 done
 
 wait

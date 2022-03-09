@@ -33,12 +33,14 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(initial_plan.to_yaml(), "{}\n")
 
     @patch("charm.MagmaOrc8rBootstrapperCharm._namespace", new_callable=PropertyMock)
+    @patch("charm.MagmaOrc8rBootstrapperCharm._orc8r_certs_mounted")
     @patch("charm.MagmaOrc8rBootstrapperCharm._certifier_relation_ready")
     def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_orc8r_bootstrapper_service_content(  # noqa: E501
-        self, certifier_relation_ready, patch_namespace
+        self, certifier_relation_ready, orc8r_certs_mounted, patch_namespace
     ):
         namespace = "whatever"
         certifier_relation_ready.return_value = True
+        orc8r_certs_mounted.return_value = True
         patch_namespace.return_value = namespace
         expected_plan = {
             "services": {

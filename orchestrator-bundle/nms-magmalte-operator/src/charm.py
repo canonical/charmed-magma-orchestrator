@@ -56,7 +56,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         if not self._relations_ready:
             event.defer()
             return
-        self._configure_pebble()
+        self._configure_pebble(event)
 
     def _on_database_relation_joined(self, event):
         """
@@ -78,18 +78,22 @@ class MagmaNmsMagmalteCharm(CharmBase):
             self.unit.status = MaintenanceStatus("Mounting NMS certificates...")
             self._mount_certifier_certs()
 
-    def _configure_pebble(self):
+    def _configure_pebble(self, event):
         """Adds layer to pebble config if the proposed config is different from the current one."""
-        self.unit.status = MaintenanceStatus(
-            f"Configuring pebble layer for {self._service_name}..."
-        )
-        plan = self._container.get_plan()
-        layer = self._pebble_layer
-        if plan.services != layer.services:
-            self._container.add_layer(self._container_name, layer, combine=True)
-            self._container.restart(self._service_name)
-            logger.info(f"Restarted container {self._service_name}")
-            self.unit.status = ActiveStatus()
+        if self._container.can_connect():
+            self.unit.status = MaintenanceStatus(
+                f"Configuring pebble layer for {self._service_name}..."
+            )
+            plan = self._container.get_plan()
+            layer = self._pebble_layer
+            if plan.services != layer.services:
+                self._container.add_layer(self._container_name, layer, combine=True)
+                self._container.restart(self._service_name)
+                logger.info(f"Restarted container {self._service_name}")
+                self.unit.status = ActiveStatus()
+        else:
+            self.unit.status = WaitingStatus("Waiting for container to be ready...")
+            event.defer()
 
     def _mount_certifier_certs(self) -> None:
         """Patch the StatefulSet to include NMS certs secret mount."""

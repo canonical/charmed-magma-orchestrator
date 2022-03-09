@@ -70,12 +70,12 @@ class TestCharm(unittest.TestCase):
             self.harness.charm.on.magma_nms_nginx_proxy_pebble_ready.emit(event)
         mock.assert_called_once()
 
-    def test_given_charm_when_certifier_relation_added_then_configure_ngnix_action_called(self):
+    def test_given_charm_when_certifier_relation_added_then_configure_nginx_action_called(self):
         event = Mock()
         with patch.object(MagmaNmsNginxProxyCharm, "_configure_nginx", event) as mock:
             relation_id = self.harness.add_relation("certifier", "orc8r-certifier")
             self.harness.add_relation_unit(relation_id, "orc8r-certifier/0")
-            self.harness.update_relation_data(relation_id, "orc8r-certifier/0", {})
+            self.harness.update_relation_data(relation_id, "orc8r-certifier/0", {"key": "value"})
         mock.assert_called_once()
 
     def test_given_charm_when_remove_event_emitted_then_on_remove_action_called(self):
