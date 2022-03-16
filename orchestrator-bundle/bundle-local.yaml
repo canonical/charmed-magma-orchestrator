@@ -174,6 +174,11 @@ applications:
     channel: edge
     scale: 1
     trust: true
+  orc8r-user-grafana:
+    charm: grafana-k8s
+    channel: edge
+    scale: 1
+    trust: true
   prometheus-cache:
     charm: prometheus-edge-hub
     channel: edge
@@ -226,3 +231,5 @@ relations:
   - nms-magmalte:magmalte
 - - orc8r-prometheus
   - prometheus-cache
+- - orc8r-prometheus
+  - orc8r-user-grafana
