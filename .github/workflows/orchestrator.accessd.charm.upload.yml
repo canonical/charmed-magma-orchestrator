@@ -12,15 +12,24 @@ jobs:
     runs-on: ubuntu-latest
     name: Charmhub upload orc8r-accessd-operator
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
 
-      - uses: canonical/charmhub-upload-action@0.2.1
+      - name: Check libraries
+        uses: canonical/charming-actions/check-libraries@test-charm-rev74
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
-          charm-path: ./orchestrator-bundle/orc8r-accessd-operator
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Select charmhub channel
+        uses: canonical/charming-actions/channel@test-charm-rev74
+        id: channel
+
+      - name: Upload charm to charmhub
+        uses: canonical/charming-actions/upload-charm@test-charm-rev74
+        with:
+          credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
           upload-image: "false"
-
-      - uses: canonical/charmhub-upload-action@0.2.1
-        with:
-          credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
-          bundle-path: ./orchestrator-bundle/orc8r-bundle
+          channel: "${{ steps.channel.outputs.name }}"
+          charm-path: ./orchestrator-bundle/orc8r-accessd-operator

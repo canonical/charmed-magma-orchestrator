@@ -14,17 +14,25 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Preinstall dependencies
+      - name: Pre-install dependencies
         run: |
           sudo apt-get update && sudo apt-get --no-install-recommends -y -oDpkg::Use-Pty=0 --allow-downgrades install cargo=0.58.0-0ubuntu1~20.04.1 libstd-rust-1.57=1.57.0+dfsg1+llvm-0ubuntu1~20.04.1 libstd-rust-dev=1.57.0+dfsg1+llvm-0ubuntu1~20.04.1 rustc=1.57.0+dfsg1+llvm-0ubuntu1~20.04.1
 
-      - uses: canonical/charmhub-upload-action@0.2.1
+      - name: Check libraries
+        uses: canonical/charming-actions/check-libraries@test-charm-rev74
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
-          charm-path: ./orchestrator-bundle/orc8r-certifier-operator
-          upload-image: "false"
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
 
-      - uses: canonical/charmhub-upload-action@0.2.1
+      - name: Select charmhub channel
+        uses: canonical/charming-actions/channel@test-charm-rev74
+        id: channel
+
+      - name: Upload charm to charmhub
+        uses: canonical/charming-actions/upload-charm@test-charm-rev74
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
-          bundle-path: ./orchestrator-bundle/orc8r-bundle
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          upload-image: "false"
+          channel: "${{ steps.channel.outputs.name }}"
+          charm-path: ./orchestrator-bundle/orc8r-certifier-operator
