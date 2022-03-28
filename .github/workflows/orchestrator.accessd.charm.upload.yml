@@ -16,17 +16,17 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Check libraries
-        uses: canonical/charming-actions/check-libraries@test-charm-rev74
+        uses: canonical/charming-actions/check-libraries@test-charm-rev75
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 
       - name: Select charmhub channel
-        uses: canonical/charming-actions/channel@test-charm-rev74
+        uses: canonical/charming-actions/channel@test-charm-rev75
         id: channel
 
       - name: Upload charm to charmhub
-        uses: canonical/charming-actions/upload-charm@test-charm-rev74
+        uses: canonical/charming-actions/upload-charm@test-charm-rev75
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
           github-token: "${{ secrets.GITHUB_TOKEN }}"
