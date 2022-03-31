@@ -14,7 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: canonical/charmhub-upload-action@0.2.1
+      - name: Upload bundle
+        uses: canonical/charming-actions/upload-bundle@test-charm-rev75
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
           bundle-path: ./orchestrator-bundle/orc8r-bundle
+          github-token: "${{ secrets.GITHUB_TOKEN }}"

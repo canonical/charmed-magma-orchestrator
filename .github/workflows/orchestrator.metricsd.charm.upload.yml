@@ -14,13 +14,21 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: canonical/charmhub-upload-action@0.2.1
+      - name: Check libraries
+        uses: canonical/charming-actions/check-libraries@test-charm-rev75
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
-          charm-path: ./orchestrator-bundle/orc8r-metricsd-operator
-          upload-image: "false"
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
 
-      - uses: canonical/charmhub-upload-action@0.2.1
+      - name: Select charmhub channel
+        uses: canonical/charming-actions/channel@test-charm-rev75
+        id: channel
+
+      - name: Upload charm to charmhub
+        uses: canonical/charming-actions/upload-charm@test-charm-rev75
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
-          bundle-path: ./orchestrator-bundle/orc8r-bundle
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          upload-image: "false"
+          channel: "${{ steps.channel.outputs.name }}"
+          charm-path: ./orchestrator-bundle/orc8r-metricsd-operator
