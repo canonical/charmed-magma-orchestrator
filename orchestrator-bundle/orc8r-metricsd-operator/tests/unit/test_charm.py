@@ -31,9 +31,7 @@ class TestCharm(unittest.TestCase):
         self.maxDiff = None
 
     @patch("ops.model.Container.push")
-    def test_given_new_charm_when_on_install_event_then_config_file_is_created(
-        self, patch_push
-    ):
+    def test_given_new_charm_when_on_install_event_then_config_file_is_created(self, patch_push):
         event = Mock()
 
         self.harness.charm._on_install(event)

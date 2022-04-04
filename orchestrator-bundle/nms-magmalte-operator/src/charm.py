@@ -2,14 +2,14 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-# from datetime import datetime
-import time
 import logging
 import secrets
 import string
+import time
 from typing import List
 
 import ops.lib
+from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from lightkube import Client
 from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
 from lightkube.resources.apps_v1 import StatefulSet
@@ -19,8 +19,6 @@ from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import ExecError, Layer
 from pgconnstr import ConnectionString  # type: ignore[import]
-
-from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 
 logger = logging.getLogger(__name__)
 pgsql = ops.lib.use("pgsql", 1, "postgresql-charmers@lists.launchpad.net")
@@ -181,7 +179,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         self._create_nms_admin_user(
             email=event.params["email"],
             password=event.params["password"],
-            organization=event.params["organization"]
+            organization=event.params["organization"],
         )
 
     def _on_get_admin_credentials(self, event: ActionEvent) -> None:
@@ -252,9 +250,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         """Checks whether required relations are ready."""
         required_relations = ["certifier", "db"]
         missing_relations = [
-            relation
-            for relation in required_relations
-            if not self.model.get_relation(relation)
+            relation for relation in required_relations if not self.model.get_relation(relation)
         ]
         if missing_relations:
             msg = f"Waiting for relation(s) to be created: {', '.join(missing_relations)}"

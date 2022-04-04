@@ -5,11 +5,10 @@
 import base64
 import logging
 
-from ops.charm import CharmBase
-from ops.main import main
-
 from charms.magma_orc8r_libs.v0.orc8r_base import Orc8rBase
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
+from ops.charm import CharmBase
+from ops.main import main
 
 logger = logging.getLogger(__name__)
 

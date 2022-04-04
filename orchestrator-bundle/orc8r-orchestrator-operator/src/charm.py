@@ -2,7 +2,6 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import base64
 import logging
 from typing import List
 
@@ -91,10 +90,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             '"metricExportURL": ""\n'
             '"metricsPrefix": ""\n'
         )
-        elastic_config = (
-            '"elasticHost": "orc8r-elasticsearch"\n'
-            '"elasticPort": 80\n'
-        )
+        elastic_config = '"elasticHost": "orc8r-elasticsearch"\n' '"elasticPort": 80\n'
 
         self._container.push(f"{self.BASE_CONFIG_PATH}/orchestrator.yml", orchestrator_config)
         self._container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
