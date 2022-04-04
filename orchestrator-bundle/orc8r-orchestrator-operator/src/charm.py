@@ -2,6 +2,7 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import base64
 import logging
 from typing import List
 
@@ -18,6 +19,11 @@ logger = logging.getLogger(__name__)
 
 
 class MagmaOrc8rOrchestratorCharm(CharmBase):
+
+    ORCHESTRATOR_SECRET_NAME = "orchestrator-config"
+    ORCHESTRATOR_VOLUME_NAME = "orchestrator-config-volume"
+    BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
+
     def __init__(self, *args):
         """An instance of this object everytime an event occurs."""
         super().__init__(*args)
@@ -35,6 +41,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             self._create_orchestrator_admin_user_action,
         )
         self.framework.observe(self.on.set_log_verbosity_action, self._set_log_verbosity_action)
+        self.framework.observe(self.on.install, self._on_install)
         self._service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[("grpc", 9180, 9112), ("http", 8080, 10112)],
@@ -58,6 +65,41 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                 "/magma/v1/networks/:network_id,",
             },
         )
+
+    def _on_install(self, event):
+        self._write_config_file()
+
+    def _write_config_file(self):
+        orchestrator_config = (
+            '"prometheusGRPCPushAddress": "orc8r-prometheus-cache:9092"\n'
+            '"prometheusPushAddresses":\n'
+            '- "http://orc8r-prometheus-cache:9091/metrics"\n'
+            '"useGRPCExporter": true\n'
+        )
+        metricsd_config = (
+            'prometheusQueryAddress: "http://orc8r-prometheus:9090"\n'
+            'alertmanagerApiURL: "http://orc8r-alertmanager:9093/api/v2"\n'
+            'prometheusConfigServiceURL: "http://orc8r-prometheus:9100/v1"\n'
+            'alertmanagerConfigServiceURL: "http://orc8r-alertmanager:9101/v1"\n'
+            '"profile": "prometheus"\n'
+        )
+        analytics_config = (
+            '"appID": ""\n'
+            '"appSecret": ""\n'
+            '"categoryName": "magma"\n'
+            '"exportMetrics": false\n'
+            '"metricExportURL": ""\n'
+            '"metricsPrefix": ""\n'
+        )
+        elastic_config = (
+            '"elasticHost": "orc8r-elasticsearch"\n'
+            '"elasticPort": 80\n'
+        )
+
+        self._container.push(f"{self.BASE_CONFIG_PATH}/orchestrator.yml", orchestrator_config)
+        self._container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
+        self._container.push(f"{self.BASE_CONFIG_PATH}/analytics.yml", analytics_config)
+        self._container.push(f"{self.BASE_CONFIG_PATH}/elastic.yml", elastic_config)
 
     def _create_orchestrator_admin_user_action(self, event):
         process = self._container.exec(

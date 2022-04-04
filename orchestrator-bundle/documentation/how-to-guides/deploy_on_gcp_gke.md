@@ -63,13 +63,11 @@ Create the Orchestrator admin user:
 juju run-action orc8r-orchestrator/0 create-orchestrator-admin-user
 ```
 
-Create an admin user for the master organization on the NMS:
+Get the master organization's username and password:
 
 ```bash
-juju run-action nms-magmalte/0 create-nms-admin-user email=<admin email> password=<admin password>
+juju run-action nms-magmalte/0 get-admin-credentials --wait
 ```
-
-Replace `<admin email>` and `<admin password>` with your email and password of choice.
 
 ## 6. Setup DNS
 
@@ -84,12 +82,11 @@ following services:
 Create these A records in your managed domain:
 
 | Hostname                                | Address                                |
-| --------------------------------------- | -------------------------------------- |
+|-----------------------------------------| -------------------------------------- |
 | `bootstrapper-controller.<your domain>` | `<orc8r-bootstrap-nginx External IP>`  |
 | `api.<your domain>`                     | `<orc8r-nginx-proxy External IP>`      |
 | `controller.<your domain>`              | `<orc8r-clientcert-nginx External IP>` |
-| `master.nms.<your domain>`              | `<nginx-proxy External IP>`            |
-| `magma-test.nms.<your domain>`          | `<nginx-proxy External IP>`            |
+| `*.nms.<your domain>`                   | `<nginx-proxy External IP>`            |
 
 > **_NOTE:_** For Google domains, navigate to Google Domains -> DNS -> Default Name Servers and
 > fill in the 4 A records.

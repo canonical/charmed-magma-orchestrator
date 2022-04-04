@@ -9,6 +9,9 @@ from ops.main import main
 
 
 class MagmaOrc8rAnalyticsCharm(CharmBase):
+
+    BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
+
     def __init__(self, *args):
         """
         An instance of this object everytime an event occurs
@@ -27,6 +30,30 @@ class MagmaOrc8rAnalyticsCharm(CharmBase):
             "-v=0"
         )
         self._orc8r_base = Orc8rBase(self, startup_command=startup_command)
+        self.framework.observe(self.on.install, self._on_install)
+
+    def _on_install(self, event):
+        self._write_config_file()
+
+    def _write_config_file(self):
+        metricsd_config = (
+            'prometheusQueryAddress: "http://orc8r-prometheus:9090"\n'
+            'alertmanagerApiURL: "http://orc8r-alertmanager:9093/api/v2"\n'
+            'prometheusConfigServiceURL: "http://orc8r-prometheus:9100/v1"\n'
+            'alertmanagerConfigServiceURL: "http://orc8r-alertmanager:9101/v1"\n'
+            '"profile": "prometheus"\n'
+        )
+
+        analytics_config = (
+            '"appID": ""\n'
+            '"appSecret": ""\n'
+            '"categoryName": "magma"\n'
+            '"exportMetrics": false\n'
+            '"metricExportURL": ""\n'
+            '"metricsPrefix": ""\n'
+        )
+        self._orc8r_base._container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
+        self._orc8r_base._container.push(f"{self.BASE_CONFIG_PATH}/analytics.yml", analytics_config)
 
 
 if __name__ == "__main__":

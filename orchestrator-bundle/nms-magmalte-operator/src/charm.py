@@ -2,19 +2,25 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+# from datetime import datetime
+import time
 import logging
+import secrets
+import string
 from typing import List
 
 import ops.lib
-from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from lightkube import Client
 from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
 from lightkube.resources.apps_v1 import StatefulSet
-from ops.charm import CharmBase
+from ops.charm import ActionEvent, CharmBase
+from ops.framework import StoredState
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import ExecError, Layer
 from pgconnstr import ConnectionString  # type: ignore[import]
+
+from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 
 logger = logging.getLogger(__name__)
 pgsql = ops.lib.use("pgsql", 1, "postgresql-charmers@lists.launchpad.net")
@@ -23,12 +29,14 @@ pgsql = ops.lib.use("pgsql", 1, "postgresql-charmers@lists.launchpad.net")
 class MagmaNmsMagmalteCharm(CharmBase):
 
     DB_NAME = "magma_dev"
+    _stored = StoredState()
 
     def __init__(self, *args):
         """Creates a new instance of this object for each event."""
         super().__init__(*args)
         self._container_name = self._service_name = "magma-nms-magmalte"
         self._container = self.unit.get_container(self._container_name)
+        self._stored.set_default(admin_username="", admin_password="", admin_password_set=False)
         self._db = pgsql.PostgreSQLClient(self, "db")
         self.framework.observe(
             self.on.magma_nms_magmalte_pebble_ready, self._on_magma_nms_magmalte_pebble_ready
@@ -38,6 +46,9 @@ class MagmaNmsMagmalteCharm(CharmBase):
         )
         self.framework.observe(
             self.on.certifier_relation_changed, self._on_certifier_relation_changed
+        )
+        self.framework.observe(
+            self.on.get_admin_credentials_action, self._on_get_admin_credentials
         )
         self.framework.observe(
             self.on.create_nms_admin_user_action, self._create_nms_admin_user_action
@@ -57,6 +68,24 @@ class MagmaNmsMagmalteCharm(CharmBase):
             event.defer()
             return
         self._configure_pebble(event)
+        self._create_master_nms_admin_user()
+
+    def _create_master_nms_admin_user(self):
+        username = self._get_admin_username()
+        password = self._get_admin_password()
+        start_time = time.time()
+        timeout = 60
+        while time.time() - start_time < timeout:
+            try:
+                self._create_nms_admin_user(username, password, "master")
+                logger.info("Successfully created admin user")
+                return
+            except ExecError:
+                logger.info("Failed to create admin user - Will retry in 5 seconds")
+                time.sleep(5)
+        message = "Timed out trying to create admin user for NMS"
+        logger.info(message)
+        raise TimeoutError(message)
 
     def _on_database_relation_joined(self, event):
         """
@@ -81,12 +110,12 @@ class MagmaNmsMagmalteCharm(CharmBase):
     def _configure_pebble(self, event):
         """Adds layer to pebble config if the proposed config is different from the current one."""
         if self._container.can_connect():
-            self.unit.status = MaintenanceStatus(
-                f"Configuring pebble layer for {self._service_name}..."
-            )
             plan = self._container.get_plan()
             layer = self._pebble_layer
             if plan.services != layer.services:
+                self.unit.status = MaintenanceStatus(
+                    f"Configuring pebble layer for {self._service_name}..."
+                )
                 self._container.add_layer(self._container_name, layer, combine=True)
                 self._container.restart(self._service_name)
                 logger.info(f"Restarted container {self._service_name}")
@@ -149,25 +178,48 @@ class MagmaNmsMagmalteCharm(CharmBase):
         )
 
     def _create_nms_admin_user_action(self, event):
+        self._create_nms_admin_user(
+            email=event.params["email"],
+            password=event.params["password"],
+            organization=event.params["organization"]
+        )
+
+    def _on_get_admin_credentials(self, event: ActionEvent) -> None:
+        if not self._relations_ready:
+            event.fail("Relations aren't yet set up. Please try again in a few minutes")
+            return
+
+        event.set_results(
+            {
+                "admin-username": self._get_admin_username(),
+                "admin-password": self._get_admin_password(),
+            }
+        )
+
+    def _create_nms_admin_user(self, email: str, password: str, organization: str):
+        """
+        Creates Admin user for the master organization in NMS
+        """
+        logger.info("Creating admin user for NMS")
         process = self._container.exec(
             [
                 "/usr/local/bin/yarn",
                 "setAdminPassword",
-                "master",
-                event.params["email"],
-                event.params["password"],
+                organization,
+                email,
+                password,
             ],
             timeout=30,
             environment=self._environment_variables,
             working_dir="/usr/src/packages/magmalte",
         )
         try:
-            stdout, error = process.wait_output()
-            logger.info(f"Return message: {stdout}, {error}")
+            process.wait_output()
         except ExecError as e:
             logger.error("Exited with code %d. Stderr:", e.exit_code)
             for line in e.stderr.splitlines():
                 logger.error("    %s", line)
+            raise e
 
     @property
     def _magma_nms_magmalte_volumes(self) -> List[Volume]:
@@ -203,13 +255,12 @@ class MagmaNmsMagmalteCharm(CharmBase):
             relation
             for relation in required_relations
             if not self.model.get_relation(relation)
-            or len(self.model.get_relation(relation).units) == 0  # noqa: W503
         ]
         if missing_relations:
-            msg = f"Waiting for relations: {', '.join(missing_relations)}"
+            msg = f"Waiting for relation(s) to be created: {', '.join(missing_relations)}"
             self.unit.status = BlockedStatus(msg)
             return False
-        if not self._get_domain_name:
+        if not self._domain_name:
             self.unit.status = WaitingStatus("Waiting for certifier relation to be ready...")
             return False
         if not self._get_db_connection_string:
@@ -228,13 +279,15 @@ class MagmaNmsMagmalteCharm(CharmBase):
         )
 
     @property
-    def _get_domain_name(self):
+    def _domain_name(self):
         """Returns domain name provided by the orc8r-certifier relation."""
         try:
             certifier_relation = self.model.get_relation("certifier")
             units = certifier_relation.units
             return certifier_relation.data[next(iter(units))]["domain"]
         except KeyError:
+            return None
+        except StopIteration:
             return None
 
     @property
@@ -249,6 +302,26 @@ class MagmaNmsMagmalteCharm(CharmBase):
     @property
     def _namespace(self) -> str:
         return self.model.name
+
+    def _get_admin_password(self) -> str:
+        """Returns the password for the admin user."""
+        if not self._stored.admin_password:
+            self._stored.admin_password = self._generate_password()
+
+        return self._stored.admin_password
+
+    def _get_admin_username(self) -> str:
+        """Returns the admin user."""
+        if not self._stored.admin_username:
+            self._stored.admin_username = f"admin@{self._domain_name}"
+
+        return self._stored.admin_username
+
+    @staticmethod
+    def _generate_password() -> str:
+        """Generates a random 12 character password."""
+        chars = string.ascii_letters + string.digits
+        return "".join(secrets.choice(chars) for _ in range(12))
 
 
 if __name__ == "__main__":

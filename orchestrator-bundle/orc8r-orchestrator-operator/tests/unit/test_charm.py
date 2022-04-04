@@ -53,3 +53,21 @@ class TestCharm(unittest.TestCase):
         self.harness.charm.on.magma_orc8r_orchestrator_pebble_ready.emit(event)
         updated_plan = self.harness.get_container_pebble_plan("magma-orc8r-orchestrator").to_dict()
         self.assertEqual(expected_plan, updated_plan)
+
+    @patch("ops.model.Container.push")
+    def test_given_new_charm_when_on_install_event_then_config_file_is_created(
+            self, patch_push
+    ):
+        event = Mock()
+
+        self.harness.charm._on_install(event)
+
+        args, kwargs = patch_push.call_args
+
+        assert args[0] == "/var/opt/magma/configs/orc8r/orchestrator.yml"
+        assert args[1] == (
+            '"prometheusGRPCPushAddress": "orc8r-prometheus-cache:9092"\n'
+            '"prometheusPushAddresses":\n'
+            '- "http://orc8r-prometheus-cache:9091/metrics"\n'
+            '"useGRPCExporter": true\n'
+        )

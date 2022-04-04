@@ -10,9 +10,18 @@ summary: |
 containers:
   magma-orc8r-metricsd:
     resource: magma-orc8r-metricsd-image
+    mounts:
+      - storage: config
+        location: /var/opt/magma/configs/orc8r
 
 resources:
   magma-orc8r-metricsd-image:
     type: oci-image
     description: OCI image for magma-orc8r-metricsd (docker.artifactory.magmacore.org/controller:1.6.0)
     upstream-source: docker.artifactory.magmacore.org/controller:1.6.0
+
+storage:
+  config:
+    type: filesystem
+    description: Configs storage
+    minimum-size: 1M

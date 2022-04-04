@@ -4,19 +4,12 @@
 
 import base64
 import logging
-from typing import List
+
+from ops.charm import CharmBase
+from ops.main import main
 
 from charms.magma_orc8r_libs.v0.orc8r_base import Orc8rBase
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
-from lightkube import Client
-from lightkube.core.exceptions import ApiError
-from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
-from lightkube.models.meta_v1 import ObjectMeta
-from lightkube.resources.apps_v1 import StatefulSet
-from lightkube.resources.core_v1 import Secret
-from ops.charm import CharmBase
-from ops.main import main
-from ops.model import MaintenanceStatus, WaitingStatus
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +18,7 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
 
     METRICSD_SECRET_NAME = "metricsd-config"
     METRICSD_VOLUME_NAME = "metricsd-config-volume"
+    BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
 
     def __init__(self, *args):
         """
@@ -61,68 +55,17 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
         self.framework.observe(self.on.install, self._on_install)
 
     def _on_install(self, event):
-        if self._container.can_connect():
-            self._create_secret()
-            self._mount_metricsd_volume()
-        else:
-            self.unit.status = WaitingStatus("Waiting for container to be ready...")
-            event.defer()
-            return
+        self._write_config_file()
 
-    def _create_secret(self):
-        self.unit.status = MaintenanceStatus("Creating metricsd secret")
-        client = Client()
-        secret_data = {
-            "metricsd.yml": self._encode_in_base64(open("src/metricsd.yml", "rb").read())
-        }
-        metadata = ObjectMeta(
-            namespace=self._namespace,
-            name=self.METRICSD_SECRET_NAME,
+    def _write_config_file(self):
+        metricsd_config = (
+            'prometheusQueryAddress: "http://orc8r-prometheus:9090"\n'
+            'alertmanagerApiURL: "http://orc8r-alertmanager:9093/api/v2"\n'
+            'prometheusConfigServiceURL: "http://orc8r-prometheus:9100/v1"\n'
+            'alertmanagerConfigServiceURL: "http://orc8r-alertmanager:9101/v1"\n'
+            '"profile": "prometheus"\n'
         )
-        secret = Secret(metadata=metadata, data=secret_data)
-        try:
-            client.create(secret)
-        except ApiError as e:
-            logger.info("Failed to create Secret: %s.", str(secret.to_dict()))
-            raise e
-
-    @property
-    def _metricsd_volumes(self) -> List[Volume]:
-        """Returns a list of volumes required by metricsd"""
-        return [
-            Volume(
-                name=self.METRICSD_VOLUME_NAME,
-                secret=SecretVolumeSource(secretName=self.METRICSD_SECRET_NAME),
-            )
-        ]
-
-    @property
-    def _metricsd_volume_mounts(self) -> List[VolumeMount]:
-        """Returns a list of volume mounts required by metricsd"""
-        return [
-            VolumeMount(
-                mountPath="/var/opt/magma/configs/orc8r",
-                name=self.METRICSD_VOLUME_NAME,
-            )
-        ]
-
-    def _mount_metricsd_volume(self) -> None:
-        """Patch the StatefulSet to include volume mounts"""
-        self.unit.status = MaintenanceStatus("Mounting additional volumes required by metricsd...")
-        client = Client()
-        try:
-            stateful_set = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
-            stateful_set.spec.template.spec.volumes.extend(self._metricsd_volumes)  # type: ignore[attr-defined]  # noqa: E501
-            stateful_set.spec.template.spec.containers[1].volumeMounts.extend(  # type: ignore[attr-defined]  # noqa: E501
-                self._metricsd_volume_mounts
-            )
-            client.patch(
-                StatefulSet, name=self.app.name, obj=stateful_set, namespace=self._namespace
-            )
-        except ApiError as e:
-            logger.debug("Failed to mount additional volumes required by metricsd")
-            raise e
-        logger.info("Additional K8s resources for magma-nms-nginx-proxy container applied!")
+        self._container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
 
     @staticmethod
     def _encode_in_base64(byte_string: bytes):

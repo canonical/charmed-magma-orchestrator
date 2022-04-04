@@ -2,14 +2,9 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import base64
 import unittest
-from unittest.mock import MagicMock, Mock, PropertyMock, patch
+from unittest.mock import Mock, patch
 
-from lightkube.models.apps_v1 import StatefulSetSpec
-from lightkube.models.core_v1 import Container, PodSpec, PodTemplateSpec
-from lightkube.models.meta_v1 import LabelSelector
-from lightkube.resources.apps_v1 import StatefulSet
 from ops.testing import Harness
 
 from charm import MagmaOrc8rMetricsdCharm
@@ -35,92 +30,21 @@ class TestCharm(unittest.TestCase):
         self.harness.begin()
         self.maxDiff = None
 
-    @patch("lightkube.core.client.GenericSyncClient", MagicMock)
-    @patch("lightkube.Client.create")
-    @patch("charm.MagmaOrc8rMetricsdCharm.model", new_callable=PropertyMock)
-    def test_given_new_charm_when_on_install_event_then_secret_is_created(
-        self, patch_model, patch_create
+    @patch("ops.model.Container.push")
+    def test_given_new_charm_when_on_install_event_then_config_file_is_created(
+        self, patch_push
     ):
         event = Mock()
-        namespace = "whatever namespace"
-        patch_model.return_value = MockModel(namespace)
 
         self.harness.charm._on_install(event)
 
-        args, kwargs = patch_create.call_args
-        expected_secret_data = {
-            "metricsd.yml": base64.b64encode(open("src/metricsd.yml", "rb").read()).decode("utf-8")
-        }
-        secret = args[0]
-        assert secret.data == expected_secret_data
-        assert secret.metadata.name == "metricsd-config"
-        assert secret.metadata.namespace == namespace
+        args, kwargs = patch_push.call_args
 
-    @patch("lightkube.core.client.GenericSyncClient", Mock)
-    @patch("lightkube.Client.patch")
-    @patch("lightkube.Client.get")
-    @patch("charm.MagmaOrc8rMetricsdCharm.model", new_callable=PropertyMock)
-    def test_given_new_charm_when_on_install_event_then_volume_is_added_to_statefulset(
-        self, patch_model, patch_get, patch_patch
-    ):
-        event = Mock()
-        namespace = "whatever namespace"
-        patch_get.return_value = StatefulSet(
-            spec=StatefulSetSpec(
-                serviceName="whatever",
-                selector=LabelSelector(),
-                template=PodTemplateSpec(
-                    spec=PodSpec(
-                        containers=[
-                            Container(name="charm"),
-                            Container(name="workload", volumeMounts=[]),
-                        ],
-                        volumes=[],
-                    )
-                ),
-            )
+        assert args[0] == "/var/opt/magma/configs/orc8r/metricsd.yml"
+        assert args[1] == (
+            'prometheusQueryAddress: "http://orc8r-prometheus:9090"\n'
+            'alertmanagerApiURL: "http://orc8r-alertmanager:9093/api/v2"\n'
+            'prometheusConfigServiceURL: "http://orc8r-prometheus:9100/v1"\n'
+            'alertmanagerConfigServiceURL: "http://orc8r-alertmanager:9101/v1"\n'
+            '"profile": "prometheus"\n'
         )
-        patch_model.return_value = MockModel(namespace)
-
-        self.harness.charm._on_install(event)
-
-        args, kwargs = patch_patch.call_args
-        statefulset = kwargs["obj"]
-        volumes = statefulset.spec.template.spec.volumes
-        assert len(volumes) == 1
-        assert volumes[0].name == "metricsd-config-volume"
-        assert volumes[0].secret.secretName == "metricsd-config"
-
-    @patch("lightkube.core.client.GenericSyncClient", Mock)
-    @patch("lightkube.Client.patch")
-    @patch("lightkube.Client.get")
-    @patch("charm.MagmaOrc8rMetricsdCharm.model", new_callable=PropertyMock)
-    def test_given_new_charm_when_on_install_event_then_volume_is_mounted(
-        self, patch_model, patch_get, patch_patch
-    ):
-        event = Mock()
-        namespace = "whatever namespace"
-        patch_get.return_value = StatefulSet(
-            spec=StatefulSetSpec(
-                serviceName="whatever",
-                selector=LabelSelector(),
-                template=PodTemplateSpec(
-                    spec=PodSpec(
-                        containers=[
-                            Container(name="charm"),
-                            Container(name="workload", volumeMounts=[]),
-                        ],
-                        volumes=[],
-                    )
-                ),
-            )
-        )
-        patch_model.return_value = MockModel(namespace)
-
-        self.harness.charm._on_install(event)
-
-        args, kwargs = patch_patch.call_args
-        statefulset = kwargs["obj"]
-        volume_mounts = statefulset.spec.template.spec.containers[1].volumeMounts
-        assert len(volume_mounts) == 1
-        assert volume_mounts[0].name == "metricsd-config-volume"

@@ -42,10 +42,10 @@ juju relate nms-magmalte postgresql-k8s:db
 
 ## Actions
 
-### Create an NMS Admin User
+### Get the master organization's username and password
 
 ```bash
-juju run-action nms-magmalte/0 create-nms-admin-user email=admin@example.com password=password123
+juju run-action nms-magmalte/0 get-admin-credentials --wait
 ```
 
 ## Relations

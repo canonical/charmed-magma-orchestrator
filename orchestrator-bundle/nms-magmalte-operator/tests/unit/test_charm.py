@@ -11,6 +11,14 @@ from pgconnstr import ConnectionString  # type: ignore[import]
 from charm import MagmaNmsMagmalteCharm
 
 
+class MockExec:
+    def exec(self, *args, **kwargs):
+        pass
+
+    def wait_output(self, *args, **kwargs):
+        pass
+
+
 class TestCharm(unittest.TestCase):
     TEST_DB_NAME = MagmaNmsMagmalteCharm.DB_NAME
     TEST_DB_PORT = "1234"
@@ -51,16 +59,19 @@ class TestCharm(unittest.TestCase):
 
     def test_given_initial_status_when_get_pebble_plan_then_content_is_empty(self):
         initial_plan = self.harness.get_container_pebble_plan("magma-nms-magmalte")
+
         self.assertEqual(initial_plan.to_yaml(), "{}\n")
 
     def test_given_charm_when_pebble_ready_event_emitted_and_no_relations_established_then_charm_goes_to_blocked_state(  # noqa: E501
         self,
     ):
         event = Mock()
+
         self.harness.charm.on.magma_nms_magmalte_pebble_ready.emit(event)
+
         self.assertEqual(
             self.harness.charm.unit.status,
-            BlockedStatus("Waiting for relations: certifier, db"),
+            BlockedStatus("Waiting for relation(s) to be created: certifier, db"),
         )
 
     def test_given_charm_when_pebble_ready_event_emitted_and_certifier_relation_is_established_but_db_relation_is_missing_then_charm_goes_to_blocked_state(  # noqa: E501
@@ -69,103 +80,114 @@ class TestCharm(unittest.TestCase):
         event = Mock()
         relation_id = self.harness.add_relation("certifier", "orc8r-certifier")
         self.harness.add_relation_unit(relation_id, "orc8r-certifier/0")
+
         self.harness.charm.on.magma_nms_magmalte_pebble_ready.emit(event)
+
         self.assertEqual(
             self.harness.charm.unit.status,
-            BlockedStatus("Waiting for relations: db"),
+            BlockedStatus("Waiting for relation(s) to be created: db"),
         )
 
+    @patch("charm.MagmaNmsMagmalteCharm.DB_NAME", new_callable=PropertyMock)
     @patch("ops.model.Unit.is_leader")
     def test_given_pod_is_leader_when_database_relation_joined_event_then_database_is_set_correctly(  # noqa: E501
-        self, is_leader
+        self, _, mock_db_name
     ):
-        is_leader.return_value = True
+        mock_db_name.return_value = self.TEST_DB_NAME
         postgres_db_name = self.TEST_DB_NAME
         postgres_host = "bread"
         postgres_password = "water"
         postgres_username = "yeast"
         postgres_port = self.TEST_DB_PORT
-        with patch.object(MagmaNmsMagmalteCharm, "DB_NAME", self.TEST_DB_NAME):
-            db_event = self._fake_db_event(
-                postgres_db_name,
-                postgres_username,
-                postgres_password,
-                postgres_host,
-                postgres_port,
-            )
-            self.harness.charm._on_database_relation_joined(db_event)
+
+        db_event = self._fake_db_event(
+            postgres_db_name,
+            postgres_username,
+            postgres_password,
+            postgres_host,
+            postgres_port,
+        )
+        self.harness.charm._on_database_relation_joined(db_event)
+
         self.assertEqual(db_event.database, self.TEST_DB_NAME)
 
+    @patch("ops.model.Container.exec")
+    @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
+    @patch("charm.MagmaNmsMagmalteCharm._domain_name", new_callable=PropertyMock)
     @patch("charm.MagmaNmsMagmalteCharm._namespace", new_callable=PropertyMock)
     @patch("charm.MagmaNmsMagmalteCharm._relations_ready", new_callable=PropertyMock)
     def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_nms_magmalte_service_content(
-        self, relations_ready, patch_namespace
+        self, relations_ready, patch_namespace, _, get_db_connection_string, mock_exec
     ):
         event = Mock()
+        mock_exec.return_value = MockExec()
         namespace = "whatever"
         relations_ready.return_value = True
         patch_namespace.return_value = namespace
-        with patch(
-            "charm.MagmaNmsMagmalteCharm._get_domain_name", new_callable=PropertyMock
-        ) as get_domain_name, patch(
-            "charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock
-        ) as get_db_connection_string:
-            get_domain_name.return_value = self.TEST_DOMAIN_NAME
-            get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
-            self.harness.charm.on.magma_nms_magmalte_pebble_ready.emit(event)
-            expected_plan = {
-                "services": {
-                    "magma-nms-magmalte": {
-                        "startup": "enabled",
-                        "override": "replace",
-                        "command": f"/usr/local/bin/wait-for-it.sh -s -t 30 "
-                        f"{self.TEST_DB_CONNECTION_STRING.host}:"
-                        f"{self.TEST_DB_CONNECTION_STRING.port} -- "
-                        f"yarn run start:prod",
-                        "environment": {
-                            "API_CERT_FILENAME": "/run/secrets/admin_operator.pem",
-                            "API_PRIVATE_KEY_FILENAME": "/run/secrets/admin_operator.key.pem",
-                            "API_HOST": f"orc8r-nginx-proxy.{namespace}.svc.cluster.local",
-                            "PORT": "8081",
-                            "HOST": "0.0.0.0",
-                            "MYSQL_HOST": self.TEST_DB_CONNECTION_STRING.host,
-                            "MYSQL_PORT": self.TEST_DB_CONNECTION_STRING.port,
-                            "MYSQL_DB": self.TEST_DB_NAME,
-                            "MYSQL_USER": self.TEST_DB_CONNECTION_STRING.user,
-                            "MYSQL_PASS": self.TEST_DB_CONNECTION_STRING.password,
-                            "MAPBOX_ACCESS_TOKEN": "",
-                            "MYSQL_DIALECT": "postgres",
-                            "PUPPETEER_SKIP_DOWNLOAD": "true",
-                            "USER_GRAFANA_ADDRESS": "orc8r-user-grafana:3000",
-                        },
+        get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
+
+        self.harness.charm.on.magma_nms_magmalte_pebble_ready.emit(event)
+        expected_plan = {
+            "services": {
+                "magma-nms-magmalte": {
+                    "startup": "enabled",
+                    "override": "replace",
+                    "command": f"/usr/local/bin/wait-for-it.sh -s -t 30 "
+                    f"{self.TEST_DB_CONNECTION_STRING.host}:"
+                    f"{self.TEST_DB_CONNECTION_STRING.port} -- "
+                    f"yarn run start:prod",
+                    "environment": {
+                        "API_CERT_FILENAME": "/run/secrets/admin_operator.pem",
+                        "API_PRIVATE_KEY_FILENAME": "/run/secrets/admin_operator.key.pem",
+                        "API_HOST": f"orc8r-nginx-proxy.{namespace}.svc.cluster.local",
+                        "PORT": "8081",
+                        "HOST": "0.0.0.0",
+                        "MYSQL_HOST": self.TEST_DB_CONNECTION_STRING.host,
+                        "MYSQL_PORT": self.TEST_DB_CONNECTION_STRING.port,
+                        "MYSQL_DB": self.TEST_DB_NAME,
+                        "MYSQL_USER": self.TEST_DB_CONNECTION_STRING.user,
+                        "MYSQL_PASS": self.TEST_DB_CONNECTION_STRING.password,
+                        "MAPBOX_ACCESS_TOKEN": "",
+                        "MYSQL_DIALECT": "postgres",
+                        "PUPPETEER_SKIP_DOWNLOAD": "true",
+                        "USER_GRAFANA_ADDRESS": "orc8r-user-grafana:3000",
                     },
                 },
-            }
-            updated_plan = self.harness.get_container_pebble_plan("magma-nms-magmalte").to_dict()
-            self.assertEqual(expected_plan, updated_plan)
+            },
+        }
 
+        updated_plan = self.harness.get_container_pebble_plan("magma-nms-magmalte").to_dict()
+        self.assertEqual(expected_plan, updated_plan)
+
+    @patch("ops.model.Container.exec")
+    @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
+    @patch("charm.MagmaNmsMagmalteCharm._domain_name", new_callable=PropertyMock)
+    @patch("charm.MagmaNmsMagmalteCharm._configure_pebble")
     @patch("charm.MagmaNmsMagmalteCharm._relations_ready")
     def test_given_charm_when_pebble_ready_event_emitted_and_relations_are_established_configure_pebble_action_is_called(  # noqa: E501
-        self, relations_ready
+        self, relations_ready, mock_configure_pebble, _, get_db_connection_string, mock_exec
     ):
         relations_ready.return_value = True
+        get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
+        mock_exec.return_value = MockExec()
         event = Mock()
-        with patch.object(MagmaNmsMagmalteCharm, "_configure_pebble") as mock:
-            self.harness.charm.on.magma_nms_magmalte_pebble_ready.emit(event)
-        mock.assert_called_once()
 
+        self.harness.charm.on.magma_nms_magmalte_pebble_ready.emit(event)
+
+        mock_configure_pebble.assert_called_once()
+
+    @patch("ops.model.Container.exec")
+    @patch("charm.MagmaNmsMagmalteCharm._domain_name", new_callable=PropertyMock)
+    @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
     @patch("charm.MagmaNmsMagmalteCharm._relations_ready")
     def test_given_charm_when_pebble_ready_event_emitted_and_relations_are_established_then_charm_goes_to_active_state(  # noqa: E501
-        self, relations_ready
+        self, relations_ready, get_db_connection_string, _, mock_exec
     ):
         event = Mock()
         relations_ready.return_value = True
-        with patch(
-            "charm.MagmaNmsMagmalteCharm._get_domain_name", new_callable=PropertyMock
-        ) as get_domain_name, patch(
-            "charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock
-        ) as get_db_connection_string:
-            get_domain_name.return_value = self.TEST_DOMAIN_NAME
-            get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
-            self.harness.charm.on.magma_nms_magmalte_pebble_ready.emit(event)
-            self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
+        mock_exec.return_value = MockExec()
+        get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
+
+        self.harness.charm.on.magma_nms_magmalte_pebble_ready.emit(event)
+
+        self.assertEqual(self.harness.charm.unit.status, ActiveStatus())

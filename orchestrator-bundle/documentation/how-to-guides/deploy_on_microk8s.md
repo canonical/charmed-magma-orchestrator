@@ -60,6 +60,14 @@ applications:
 
 Replace `<your domain name>` with your domain name.
 
+Deploy orchestrator:
+
+```bash
+juju deploy magma-orc8r --overlay overlay.yaml --trust --channel=edge
+```
+
+The deployment is completed when all services are in the `Active-Idle` state.
+
 ## 4. Setup Orchestrator
 
 Create the Orchestrator admin user:
@@ -68,13 +76,11 @@ Create the Orchestrator admin user:
 juju run-action orc8r-orchestrator/0 create-orchestrator-admin-user
 ```
 
-Create an admin user for the master organization on the NMS:
+Get the master organization's username and password:
 
 ```bash
-juju run-action nms-magmalte/0 create-nms-admin-user email=<admin email> password=<admin password>
+juju run-action nms-magmalte/0 get-admin-credentials --wait
 ```
-
-Replace `<admin email>` and `<admin password>` with your email and password of choice.
 
 ## 5. Setup DNS
 
@@ -84,8 +90,7 @@ Add the following entries to your `/etc/hosts` file:
 <orc8r-bootstrap-nginx External IP>   bootstrapper-controller.<your domain>
 <orc8r-nginx-proxy External IP>       api.<your domain>
 <orc8r-clientcert-nginx External IP>  controller.<your domain>
-<nginx-proxy External IP>             master.nms.<your domain>
-<nginx-proxy External IP>             magma-test.nms.<your domain>
+<nginx-proxy External IP>             *.nms.<your domain>
 ```
 
 Here replace `<your domain>` with your actual domain name and `<xxx External IP>` with the external

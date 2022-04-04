@@ -51,7 +51,7 @@ import logging
 
 from ops.charm import CharmBase
 from ops.framework import Object
-from ops.model import ActiveStatus, MaintenanceStatus
+from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import Layer
 
 # The unique Charmhub library identifier, never change it
@@ -62,7 +62,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 7
+LIBPATCH = 8
 
 
 logger = logging.getLogger(__name__)
@@ -97,20 +97,18 @@ class Orc8rBase(Object):
         """
         Adds layer to pebble config if the proposed config is different from the current one
         """
-        self.charm.unit.status = MaintenanceStatus("Configuring pod")
-        pebble_layer = self._pebble_layer()
-        try:
+        if self._container.can_connect():
+            self.charm.unit.status = MaintenanceStatus("Configuring pod")
+            pebble_layer = self._pebble_layer()
             plan = self._container.get_plan()
             if plan.services != pebble_layer.services:
                 self._container.add_layer(self._container_name, pebble_layer, combine=True)
                 self._container.restart(self._service_name)
                 logger.info(f"Restarted container {self._service_name}")
                 self.charm.unit.status = ActiveStatus()
-        except ConnectionError:
-            logger.error(
-                f"Could not restart {self._service_name} -- Pebble socket does "
-                f"not exist or is not responsive"
-            )
+        else:
+            self.charm.unit.status = WaitingStatus("Waiting for container to be ready...")
+            event.defer()
 
     def _pebble_layer(self) -> Layer:
         """Returns pebble layer for the charm."""

@@ -34,6 +34,7 @@ pgsql = ops.lib.use("pgsql", 1, "postgresql-charmers@lists.launchpad.net")
 class MagmaOrc8rCertifierCharm(CharmBase):
 
     DB_NAME = "magma_dev"
+    BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
 
     def __init__(self, *args):
         """An instance of this object everytime an event occurs."""
@@ -58,12 +59,24 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                 "orc8r.io/analytics_collector": "true",
             },
         )
+        self.framework.observe(self.on.install, self._on_install)
+
+    def _write_config_file(self):
+        metricsd_config = (
+            'prometheusQueryAddress: "http://orc8r-prometheus:9090"\n'
+            'alertmanagerApiURL: "http://orc8r-alertmanager:9093/api/v2"\n'
+            'prometheusConfigServiceURL: "http://orc8r-prometheus:9100/v1"\n'
+            'alertmanagerConfigServiceURL: "http://orc8r-alertmanager:9101/v1"\n'
+            '"profile": "prometheus"\n'
+        )
+        self._container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
 
     def _on_install(self, event):
         """Runs each time the charm is installed."""
         if self._container.can_connect():
             self._create_magma_orc8r_secrets()
             self._mount_certifier_certs()
+            self._write_config_file()
         else:
             self.unit.status = WaitingStatus("Waiting for container to be ready...")
             event.defer()
