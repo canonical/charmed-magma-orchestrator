@@ -3,7 +3,7 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 from ops.testing import Harness
 
@@ -36,13 +36,14 @@ class TestCharm(unittest.TestCase):
 
         self.harness.charm._on_install(event)
 
-        args, kwargs = patch_push.call_args
-
-        assert args[0] == "/var/opt/magma/configs/orc8r/metricsd.yml"
-        assert args[1] == (
-            'prometheusQueryAddress: "http://orc8r-prometheus:9090"\n'
-            'alertmanagerApiURL: "http://orc8r-alertmanager:9093/api/v2"\n'
-            'prometheusConfigServiceURL: "http://orc8r-prometheus:9100/v1"\n'
-            'alertmanagerConfigServiceURL: "http://orc8r-alertmanager:9101/v1"\n'
-            '"profile": "prometheus"\n'
-        )
+        calls = [
+            call(
+                "/var/opt/magma/configs/orc8r/metricsd.yml",
+                'prometheusQueryAddress: "http://orc8r-prometheus:9090"\n'
+                'alertmanagerApiURL: "http://orc8r-alertmanager:9093/api/v2"\n'
+                'prometheusConfigServiceURL: "http://orc8r-prometheus:9100/v1"\n'
+                'alertmanagerConfigServiceURL: "http://orc8r-alertmanager:9101/v1"\n'
+                '"profile": "prometheus"\n',
+            ),
+        ]
+        patch_push.assert_has_calls(calls)

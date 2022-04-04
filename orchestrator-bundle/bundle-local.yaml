@@ -174,13 +174,10 @@ applications:
     channel: edge
     scale: 1
     trust: true
-  orc8r-prometheus-configurer:
-    charm: prometheus-configurer
-    channel: edge
-    scale: 1
-    trust: true
   orc8r-user-grafana:
     charm: grafana-k8s
+    options:
+      web_external_url: "/grafana"
     channel: edge
     scale: 1
     trust: true
@@ -245,5 +242,3 @@ relations:
   - orc8r-user-grafana
 - - orc8r-prometheus:alertmanager
   - orc8r-alertmanager:alerting
-- - orc8r-prometheus-configurer
-  - orc8r-prometheus

@@ -179,7 +179,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         self._create_nms_admin_user(
             email=event.params["email"],
             password=event.params["password"],
-            organization=event.params["organization"],
+            organization=event.params["organization"]
         )
 
     def _on_get_admin_credentials(self, event: ActionEvent) -> None:
@@ -250,7 +250,9 @@ class MagmaNmsMagmalteCharm(CharmBase):
         """Checks whether required relations are ready."""
         required_relations = ["certifier", "db"]
         missing_relations = [
-            relation for relation in required_relations if not self.model.get_relation(relation)
+            relation
+            for relation in required_relations
+            if not self.model.get_relation(relation)
         ]
         if missing_relations:
             msg = f"Waiting for relation(s) to be created: {', '.join(missing_relations)}"

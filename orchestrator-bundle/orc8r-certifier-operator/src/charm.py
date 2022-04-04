@@ -74,9 +74,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     def _on_install(self, event):
         """Runs each time the charm is installed."""
         if self._container.can_connect():
+            self._write_config_file()
             self._create_magma_orc8r_secrets()
             self._mount_certifier_certs()
-            self._write_config_file()
         else:
             self.unit.status = WaitingStatus("Waiting for container to be ready...")
             event.defer()
