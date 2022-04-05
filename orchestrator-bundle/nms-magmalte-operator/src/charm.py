@@ -27,6 +27,7 @@ pgsql = ops.lib.use("pgsql", 1, "postgresql-charmers@lists.launchpad.net")
 class MagmaNmsMagmalteCharm(CharmBase):
 
     DB_NAME = "magma_dev"
+    GRAFANA_URL = "orc8r-user-grafana:3000"
     _stored = StoredState()
 
     def __init__(self, *args):
@@ -34,7 +35,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         super().__init__(*args)
         self._container_name = self._service_name = "magma-nms-magmalte"
         self._container = self.unit.get_container(self._container_name)
-        self._stored.set_default(admin_username="", admin_password="", admin_password_set=False)
+        self._stored.set_default(admin_username="", admin_password="")
         self._db = pgsql.PostgreSQLClient(self, "db")
         self.framework.observe(
             self.on.magma_nms_magmalte_pebble_ready, self._on_magma_nms_magmalte_pebble_ready
@@ -76,7 +77,6 @@ class MagmaNmsMagmalteCharm(CharmBase):
         while time.time() - start_time < timeout:
             try:
                 self._create_nms_admin_user(username, password, "master")
-                logger.info("Successfully created admin user")
                 return
             except ExecError:
                 logger.info("Failed to create admin user - Will retry in 5 seconds")
@@ -152,7 +152,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             "MAPBOX_ACCESS_TOKEN": "",
             "MYSQL_DIALECT": "postgres",
             "PUPPETEER_SKIP_DOWNLOAD": "true",
-            "USER_GRAFANA_ADDRESS": "orc8r-user-grafana:3000",
+            "USER_GRAFANA_ADDRESS": self.GRAFANA_URL,
         }
 
     @property
@@ -179,7 +179,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         self._create_nms_admin_user(
             email=event.params["email"],
             password=event.params["password"],
-            organization=event.params["organization"]
+            organization=event.params["organization"],
         )
 
     def _on_get_admin_credentials(self, event: ActionEvent) -> None:
@@ -218,6 +218,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             for line in e.stderr.splitlines():
                 logger.error("    %s", line)
             raise e
+        logger.info("Successfully created admin user")
 
     @property
     def _magma_nms_magmalte_volumes(self) -> List[Volume]:
@@ -250,13 +251,12 @@ class MagmaNmsMagmalteCharm(CharmBase):
         """Checks whether required relations are ready."""
         required_relations = ["certifier", "db"]
         missing_relations = [
-            relation
-            for relation in required_relations
-            if not self.model.get_relation(relation)
+            relation for relation in required_relations if not self.model.get_relation(relation)
         ]
         if missing_relations:
-            msg = f"Waiting for relation(s) to be created: {', '.join(missing_relations)}"
-            self.unit.status = BlockedStatus(msg)
+            self.unit.status = BlockedStatus(
+                f"Waiting for relation(s) to be created: {', '.join(missing_relations)}"
+            )
             return False
         if not self._domain_name:
             self.unit.status = WaitingStatus("Waiting for certifier relation to be ready...")
@@ -283,9 +283,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             certifier_relation = self.model.get_relation("certifier")
             units = certifier_relation.units
             return certifier_relation.data[next(iter(units))]["domain"]
-        except KeyError:
-            return None
-        except StopIteration:
+        except (KeyError, StopIteration):
             return None
 
     @property
@@ -299,20 +297,19 @@ class MagmaNmsMagmalteCharm(CharmBase):
 
     @property
     def _namespace(self) -> str:
+        """Returns the namespace."""
         return self.model.name
 
     def _get_admin_password(self) -> str:
         """Returns the password for the admin user."""
         if not self._stored.admin_password:
             self._stored.admin_password = self._generate_password()
-
         return self._stored.admin_password
 
     def _get_admin_username(self) -> str:
         """Returns the admin user."""
         if not self._stored.admin_username:
             self._stored.admin_username = f"admin@{self._domain_name}"
-
         return self._stored.admin_username
 
     @staticmethod
