@@ -186,7 +186,7 @@ applications:
     channel: edge
     scale: 1
     trust: true
-  prometheus-cache:
+  orc8r-prometheus-cache:
     charm: prometheus-edge-hub
     channel: edge
     scale: 1
@@ -237,7 +237,7 @@ relations:
 - - nms-nginx-proxy:magmalte
   - nms-magmalte:magmalte
 - - orc8r-prometheus
-  - prometheus-cache
+  - orc8r-prometheus-cache
 - - orc8r-prometheus
   - orc8r-user-grafana
 - - orc8r-prometheus:alertmanager

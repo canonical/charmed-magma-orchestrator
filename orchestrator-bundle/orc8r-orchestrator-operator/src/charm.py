@@ -19,8 +19,6 @@ logger = logging.getLogger(__name__)
 
 class MagmaOrc8rOrchestratorCharm(CharmBase):
 
-    ORCHESTRATOR_SECRET_NAME = "orchestrator-config"
-    ORCHESTRATOR_VOLUME_NAME = "orchestrator-config-volume"
     BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
 
     def __init__(self, *args):

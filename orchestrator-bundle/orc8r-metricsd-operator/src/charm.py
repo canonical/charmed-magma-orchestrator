@@ -2,7 +2,6 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import base64
 import logging
 
 from charms.magma_orc8r_libs.v0.orc8r_base import Orc8rBase
@@ -15,8 +14,6 @@ logger = logging.getLogger(__name__)
 
 class MagmaOrc8rMetricsdCharm(CharmBase):
 
-    METRICSD_SECRET_NAME = "metricsd-config"
-    METRICSD_VOLUME_NAME = "metricsd-config-volume"
     BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
 
     def __init__(self, *args):
@@ -24,8 +21,6 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
         An instance of this object everytime an event occurs
         """
         super().__init__(*args)
-        self._container_name = self._service_name = "magma-orc8r-metricsd"
-        self._container = self.unit.get_container(self._container_name)
         self._service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[("grpc", 9180, 9084), ("http", 8080, 10084)],
@@ -64,12 +59,7 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
             'alertmanagerConfigServiceURL: "http://orc8r-alertmanager:9101/v1"\n'
             '"profile": "prometheus"\n'
         )
-        self._container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
-
-    @staticmethod
-    def _encode_in_base64(byte_string: bytes):
-        """Encodes given byte string in Base64"""
-        return base64.b64encode(byte_string).decode("utf-8")
+        self._orc8r_base._container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
 
     @property
     def _namespace(self) -> str:
