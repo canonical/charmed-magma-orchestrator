@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Upload bundle
-        uses: canonical/charming-actions/upload-bundle@test-charm-rev75
+        uses: canonical/charming-actions/upload-bundle@1.0.2
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
           bundle-path: ./orchestrator-bundle/orc8r-bundle
