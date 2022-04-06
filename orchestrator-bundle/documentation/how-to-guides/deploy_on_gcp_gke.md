@@ -82,7 +82,7 @@ following services:
 Create these A records in your managed domain:
 
 | Hostname                                | Address                                |
-|-----------------------------------------| -------------------------------------- |
+|-----------------------------------------|----------------------------------------|
 | `bootstrapper-controller.<your domain>` | `<orc8r-bootstrap-nginx External IP>`  |
 | `api.<your domain>`                     | `<orc8r-nginx-proxy External IP>`      |
 | `controller.<your domain>`              | `<orc8r-clientcert-nginx External IP>` |
