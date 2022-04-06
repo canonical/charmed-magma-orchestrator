@@ -18,6 +18,19 @@ logger = logging.getLogger(__name__)
 
 
 class MagmaOrc8rOrchestratorCharm(CharmBase):
+
+    BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
+
+    # TODO: The various URL's should be provided through relationships.
+    PROMETHEUS_URL = "http://orc8r-prometheus:9090"
+    PROMETHEUS_CONFIGURER_URL = "http://orc8r-prometheus:9100"
+    PROMETHEUS_CACHE_GRPC_URL = "orc8r-prometheus-cache:9092"
+    PROMETHEUS_CACHE_METRICS_URL = "http://orc8r-prometheus-cache:9091"
+    ALERTMANAGER_URL = "http://orc8r-alertmanager:9093"
+    ALERTMANAGER_CONFIGURER_URL = "http://orc8r-alertmanager:9101"
+    ELASTICSEARCH_URL = "orc8r-elasticsearch"
+    ELASTICSEARCH_PORT = 80
+
     def __init__(self, *args):
         """An instance of this object everytime an event occurs."""
         super().__init__(*args)
@@ -35,6 +48,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             self._create_orchestrator_admin_user_action,
         )
         self.framework.observe(self.on.set_log_verbosity_action, self._set_log_verbosity_action)
+        self.framework.observe(self.on.install, self._on_install)
         self._service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[("grpc", 9180, 9112), ("http", 8080, 10112)],
@@ -58,6 +72,41 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                 "/magma/v1/networks/:network_id,",
             },
         )
+
+    def _on_install(self, event):
+        self._write_config_file()
+
+    def _write_config_file(self):
+        orchestrator_config = (
+            f'"prometheusGRPCPushAddress": "{self.PROMETHEUS_CACHE_GRPC_URL}"\n'
+            '"prometheusPushAddresses":\n'
+            f'- "{self.PROMETHEUS_CACHE_METRICS_URL}/metrics"\n'
+            '"useGRPCExporter": true\n'
+        )
+        metricsd_config = (
+            f'prometheusQueryAddress: "{self.PROMETHEUS_URL}"\n'
+            f'alertmanagerApiURL: "{self.ALERTMANAGER_URL}/api/v2"\n'
+            f'prometheusConfigServiceURL: "{self.PROMETHEUS_CONFIGURER_URL}/v1"\n'
+            f'alertmanagerConfigServiceURL: "{self.ALERTMANAGER_CONFIGURER_URL}/v1"\n'
+            '"profile": "prometheus"\n'
+        )
+        analytics_config = (
+            '"appID": ""\n'
+            '"appSecret": ""\n'
+            '"categoryName": "magma"\n'
+            '"exportMetrics": false\n'
+            '"metricExportURL": ""\n'
+            '"metricsPrefix": ""\n'
+        )
+        elastic_config = (
+            f'"elasticHost": "{self.ELASTICSEARCH_URL}"\n'
+            f'"elasticPort": {self.ELASTICSEARCH_PORT}\n'
+        )
+
+        self._container.push(f"{self.BASE_CONFIG_PATH}/orchestrator.yml", orchestrator_config)
+        self._container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
+        self._container.push(f"{self.BASE_CONFIG_PATH}/analytics.yml", analytics_config)
+        self._container.push(f"{self.BASE_CONFIG_PATH}/elastic.yml", elastic_config)
 
     def _create_orchestrator_admin_user_action(self, event):
         process = self._container.exec(

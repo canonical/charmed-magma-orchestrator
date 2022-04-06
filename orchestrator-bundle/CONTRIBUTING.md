@@ -119,5 +119,5 @@ charmcraft upload magma-orc8r.zip
 - Release the bundle to charmhub:
 
 ```bash
-charmcraft release magma-orc8r --revision=2 --channel=edge
+charmcraft release magma-orc8r --revision=<revision number> --channel=edge
 ```

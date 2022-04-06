@@ -14,6 +14,9 @@ summary: |
 containers:
   magma-orc8r-lte:
     resource: magma-orc8r-lte-image
+    mounts:
+      - storage: config
+        location: /var/opt/magma/configs/orc8r
 
 resources:
   magma-orc8r-lte-image:
@@ -24,3 +27,9 @@ resources:
 requires:
   db:
     interface: pgsql
+
+storage:
+  config:
+    type: filesystem
+    description: Configs storage
+    minimum-size: 1M

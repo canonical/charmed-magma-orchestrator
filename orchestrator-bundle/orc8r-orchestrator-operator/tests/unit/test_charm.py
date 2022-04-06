@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import Mock, PropertyMock, patch
+from unittest.mock import Mock, PropertyMock, call, patch
 
 from ops.testing import Harness
 
@@ -53,3 +53,41 @@ class TestCharm(unittest.TestCase):
         self.harness.charm.on.magma_orc8r_orchestrator_pebble_ready.emit(event)
         updated_plan = self.harness.get_container_pebble_plan("magma-orc8r-orchestrator").to_dict()
         self.assertEqual(expected_plan, updated_plan)
+
+    @patch("ops.model.Container.push")
+    def test_given_new_charm_when_on_install_event_then_config_file_is_created(self, patch_push):
+        event = Mock()
+
+        self.harness.charm._on_install(event)
+
+        calls = [
+            call(
+                "/var/opt/magma/configs/orc8r/orchestrator.yml",
+                '"prometheusGRPCPushAddress": "orc8r-prometheus-cache:9092"\n'
+                '"prometheusPushAddresses":\n'
+                '- "http://orc8r-prometheus-cache:9091/metrics"\n'
+                '"useGRPCExporter": true\n',
+            ),
+            call(
+                "/var/opt/magma/configs/orc8r/metricsd.yml",
+                'prometheusQueryAddress: "http://orc8r-prometheus:9090"\n'
+                'alertmanagerApiURL: "http://orc8r-alertmanager:9093/api/v2"\n'
+                'prometheusConfigServiceURL: "http://orc8r-prometheus:9100/v1"\n'
+                'alertmanagerConfigServiceURL: "http://orc8r-alertmanager:9101/v1"\n'
+                '"profile": "prometheus"\n',
+            ),
+            call(
+                "/var/opt/magma/configs/orc8r/analytics.yml",
+                '"appID": ""\n'
+                '"appSecret": ""\n'
+                '"categoryName": "magma"\n'
+                '"exportMetrics": false\n'
+                '"metricExportURL": ""\n'
+                '"metricsPrefix": ""\n',
+            ),
+            call(
+                "/var/opt/magma/configs/orc8r/elastic.yml",
+                '"elasticHost": "orc8r-elasticsearch"\n' '"elasticPort": 80\n',
+            ),
+        ]
+        patch_push.assert_has_calls(calls)

@@ -67,13 +67,11 @@ Create the Orchestrator admin user:
 juju run-action orc8r-orchestrator/0 create-orchestrator-admin-user
 ```
 
-Create an admin user for the master organization on the NMS:
+Get the master organization's username and password:
 
 ```bash
-juju run-action nms-magmalte/0 create-nms-admin-user email=<admin email> password=<admin password>
+juju run-action nms-magmalte/0 get-admin-credentials --wait
 ```
-
-Replace `<admin email>` and `<admin password>` with your email and password of choice.
 
 ## 6. Setup DNS
 
