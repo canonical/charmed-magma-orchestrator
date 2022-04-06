@@ -250,10 +250,9 @@ class MagmaNmsMagmalteCharm(CharmBase):
     def _relations_ready(self) -> bool:
         """Checks whether required relations are ready."""
         required_relations = ["certifier", "db"]
-        missing_relations = [
+        if missing_relations := [
             relation for relation in required_relations if not self.model.get_relation(relation)
-        ]
-        if missing_relations:
+        ]:
             self.unit.status = BlockedStatus(
                 f"Waiting for relation(s) to be created: {', '.join(missing_relations)}"
             )

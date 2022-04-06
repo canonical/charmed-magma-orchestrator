@@ -15,6 +15,6 @@ create-nms-admin-user:
       description: password (ex. password123)
     organization:
       type: string
-      description: organization (ex. master)
+      description: organization (ex. org-1)
       default: master
   required: [email, password]
