@@ -21,6 +21,16 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
 
     BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
 
+    # TODO: The various URL's should be provided through relationships.
+    PROMETHEUS_URL = "http://orc8r-prometheus:9090"
+    PROMETHEUS_CONFIGURER_URL = "http://orc8r-prometheus:9100"
+    PROMETHEUS_CACHE_GRPC_URL = "orc8r-prometheus-cache:9092"
+    PROMETHEUS_CACHE_METRICS_URL = "http://orc8r-prometheus-cache:9091"
+    ALERTMANAGER_URL = "http://orc8r-alertmanager:9093"
+    ALERTMANAGER_CONFIGURER_URL = "http://orc8r-alertmanager:9101"
+    ELASTICSEARCH_URL = "orc8r-elasticsearch"
+    ELASTICSEARCH_PORT = 80
+
     def __init__(self, *args):
         """An instance of this object everytime an event occurs."""
         super().__init__(*args)
@@ -68,16 +78,16 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
 
     def _write_config_file(self):
         orchestrator_config = (
-            '"prometheusGRPCPushAddress": "orc8r-prometheus-cache:9092"\n'
+            f'"prometheusGRPCPushAddress": "{self.PROMETHEUS_CACHE_GRPC_URL}"\n'
             '"prometheusPushAddresses":\n'
-            '- "http://orc8r-prometheus-cache:9091/metrics"\n'
+            f'- "{self.PROMETHEUS_CACHE_METRICS_URL}/metrics"\n'
             '"useGRPCExporter": true\n'
         )
         metricsd_config = (
-            'prometheusQueryAddress: "http://orc8r-prometheus:9090"\n'
-            'alertmanagerApiURL: "http://orc8r-alertmanager:9093/api/v2"\n'
-            'prometheusConfigServiceURL: "http://orc8r-prometheus:9100/v1"\n'
-            'alertmanagerConfigServiceURL: "http://orc8r-alertmanager:9101/v1"\n'
+            f'prometheusQueryAddress: "{self.PROMETHEUS_URL}"\n'
+            f'alertmanagerApiURL: "{self.ALERTMANAGER_URL}/api/v2"\n'
+            f'prometheusConfigServiceURL: "{self.PROMETHEUS_CONFIGURER_URL}/v1"\n'
+            f'alertmanagerConfigServiceURL: "{self.ALERTMANAGER_CONFIGURER_URL}/v1"\n'
             '"profile": "prometheus"\n'
         )
         analytics_config = (
@@ -88,7 +98,10 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             '"metricExportURL": ""\n'
             '"metricsPrefix": ""\n'
         )
-        elastic_config = '"elasticHost": "orc8r-elasticsearch"\n' '"elasticPort": 80\n'
+        elastic_config = (
+            f'"elasticHost": "{self.ELASTICSEARCH_URL}"\n'
+            f'"elasticPort": {self.ELASTICSEARCH_PORT}\n'
+        )
 
         self._container.push(f"{self.BASE_CONFIG_PATH}/orchestrator.yml", orchestrator_config)
         self._container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)

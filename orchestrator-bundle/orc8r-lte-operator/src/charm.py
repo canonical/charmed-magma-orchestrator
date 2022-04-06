@@ -9,7 +9,14 @@ from ops.main import main
 
 
 class MagmaOrc8rLteCharm(CharmBase):
+
     BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
+
+    # TODO: The various URL's should be provided through relationships.
+    PROMETHEUS_URL = "http://orc8r-prometheus:9090"
+    PROMETHEUS_CONFIGURER_URL = "http://orc8r-prometheus:9100"
+    ALERTMANAGER_URL = "http://orc8r-alertmanager:9093"
+    ALERTMANAGER_CONFIGURER_URL = "http://orc8r-alertmanager:9101"
 
     def __init__(self, *args):
         """Creates a new instance of this object for each event."""
@@ -55,10 +62,10 @@ class MagmaOrc8rLteCharm(CharmBase):
 
     def _write_config_file(self):
         metricsd_config = (
-            'prometheusQueryAddress: "http://orc8r-prometheus:9090"\n'
-            'alertmanagerApiURL: "http://orc8r-alertmanager:9093/api/v2"\n'
-            'prometheusConfigServiceURL: "http://orc8r-prometheus:9100/v1"\n'
-            'alertmanagerConfigServiceURL: "http://orc8r-alertmanager:9101/v1"\n'
+            f'prometheusQueryAddress: "{self.PROMETHEUS_URL}"\n'
+            f'alertmanagerApiURL: "{self.ALERTMANAGER_URL}/api/v2"\n'
+            f'prometheusConfigServiceURL: "{self.PROMETHEUS_CONFIGURER_URL}/v1"\n'
+            f'alertmanagerConfigServiceURL: "{self.ALERTMANAGER_CONFIGURER_URL}/v1"\n'
             '"profile": "prometheus"\n'
         )
         analytics_config = (

@@ -5,9 +5,11 @@
 import unittest
 from unittest.mock import Mock, call, patch
 
-from ops.testing import Harness
+from ops import testing
 
 from charm import MagmaOrc8rMetricsdCharm
+
+testing.SIMULATE_CAN_CONNECT = True
 
 
 class MockModel:
@@ -25,7 +27,7 @@ class TestCharm(unittest.TestCase):
         lambda charm, ports, additional_labels, additional_annotations: None,
     )
     def setUp(self):
-        self.harness = Harness(MagmaOrc8rMetricsdCharm)
+        self.harness = testing.Harness(MagmaOrc8rMetricsdCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
         self.maxDiff = None
