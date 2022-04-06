@@ -188,7 +188,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         return True
 
     def _delete_secrets(self) -> None:
-        """Delete Kubernetes secrets created by the create_secrets method"""
+        """Delete Kubernetes secrets created by the create_secrets method."""
         client = Client()
         for secret in self._magma_orc8r_certifier_secrets:
             client.delete(SecretRes, name=secret, namespace=self._namespace)

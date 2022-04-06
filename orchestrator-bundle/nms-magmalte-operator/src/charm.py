@@ -196,7 +196,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
 
     def _create_nms_admin_user(self, email: str, password: str, organization: str):
         """
-        Creates Admin user for the master organization in NMS
+        Creates Admin user for the master organization in NMS.
         """
         logger.info("Creating admin user for NMS")
         process = self._container.exec(
