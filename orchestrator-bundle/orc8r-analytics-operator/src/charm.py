@@ -20,7 +20,7 @@ class MagmaOrc8rAnalyticsCharm(CharmBase):
 
     def __init__(self, *args):
         """
-        An instance of this object everytime an event occurs
+        An instance of this object everytime an event occurs.
         """
         super().__init__(*args)
         self._service_patcher = KubernetesServicePatch(
