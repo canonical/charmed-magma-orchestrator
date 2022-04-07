@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Check libraries
-        uses: canonical/charming-actions/check-libraries@test-charm-75
+        uses: canonical/charming-actions/check-libraries@1.0.2
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
           github-token: "${{ secrets.GITHUB_TOKEN }}"
