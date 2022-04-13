@@ -11,6 +11,7 @@ from ops.main import main
 
 class Orc8rLibsCharm(CharmBase):
     """Placeholder charm for Orc8r libs."""
+
     pass
 
 

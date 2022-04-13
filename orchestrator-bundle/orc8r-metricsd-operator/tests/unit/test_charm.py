@@ -10,7 +10,7 @@ from ops.model import BlockedStatus
 
 from charm import MagmaOrc8rMetricsdCharm
 
-testing.SIMULATE_CAN_CONNECT = True  # type: ignore[attr-defined]
+testing.SIMULATE_CAN_CONNECT = True
 
 
 class MockModel:
