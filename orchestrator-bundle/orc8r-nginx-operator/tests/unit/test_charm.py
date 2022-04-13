@@ -4,10 +4,12 @@
 import unittest
 from unittest.mock import Mock, PropertyMock, patch
 
+from ops import testing
 from ops.model import BlockedStatus
-from ops.testing import Harness
 
 from charm import MagmaOrc8rNginxCharm
+
+testing.SIMULATE_CAN_CONNECT = True
 
 
 class TestCharm(unittest.TestCase):
@@ -16,7 +18,7 @@ class TestCharm(unittest.TestCase):
         lambda charm, ports, service_type, service_name, additional_labels, additional_selectors: None,  # noqa: E501
     )
     def setUp(self):
-        self.harness = Harness(MagmaOrc8rNginxCharm)
+        self.harness = testing.Harness(MagmaOrc8rNginxCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
 

@@ -65,7 +65,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                 "orc8r.io/analytics_collector": "true",
             },
         )
-        self.framework.observe(self.on.install, self._on_install)
 
     def _write_config_file(self):
         metricsd_config = (

@@ -92,9 +92,6 @@ python3 main.py --hosted_zone=<your domain> --namespace <your model>
 Configure DNS records on your managed domain name to use the Route53 nameservers outputted by the
 script.
 
-> **_NOTE:_** For Google domains, navigate to Google Domains -> DNS -> Custom Name Servers. Fill in 4 Name Server
-> boxes with the domains retrieved from the `route53_integrator` script.
-
 ## 7. Verify the deployment
 
 Confirm successful deployment by visiting `https://master.nms.<your domain>` and logging in

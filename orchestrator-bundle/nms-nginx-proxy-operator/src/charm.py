@@ -38,7 +38,7 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         self.framework.observe(self.on.remove, self._on_remove)
         self.service_patcher = KubernetesServicePatch(
             charm=self,
-            ports=[("https", 443, 443, 30760)],
+            ports=[("https", 443)],
             service_type="LoadBalancer",
             service_name="nginx-proxy",
             additional_labels={"app.kubernetes.io/part-of": "magma"},

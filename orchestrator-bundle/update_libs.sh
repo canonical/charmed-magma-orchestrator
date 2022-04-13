@@ -21,7 +21,6 @@ orc8r-analytics
 orc8r-dispatcher
 orc8r-eventd
 orc8r-ha
-orc8r-metricsd
 orc8r-obsidian
 orc8r-service-registry
 orc8r-streamer
@@ -48,6 +47,7 @@ nms-magmalte
 nms-nginx-proxy
 orc8r-bootstrapper
 orc8r-certifier
+orc8r-metricsd
 orc8r-nginx
 orc8r-orchestrator
 "

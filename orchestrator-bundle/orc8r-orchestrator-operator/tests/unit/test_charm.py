@@ -4,9 +4,11 @@
 import unittest
 from unittest.mock import Mock, PropertyMock, call, patch
 
-from ops.testing import Harness
+from ops import testing
 
 from charm import MagmaOrc8rOrchestratorCharm
+
+testing.SIMULATE_CAN_CONNECT = True
 
 
 class TestCharm(unittest.TestCase):
@@ -15,20 +17,15 @@ class TestCharm(unittest.TestCase):
         lambda charm, ports, additional_labels, additional_annotations: None,
     )
     def setUp(self):
-        self.harness = Harness(MagmaOrc8rOrchestratorCharm)
+        self.harness = testing.Harness(MagmaOrc8rOrchestratorCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
-
-    def test_given_initial_status_when_get_pebble_plan_then_content_is_empty(self):
-        initial_plan = self.harness.get_container_pebble_plan("magma-orc8r-orchestrator")
-        self.assertEqual(initial_plan.to_yaml(), "{}\n")
 
     @patch("charm.MagmaOrc8rOrchestratorCharm._namespace", new_callable=PropertyMock)
     @patch("charm.MagmaOrc8rOrchestratorCharm._relations_ready")
     def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_nms_magmalte_service_content(
         self, relations_ready, patch_namespace
     ):
-        event = Mock()
         namespace = "whatever"
         relations_ready.return_value = True
         patch_namespace.return_value = namespace
@@ -50,7 +47,7 @@ class TestCharm(unittest.TestCase):
                 },
             },
         }
-        self.harness.charm.on.magma_orc8r_orchestrator_pebble_ready.emit(event)
+        self.harness.container_pebble_ready("magma-orc8r-orchestrator")
         updated_plan = self.harness.get_container_pebble_plan("magma-orc8r-orchestrator").to_dict()
         self.assertEqual(expected_plan, updated_plan)
 

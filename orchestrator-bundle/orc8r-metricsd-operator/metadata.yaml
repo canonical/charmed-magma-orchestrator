@@ -25,3 +25,7 @@ storage:
     type: filesystem
     description: Configs storage
     minimum-size: 1M
+
+requires:
+  magma-service-registry:
+    interface: magma-service-registry

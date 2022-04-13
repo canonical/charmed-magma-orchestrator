@@ -1,7 +1,7 @@
 # How-to: Deploy Magma Orchestrator on GCP with GKE
 
 The goal of this document is to detail how to deploy Magma's Orchestrator on GCP with GKE. To do so,
-we will setup GKE, bootstrap a Juju controller, deploy Magma Orchestrator and configure A
+we will set up a GKE cluster, bootstrap a Juju controller, deploy Magma Orchestrator and configure A
 records.
 
 ### Pre-requisites
@@ -87,9 +87,6 @@ Create these A records in your managed domain:
 | `api.<your domain>`                     | `<orc8r-nginx-proxy External IP>`      |
 | `controller.<your domain>`              | `<orc8r-clientcert-nginx External IP>` |
 | `*.nms.<your domain>`                   | `<nginx-proxy External IP>`            |
-
-> **_NOTE:_** For Google domains, navigate to Google Domains -> DNS -> Default Name Servers and
-> fill in the 4 A records.
 
 ## 7. Verify the deployment
 

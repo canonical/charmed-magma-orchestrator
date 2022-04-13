@@ -165,6 +165,8 @@ applications:
     channel: edge
     scale: 1
     trust: true
+    options:
+      metrics_count_limit: 500000
 relations:
 - - nms-magmalte:certifier
   - orc8r-certifier:certifier
@@ -210,6 +212,8 @@ relations:
   - postgresql-k8s:db
 - - nms-nginx-proxy:magmalte
   - nms-magmalte:magmalte
+- - orc8r-service-registry
+  - orc8r-metricsd
 - - orc8r-prometheus
   - orc8r-prometheus-cache
 - - orc8r-prometheus

@@ -22,47 +22,11 @@ Log in to your AWS account via the AWS CLI tool (instructions
 
 ## 2. Deploy Charmed Kubernetes on AWS using Juju
 
-From your Ubuntu machine, bootstrap an AWS Juju controller:
+Follow this [guide](https://ubuntu.com/kubernetes/docs/aws-integration) to deploy charmed Kubernetes
+on AWS.
 
-```bash
-juju bootstrap aws <your aws region> <juju AWS controller name>
-```
-
-Create an `overlay.yaml` file that contains the following content:
-
-```yaml
-description: Charmed Kubernetes overlay to add native AWS support.
-applications:
-  aws-integrator:
-    charm: cs:~containers/aws-integrator
-    num_units: 1
-    trust: true
-relations:
-  - ['aws-integrator', 'kubernetes-master']
-  - ['aws-integrator', 'kubernetes-worker']
-```
-
-Deploy charmed-kubernetes:
-
-```bash
-juju deploy charmed-kubernetes --overlay overlay.yaml --trust
-```
-
-The deployment is completed when all services are in the `Active-Idle` state.
-
-Fetch the kubectl config file:
-
-```bash
-juju scp kubernetes-master/0:config ~/.kube/config
-```
-
-To test communication with the Kubernetes cluster, run:
-
-```bash
-kubectl get nodes
-```
-
-Add this new k8s endpoint and credentials to Juju:
+Once you have access to the newly created Kubernetes cluster using `kubectl`, add this new k8s 
+endpoint and credentials to Juju:
 
 ```bash
 juju add-k8s <controller name>
@@ -82,7 +46,7 @@ Create a new model (namespace):
 juju add-model <model name>
 ```
 
-Replace `<model name>` with the Kubernetes namespace you want.
+Replace `<model name>` with the Kubernetes namespace you want for the Magma deployment.
 
 ## 3. Deploy charmed magma orchestrator
 
@@ -150,9 +114,6 @@ python3 main.py --hosted_zone=<your domain> --namespace <your model>
 
 Configure DNS records on your managed domain name to use the Route53 nameservers outputted by the
 script.
-
-> **_NOTE:_** For Google domains, navigate to Google Domains -> DNS -> Custom Name Servers. Fill in 4 Name Server
-> boxes with the domains retrieved from the `route53_integrator` script.
 
 ## 7. Verify the deployment
 

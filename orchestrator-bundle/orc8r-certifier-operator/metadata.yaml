@@ -37,7 +37,7 @@ storage:
 
 provides:
   certifier:
-    interface: certs
+    interface: magma-orc8r-certifier
 
 requires:
   db:

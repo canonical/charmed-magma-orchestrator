@@ -18,6 +18,6 @@ resources:
 
 requires:
   certifier:
-    interface: certs
+    interface: magma-orc8r-certifier
   magmalte:
     interface: nms-magmalte

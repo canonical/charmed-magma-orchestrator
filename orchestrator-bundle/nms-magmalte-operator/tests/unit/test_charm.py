@@ -4,11 +4,13 @@
 import unittest
 from unittest.mock import Mock, PropertyMock, patch
 
+from ops import testing
 from ops.model import ActiveStatus, BlockedStatus
-from ops.testing import Harness
 from pgconnstr import ConnectionString  # type: ignore[import]
 
 from charm import MagmaNmsMagmalteCharm
+
+testing.SIMULATE_CAN_CONNECT = True
 
 
 class MockExec:
@@ -36,7 +38,7 @@ class TestCharm(unittest.TestCase):
         "charm.KubernetesServicePatch", lambda charm, ports, service_name, additional_labels: None
     )
     def setUp(self):
-        self.harness = Harness(MagmaNmsMagmalteCharm)
+        self.harness = testing.Harness(MagmaNmsMagmalteCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
 
@@ -56,11 +58,6 @@ class TestCharm(unittest.TestCase):
         db_event.master.host = postgres_host
         db_event.master.port = postgres_port
         return db_event
-
-    def test_given_initial_status_when_get_pebble_plan_then_content_is_empty(self):
-        initial_plan = self.harness.get_container_pebble_plan("magma-nms-magmalte")
-
-        self.assertEqual(initial_plan.to_yaml(), "{}\n")
 
     def test_given_charm_when_pebble_ready_event_emitted_and_no_relations_established_then_charm_goes_to_blocked_state(  # noqa: E501
         self,
@@ -119,14 +116,13 @@ class TestCharm(unittest.TestCase):
     def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_nms_magmalte_service_content(
         self, relations_ready, patch_namespace, _, get_db_connection_string, mock_exec
     ):
-        event = Mock()
         mock_exec.return_value = MockExec()
         namespace = "whatever"
         relations_ready.return_value = True
         patch_namespace.return_value = namespace
         get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
 
-        self.harness.charm.on.magma_nms_magmalte_pebble_ready.emit(event)
+        self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
         expected_plan = {
             "services": {
                 "magma-nms-magmalte": {
@@ -183,11 +179,10 @@ class TestCharm(unittest.TestCase):
     def test_given_charm_when_pebble_ready_event_emitted_and_relations_are_established_then_charm_goes_to_active_state(  # noqa: E501
         self, relations_ready, get_db_connection_string, _, mock_exec
     ):
-        event = Mock()
         relations_ready.return_value = True
         mock_exec.return_value = MockExec()
         get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
 
-        self.harness.charm.on.magma_nms_magmalte_pebble_ready.emit(event)
+        self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
 
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus())

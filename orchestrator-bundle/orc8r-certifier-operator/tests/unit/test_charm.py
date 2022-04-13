@@ -4,10 +4,12 @@
 import unittest
 from unittest.mock import Mock, PropertyMock, call, patch
 
-from ops.testing import Harness
+from ops import testing
 from pgconnstr import ConnectionString  # type: ignore[import]
 
 from charm import MagmaOrc8rCertifierCharm
+
+testing.SIMULATE_CAN_CONNECT = True
 
 
 class TestCharm(unittest.TestCase):
@@ -25,7 +27,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("charm.KubernetesServicePatch", lambda charm, ports, additional_labels: None)
     def setUp(self):
-        self.harness = Harness(MagmaOrc8rCertifierCharm)
+        self.harness = testing.Harness(MagmaOrc8rCertifierCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
         self.maxDiff = None
@@ -46,10 +48,6 @@ class TestCharm(unittest.TestCase):
         db_event.master.host = postgres_host
         db_event.master.port = postgres_port
         return db_event
-
-    def test_given_initial_status_when_get_pebble_plan_then_content_is_empty(self):
-        initial_plan = self.harness.get_container_pebble_plan("magma-orc8r-certifier")
-        self.assertEqual(initial_plan.to_yaml(), "{}\n")
 
     @patch("ops.model.Unit.is_leader")
     def test_given_pod_is_leader_when_database_relation_joined_event_then_database_is_set_correctly(  # noqa: E501
@@ -72,55 +70,52 @@ class TestCharm(unittest.TestCase):
             self.harness.charm._on_database_relation_joined(db_event)
         self.assertEqual(db_event.database, self.TEST_DB_NAME)
 
+    @patch("charm.MagmaOrc8rCertifierCharm._get_db_connection_string", new_callable=PropertyMock)
     @patch("charm.MagmaOrc8rCertifierCharm._namespace", new_callable=PropertyMock)
     @patch("charm.MagmaOrc8rCertifierCharm._db_relation_created")
     @patch("charm.MagmaOrc8rCertifierCharm._db_relation_established")
     def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_orc8r_certifier_service_content(  # noqa: E501
-        self, db_relation_established, db_relation_created, patch_namespace
+        self, db_relation_established, db_relation_created, patch_namespace, patch_db_string
     ):
         namespace = "whatever"
         db_relation_established.return_value = True
         db_relation_created.return_value = True
         patch_namespace.return_value = namespace
-        event = Mock()
-        with patch(
-            "charm.MagmaOrc8rCertifierCharm._get_db_connection_string", new_callable=PropertyMock
-        ) as get_db_connection_string:
-            get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
-            self.harness.charm.on.magma_orc8r_certifier_pebble_ready.emit(event)
-            expected_plan = {
-                "services": {
-                    "magma-orc8r-certifier": {
-                        "override": "replace",
-                        "startup": "enabled",
-                        "command": "/usr/bin/envdir "
-                        "/var/opt/magma/envdir "
-                        "/var/opt/magma/bin/certifier "
-                        "-cac=/var/opt/magma/certs/certifier.pem "
-                        "-cak=/var/opt/magma/certs/certifier.key "
-                        "-vpnc=/var/opt/magma/certs/vpn_ca.crt "
-                        "-vpnk=/var/opt/magma/certs/vpn_ca.key "
-                        "-logtostderr=true "
-                        "-v=0",
-                        "environment": {
-                            "DATABASE_SOURCE": f"dbname={self.TEST_DB_NAME} "
-                            f"user={self.TEST_DB_CONNECTION_STRING.user} "
-                            f"password={self.TEST_DB_CONNECTION_STRING.password} "
-                            f"host={self.TEST_DB_CONNECTION_STRING.host} "
-                            f"sslmode=disable",
-                            "SQL_DRIVER": "postgres",
-                            "SQL_DIALECT": "psql",
-                            "SERVICE_HOSTNAME": "magma-orc8r-certifier",
-                            "SERVICE_REGISTRY_MODE": "k8s",
-                            "SERVICE_REGISTRY_NAMESPACE": namespace,
-                        },
-                    }
-                },
-            }
-            updated_plan = self.harness.get_container_pebble_plan(
-                "magma-orc8r-certifier"
-            ).to_dict()
-            self.assertEqual(expected_plan, updated_plan)
+        patch_db_string.return_value = self.TEST_DB_CONNECTION_STRING
+
+        self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
+
+        expected_plan = {
+            "services": {
+                "magma-orc8r-certifier": {
+                    "override": "replace",
+                    "startup": "enabled",
+                    "command": "/usr/bin/envdir "
+                    "/var/opt/magma/envdir "
+                    "/var/opt/magma/bin/certifier "
+                    "-cac=/var/opt/magma/certs/certifier.pem "
+                    "-cak=/var/opt/magma/certs/certifier.key "
+                    "-vpnc=/var/opt/magma/certs/vpn_ca.crt "
+                    "-vpnk=/var/opt/magma/certs/vpn_ca.key "
+                    "-logtostderr=true "
+                    "-v=0",
+                    "environment": {
+                        "DATABASE_SOURCE": f"dbname={self.TEST_DB_NAME} "
+                        f"user={self.TEST_DB_CONNECTION_STRING.user} "
+                        f"password={self.TEST_DB_CONNECTION_STRING.password} "
+                        f"host={self.TEST_DB_CONNECTION_STRING.host} "
+                        f"sslmode=disable",
+                        "SQL_DRIVER": "postgres",
+                        "SQL_DIALECT": "psql",
+                        "SERVICE_HOSTNAME": "magma-orc8r-certifier",
+                        "SERVICE_REGISTRY_MODE": "k8s",
+                        "SERVICE_REGISTRY_NAMESPACE": namespace,
+                    },
+                }
+            },
+        }
+        updated_plan = self.harness.get_container_pebble_plan("magma-orc8r-certifier").to_dict()
+        self.assertEqual(expected_plan, updated_plan)
 
     def test_given_charm_when_remove_event_emitted_then_on_remove_action_called(self):
         with patch.object(MagmaOrc8rCertifierCharm, "_on_remove") as mock:
@@ -131,9 +126,9 @@ class TestCharm(unittest.TestCase):
     @patch("charm.MagmaOrc8rCertifierCharm._create_magma_orc8r_secrets", Mock)
     @patch("ops.model.Container.push")
     def test_given_new_charm_when_on_install_event_then_config_files_are_created(self, patch_push):
-        event = Mock()
+        self.harness.container_pebble_ready("magma-orc8r-certifier")
 
-        self.harness.charm._on_install(event)
+        self.harness.charm.on.install.emit()
 
         calls = [
             call(

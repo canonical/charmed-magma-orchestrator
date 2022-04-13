@@ -9,6 +9,12 @@ from ops.main import main
 
 
 class MagmaOrc8rEventdCharm(CharmBase):
+    BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
+
+    # TODO: The various URL's should be provided through relationships
+    ELASTICSEARCH_URL = "orc8r-elasticsearch"
+    ELASTICSEARCH_PORT = 80
+
     def __init__(self, *args):
         """
         An instance of this object everytime an event occurs.
@@ -36,6 +42,17 @@ class MagmaOrc8rEventdCharm(CharmBase):
             "-v=0"
         )
         self._orc8r_base = Orc8rBase(self, startup_command=startup_command)
+        self.framework.observe(self.on.install, self._on_install)
+
+    def _on_install(self, event):
+        self._write_config_file()
+
+    def _write_config_file(self):
+        elastic_config = (
+            f'"elasticHost": "{self.ELASTICSEARCH_URL}"\n'
+            f'"elasticPort": {self.ELASTICSEARCH_PORT}\n'
+        )
+        self._orc8r_base._container.push(f"{self.BASE_CONFIG_PATH}/elastic.yml", elastic_config)
 
 
 if __name__ == "__main__":
