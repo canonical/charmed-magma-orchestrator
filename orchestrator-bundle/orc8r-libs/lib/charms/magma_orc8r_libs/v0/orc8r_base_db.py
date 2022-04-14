@@ -61,7 +61,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 8
+LIBPATCH = 9
 
 
 logger = logging.getLogger(__name__)
@@ -81,7 +81,7 @@ class Orc8rBase(Object):
         self.charm = charm
         self.startup_command = startup_command
         self._container_name = self._service_name = self.charm.meta.name
-        self._container = self.charm.unit.get_container(self._container_name)
+        self.container = self.charm.unit.get_container(self._container_name)
         pebble_ready_event = getattr(
             self.charm.on, f"{self._service_name.replace('-', '_')}_pebble_ready"
         )
@@ -121,13 +121,13 @@ class Orc8rBase(Object):
         """
         Adds layer to pebble config if the proposed config is different from the current one
         """
-        if self._container.can_connect():
+        if self.container.can_connect():
             self.charm.unit.status = MaintenanceStatus("Configuring pod")
             pebble_layer = self._pebble_layer()
-            plan = self._container.get_plan()
+            plan = self.container.get_plan()
             if plan.services != pebble_layer.services:
-                self._container.add_layer(self._container_name, pebble_layer, combine=True)
-                self._container.restart(self._service_name)
+                self.container.add_layer(self._container_name, pebble_layer, combine=True)
+                self.container.restart(self._service_name)
                 logger.info(f"Restarted container {self._service_name}")
                 self.charm.unit.status = ActiveStatus()
         else:

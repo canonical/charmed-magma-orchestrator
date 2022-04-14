@@ -6,14 +6,11 @@ from charms.magma_orc8r_libs.v0.orc8r_base import Orc8rBase
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from ops.charm import CharmBase
 from ops.main import main
+from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 
 
 class MagmaOrc8rEventdCharm(CharmBase):
     BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
-
-    # TODO: The various URL's should be provided through relationships
-    ELASTICSEARCH_URL = "orc8r-elasticsearch"
-    ELASTICSEARCH_PORT = 80
 
     def __init__(self, *args):
         """
@@ -41,18 +38,53 @@ class MagmaOrc8rEventdCharm(CharmBase):
             "-logtostderr=true "
             "-v=0"
         )
-        self._orc8r_base = Orc8rBase(self, startup_command=startup_command)
+        self.orc8r_base = Orc8rBase(self, startup_command=startup_command)
         self.framework.observe(self.on.install, self._on_install)
+        self.framework.observe(self.on.config_changed, self._on_elasticsearch_url_config_changed)
 
     def _on_install(self, event):
-        self._write_config_file()
+        if self._elasticsearch_config_is_valid:
+            self._write_config_file()
+        else:
+            self.unit.status = BlockedStatus(
+                "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
+            )
+
+    def _on_elasticsearch_url_config_changed(self, event):
+        # TODO: Elasticsearch url should be passed through a relationship (not a config)
+        if self._elasticsearch_config_is_valid:
+            self._write_config_file()
+            if self.orc8r_base._container.can_connect():
+                self.orc8r_base._container.restart("magma-orc8r-eventd")
+                self.orc8r_base.charm.unit.status = ActiveStatus()
+            else:
+                self.unit.status = WaitingStatus("Waiting for container to be available")
+                event.defer()
+                return
+        else:
+            self.unit.status = BlockedStatus(
+                "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
+            )
 
     def _write_config_file(self):
+        elasticsearch_url, elasticsearch_port = self._get_elasticsearch_config()
         elastic_config = (
-            f'"elasticHost": "{self.ELASTICSEARCH_URL}"\n'
-            f'"elasticPort": {self.ELASTICSEARCH_PORT}\n'
+            f'"elasticHost": "{elasticsearch_url}"\n' f'"elasticPort": {elasticsearch_port}\n'
         )
-        self._orc8r_base._container.push(f"{self.BASE_CONFIG_PATH}/elastic.yml", elastic_config)
+        self.orc8r_base._container.push(f"{self.BASE_CONFIG_PATH}/elastic.yml", elastic_config)
+
+    def _get_elasticsearch_config(self) -> tuple:
+        elasticsearch_url = self.model.config.get("elasticsearch-url")
+        elasticsearch_url_split = elasticsearch_url.split(":")
+        return elasticsearch_url_split[0], elasticsearch_url_split[1]
+
+    @property
+    def _elasticsearch_config_is_valid(self) -> bool:
+        elasticsearch_url = self.model.config.get("elasticsearch-url")
+        elasticsearch_url_split = elasticsearch_url.split(":")
+        if len(elasticsearch_url_split) != 2:
+            return False
+        return True
 
 
 if __name__ == "__main__":

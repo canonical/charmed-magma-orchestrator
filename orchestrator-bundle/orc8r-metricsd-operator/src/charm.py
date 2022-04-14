@@ -62,11 +62,12 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
         self._configure_orc8r(event)
 
     def _on_pebble_ready(self, event):
-        if not self._service_registry_relation_created:
+        if self._service_registry_relation_created:
+            self._configure_orc8r(event)
+        else:
             self.unit.status = BlockedStatus("Waiting for service registry relation to be created")
             event.defer()
             return
-        self._configure_orc8r(event)
 
     def _on_relation_broken(self, event):
         logger.info("Relation with service-registry broken - Stopping service")

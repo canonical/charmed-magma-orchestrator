@@ -3,7 +3,7 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import Mock, call, patch
+from unittest.mock import call, patch
 
 from ops import testing
 
@@ -24,9 +24,7 @@ class Test(unittest.TestCase):
 
     @patch("ops.model.Container.push")
     def test_given_new_charm_when_on_install_event_then_config_files_are_created(self, patch_push):
-        event = Mock()
-
-        self.harness.charm._on_install(event)
+        self.harness.charm.on.install.emit()
 
         calls = [
             call(

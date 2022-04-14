@@ -2,9 +2,10 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import Mock, PropertyMock, call, patch
+from unittest.mock import PropertyMock, patch
 
 from ops import testing
+from ops.model import BlockedStatus
 
 from charm import MagmaOrc8rOrchestratorCharm
 
@@ -52,39 +53,89 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(expected_plan, updated_plan)
 
     @patch("ops.model.Container.push")
-    def test_given_new_charm_when_on_install_event_then_config_file_is_created(self, patch_push):
-        event = Mock()
+    def test_given_new_charm_when_on_install_event_then_orchestrator_config_file_is_created(
+        self, patch_push
+    ):
 
-        self.harness.charm._on_install(event)
+        self.harness.charm.on.install.emit()
 
-        calls = [
-            call(
-                "/var/opt/magma/configs/orc8r/orchestrator.yml",
-                '"prometheusGRPCPushAddress": "orc8r-prometheus-cache:9092"\n'
-                '"prometheusPushAddresses":\n'
-                '- "http://orc8r-prometheus-cache:9091/metrics"\n'
-                '"useGRPCExporter": true\n',
-            ),
-            call(
-                "/var/opt/magma/configs/orc8r/metricsd.yml",
-                'prometheusQueryAddress: "http://orc8r-prometheus:9090"\n'
-                'alertmanagerApiURL: "http://orc8r-alertmanager:9093/api/v2"\n'
-                'prometheusConfigServiceURL: "http://orc8r-prometheus:9100/v1"\n'
-                'alertmanagerConfigServiceURL: "http://orc8r-alertmanager:9101/v1"\n'
-                '"profile": "prometheus"\n',
-            ),
-            call(
-                "/var/opt/magma/configs/orc8r/analytics.yml",
-                '"appID": ""\n'
-                '"appSecret": ""\n'
-                '"categoryName": "magma"\n'
-                '"exportMetrics": false\n'
-                '"metricExportURL": ""\n'
-                '"metricsPrefix": ""\n',
-            ),
-            call(
-                "/var/opt/magma/configs/orc8r/elastic.yml",
-                '"elasticHost": "orc8r-elasticsearch"\n' '"elasticPort": 80\n',
-            ),
-        ]
-        patch_push.assert_has_calls(calls)
+        patch_push.assert_any_call(
+            "/var/opt/magma/configs/orc8r/orchestrator.yml",
+            '"prometheusGRPCPushAddress": "orc8r-prometheus-cache:9092"\n'
+            '"prometheusPushAddresses":\n'
+            '- "http://orc8r-prometheus-cache:9091/metrics"\n'
+            '"useGRPCExporter": true\n',
+        )
+
+    @patch("ops.model.Container.push")
+    def test_given_new_charm_when_on_install_event_then_metricsd_config_file_is_created(
+        self, patch_push
+    ):
+        self.harness.charm.on.install.emit()
+
+        patch_push.assert_any_call(
+            "/var/opt/magma/configs/orc8r/metricsd.yml",
+            'prometheusQueryAddress: "http://orc8r-prometheus:9090"\n'
+            'alertmanagerApiURL: "http://orc8r-alertmanager:9093/api/v2"\n'
+            'prometheusConfigServiceURL: "http://orc8r-prometheus:9100/v1"\n'
+            'alertmanagerConfigServiceURL: "http://orc8r-alertmanager:9101/v1"\n'
+            '"profile": "prometheus"\n',
+        )
+
+    @patch("ops.model.Container.push")
+    def test_given_new_charm_when_on_install_event_then_analytics_config_file_is_created(
+        self, patch_push
+    ):
+        self.harness.charm.on.install.emit()
+
+        patch_push.assert_any_call(
+            "/var/opt/magma/configs/orc8r/analytics.yml",
+            '"appID": ""\n'
+            '"appSecret": ""\n'
+            '"categoryName": "magma"\n'
+            '"exportMetrics": false\n'
+            '"metricExportURL": ""\n'
+            '"metricsPrefix": ""\n',
+        )
+
+    @patch("ops.model.Container.push")
+    def test_given_default_elasticsearch_config_when_on_install_event_then_elasticsearch_config_file_is_created(  # noqa: E501
+        self, patch_push
+    ):
+        default_config = self.harness.charm.config
+        elasticsearch_url = default_config["elasticsearch-url"].split(":")
+
+        self.harness.charm.on.install.emit()
+
+        patch_push.assert_any_call(
+            "/var/opt/magma/configs/orc8r/elastic.yml",
+            f'"elasticHost": "{elasticsearch_url[0]}"\n'
+            f'"elasticPort": {elasticsearch_url[1]}\n',
+        )
+
+    @patch("ops.model.Container.push")
+    def test_given_good_elasticsearch_config_when_on_install_event_then_elasticsearch_config_file_is_created(  # noqa: E501
+        self, patch_push
+    ):
+        hostname = "blablabla"
+        port = 80
+        config = {"elasticsearch-url": f"{hostname}:{port}"}
+        self.harness.update_config(key_values=config)
+
+        patch_push.assert_any_call(
+            "/var/opt/magma/configs/orc8r/elastic.yml",
+            f'"elasticHost": "{hostname}"\n' f'"elasticPort": {port}\n',
+        )
+
+    @patch("ops.model.Container.push")
+    def test_given_bad_elasticsearch_config_when_on_install_event_then_elasticsearch_config_file_is_created(  # noqa: E501
+        self, _
+    ):
+        config = {"elasticsearch-url": "hello"}
+        self.harness.update_config(key_values=config)
+
+        self.harness.charm.on.install.emit()
+
+        assert self.harness.charm.unit.status == BlockedStatus(
+            "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
+        )

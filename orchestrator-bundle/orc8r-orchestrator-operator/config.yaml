@@ -1,0 +1,6 @@
+options:
+  elasticsearch-url:
+    type: string
+    default: orc8r-elasticsearch:9200
+    description: |
+      elasticsearch URL (example: orc8r-elasticsearch:9200)

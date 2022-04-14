@@ -3,7 +3,7 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import Mock, PropertyMock, call, patch
+from unittest.mock import PropertyMock, call, patch
 
 from ops import testing
 from ops.model import BlockedStatus
@@ -35,9 +35,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.push")
     def test_given_new_charm_when_on_install_event_then_config_file_is_created(self, patch_push):
-        event = Mock()
-
-        self.harness.charm._on_install(event)
+        self.harness.charm.on.install.emit()
 
         calls = [
             call(
