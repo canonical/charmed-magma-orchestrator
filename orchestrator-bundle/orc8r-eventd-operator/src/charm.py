@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
+import re
 
 from charms.magma_orc8r_libs.v0.orc8r_base import Orc8rBase
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
@@ -38,7 +39,7 @@ class MagmaOrc8rEventdCharm(CharmBase):
             "-logtostderr=true "
             "-v=0"
         )
-        self.orc8r_base = Orc8rBase(self, startup_command=startup_command)
+        self._orc8r_base = Orc8rBase(self, startup_command=startup_command)
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_elasticsearch_url_config_changed)
 
@@ -54,9 +55,9 @@ class MagmaOrc8rEventdCharm(CharmBase):
         # TODO: Elasticsearch url should be passed through a relationship (not a config)
         if self._elasticsearch_config_is_valid:
             self._write_config_file()
-            if self.orc8r_base._container.can_connect():
-                self.orc8r_base._container.restart("magma-orc8r-eventd")
-                self.orc8r_base.charm.unit.status = ActiveStatus()
+            if self._orc8r_base._container.can_connect():
+                self._orc8r_base._container.restart("magma-orc8r-eventd")
+                self._orc8r_base.charm.unit.status = ActiveStatus()
             else:
                 self.unit.status = WaitingStatus("Waiting for container to be available")
                 event.defer()
@@ -71,7 +72,7 @@ class MagmaOrc8rEventdCharm(CharmBase):
         elastic_config = (
             f'"elasticHost": "{elasticsearch_url}"\n' f'"elasticPort": {elasticsearch_port}\n'
         )
-        self.orc8r_base._container.push(f"{self.BASE_CONFIG_PATH}/elastic.yml", elastic_config)
+        self._orc8r_base._container.push(f"{self.BASE_CONFIG_PATH}/elastic.yml", elastic_config)
 
     def _get_elasticsearch_config(self) -> tuple:
         elasticsearch_url = self.model.config.get("elasticsearch-url")
@@ -81,10 +82,10 @@ class MagmaOrc8rEventdCharm(CharmBase):
     @property
     def _elasticsearch_config_is_valid(self) -> bool:
         elasticsearch_url = self.model.config.get("elasticsearch-url")
-        elasticsearch_url_split = elasticsearch_url.split(":")
-        if len(elasticsearch_url_split) != 2:
+        if re.match("^[a-zA-Z0-9._-]+:[0-9]+$", elasticsearch_url):
+            return True
+        else:
             return False
-        return True
 
 
 if __name__ == "__main__":

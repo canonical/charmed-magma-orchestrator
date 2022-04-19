@@ -31,7 +31,6 @@ class TestCharm(unittest.TestCase):
         self.harness = testing.Harness(MagmaOrc8rMetricsdCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
-        self.maxDiff = None
 
     @patch("ops.model.Container.push")
     def test_given_new_charm_when_on_install_event_then_config_file_is_created(self, patch_push):

@@ -70,7 +70,7 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
             return
 
     def _on_relation_broken(self, event):
-        logger.info("Relation with service-registry broken - Stopping service")
+        logger.warning("Relation with service-registry broken - Stopping service")
         self._container.stop(self._service_name)
         self.unit.status = BlockedStatus("Waiting for service registry relation to be created")
 
@@ -142,8 +142,6 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
     @property
     def _service_registry_relation_created(self) -> bool:
         """Checks whether charm is related to magma-service-registry."""
-        aa = self.model.get_relation("magma-service-registry")
-        logger.info(aa)
         if not self.model.get_relation("magma-service-registry"):
             return False
         return True

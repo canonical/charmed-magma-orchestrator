@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import logging
+import re
 from typing import List
 
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
@@ -79,7 +80,12 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         self._write_orchestrator_config()
         self._write_metricsd_config()
         self._write_analytics_config()
-        self._write_elastic_config()
+        if self._elasticsearch_config_is_valid:
+            self._write_elastic_config()
+        else:
+            self.unit.status = BlockedStatus(
+                "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
+            )
 
     def _write_orchestrator_config(self):
         orchestrator_config = (
@@ -112,16 +118,11 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         self._container.push(f"{self.BASE_CONFIG_PATH}/analytics.yml", analytics_config)
 
     def _write_elastic_config(self):
-        if self._elasticsearch_config_is_valid:
-            elasticsearch_url, elasticsearch_port = self._get_elasticsearch_config()
-            elastic_config = (
-                f'"elasticHost": "{elasticsearch_url}"\n' f'"elasticPort": {elasticsearch_port}\n'
-            )
-            self._container.push(f"{self.BASE_CONFIG_PATH}/elastic.yml", elastic_config)
-        else:
-            self.unit.status = BlockedStatus(
-                "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
-            )
+        elasticsearch_url, elasticsearch_port = self._get_elasticsearch_config()
+        elastic_config = (
+            f'"elasticHost": "{elasticsearch_url}"\n' f'"elasticPort": {elasticsearch_port}\n'
+        )
+        self._container.push(f"{self.BASE_CONFIG_PATH}/elastic.yml", elastic_config)
 
     def _on_elasticsearch_url_config_changed(self, event):
         # TODO: Elasticsearch url should be passed through a relationship (not a config)
@@ -305,10 +306,10 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
     @property
     def _elasticsearch_config_is_valid(self) -> bool:
         elasticsearch_url = self.model.config.get("elasticsearch-url")
-        elasticsearch_url_split = elasticsearch_url.split(":")
-        if len(elasticsearch_url_split) != 2:
+        if re.match("^[a-zA-Z0-9._-]+:[0-9]+$", elasticsearch_url):
+            return True
+        else:
             return False
-        return True
 
     @property
     def _namespace(self) -> str:

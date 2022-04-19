@@ -170,8 +170,12 @@ applications:
 relations:
 - - nms-magmalte:certifier
   - orc8r-certifier:certifier
+- - nms-magmalte:db
+  - postgresql-k8s:db
 - - nms-nginx-proxy:certifier
   - orc8r-certifier:certifier
+- - nms-nginx-proxy:magmalte
+  - nms-magmalte:magmalte
 - - orc8r-accessd:db
   - postgresql-k8s:db
 - - orc8r-bootstrapper:certifier
@@ -188,8 +192,24 @@ relations:
   - postgresql-k8s:db
 - - orc8r-lte:db
   - postgresql-k8s:db
+- - orc8r-nginx:bootstrapper
+  - orc8r-bootstrapper:bootstrapper
+- - orc8r-nginx:certifier
+  - orc8r-certifier:certifier
+- - orc8r-nginx:obsidian
+  - orc8r-obsidian:obsidian
+- - orc8r-orchestrator:certifier
+  - orc8r-certifier:certifier
 - - orc8r-policydb:db
   - postgresql-k8s:db
+- - orc8r-prometheus:alertmanager
+  - orc8r-alertmanager:alerting
+- - orc8r-prometheus
+  - orc8r-prometheus-cache
+- - orc8r-prometheus
+  - orc8r-user-grafana
+- - orc8r-service-registry
+  - orc8r-metricsd
 - - orc8r-smsd:db
   - postgresql-k8s:db
 - - orc8r-state:db
@@ -200,23 +220,3 @@ relations:
   - postgresql-k8s:db
 - - orc8r-tenants:db
   - postgresql-k8s:db
-- - orc8r-nginx:certifier
-  - orc8r-certifier:certifier
-- - orc8r-nginx:bootstrapper
-  - orc8r-bootstrapper:bootstrapper
-- - orc8r-nginx:obsidian
-  - orc8r-obsidian:obsidian
-- - orc8r-orchestrator:certifier
-  - orc8r-certifier:certifier
-- - nms-magmalte:db
-  - postgresql-k8s:db
-- - nms-nginx-proxy:magmalte
-  - nms-magmalte:magmalte
-- - orc8r-service-registry
-  - orc8r-metricsd
-- - orc8r-prometheus
-  - orc8r-prometheus-cache
-- - orc8r-prometheus
-  - orc8r-user-grafana
-- - orc8r-prometheus:alertmanager
-  - orc8r-alertmanager:alerting
