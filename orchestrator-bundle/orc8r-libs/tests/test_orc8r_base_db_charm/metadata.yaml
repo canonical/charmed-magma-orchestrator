@@ -21,3 +21,8 @@ resources:
 requires:
   db:
     interface: pgsql
+
+provides:
+  magma-orc8r-directoryd:
+    interface:
+      magma-orc8r-directoryd

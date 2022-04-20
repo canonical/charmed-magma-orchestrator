@@ -58,7 +58,13 @@ import logging
 import ops.lib
 from ops.charm import CharmBase
 from ops.framework import Object
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus, ModelError
+from ops.model import (
+    ActiveStatus,
+    BlockedStatus,
+    MaintenanceStatus,
+    ModelError,
+    WaitingStatus,
+)
 from ops.pebble import Layer
 from pgconnstr import ConnectionString  # type: ignore[import]
 
@@ -91,11 +97,13 @@ class Orc8rBase(Object):
         self.startup_command = startup_command
         self.container_name = self.service_name = self.charm.meta.name
         self.container = self.charm.unit.get_container(self.container_name)
-        name_with_underscores = self.service_name.replace('-', '_')
+        service_name_with_underscores = self.service_name.replace("-", "_")
         pebble_ready_event = getattr(
-            self.charm.on, f"{name_with_underscores}_pebble_ready"
+            self.charm.on, f"{service_name_with_underscores}_pebble_ready"
         )
-        relation_joined_event = getattr(self.charm.on, f"{name_with_underscores}_relation_joined")
+        relation_joined_event = getattr(
+            self.charm.on, f"{service_name_with_underscores}_relation_joined"
+        )
         self.framework.observe(pebble_ready_event, self._on_magma_orc8r_pebble_ready)
 
         if additional_environment_variables:
@@ -229,16 +237,14 @@ class Orc8rBase(Object):
         relations = self.charm.model.relations[self.charm.meta.name]
         for relation in relations:
             self._update_relation_active_status(
-                relation=relation,
-                is_active=self._service_is_running
+                relation=relation, is_active=self._service_is_running
             )
 
     def _on_relation_joined(self, event):
         if not self.charm.unit.is_leader():
             return
         self._update_relation_active_status(
-            relation=event.relation,
-            is_active=self._service_is_running
+            relation=event.relation, is_active=self._service_is_running
         )
 
     @property

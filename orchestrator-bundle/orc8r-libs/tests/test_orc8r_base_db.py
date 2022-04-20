@@ -82,7 +82,7 @@ class TestCharm(unittest.TestCase):
         new_callable=PropertyMock,
     )
     @patch(
-        "charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._namespace", new_callable=PropertyMock
+        "charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase.namespace", new_callable=PropertyMock
     )
     @patch("charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._db_relation_created")
     @patch("charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._db_relation_established")

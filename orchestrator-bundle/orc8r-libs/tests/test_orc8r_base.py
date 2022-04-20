@@ -22,7 +22,7 @@ class TestCharm(unittest.TestCase):
         initial_plan = self.harness.get_container_pebble_plan("magma-orc8r-ha")
         self.assertEqual(initial_plan.to_yaml(), "{}\n")
 
-    @patch("charms.magma_orc8r_libs.v0.orc8r_base.Orc8rBase._namespace", new_callable=PropertyMock)
+    @patch("charms.magma_orc8r_libs.v0.orc8r_base.Orc8rBase.namespace", new_callable=PropertyMock)
     def test_given_pebble_ready_when_get_pebble_plan_then_plan_is_filled_with_orc8r_service_content(  # noqa: E501
         self, patch_namespace
     ):
