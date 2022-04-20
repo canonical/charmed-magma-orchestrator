@@ -94,7 +94,7 @@ class Orc8rBase(Object):
         relation_joined_event = getattr(
             self.charm.on, f"{service_name_with_underscores}_relation_joined"
         )
-        self._container = self.charm.unit.get_container(self.container_name)
+        self.container = self.charm.unit.get_container(self.container_name)
         self.framework.observe(pebble_ready_event, self._on_magma_orc8r_pebble_ready)
         self.framework.observe(relation_joined_event, self._on_relation_joined)
 
@@ -110,13 +110,13 @@ class Orc8rBase(Object):
         """
         Adds layer to pebble config if the proposed config is different from the current one
         """
-        if self._container.can_connect():
+        if self.container.can_connect():
             self.charm.unit.status = MaintenanceStatus("Configuring pod")
             pebble_layer = self._pebble_layer()
-            plan = self._container.get_plan()
+            plan = self.container.get_plan()
             if plan.services != pebble_layer.services:
-                self._container.add_layer(self.container_name, pebble_layer, combine=True)
-            self._container.restart(self.service_name)
+                self.container.add_layer(self.container_name, pebble_layer, combine=True)
+            self.container.restart(self.service_name)
             logger.info(f"Restarted container {self.service_name}")
             self._update_relations()
             self.charm.unit.status = ActiveStatus()
@@ -176,9 +176,9 @@ class Orc8rBase(Object):
 
     @property
     def _service_is_running(self) -> bool:
-        if self._container.can_connect():
+        if self.container.can_connect():
             try:
-                self._container.get_service(self.service_name)
+                self.container.get_service(self.service_name)
                 return True
             except ModelError:
                 pass
