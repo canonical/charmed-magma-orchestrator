@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
+import logging
 import re
 
 from charms.magma_orc8r_libs.v0.orc8r_base import Orc8rBase
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from ops.charm import CharmBase
 from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.model import BlockedStatus, ModelError
+
+logger = logging.getLogger(__name__)
 
 
 class MagmaOrc8rEventdCharm(CharmBase):
@@ -56,12 +59,13 @@ class MagmaOrc8rEventdCharm(CharmBase):
         if self._elasticsearch_config_is_valid:
             self._write_config_file()
             if self._orc8r_base._container.can_connect():
-                self._orc8r_base._container.restart("magma-orc8r-eventd")
-                self._orc8r_base.charm.unit.status = ActiveStatus()
-            else:
-                self.unit.status = WaitingStatus("Waiting for container to be available")
-                event.defer()
-                return
+                try:
+                    self._orc8r_base._container.get_service(self._orc8r_base._service_name)
+                    logger.info("Restarting service")
+                    self._orc8r_base._container.restart(self._orc8r_base._service_name)
+                except ModelError:
+                    logger.info("Service is not yet started, doing nothing")
+                    pass
         else:
             self.unit.status = BlockedStatus(
                 "Config for elasticsearch is not valid. Format should be <hostname>:<port>"

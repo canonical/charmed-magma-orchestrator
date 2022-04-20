@@ -208,8 +208,6 @@ relations:
   - orc8r-prometheus-cache
 - - orc8r-prometheus
   - orc8r-user-grafana
-- - orc8r-service-registry
-  - orc8r-metricsd
 - - orc8r-smsd:db
   - postgresql-k8s:db
 - - orc8r-state:db

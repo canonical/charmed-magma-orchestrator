@@ -12,7 +12,7 @@ from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
 from lightkube.resources.apps_v1 import StatefulSet
 from ops.charm import CharmBase
 from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, ModelError
 from ops.pebble import ConnectionError, ExecError, Layer
 
 logger = logging.getLogger(__name__)
@@ -118,6 +118,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         self._container.push(f"{self.BASE_CONFIG_PATH}/analytics.yml", analytics_config)
 
     def _write_elastic_config(self):
+        logging.info("Writing elasticsearch config to elastic.yml")
         elasticsearch_url, elasticsearch_port = self._get_elasticsearch_config()
         elastic_config = (
             f'"elasticHost": "{elasticsearch_url}"\n' f'"elasticPort": {elasticsearch_port}\n'
@@ -129,12 +130,13 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         if self._elasticsearch_config_is_valid:
             self._write_elastic_config()
             if self._container.can_connect():
-                self._container.restart("magma-orc8r-orchestrator")
-                self.unit.status = ActiveStatus()
-            else:
-                self.unit.status = WaitingStatus("Waiting for container to be available")
-                event.defer()
-                return
+                try:
+                    self._container.get_service(self._service_name)
+                    logger.info("Restarting service")
+                    self._container.restart(self._service_name)
+                except ModelError:
+                    logger.info("Service is not yet started, doing nothing")
+                    pass
         else:
             self.unit.status = BlockedStatus(
                 "Config for elasticsearch is not valid. Format should be <hostname>:<port>"

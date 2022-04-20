@@ -21,6 +21,7 @@ orc8r-analytics
 orc8r-dispatcher
 orc8r-eventd
 orc8r-ha
+orc8r-metricsd
 orc8r-obsidian
 orc8r-service-registry
 orc8r-streamer
