@@ -29,32 +29,25 @@ class Test(unittest.TestCase):
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
 
-    @patch("ops.model.Container.push")
-    def test_given_default_config_when_on_install_event_then_config_files_are_created(
-        self, patch_push
-    ):
-        default_config = self.harness.charm.config
-        elasticsearch_url = default_config["elasticsearch-url"].split(":")
+    def test_given_default_config_when_on_config_changed_then_status_is_blocked(self):
+        key_values = {"elasticsearch-url": ""}
+        self.harness.container_pebble_ready("magma-orc8r-eventd")
 
-        self.harness.charm.on.install.emit()
+        self.harness.update_config(key_values=key_values)
 
-        calls = [
-            call(
-                "/var/opt/magma/configs/orc8r/elastic.yml",
-                f'"elasticHost": "{elasticsearch_url[0]}"\n'
-                f'"elasticPort": {elasticsearch_url[1]}\n',
-            ),
-        ]
-        patch_push.assert_has_calls(calls)
+        assert self.harness.charm.unit.status == BlockedStatus(
+            "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
+        )
 
     @patch("ops.model.Container.push")
-    def test_given_good_elasticsearch_config_when_install_then_config_is_written_to_file(
+    def test_given_good_elasticsearch_config_when_config_changed_then_config_is_written_to_file(
         self, patch_push
     ):
         hostname = "blablabla"
         port = 80
         config = {"elasticsearch-url": f"{hostname}:{port}"}
 
+        self.harness.container_pebble_ready("magma-orc8r-eventd")
         self.harness.update_config(key_values=config)
 
         calls = [
@@ -65,11 +58,11 @@ class Test(unittest.TestCase):
         ]
         patch_push.assert_has_calls(calls)
 
-    def test_given_bad_elasticsearch_config_when_install_then_status_is_blocked(self):
+    def test_given_bad_elasticsearch_config_when_config_changed_then_status_is_blocked(self):
         config = {"elasticsearch-url": "hello"}
-        self.harness.update_config(key_values=config)
 
-        self.harness.charm.on.install.emit()
+        self.harness.container_pebble_ready("magma-orc8r-eventd")
+        self.harness.update_config(key_values=config)
 
         assert self.harness.charm.unit.status == BlockedStatus(
             "Config for elasticsearch is not valid. Format should be <hostname>:<port>"

@@ -53,10 +53,10 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(expected_plan, updated_plan)
 
     @patch("ops.model.Container.push")
-    def test_given_new_charm_when_on_install_event_then_orchestrator_config_file_is_created(
+    def test_given_pebble_ready_when_on_install_event_then_orchestrator_config_file_is_created(  # noqa: E501
         self, patch_push
     ):
-
+        self.harness.container_pebble_ready("magma-orc8r-orchestrator")
         self.harness.charm.on.install.emit()
 
         patch_push.assert_any_call(
@@ -71,6 +71,7 @@ class TestCharm(unittest.TestCase):
     def test_given_new_charm_when_on_install_event_then_metricsd_config_file_is_created(
         self, patch_push
     ):
+        self.harness.container_pebble_ready("magma-orc8r-orchestrator")
         self.harness.charm.on.install.emit()
 
         patch_push.assert_any_call(
@@ -86,6 +87,7 @@ class TestCharm(unittest.TestCase):
     def test_given_new_charm_when_on_install_event_then_analytics_config_file_is_created(
         self, patch_push
     ):
+        self.harness.container_pebble_ready("magma-orc8r-orchestrator")
         self.harness.charm.on.install.emit()
 
         patch_push.assert_any_call(
@@ -98,28 +100,26 @@ class TestCharm(unittest.TestCase):
             '"metricsPrefix": ""\n',
         )
 
-    @patch("ops.model.Container.push")
-    def test_given_default_elasticsearch_config_when_on_install_event_then_elasticsearch_config_file_is_created(  # noqa: E501
-        self, patch_push
+    def test_given_default_elasticsearch_config_when_on_config_changed_event_then_status_is_blocked(  # noqa: E501
+        self,
     ):
-        default_config = self.harness.charm.config
-        elasticsearch_url = default_config["elasticsearch-url"].split(":")
+        key_values = {"elasticsearch-url": ""}
+        self.harness.container_pebble_ready("magma-orc8r-orchestrator")
+        self.harness.update_config(key_values=key_values)
 
-        self.harness.charm.on.install.emit()
-
-        patch_push.assert_any_call(
-            "/var/opt/magma/configs/orc8r/elastic.yml",
-            f'"elasticHost": "{elasticsearch_url[0]}"\n'
-            f'"elasticPort": {elasticsearch_url[1]}\n',
+        assert self.harness.charm.unit.status == BlockedStatus(
+            "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
         )
 
     @patch("ops.model.Container.push")
-    def test_given_good_elasticsearch_config_when_on_install_event_then_elasticsearch_config_file_is_created(  # noqa: E501
+    def test_given_good_elasticsearch_config_when_on_config_changed_event_then_elasticsearch_config_file_is_created(  # noqa: E501
         self, patch_push
     ):
         hostname = "blablabla"
         port = 80
         config = {"elasticsearch-url": f"{hostname}:{port}"}
+        self.harness.container_pebble_ready("magma-orc8r-orchestrator")
+
         self.harness.update_config(key_values=config)
 
         patch_push.assert_any_call(
@@ -128,13 +128,13 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.push")
-    def test_given_bad_elasticsearch_config_when_on_install_event_then_elasticsearch_config_file_is_created(  # noqa: E501
+    def test_given_bad_elasticsearch_config_when_on_config_changed_event_then_status_is_blocked(
         self, _
     ):
         config = {"elasticsearch-url": "hello"}
-        self.harness.update_config(key_values=config)
+        self.harness.container_pebble_ready("magma-orc8r-orchestrator")
 
-        self.harness.charm.on.install.emit()
+        self.harness.update_config(key_values=config)
 
         assert self.harness.charm.unit.status == BlockedStatus(
             "Config for elasticsearch is not valid. Format should be <hostname>:<port>"

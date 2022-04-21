@@ -69,6 +69,8 @@ applications:
     charm: ./orc8r-eventd-operator/orc8r-eventd.charm
     scale: 1
     trust: true
+    options:
+      elasticsearch-url: "orc8r-elasticsearch:1234"
     resources:
       magma-orc8r-eventd-image: docker.artifactory.magmacore.org/controller:1.6.0
   orc8r-ha:
@@ -113,6 +115,8 @@ applications:
     charm: ./orc8r-orchestrator-operator/orc8r-orchestrator.charm
     scale: 1
     trust: true
+    options:
+      elasticsearch-url: "orc8r-elasticsearch:1234"
     resources:
       magma-orc8r-orchestrator-image: docker.artifactory.magmacore.org/controller:1.6.0
   orc8r-policydb:

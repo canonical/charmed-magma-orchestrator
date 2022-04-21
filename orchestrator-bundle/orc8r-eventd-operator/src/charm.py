@@ -8,7 +8,7 @@ from charms.magma_orc8r_libs.v0.orc8r_base import Orc8rBase
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from ops.charm import CharmBase
 from ops.main import main
-from ops.model import BlockedStatus, ModelError
+from ops.model import ActiveStatus, BlockedStatus
 
 logger = logging.getLogger(__name__)
 
@@ -43,27 +43,18 @@ class MagmaOrc8rEventdCharm(CharmBase):
             "-v=0"
         )
         self._orc8r_base = Orc8rBase(self, startup_command=startup_command)
-        self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_elasticsearch_url_config_changed)
-
-    def _on_install(self, event):
-        if self._elasticsearch_config_is_valid:
-            self._write_config_file()
-        else:
-            self.unit.status = BlockedStatus(
-                "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
-            )
 
     def _on_elasticsearch_url_config_changed(self, event):
         # TODO: Elasticsearch url should be passed through a relationship (not a config)
         if self._elasticsearch_config_is_valid:
-            self._write_config_file()
             if self._orc8r_base._container.can_connect():
+                self._write_config_file()
                 try:
-                    self._orc8r_base._container.get_service(self._orc8r_base._service_name)
                     logger.info("Restarting service")
                     self._orc8r_base._container.restart(self._orc8r_base._service_name)
-                except ModelError:
+                    self.unit.status = ActiveStatus()
+                except RuntimeError:
                     logger.info("Service is not yet started, doing nothing")
                     pass
         else:
@@ -72,6 +63,7 @@ class MagmaOrc8rEventdCharm(CharmBase):
             )
 
     def _write_config_file(self):
+        logger.info("Writing config file or elastic.yml")
         elasticsearch_url, elasticsearch_port = self._get_elasticsearch_config()
         elastic_config = (
             f'"elasticHost": "{elasticsearch_url}"\n' f'"elasticPort": {elasticsearch_port}\n'
@@ -86,6 +78,8 @@ class MagmaOrc8rEventdCharm(CharmBase):
     @property
     def _elasticsearch_config_is_valid(self) -> bool:
         elasticsearch_url = self.model.config.get("elasticsearch-url")
+        if not elasticsearch_url:
+            return False
         if re.match("^[a-zA-Z0-9._-]+:[0-9]+$", elasticsearch_url):
             return True
         else:

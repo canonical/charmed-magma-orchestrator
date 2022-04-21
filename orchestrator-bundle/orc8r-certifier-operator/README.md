@@ -28,6 +28,8 @@ juju relate orc8r-certifier postgresql-k8s:db
 - **rootCA-pem** - Allows passing own trusted cert (see [magma](https://www.magmacore.org/) for details)
 - **domain** - Domain for self-signed certs. Use only when **use-self-signed-ssl-certs** set to **True**
 
+> Note that once configs have been applied to orc8r-certifier, it is not possible to re-configure.
+> To change config, please re-deploy it with the correct config.
 
 ### Usage
 

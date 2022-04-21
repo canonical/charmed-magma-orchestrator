@@ -20,6 +20,11 @@ applications:
     channel: edge
     scale: 1
     trust: true
+  orc8r-alertmanager:
+    charm: alertmanager-k8s
+    channel: edge
+    scale: 1
+    trust: true
   orc8r-analytics:
     charm: magma-orc8r-analytics
     channel: edge
@@ -67,6 +72,8 @@ applications:
     channel: edge
     scale: 1
     trust: true
+    options:
+      elasticsearch-url: "orc8r-elasticsearch:1234"
   orc8r-ha:
     charm: magma-orc8r-ha
     channel: edge
@@ -97,11 +104,25 @@ applications:
     channel: edge
     scale: 1
     trust: true
+    options:
+      elasticsearch-url: "orc8r-elasticsearch:1234"
   orc8r-policydb:
     charm: magma-orc8r-policydb
     channel: edge
     scale: 1
     trust: true
+  orc8r-prometheus:
+    charm: prometheus-k8s
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-prometheus-cache:
+    charm: prometheus-edge-hub
+    channel: edge
+    scale: 1
+    trust: true
+    options:
+      metrics_count_limit: 500000
   orc8r-service-registry:
     charm: magma-orc8r-service-registry
     channel: edge
@@ -137,17 +158,6 @@ applications:
     channel: edge
     scale: 1
     trust: true
-  postgresql-k8s:
-    charm: postgresql-k8s
-    series: kubernetes
-    channel: stable
-    scale: 1
-    trust: true
-  orc8r-prometheus:
-    charm: prometheus-k8s
-    channel: edge
-    scale: 1
-    trust: true
   orc8r-user-grafana:
     charm: grafana-k8s
     channel: edge
@@ -155,18 +165,12 @@ applications:
       web_external_url: "/grafana"
     scale: 1
     trust: true
-  orc8r-alertmanager:
-    charm: alertmanager-k8s
-    channel: edge
+  postgresql-k8s:
+    charm: postgresql-k8s
+    series: kubernetes
+    channel: stable
     scale: 1
     trust: true
-  orc8r-prometheus-cache:
-    charm: prometheus-edge-hub
-    channel: edge
-    scale: 1
-    trust: true
-    options:
-      metrics_count_limit: 500000
 relations:
 - - nms-magmalte:certifier
   - orc8r-certifier:certifier

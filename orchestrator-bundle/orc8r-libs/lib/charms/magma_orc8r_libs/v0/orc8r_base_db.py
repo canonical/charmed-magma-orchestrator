@@ -147,10 +147,9 @@ class Orc8rBase(Object):
             plan = self.container.get_plan()
             if plan.services != pebble_layer.services:
                 self.container.add_layer(self.container_name, pebble_layer, combine=True)
-            self.container.restart(self.service_name)
-            logger.info(f"Restarted container {self.service_name}")
-            self._update_relations()
-            self.charm.unit.status = ActiveStatus()
+                self.container.restart(self.service_name)
+                logger.info(f"Restarted container {self.service_name}")
+                self.charm.unit.status = ActiveStatus()
         else:
             self.charm.unit.status = WaitingStatus("Waiting for container to be ready...")
             event.defer()

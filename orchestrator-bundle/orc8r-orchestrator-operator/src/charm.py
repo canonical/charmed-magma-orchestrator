@@ -12,7 +12,7 @@ from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
 from lightkube.resources.apps_v1 import StatefulSet
 from ops.charm import CharmBase
 from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, ModelError
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 from ops.pebble import ConnectionError, ExecError, Layer
 
 logger = logging.getLogger(__name__)
@@ -74,18 +74,15 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         )
 
     def _on_install(self, event):
+        if not self._container.can_connect():
+            event.defer()
+            return
         self._write_config_files()
 
     def _write_config_files(self):
         self._write_orchestrator_config()
         self._write_metricsd_config()
         self._write_analytics_config()
-        if self._elasticsearch_config_is_valid:
-            self._write_elastic_config()
-        else:
-            self.unit.status = BlockedStatus(
-                "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
-            )
 
     def _write_orchestrator_config(self):
         orchestrator_config = (
@@ -127,16 +124,17 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
 
     def _on_elasticsearch_url_config_changed(self, event):
         # TODO: Elasticsearch url should be passed through a relationship (not a config)
+        if not self._container.can_connect():
+            event.defer()
+            return
         if self._elasticsearch_config_is_valid:
             self._write_elastic_config()
-            if self._container.can_connect():
-                try:
-                    self._container.get_service(self._service_name)
-                    logger.info("Restarting service")
-                    self._container.restart(self._service_name)
-                except ModelError:
-                    logger.info("Service is not yet started, doing nothing")
-                    pass
+            try:
+                logger.info("Restarting service")
+                self._container.restart(self._service_name)
+                self.unit.status = ActiveStatus()
+            except RuntimeError:
+                logger.info("Service is not yet started, doing nothing")
         else:
             self.unit.status = BlockedStatus(
                 "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
@@ -308,6 +306,8 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
     @property
     def _elasticsearch_config_is_valid(self) -> bool:
         elasticsearch_url = self.model.config.get("elasticsearch-url")
+        if not elasticsearch_url:
+            return False
         if re.match("^[a-zA-Z0-9._-]+:[0-9]+$", elasticsearch_url):
             return True
         else:
