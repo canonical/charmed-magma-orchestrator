@@ -13,7 +13,7 @@ from lightkube.resources.apps_v1 import StatefulSet
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
-from ops.pebble import ConnectionError, ExecError, Layer
+from ops.pebble import ConnectionError, ExecError, Layer, APIError
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +133,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                 logger.info("Restarting service")
                 self._container.restart(self._service_name)
                 self.unit.status = ActiveStatus()
-            except RuntimeError:
+            except APIError:
                 logger.info("Service is not yet started, doing nothing")
         else:
             self.unit.status = BlockedStatus(

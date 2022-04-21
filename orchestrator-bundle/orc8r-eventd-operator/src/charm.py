@@ -9,6 +9,7 @@ from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServ
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus
+from ops.pebble import APIError
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ class MagmaOrc8rEventdCharm(CharmBase):
                     logger.info("Restarting service")
                     self._orc8r_base._container.restart(self._orc8r_base._service_name)
                     self.unit.status = ActiveStatus()
-                except RuntimeError:
+                except APIError:
                     logger.info("Service is not yet started, doing nothing")
                     pass
         else:
