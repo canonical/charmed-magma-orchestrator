@@ -129,7 +129,7 @@ class Orc8rBase(Object):
             self.charm.unit.status = BlockedStatus("Waiting for database relation to be created")
             event.defer()
             return
-        if not self._db_relation_created:
+        if not self._db_relation_established:
             self.charm.unit.status = WaitingStatus(
                 "Waiting for database relation to be established..."
             )
