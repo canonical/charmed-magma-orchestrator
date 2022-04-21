@@ -6,6 +6,7 @@ from unittest.mock import PropertyMock, patch
 
 from ops import testing
 from ops.model import BlockedStatus
+from ops.pebble import APIError
 
 from charm import MagmaOrc8rOrchestratorCharm
 
@@ -111,10 +112,17 @@ class TestCharm(unittest.TestCase):
             "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
         )
 
+    @patch("ops.model.Container.restart")
     @patch("ops.model.Container.push")
     def test_given_good_elasticsearch_config_when_on_config_changed_event_then_elasticsearch_config_file_is_created(  # noqa: E501
-        self, patch_push
+        self, patch_push, patch_restart
     ):
+        patch_restart.side_effect = APIError(
+            body={"bla": "blo"},
+            code=400,
+            status="whatever status",
+            message="whatever message",
+        )
         hostname = "blablabla"
         port = 80
         config = {"elasticsearch-url": f"{hostname}:{port}"}

@@ -13,7 +13,7 @@ from lightkube.resources.apps_v1 import StatefulSet
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
-from ops.pebble import ConnectionError, ExecError, Layer, APIError
+from ops.pebble import APIError, ConnectionError, ExecError, Layer
 
 logger = logging.getLogger(__name__)
 
