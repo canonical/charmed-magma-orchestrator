@@ -5,6 +5,7 @@
 import logging
 from pathlib import Path
 
+import time
 import pytest
 import yaml
 from pytest_operator.plugin import OpsTest  # type: ignore[import]  # noqa: F401

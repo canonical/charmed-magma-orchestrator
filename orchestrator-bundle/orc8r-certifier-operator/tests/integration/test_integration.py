@@ -5,6 +5,7 @@
 import logging
 from pathlib import Path
 
+import time
 import pytest
 import yaml
 from pytest_operator.plugin import OpsTest  # type: ignore[import]  # noqa: F401
@@ -35,6 +36,7 @@ class TestOrc8rCertifier:
             config={"domain": "example.com"},
             trust=True,
         )
+        time.sleep(10)
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
         )
