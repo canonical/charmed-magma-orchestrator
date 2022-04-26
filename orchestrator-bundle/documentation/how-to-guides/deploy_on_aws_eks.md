@@ -51,7 +51,7 @@ The deployment is completed when all services are in the `Active-Idle` state.
 Retrieve the self-signed certificate:
 
 ```bash
-juju scp orc8r-certifier/0:/tmp/certs/admin_operator.pfx admin_operator.pfx
+juju scp orc8r-certifier/0:/var/opt/magma/certs/admin_operator.pfx admin_operator.pfx
 ```
 
 The default password is `password123`.

@@ -407,8 +407,8 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     @property
     def _domain_config_is_valid(self) -> bool:
-        elasticsearch_url = self.model.config.get("domain")
-        if not elasticsearch_url:
+        domain = self.model.config.get("domain")
+        if not domain:
             return False
         return True
 
