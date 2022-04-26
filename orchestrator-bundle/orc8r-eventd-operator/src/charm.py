@@ -57,7 +57,6 @@ class MagmaOrc8rEventdCharm(CharmBase):
                     self.unit.status = ActiveStatus()
                 except APIError:
                     logger.info("Service is not yet started, doing nothing")
-                    pass
         else:
             self.unit.status = BlockedStatus(
                 "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
