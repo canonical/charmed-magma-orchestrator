@@ -47,7 +47,7 @@ def generate_certificate(
             critical=False,
         )
     certificate_builder._version = x509.Version.v1
-    cert = certificate_builder.sign(private_key, hashes.SHA256())
+    cert = certificate_builder.sign(private_key, hashes.SHA256())  # type: ignore[arg-type]
     return cert.public_bytes(serialization.Encoding.PEM)
 
 
@@ -70,7 +70,7 @@ def generate_csr(private_key: bytes, subject: str, country: str = "US") -> bytes
     csr = (
         x509.CertificateSigningRequestBuilder()
         .subject_name(subject)
-        .sign(signing_key, hashes.SHA256())
+        .sign(signing_key, hashes.SHA256())  # type: ignore[arg-type]
     )
     csr_bytes = csr.public_bytes(serialization.Encoding.PEM)
     return csr_bytes
@@ -98,14 +98,14 @@ def generate_ca(
         ]
     )
     subject_identifier_object = x509.SubjectKeyIdentifier.from_public_key(
-        private_key_object.public_key()
+        private_key_object.public_key()  # type: ignore[arg-type]
     )
     subject_identifier = key_identifier = subject_identifier_object.public_bytes()
     cert = (
         x509.CertificateBuilder()
         .subject_name(subject)
         .issuer_name(issuer)
-        .public_key(private_key_object.public_key())
+        .public_key(private_key_object.public_key())  # type: ignore[arg-type]
         .serial_number(x509.random_serial_number())
         .not_valid_before(datetime.datetime.utcnow())
         .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=validity))
@@ -122,7 +122,7 @@ def generate_ca(
             x509.BasicConstraints(ca=True, path_length=None),
             critical=True,
         )
-        .sign(private_key_object, hashes.SHA256())
+        .sign(private_key_object, hashes.SHA256())  # type: ignore[arg-type]
     )
     return cert.public_bytes(serialization.Encoding.PEM)
 

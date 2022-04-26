@@ -215,7 +215,7 @@ def test_given_certificate_created_when_verify_public_key_then_no_exception_is_t
     private_key_object = serialization.load_pem_private_key(ca_key, password=None)
     public_key = private_key_object.public_key()
 
-    public_key.verify(  # type: ignore[call-arg]
+    public_key.verify(  # type: ignore[union-attr, call-arg]
         certificate_object.signature,
         certificate_object.tbs_certificate_bytes,
         padding.PKCS1v15(),  # type: ignore[arg-type]
