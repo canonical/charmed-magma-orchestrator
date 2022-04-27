@@ -79,7 +79,7 @@ Create these A records in your managed domain:
 | `*.nms.<your domain>`                   | `<nginx-proxy External IP>`            |
 
 
-## 7. Verify the deployment
+## Verify the deployment
 
 Get the master organization's username and password:
 
