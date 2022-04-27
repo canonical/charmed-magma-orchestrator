@@ -69,7 +69,7 @@ juju deploy magma-orc8r --overlay overlay.yaml --trust --channel=edge
 
 The deployment is completed when all services are in the `Active-Idle` state.
 
-## 4. Import the HTTPS Certificate
+## 4. Import the admin operator HTTPS certificate
 
 Retrieve the self-signed certificate:
 
@@ -77,23 +77,15 @@ Retrieve the self-signed certificate:
 juju scp --container="magma-orc8r-certifier" orc8r-certifier/0:/var/opt/magma/certs/..data/admin_operator.pfx admin_operator.pfx
 ```
 
-The default password is `password123`.
+> The default password to open the admin_operator.pfx file is `password123`. To choose a different 
+> password, re-deploy orc8r-certifier with the `passphrase` juju config.
 
-> **_NOTE:_** The default password can be changed by deploying the certifier charm using
-> the Juju config `passphrase`.
+## 5. Create the orchestrator admin user
 
-## 5. Setup Orchestrator
-
-Create the Orchestrator admin user:
+Create the user:
 
 ```bash
 juju run-action orc8r-orchestrator/0 create-orchestrator-admin-user
-```
-
-Get the master organization's username and password:
-
-```bash
-juju run-action nms-magmalte/0 get-admin-credentials --wait
 ```
 
 ## 6. Setup DNS
@@ -117,5 +109,11 @@ script.
 
 ## 7. Verify the deployment
 
+Get the master organization's username and password:
+
+```bash
+juju run-action nms-magmalte/0 get-admin-credentials --wait
+```
+
 Confirm successful deployment by visiting `https://master.nms.<your domain>` and logging in
-with the `<admin email>` and `<admin password>` provided above.
+with the `admin-username` and `admin-password` outputted here.

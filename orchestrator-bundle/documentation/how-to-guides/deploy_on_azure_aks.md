@@ -1,7 +1,7 @@
-# How-to: Deploy Magma Orchestrator on AWS with EKS
+# How-to: Deploy Magma Orchestrator on Azure with AKS
 
-The goal of this document is to detail how to deploy Magma's Orchestrator on AWS with EKS. To do so,
-we will setup EKS, bootstrap a Juju controller, deploy Magma Orchestrator and configure A
+The goal of this document is to detail how to deploy Magma's Orchestrator on Azure with AKS. To do so,
+we will set up a AKS cluster, bootstrap a Juju controller, deploy Magma Orchestrator and configure A
 records.
 
 ### Pre-requisites
@@ -15,16 +15,14 @@ From a Ubuntu 20.04 machine, install the following tools:
 
 - [Juju](https://juju.is/docs/olm/installing-juju)
 - [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/)
-- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-- [eksctl](https://docs.aws.amazon.com/eks/latest/userguide/eksctl.html)
 
-Log in to your AWS account via the AWS CLI tool (instructions
-[here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html)).
+## 2. Deploy Kubernetes on Azure using AKS
 
-## 2. Deploy Kubernetes on AWS using EKS
+Follow this [guide](<https://juju.is/docs/olm/azure-kubernetes-service-(azure-aks)>) to deploy a
+Kubernetes cluster using AKS and bootstrap a Juju controller.
 
-Follow this [guide](<https://juju.is/docs/olm/amazon-elastic-kubernetes-service-(amazon-eks)#heading--install-the-juju-client>) to deploy a Kubernetes cluster using EKS and bootstrap a Juju controller.
-
+> **Node size:** Select virtual machines with at least 8 GB of RAM, 8 vCPU's and 12 data disks.
+ 
 ## 3. Deploy charmed magma orchestrator
 
 From your Ubuntu machine, create an `overlay.yaml` file that contains the following:
@@ -67,22 +65,22 @@ juju run-action orc8r-orchestrator/0 create-orchestrator-admin-user
 
 ## 6. Setup DNS
 
-To configure Route53, on your Ubuntu machine clone the `charmed-magma` project:
+Navigate to the Azure Portal -> Kubernetes Services -> <your cluster name> -> Services and ingresses and note the addresses associated to the
+following services:
 
-```bash
-git clone https://github.com/canonical/charmed-magma.git
-```
+- `nginx-proxy`
+- `orc8r-bootstrap-nginx`
+- `orc8r-clientcert-nginx`
+- `orc8r-nginx-proxy`
 
-Navigate to the `route53_integrator` directory and run the main script:
+Create these A records in your managed domain:
 
-```bash
-cd charmed-magma/orchestrator-bundle/tools/route53_integrator
-pip3 install -r requirements.txt
-python3 main.py --hosted_zone=<your domain> --namespace <your model>
-```
-
-Configure DNS records on your managed domain name to use the Route53 nameservers outputted by the
-script.
+| Hostname                                | Address                                |
+|-----------------------------------------|----------------------------------------|
+| `bootstrapper-controller.<your domain>` | `<orc8r-bootstrap-nginx External IP>`  |
+| `api.<your domain>`                     | `<orc8r-nginx-proxy External IP>`      |
+| `controller.<your domain>`              | `<orc8r-clientcert-nginx External IP>` |
+| `*.nms.<your domain>`                   | `<nginx-proxy External IP>`            |
 
 ## 7. Verify the deployment
 
