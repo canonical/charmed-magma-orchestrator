@@ -66,7 +66,7 @@ changed by deploying the certifier charm using the Juju config `passphrase`.
 You can retrieve the `admin_operator.pfx` file using the following command:
 
 ```bash
-juju scp orc8r-certifier/0:/tmp/certs/admin_operator.pfx admin_operator.pfx
+juju scp --container="magma-orc8r-certifier" orc8r-certifier/0:/var/opt/magma/certs/..data/admin_operator.pfx admin_operator.pfx
 ```
 
 The cert can now be loaded in your browser.
