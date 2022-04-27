@@ -15,7 +15,7 @@ containers:
 resources:
   magma-orc8r-accessd-image:
     type: oci-image
-    description: OCI image for magma-orc8r-accessd (docker.artifactory.magmacore.org/controller:1.6.0)
+    description: OCI image for magma-orc8r-accessd
     upstream-source: docker.artifactory.magmacore.org/controller:1.6.0
 
 requires:

@@ -3,7 +3,7 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import Mock, call, patch
+from unittest.mock import call, patch
 
 from ops import testing
 
@@ -22,6 +22,12 @@ class MockModel:
 
 
 class TestCharm(unittest.TestCase):
+    """
+    Unit tests for charms that leverage the `orc8r_base` and `orc8r_base_db` libraries are
+    done at the library level. This file only contains tests for additional functionality not
+    present in the base libraries.
+    """
+
     @patch(
         "charm.KubernetesServicePatch",
         lambda charm, ports, additional_labels, additional_annotations: None,
@@ -30,13 +36,10 @@ class TestCharm(unittest.TestCase):
         self.harness = testing.Harness(MagmaOrc8rMetricsdCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
-        self.maxDiff = None
 
     @patch("ops.model.Container.push")
     def test_given_new_charm_when_on_install_event_then_config_file_is_created(self, patch_push):
-        event = Mock()
-
-        self.harness.charm._on_install(event)
+        self.harness.charm.on.install.emit()
 
         calls = [
             call(

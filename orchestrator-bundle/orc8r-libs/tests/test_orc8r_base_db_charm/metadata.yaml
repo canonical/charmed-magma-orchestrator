@@ -1,23 +1,28 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-name: magma-orc8r-directoryd
+name: magma-orc8r-dummy
 description: |
-  magma-orc8r-directoryd stores subscriber identity (e.g. IMSI, IP address, MAC address) and location 
+  magma-orc8r-dummy stores subscriber identity (e.g. IMSI, IP address, MAC address) and location 
   (gateway hardware ID).
 summary: |
-  magma-orc8r-directoryd stores subscriber identity and location.
+  magma-orc8r-dummy stores subscriber identity and location.
 
 containers:
-  magma-orc8r-directoryd:
-    resource: magma-orc8r-directoryd-image
+  magma-orc8r-dummy:
+    resource: magma-orc8r-dummy-image
 
 resources:
-  magma-orc8r-directoryd-image:
+  magma-orc8r-dummy-image:
     type: oci-image
-    description: OCI image for magma-orc8r-directoryd (docker.artifactory.magmacore.org/controller:1.6.0)
+    description: OCI image for magma-orc8r-dummy (docker.artifactory.magmacore.org/controller:1.6.0)
     upstream-source: docker.artifactory.magmacore.org/controller:1.6.0
 
 requires:
   db:
     interface: pgsql
+
+provides:
+  magma-orc8r-dummy:
+    interface:
+      magma-orc8r-dummy

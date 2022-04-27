@@ -54,7 +54,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         )
         self._service_patcher = KubernetesServicePatch(
             charm=self,
-            ports=[("magmalte", 8081, 8081)],
+            ports=[("magmalte", 8081)],
             service_name="magmalte",
             additional_labels={
                 "app.kubernetes.io/part-of": "magma",

@@ -13,8 +13,6 @@ containers:
   magma-orc8r-certifier:
     resource: magma-orc8r-certifier-image
     mounts:
-      - storage: certs
-        location: /tmp/certs
       - storage: config
         location: /var/opt/magma/configs/orc8r
 
@@ -25,11 +23,6 @@ resources:
     upstream-source: docker.artifactory.magmacore.org/controller:1.6.0
 
 storage:
-  certs:
-    type: filesystem
-    description: Temp certs storage
-    minimum-size: 1M
-    location: /tmp/certs
   config:
     type: filesystem
     description: Configs storage
@@ -37,7 +30,7 @@ storage:
 
 provides:
   certifier:
-    interface: certs
+    interface: magma-orc8r-certifier
 
 requires:
   db:

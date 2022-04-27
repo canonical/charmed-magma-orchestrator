@@ -8,7 +8,7 @@ from ops.charm import CharmBase
 from ops.main import main
 
 
-class MagmaOrc8rHACharm(CharmBase):
+class MagmaOrc8rDummyCharm(CharmBase):
     """Charm the service."""
 
     def __init__(self, *args):
@@ -24,7 +24,7 @@ class MagmaOrc8rHACharm(CharmBase):
         startup_command = (
             "/usr/bin/envdir "
             "/var/opt/magma/envdir "
-            "/var/opt/magma/bin/ha "
+            "/var/opt/magma/bin/dummy "
             "-logtostderr=true "
             "-v=0"
         )
@@ -32,4 +32,4 @@ class MagmaOrc8rHACharm(CharmBase):
 
 
 if __name__ == "__main__":
-    main(MagmaOrc8rHACharm)
+    main(MagmaOrc8rDummyCharm)

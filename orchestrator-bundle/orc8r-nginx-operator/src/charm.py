@@ -41,14 +41,14 @@ class MagmaOrc8rNginxCharm(CharmBase):
         self.service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[
-                ("health", 80, 80, 32035),
-                ("clientcert", 8443, 8443, 30130),
-                ("open", 8444, 8444, 31694),
-                ("api", 443, 9443, 30794),
+                ("health", 80),
+                ("clientcert", 8443),
+                ("open", 8444),
+                ("api", 443, 9443),
             ],
             service_type="LoadBalancer",
             service_name="orc8r-nginx-proxy",
-            additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
+            additional_labels={"app.kubernetes.io/part-of": "orc8r"},
             additional_selectors={"app.kubernetes.io/name": "orc8r-nginx"},
         )
 

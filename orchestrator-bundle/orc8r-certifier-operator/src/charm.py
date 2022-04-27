@@ -7,15 +7,17 @@ import logging
 
 import ops.lib
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
-from lightkube import Client, codecs
+from lightkube import Client
 from lightkube.core.exceptions import ApiError
 from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
+from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.apps_v1 import StatefulSet
+from lightkube.resources.core_v1 import Secret
 from lightkube.resources.core_v1 import Secret as SecretRes
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
-from ops.pebble import Layer
+from ops.pebble import Layer, PathError
 from pgconnstr import ConnectionString  # type: ignore[import]
 
 from client_relations import ClientRelations
@@ -35,6 +37,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     DB_NAME = "magma_dev"
     BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
+    BASE_CERTS_PATH = "/var/opt/magma/certs"
 
     # TODO: The various URL's should be provided through relationships
     PROMETHEUS_URL = "http://orc8r-prometheus:9090"
@@ -57,6 +60,11 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self._db.on.database_relation_joined, self._on_database_relation_joined
         )
         self.framework.observe(self.on.remove, self._on_remove)
+        self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self._nms_certs_secret_name = "nms-certs"
+        self._orc8r_certs_secret_name = "orc8r-certs"
+        self._nms_certs_data = {}
+        self._orc8r_certs_data = {}
         self._service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[("grpc", 9180, 9086)],
@@ -65,9 +73,8 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                 "orc8r.io/analytics_collector": "true",
             },
         )
-        self.framework.observe(self.on.install, self._on_install)
 
-    def _write_config_file(self):
+    def _write_metricsd_config_file(self):
         metricsd_config = (
             f'prometheusQueryAddress: "{self.PROMETHEUS_URL}"\n'
             f'alertmanagerApiURL: "{self.ALERTMANAGER_URL}/api/v2"\n'
@@ -79,14 +86,25 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     def _on_install(self, event):
         """Runs each time the charm is installed."""
-        if self._container.can_connect():
-            self._write_config_file()
-            self._create_magma_orc8r_secrets()
-            self._mount_certifier_certs()
-        else:
-            self.unit.status = WaitingStatus("Waiting for container to be ready...")
+        if not self._container.can_connect():
             event.defer()
             return
+        self._write_metricsd_config_file()
+
+    def _on_config_changed(self, event):
+        if not self._domain_config_is_valid:
+            self.unit.status = BlockedStatus("Config 'domain' is not valid")
+            logger.warning("Config 'domain' not valid")
+            event.defer()
+            return
+        if not self._secrets_are_created:
+            self._create_magma_orc8r_secrets()
+        if not self._container.can_connect():
+            logger.info("Can't connect to container - Deferring")
+            event.defer()
+            return
+        if not self._certs_are_mounted:
+            self._mount_certifier_certs()
 
     def _on_magma_orc8r_certifier_pebble_ready(self, event):
         """Triggered when pebble is ready."""
@@ -95,7 +113,11 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             event.defer()
             return
         if not self._db_relation_established:
-            self.unit.status = WaitingStatus("Waiting for database relation to be established...")
+            self.unit.status = WaitingStatus("Waiting for database relation to be established")
+            event.defer()
+            return
+        if not self._certs_are_mounted:
+            self.unit.status = WaitingStatus("Waiting for certs to be mounted")
             event.defer()
             return
         self._configure_magma_orc8r_certifier(event)
@@ -111,8 +133,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         """
         if self.unit.is_leader():
             event.database = self.DB_NAME
-        else:
-            event.defer()
 
     @property
     def _db_relation_created(self) -> bool:
@@ -131,15 +151,13 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     def _create_magma_orc8r_secrets(self):
         self.unit.status = MaintenanceStatus("Creating Magma Orc8r secrets...")
-        if self.model.config["use-self-signed-ssl-certs"]:
-            self._generate_self_signed_ssl_certs()
+        self._get_certificates()
         self._create_secrets()
 
-    def _mount_certifier_certs(self) -> None:
+    def _mount_certifier_certs(self):
         """Patch the StatefulSet to include certs secret mount."""
-        self.unit.status = MaintenanceStatus(
-            "Mounting additional volumes required by the magma-orc8r-certifier container..."
-        )
+        self.unit.status = MaintenanceStatus("Mounting additional volumes")
+        logger.info("Mounting volumes for certificates")
         client = Client()
         stateful_set = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
         stateful_set.spec.template.spec.volumes.extend(self._magma_orc8r_certifier_volumes)  # type: ignore[attr-defined]  # noqa: E501
@@ -147,7 +165,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self._magma_orc8r_certifier_volume_mounts
         )
         client.patch(StatefulSet, name=self.app.name, obj=stateful_set, namespace=self._namespace)
-        logger.info("Additional K8s resources for magma-orc8r-certifier container applied!")
+        logger.info("Additional volumes for certificates are mounted")
 
     def _configure_magma_orc8r_certifier(self, event):
         """Adds layer to pebble config if the proposed config is different from the current one."""
@@ -166,32 +184,44 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     def _on_remove(self, event):
         self.unit.status = MaintenanceStatus("Removing Magma Orc8r secrets...")
-        self._delete_secrets()
 
-    def _create_secrets(self) -> bool:
-        """Creates Secrets which are provided by the magma-orc8r-certifier."""
-        client = Client()
-        for secret_name, secret_data in self._magma_orc8r_certifier_secrets.items():
-            context = {
-                "app_name": self.app.name,
-                "namespace": self._namespace,
-                "secret_name": secret_name,
-                "secret_data": secret_data,
-            }
-            with open("src/templates/secret.yaml.j2") as secret_manifest:
-                secret = codecs.load_all_yaml(secret_manifest, context=context)[0]
-                try:
-                    client.create(secret)
-                except ApiError as e:
-                    logger.info("Failed to create Secret: %s.", str(secret.to_dict()))
-                    raise e
+        self._delete_k8s_secret(secret_name=self._nms_certs_secret_name)
+        self._delete_k8s_secret(secret_name=self._orc8r_certs_secret_name)
+
+    def _create_secrets(self):
+        logger.info("Creating k8s secrets")
+        self._create_k8s_secret(
+            secret_name=self._nms_certs_secret_name, secret_data=self._nms_certs_data
+        )
+        self._create_k8s_secret(
+            secret_name=self._orc8r_certs_secret_name, secret_data=self._orc8r_certs_data
+        )
+
+    def _create_k8s_secret(self, secret_name: str, secret_data: dict):
+        logger.info(f"Creating k8s secret for '{secret_name}'")
+        secret = Secret(
+            apiVersion="v1",
+            data=secret_data,
+            metadata=ObjectMeta(
+                labels={"app.kubernetes.io/name": self.app.name},
+                name=secret_name,
+                namespace=self._namespace,
+            ),
+            kind="Secret",
+            type="Opaque",
+        )
+        try:
+            client = Client()
+            client.create(secret)
+        except ApiError as e:
+            logger.info("Failed to create Secret: %s.", str(secret.to_dict()))
+            raise e
         return True
 
-    def _delete_secrets(self) -> None:
+    def _delete_k8s_secret(self, secret_name: str) -> None:
         """Delete Kubernetes secrets created by the create_secrets method."""
         client = Client()
-        for secret in self._magma_orc8r_certifier_secrets:
-            client.delete(SecretRes, name=secret, namespace=self._namespace)
+        client.delete(SecretRes, name=secret_name, namespace=self._namespace)
         logger.info("Deleted Kubernetes secrets!")
 
     def _generate_self_signed_ssl_certs(self):
@@ -202,7 +232,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     def _generate_admin_operator_cert(self):
         """
-        Generates admin operator certificates and pushes them to the "/tmp/certs" directory.
+        Generates admin operator certificates.
         List of certificates:
             1. Generates Certifier certificate to sign AdminOperator certificate
             2. Generate AdminOperator private key to create CSR
@@ -231,24 +261,25 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             password=self.model.config["passphrase"],
         )
 
-        self._container.push("/tmp/certs/certifier.key", certifier_key)
-        self._container.push("/tmp/certs/certifier.pem", certifier_pem)
-        self._container.push("/tmp/certs/admin_operator.key.pem", admin_operator_key_pem)
-        self._container.push("/tmp/certs/admin_operator.csr", admin_operator_csr)
-        self._container.push("/tmp/certs/admin_operator.pem", admin_operator_pem)
-        self._container.push("/tmp/certs/admin_operator.pfx", admin_operator_pfx)
+        self._nms_certs_data["admin_operator.key.pem"] = self._encode_in_base64(
+            admin_operator_key_pem
+        )
+        self._nms_certs_data["admin_operator.pem"] = self._encode_in_base64(admin_operator_pem)
+        self._orc8r_certs_data["admin_operator.pem"] = self._encode_in_base64(admin_operator_pem)
+        self._orc8r_certs_data["certifier.key"] = self._encode_in_base64(certifier_key)
+        self._orc8r_certs_data["certifier.pem"] = self._encode_in_base64(certifier_pem)
+        self._orc8r_certs_data["admin_operator.pfx"] = self._encode_in_base64(admin_operator_pfx)
 
     def _generate_bootstrapper_cert(self):
         """
-        Generates bootstrapper certificate and pushes it to the "/tmp/certs" directory.
+        Generates bootstrapper certificate.
         """
         bootstrapper_key = generate_private_key()
-        self._container.push("/tmp/certs/bootstrapper.key", bootstrapper_key)
+        self._orc8r_certs_data["bootstrapper.key"] = self._encode_in_base64(bootstrapper_key)
 
     def _generate_controller_cert(self):
         """
-        Generates controller certificates and pushes them to the "/tmp/certs" directory. List of
-        certificates:
+        Generates controller certificates. List of certificates:
             1. Generate rootCA certificate to sign AdminOperator certificate
             2. Generate Controller private key to create CSR
             3. Generate Controller CSR (Certificate Signing Request)
@@ -270,11 +301,44 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             ca_key=rootca_key,
         )
 
-        self._container.push("/tmp/certs/rootCA.key", rootca_key)
-        self._container.push("/tmp/certs/rootCA.pem", rootca_pem)
-        self._container.push("/tmp/certs/controller.key", controller_key)
-        self._container.push("/tmp/certs/controller.csr", controller_csr)
-        self._container.push("/tmp/certs/controller.crt", controller_crt)
+        self._nms_certs_data["controller.crt"] = self._encode_in_base64(controller_crt)
+        self._nms_certs_data["controller.key"] = self._encode_in_base64(controller_key)
+        self._orc8r_certs_data["controller.crt"] = self._encode_in_base64(controller_crt)
+        self._orc8r_certs_data["controller.key"] = self._encode_in_base64(controller_key)
+        self._orc8r_certs_data["rootCA.key"] = self._encode_in_base64(rootca_key)
+        self._orc8r_certs_data["rootCA.pem"] = self._encode_in_base64(rootca_pem)
+
+    def _get_certificates(self):
+        if self.model.config["use-self-signed-ssl-certs"]:
+            self._generate_self_signed_ssl_certs()
+        else:
+            self._load_certificates_from_configs()
+
+    def _load_certificates_from_configs(self):
+        self._nms_certs_data = {
+            "admin_operator.key.pem": self._encode_in_base64(
+                self.model.config["admin-operator-key-pem"].encode()
+            ),
+            "admin_operator.pem": self._encode_in_base64(
+                self.model.config["admin-operator-pem"].encode()
+            ),
+            "controller.crt": self._encode_in_base64(self.model.config["controller-crt"].encode()),
+            "controller.key": self._encode_in_base64(self.model.config["controller-key"].encode()),
+        }
+        self._orc8r_certs_data = {
+            "admin_operator.pem": self._encode_in_base64(
+                self.model.config["admin-operator-pem"].encode()
+            ),
+            "controller.crt": self._encode_in_base64(self.model.config["controller-crt"].encode()),
+            "controller.key": self._encode_in_base64(self.model.config["controller-key"].encode()),
+            "bootstrapper.key": self._encode_in_base64(
+                self.model.config["bootstrapper-key"].encode()
+            ),
+            "certifier.key": self._encode_in_base64(self.model.config["certifier-key"].encode()),
+            "certifier.pem": self._encode_in_base64(self.model.config["certifier-pem"].encode()),
+            "rootCA.key": self._encode_in_base64(self.model.config["rootCA-key"].encode()),
+            "rootCA.pem": self._encode_in_base64(self.model.config["rootCA-pem"].encode()),
+        }
 
     @property
     def _pebble_layer(self) -> Layer:
@@ -288,10 +352,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                         "command": "/usr/bin/envdir "
                         "/var/opt/magma/envdir "
                         "/var/opt/magma/bin/certifier "
-                        "-cac=/var/opt/magma/certs/certifier.pem "
-                        "-cak=/var/opt/magma/certs/certifier.key "
-                        "-vpnc=/var/opt/magma/certs/vpn_ca.crt "
-                        "-vpnk=/var/opt/magma/certs/vpn_ca.key "
+                        f"-cac={self.BASE_CERTS_PATH}/certifier.pem "
+                        f"-cak={self.BASE_CERTS_PATH}/certifier.key "
+                        f"-vpnc={self.BASE_CERTS_PATH}/vpn_ca.crt "
+                        f"-vpnk={self.BASE_CERTS_PATH}/vpn_ca.key "
                         "-logtostderr=true "
                         "-v=0",
                         "environment": {
@@ -312,91 +376,12 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         )
 
     @property
-    def _magma_orc8r_certifier_secrets(self) -> dict:
-        """Return a list of secrets to be provided by the magma-orc8r-certifier."""
-        if self.model.config["use-self-signed-ssl-certs"]:
-            nms_certs_data = {
-                "controller.crt": self._encode_in_base64(
-                    open("/tmp/certs/controller.crt", "rb").read()
-                ),
-                "controller.key": self._encode_in_base64(
-                    open("/tmp/certs/controller.key", "rb").read()
-                ),
-                "admin_operator.key.pem": self._encode_in_base64(
-                    open("/tmp/certs/admin_operator.key.pem", "rb").read()
-                ),
-                "admin_operator.pem": self._encode_in_base64(
-                    open("/tmp/certs/admin_operator.pem", "rb").read()
-                ),
-            }
-            orc8r_certs_data = {
-                "admin_operator.pem": self._encode_in_base64(
-                    open("/tmp/certs/admin_operator.pem", "rb").read()
-                ),
-                "controller.crt": self._encode_in_base64(
-                    open("/tmp/certs/controller.crt", "rb").read()
-                ),
-                "controller.key": self._encode_in_base64(
-                    open("/tmp/certs/controller.key", "rb").read()
-                ),
-                "bootstrapper.key": self._encode_in_base64(
-                    open("/tmp/certs/bootstrapper.key", "rb").read()
-                ),
-                "certifier.key": self._encode_in_base64(
-                    open("/tmp/certs/certifier.key", "rb").read()
-                ),
-                "certifier.pem": self._encode_in_base64(
-                    open("/tmp/certs/certifier.pem", "rb").read()
-                ),
-                "rootCA.key": self._encode_in_base64(open("/tmp/certs/rootCA.key", "rb").read()),
-                "rootCA.pem": self._encode_in_base64(open("/tmp/certs/rootCA.pem", "rb").read()),
-            }
-        else:
-            nms_certs_data = {
-                "admin_operator.key.pem": self._encode_in_base64(
-                    self.model.config["admin-operator-key-pem"].encode()
-                ),
-                "admin_operator.pem": self._encode_in_base64(
-                    self.model.config["admin-operator-pem"].encode()
-                ),
-                "controller.crt": self._encode_in_base64(
-                    self.model.config["controller-crt"].encode()
-                ),
-                "controller.key": self._encode_in_base64(
-                    self.model.config["controller-key"].encode()
-                ),
-            }
-            orc8r_certs_data = {
-                "admin_operator.pem": self._encode_in_base64(
-                    self.model.config["admin-operator-pem"].encode()
-                ),
-                "controller.crt": self._encode_in_base64(
-                    self.model.config["controller-crt"].encode()
-                ),
-                "controller.key": self._encode_in_base64(
-                    self.model.config["controller-key"].encode()
-                ),
-                "bootstrapper.key": self._encode_in_base64(
-                    self.model.config["bootstrapper-key"].encode()
-                ),
-                "certifier.key": self._encode_in_base64(
-                    self.model.config["certifier-key"].encode()
-                ),
-                "certifier.pem": self._encode_in_base64(
-                    self.model.config["certifier-pem"].encode()
-                ),
-                "rootCA.key": self._encode_in_base64(self.model.config["rootCA-key"].encode()),
-                "rootCA.pem": self._encode_in_base64(self.model.config["rootCA-pem"].encode()),
-            }
-        return {"nms-certs": nms_certs_data, "orc8r-certs": orc8r_certs_data}
-
-    @property
     def _magma_orc8r_certifier_volumes(self) -> list:
         """Returns a list of volumes required by the magma-orc8r-certifier container."""
         return [
             Volume(
                 name="certs",
-                secret=SecretVolumeSource(secretName="orc8r-certs"),
+                secret=SecretVolumeSource(secretName=self._orc8r_certs_secret_name),
             ),
         ]
 
@@ -405,7 +390,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         """Returns a list of volume mounts required by the magma-orc8r-certifier container."""
         return [
             VolumeMount(
-                mountPath="/var/opt/magma/certs",
+                mountPath=self.BASE_CERTS_PATH,
                 name="certs",
                 readOnly=True,
             ),
@@ -419,6 +404,35 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             return ConnectionString(db_relation.data[db_relation.app]["master"])
         except (AttributeError, KeyError):
             return None
+
+    @property
+    def _domain_config_is_valid(self) -> bool:
+        domain = self.model.config.get("domain")
+        if not domain:
+            return False
+        return True
+
+    @property
+    def _certs_are_mounted(self) -> bool:
+        try:
+            self._container.pull(f"{self.BASE_CERTS_PATH}/certifier.pem")
+            logger.info("Certificates are already mounted to workload")
+            return True
+        except PathError:
+            logger.info("Certificates are not already mounted to workload")
+            return False
+
+    @property
+    def _secrets_are_created(self) -> bool:
+        client = Client()
+        try:
+            client.get(res=Secret, name="orc8r-certs")
+            client.get(res=Secret, name="nms-certs")
+            logger.info("Secrets are already created")
+            return True
+        except ApiError:
+            logger.info("Kubernetes secrets are not already created")
+            return False
 
     @staticmethod
     def _encode_in_base64(byte_string: bytes):

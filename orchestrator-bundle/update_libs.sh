@@ -43,15 +43,6 @@ orc8r-subscriberdb
 orc8r-tenants
 "
 
-charms_using_no_base_lib="
-nms-magmalte
-nms-nginx-proxy
-orc8r-bootstrapper
-orc8r-certifier
-orc8r-nginx
-orc8r-orchestrator
-"
-
 for charm in ${charms_using_orc8r_base_lib}; do
     fetch_orc8r_base_lib ${charm}
 done

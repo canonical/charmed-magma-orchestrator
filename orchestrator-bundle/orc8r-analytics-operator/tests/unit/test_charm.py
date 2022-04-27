@@ -3,7 +3,7 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import Mock, call, patch
+from unittest.mock import call, patch
 
 from ops import testing
 
@@ -13,6 +13,12 @@ testing.SIMULATE_CAN_CONNECT = True
 
 
 class Test(unittest.TestCase):
+    """
+    Unit tests for charms that leverage the `orc8r_base` and `orc8r_base_db` libraries are
+    done at the library level. This file only contains tests for additional functionality not
+    present in the base libraries.
+    """
+
     @patch(
         "charm.KubernetesServicePatch",
         lambda charm, ports, additional_labels: None,
@@ -24,9 +30,7 @@ class Test(unittest.TestCase):
 
     @patch("ops.model.Container.push")
     def test_given_new_charm_when_on_install_event_then_config_files_are_created(self, patch_push):
-        event = Mock()
-
-        self.harness.charm._on_install(event)
+        self.harness.charm.on.install.emit()
 
         calls = [
             call(

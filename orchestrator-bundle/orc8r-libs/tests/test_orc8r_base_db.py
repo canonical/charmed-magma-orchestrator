@@ -5,12 +5,14 @@ import unittest
 from unittest.mock import Mock, PropertyMock, patch
 
 from charms.magma_orc8r_libs.v0.orc8r_base_db import Orc8rBase
+from ops import testing
 from ops.model import ActiveStatus
-from ops.testing import Harness
 from pgconnstr import ConnectionString  # type: ignore[import]
 from test_orc8r_base_db_charm.src.charm import (  # type: ignore[import]
-    MagmaOrc8rDirectorydCharm,
+    MagmaOrc8rDummyCharm,
 )
+
+testing.SIMULATE_CAN_CONNECT = True
 
 
 class TestCharm(unittest.TestCase):
@@ -31,7 +33,7 @@ class TestCharm(unittest.TestCase):
         lambda charm, ports, additional_labels: None,
     )
     def setUp(self):
-        self.harness = Harness(MagmaOrc8rDirectorydCharm)
+        self.harness = testing.Harness(MagmaOrc8rDummyCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
 
@@ -51,10 +53,6 @@ class TestCharm(unittest.TestCase):
         db_event.master.host = postgres_host
         db_event.master.port = postgres_port
         return db_event
-
-    def test_given_initial_status_when_get_pebble_plan_then_content_is_empty(self):
-        initial_plan = self.harness.get_container_pebble_plan("magma-orc8r-directoryd")
-        self.assertEqual(initial_plan.to_yaml(), "{}\n")
 
     @patch("ops.model.Unit.is_leader")
     def test_given_pod_is_leader_when_database_relation_joined_event_then_database_is_set_correctly(  # noqa: E501
@@ -82,33 +80,34 @@ class TestCharm(unittest.TestCase):
         new_callable=PropertyMock,
     )
     @patch(
-        "charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._namespace", new_callable=PropertyMock
+        "charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase.namespace", new_callable=PropertyMock
     )
     @patch("charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._db_relation_created")
     @patch("charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._db_relation_established")
-    def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_orc8r_directoryd_service_content(  # noqa: E501
+    def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_orc8r_dummy_service_content(  # noqa: E501
         self,
         db_relation_established,
         db_relation_created,
         patch_namespace,
         get_db_connection_string,
     ):
-        event = Mock()
         namespace = "whatever"
         db_relation_established.return_value = True
         db_relation_created.return_value = True
         patch_namespace.return_value = namespace
         get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
-        self.harness.charm.on.magma_orc8r_directoryd_pebble_ready.emit(event)
+
+        self.harness.container_pebble_ready("magma-orc8r-dummy")
+
         expected_plan = {
             "services": {
-                "magma-orc8r-directoryd": {
+                "magma-orc8r-dummy": {
                     "startup": "enabled",
-                    "summary": "magma-orc8r-directoryd",
+                    "summary": "magma-orc8r-dummy",
                     "override": "replace",
                     "command": "/usr/bin/envdir "
                     "/var/opt/magma/envdir "
-                    "/var/opt/magma/bin/directoryd "
+                    "/var/opt/magma/bin/dummy "
                     "-logtostderr=true "
                     "-v=0",
                     "environment": {
@@ -119,14 +118,14 @@ class TestCharm(unittest.TestCase):
                         f"sslmode=disable",
                         "SQL_DRIVER": "postgres",
                         "SQL_DIALECT": "psql",
-                        "SERVICE_HOSTNAME": "magma-orc8r-directoryd",
+                        "SERVICE_HOSTNAME": "magma-orc8r-dummy",
                         "SERVICE_REGISTRY_MODE": "k8s",
                         "SERVICE_REGISTRY_NAMESPACE": namespace,
                     },
                 },
             },
         }
-        updated_plan = self.harness.get_container_pebble_plan("magma-orc8r-directoryd").to_dict()
+        updated_plan = self.harness.get_container_pebble_plan("magma-orc8r-dummy").to_dict()
         self.assertEqual(expected_plan, updated_plan)
 
     @patch(
@@ -138,11 +137,10 @@ class TestCharm(unittest.TestCase):
     def test_db_relation_added_when_get_status_then_status_is_active(
         self, db_relation_established, db_relation_created, get_db_connection_string
     ):
-        event = Mock()
         db_relation_established.return_value = True
         db_relation_created.return_value = True
         get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
 
-        self.harness.charm.on.magma_orc8r_directoryd_pebble_ready.emit(event)
+        self.harness.container_pebble_ready("magma-orc8r-dummy")
 
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus())

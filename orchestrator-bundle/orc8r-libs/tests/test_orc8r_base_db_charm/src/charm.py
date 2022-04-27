@@ -7,7 +7,7 @@ from ops.charm import CharmBase
 from ops.main import main
 
 
-class MagmaOrc8rDirectorydCharm(CharmBase):
+class MagmaOrc8rDummyCharm(CharmBase):
     def __init__(self, *args):
         """Creates a new instance of this object for each event."""
         super().__init__(*args)
@@ -20,7 +20,7 @@ class MagmaOrc8rDirectorydCharm(CharmBase):
         startup_command = (
             "/usr/bin/envdir "
             "/var/opt/magma/envdir "
-            "/var/opt/magma/bin/directoryd "
+            "/var/opt/magma/bin/dummy "
             "-logtostderr=true "
             "-v=0"
         )
@@ -29,4 +29,4 @@ class MagmaOrc8rDirectorydCharm(CharmBase):
 
 
 if __name__ == "__main__":
-    main(MagmaOrc8rDirectorydCharm)
+    main(MagmaOrc8rDummyCharm)

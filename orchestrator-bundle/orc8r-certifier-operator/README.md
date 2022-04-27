@@ -28,6 +28,8 @@ juju relate orc8r-certifier postgresql-k8s:db
 - **rootCA-pem** - Allows passing own trusted cert (see [magma](https://www.magmacore.org/) for details)
 - **domain** - Domain for self-signed certs. Use only when **use-self-signed-ssl-certs** set to **True**
 
+> Note that once configs have been applied to orc8r-certifier, it is not possible to re-configure.
+> To change config, please re-deploy it with the correct config.
 
 ### Usage
 
@@ -64,7 +66,7 @@ changed by deploying the certifier charm using the Juju config `passphrase`.
 You can retrieve the `admin_operator.pfx` file using the following command:
 
 ```bash
-juju scp orc8r-certifier/0:/tmp/certs/admin_operator.pfx admin_operator.pfx
+juju scp --container="magma-orc8r-certifier" orc8r-certifier/0:/var/opt/magma/certs/..data/admin_operator.pfx admin_operator.pfx
 ```
 
 The cert can now be loaded in your browser.

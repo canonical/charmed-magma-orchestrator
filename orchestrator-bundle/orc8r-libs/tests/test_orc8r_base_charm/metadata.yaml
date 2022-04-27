@@ -1,20 +1,25 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-name: magma-orc8r-ha
+name: magma-orc8r-dummy
 description: |
-  magma-orc8r-ha provides interface for secondary gateways in an HA deployment to find offload status
-  for UEs
+  magma-orc8r-dummy provides interface for secondary gateways in an HA deployment to find offload 
+  status for UEs
 summary: |
-  magma-orc8r-ha provides interface for secondary gateways in an HA deployment to find offload status
-  for UEs
+  magma-orc8r-dummy provides interface for secondary gateways in an HA deployment to find offload 
+  status for UEs
 
 containers:
-  magma-orc8r-ha:
-    resource: magma-orc8r-ha-image
+  magma-orc8r-dummy:
+    resource: magma-orc8r-dummy-image
 
 resources:
-  magma-orc8r-ha-image:
+  magma-orc8r-dummy-image:
     type: oci-image
-    description: OCI image for magma-orc8r-ha (docker.artifactory.magmacore.org/controller:1.6.0)
+    description: OCI image for magma-orc8r-dummy (docker.artifactory.magmacore.org/controller:1.6.0)
     upstream-source: docker.artifactory.magmacore.org/controller:1.6.0
+
+provides:
+  magma-orc8r-dummy:
+    interface:
+      magma-orc8r-dummy

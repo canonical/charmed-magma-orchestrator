@@ -2,11 +2,15 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import Mock, PropertyMock, call, patch
+from unittest.mock import PropertyMock, patch
 
-from ops.testing import Harness
+from ops import testing
+from ops.model import BlockedStatus
+from ops.pebble import APIError
 
 from charm import MagmaOrc8rOrchestratorCharm
+
+testing.SIMULATE_CAN_CONNECT = True
 
 
 class TestCharm(unittest.TestCase):
@@ -15,20 +19,15 @@ class TestCharm(unittest.TestCase):
         lambda charm, ports, additional_labels, additional_annotations: None,
     )
     def setUp(self):
-        self.harness = Harness(MagmaOrc8rOrchestratorCharm)
+        self.harness = testing.Harness(MagmaOrc8rOrchestratorCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
-
-    def test_given_initial_status_when_get_pebble_plan_then_content_is_empty(self):
-        initial_plan = self.harness.get_container_pebble_plan("magma-orc8r-orchestrator")
-        self.assertEqual(initial_plan.to_yaml(), "{}\n")
 
     @patch("charm.MagmaOrc8rOrchestratorCharm._namespace", new_callable=PropertyMock)
     @patch("charm.MagmaOrc8rOrchestratorCharm._relations_ready")
     def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_nms_magmalte_service_content(
         self, relations_ready, patch_namespace
     ):
-        event = Mock()
         namespace = "whatever"
         relations_ready.return_value = True
         patch_namespace.return_value = namespace
@@ -50,44 +49,101 @@ class TestCharm(unittest.TestCase):
                 },
             },
         }
-        self.harness.charm.on.magma_orc8r_orchestrator_pebble_ready.emit(event)
+        self.harness.container_pebble_ready("magma-orc8r-orchestrator")
         updated_plan = self.harness.get_container_pebble_plan("magma-orc8r-orchestrator").to_dict()
         self.assertEqual(expected_plan, updated_plan)
 
     @patch("ops.model.Container.push")
-    def test_given_new_charm_when_on_install_event_then_config_file_is_created(self, patch_push):
-        event = Mock()
+    def test_given_pebble_ready_when_on_install_event_then_orchestrator_config_file_is_created(  # noqa: E501
+        self, patch_push
+    ):
+        self.harness.container_pebble_ready("magma-orc8r-orchestrator")
+        self.harness.charm.on.install.emit()
 
-        self.harness.charm._on_install(event)
+        patch_push.assert_any_call(
+            "/var/opt/magma/configs/orc8r/orchestrator.yml",
+            '"prometheusGRPCPushAddress": "orc8r-prometheus-cache:9092"\n'
+            '"prometheusPushAddresses":\n'
+            '- "http://orc8r-prometheus-cache:9091/metrics"\n'
+            '"useGRPCExporter": true\n',
+        )
 
-        calls = [
-            call(
-                "/var/opt/magma/configs/orc8r/orchestrator.yml",
-                '"prometheusGRPCPushAddress": "orc8r-prometheus-cache:9092"\n'
-                '"prometheusPushAddresses":\n'
-                '- "http://orc8r-prometheus-cache:9091/metrics"\n'
-                '"useGRPCExporter": true\n',
-            ),
-            call(
-                "/var/opt/magma/configs/orc8r/metricsd.yml",
-                'prometheusQueryAddress: "http://orc8r-prometheus:9090"\n'
-                'alertmanagerApiURL: "http://orc8r-alertmanager:9093/api/v2"\n'
-                'prometheusConfigServiceURL: "http://orc8r-prometheus:9100/v1"\n'
-                'alertmanagerConfigServiceURL: "http://orc8r-alertmanager:9101/v1"\n'
-                '"profile": "prometheus"\n',
-            ),
-            call(
-                "/var/opt/magma/configs/orc8r/analytics.yml",
-                '"appID": ""\n'
-                '"appSecret": ""\n'
-                '"categoryName": "magma"\n'
-                '"exportMetrics": false\n'
-                '"metricExportURL": ""\n'
-                '"metricsPrefix": ""\n',
-            ),
-            call(
-                "/var/opt/magma/configs/orc8r/elastic.yml",
-                '"elasticHost": "orc8r-elasticsearch"\n' '"elasticPort": 80\n',
-            ),
-        ]
-        patch_push.assert_has_calls(calls)
+    @patch("ops.model.Container.push")
+    def test_given_new_charm_when_on_install_event_then_metricsd_config_file_is_created(
+        self, patch_push
+    ):
+        self.harness.container_pebble_ready("magma-orc8r-orchestrator")
+        self.harness.charm.on.install.emit()
+
+        patch_push.assert_any_call(
+            "/var/opt/magma/configs/orc8r/metricsd.yml",
+            'prometheusQueryAddress: "http://orc8r-prometheus:9090"\n'
+            'alertmanagerApiURL: "http://orc8r-alertmanager:9093/api/v2"\n'
+            'prometheusConfigServiceURL: "http://orc8r-prometheus:9100/v1"\n'
+            'alertmanagerConfigServiceURL: "http://orc8r-alertmanager:9101/v1"\n'
+            '"profile": "prometheus"\n',
+        )
+
+    @patch("ops.model.Container.push")
+    def test_given_new_charm_when_on_install_event_then_analytics_config_file_is_created(
+        self, patch_push
+    ):
+        self.harness.container_pebble_ready("magma-orc8r-orchestrator")
+        self.harness.charm.on.install.emit()
+
+        patch_push.assert_any_call(
+            "/var/opt/magma/configs/orc8r/analytics.yml",
+            '"appID": ""\n'
+            '"appSecret": ""\n'
+            '"categoryName": "magma"\n'
+            '"exportMetrics": false\n'
+            '"metricExportURL": ""\n'
+            '"metricsPrefix": ""\n',
+        )
+
+    def test_given_default_elasticsearch_config_when_on_config_changed_event_then_status_is_blocked(  # noqa: E501
+        self,
+    ):
+        key_values = {"elasticsearch-url": ""}
+        self.harness.container_pebble_ready("magma-orc8r-orchestrator")
+        self.harness.update_config(key_values=key_values)
+
+        assert self.harness.charm.unit.status == BlockedStatus(
+            "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
+        )
+
+    @patch("ops.model.Container.restart")
+    @patch("ops.model.Container.push")
+    def test_given_good_elasticsearch_config_when_on_config_changed_event_then_elasticsearch_config_file_is_created(  # noqa: E501
+        self, patch_push, patch_restart
+    ):
+        patch_restart.side_effect = APIError(
+            body={"bla": "blo"},
+            code=400,
+            status="whatever status",
+            message="whatever message",
+        )
+        hostname = "blablabla"
+        port = 80
+        config = {"elasticsearch-url": f"{hostname}:{port}"}
+        self.harness.container_pebble_ready("magma-orc8r-orchestrator")
+
+        self.harness.update_config(key_values=config)
+
+        patch_push.assert_any_call(
+            "/var/opt/magma/configs/orc8r/elastic.yml",
+            f'"elasticHost": "{hostname}"\n' f'"elasticPort": {port}\n',
+        )
+
+    @patch("ops.model.Container.push")
+    def test_given_bad_elasticsearch_config_when_on_config_changed_event_then_status_is_blocked(
+        self, _
+    ):
+        config = {"elasticsearch-url": "hello"}
+        self.harness.container_pebble_ready("magma-orc8r-orchestrator")
+
+        self.harness.update_config(key_values=config)
+
+        assert self.harness.charm.unit.status == BlockedStatus(
+            "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
+        )

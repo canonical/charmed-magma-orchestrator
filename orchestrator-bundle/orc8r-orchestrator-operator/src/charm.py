@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import logging
+import re
 from typing import List
 
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
@@ -12,7 +13,7 @@ from lightkube.resources.apps_v1 import StatefulSet
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
-from ops.pebble import ConnectionError, ExecError, Layer
+from ops.pebble import APIError, ConnectionError, ExecError, Layer
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +29,6 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
     PROMETHEUS_CACHE_METRICS_URL = "http://orc8r-prometheus-cache:9091"
     ALERTMANAGER_URL = "http://orc8r-alertmanager:9093"
     ALERTMANAGER_CONFIGURER_URL = "http://orc8r-alertmanager:9101"
-    ELASTICSEARCH_URL = "orc8r-elasticsearch"
-    ELASTICSEARCH_PORT = 80
 
     def __init__(self, *args):
         """An instance of this object everytime an event occurs."""
@@ -49,6 +48,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         )
         self.framework.observe(self.on.set_log_verbosity_action, self._set_log_verbosity_action)
         self.framework.observe(self.on.install, self._on_install)
+        self.framework.observe(self.on.config_changed, self._on_elasticsearch_url_config_changed)
         self._service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[("grpc", 9180, 9112), ("http", 8080, 10112)],
@@ -74,15 +74,26 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         )
 
     def _on_install(self, event):
-        self._write_config_file()
+        if not self._container.can_connect():
+            event.defer()
+            return
+        self._write_config_files()
 
-    def _write_config_file(self):
+    def _write_config_files(self):
+        self._write_orchestrator_config()
+        self._write_metricsd_config()
+        self._write_analytics_config()
+
+    def _write_orchestrator_config(self):
         orchestrator_config = (
             f'"prometheusGRPCPushAddress": "{self.PROMETHEUS_CACHE_GRPC_URL}"\n'
             '"prometheusPushAddresses":\n'
             f'- "{self.PROMETHEUS_CACHE_METRICS_URL}/metrics"\n'
             '"useGRPCExporter": true\n'
         )
+        self._container.push(f"{self.BASE_CONFIG_PATH}/orchestrator.yml", orchestrator_config)
+
+    def _write_metricsd_config(self):
         metricsd_config = (
             f'prometheusQueryAddress: "{self.PROMETHEUS_URL}"\n'
             f'alertmanagerApiURL: "{self.ALERTMANAGER_URL}/api/v2"\n'
@@ -90,6 +101,9 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             f'alertmanagerConfigServiceURL: "{self.ALERTMANAGER_CONFIGURER_URL}/v1"\n'
             '"profile": "prometheus"\n'
         )
+        self._container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
+
+    def _write_analytics_config(self):
         analytics_config = (
             '"appID": ""\n'
             '"appSecret": ""\n'
@@ -98,15 +112,33 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             '"metricExportURL": ""\n'
             '"metricsPrefix": ""\n'
         )
-        elastic_config = (
-            f'"elasticHost": "{self.ELASTICSEARCH_URL}"\n'
-            f'"elasticPort": {self.ELASTICSEARCH_PORT}\n'
-        )
-
-        self._container.push(f"{self.BASE_CONFIG_PATH}/orchestrator.yml", orchestrator_config)
-        self._container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
         self._container.push(f"{self.BASE_CONFIG_PATH}/analytics.yml", analytics_config)
+
+    def _write_elastic_config(self):
+        logging.info("Writing elasticsearch config to elastic.yml")
+        elasticsearch_url, elasticsearch_port = self._get_elasticsearch_config()
+        elastic_config = (
+            f'"elasticHost": "{elasticsearch_url}"\n' f'"elasticPort": {elasticsearch_port}\n'
+        )
         self._container.push(f"{self.BASE_CONFIG_PATH}/elastic.yml", elastic_config)
+
+    def _on_elasticsearch_url_config_changed(self, event):
+        # TODO: Elasticsearch url should be passed through a relationship (not a config)
+        if not self._container.can_connect():
+            event.defer()
+            return
+        if self._elasticsearch_config_is_valid:
+            self._write_elastic_config()
+            try:
+                logger.info("Restarting service")
+                self._container.restart(self._service_name)
+                self.unit.status = ActiveStatus()
+            except APIError:
+                logger.info("Service is not yet started, doing nothing")
+        else:
+            self.unit.status = BlockedStatus(
+                "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
+            )
 
     def _create_orchestrator_admin_user_action(self, event):
         process = self._container.exec(
@@ -265,6 +297,21 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                 },
             }
         )
+
+    def _get_elasticsearch_config(self) -> tuple:
+        elasticsearch_url = self.model.config.get("elasticsearch-url")
+        elasticsearch_url_split = elasticsearch_url.split(":")
+        return elasticsearch_url_split[0], elasticsearch_url_split[1]
+
+    @property
+    def _elasticsearch_config_is_valid(self) -> bool:
+        elasticsearch_url = self.model.config.get("elasticsearch-url")
+        if not elasticsearch_url:
+            return False
+        if re.match("^[a-zA-Z0-9._-]+:[0-9]+$", elasticsearch_url):
+            return True
+        else:
+            return False
 
     @property
     def _namespace(self) -> str:

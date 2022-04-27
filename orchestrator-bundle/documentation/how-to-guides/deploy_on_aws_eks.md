@@ -51,7 +51,7 @@ The deployment is completed when all services are in the `Active-Idle` state.
 Retrieve the self-signed certificate:
 
 ```bash
-juju scp orc8r-certifier/0:/tmp/certs/admin_operator.pfx admin_operator.pfx
+juju scp --container="magma-orc8r-certifier" orc8r-certifier/0:/var/opt/magma/certs/..data/admin_operator.pfx admin_operator.pfx
 ```
 
 The default password is `password123`.
@@ -91,9 +91,6 @@ python3 main.py --hosted_zone=<your domain> --namespace <your model>
 
 Configure DNS records on your managed domain name to use the Route53 nameservers outputted by the
 script.
-
-> **_NOTE:_** For Google domains, navigate to Google Domains -> DNS -> Custom Name Servers. Fill in 4 Name Server
-> boxes with the domains retrieved from the `route53_integrator` script.
 
 ## 7. Verify the deployment
 

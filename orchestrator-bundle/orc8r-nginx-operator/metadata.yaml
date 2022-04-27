@@ -22,6 +22,6 @@ requires:
   bootstrapper:
     interface: magma-orc8r-bootstrapper
   certifier:
-    interface: certs
+    interface: magma-orc8r-certifier
   obsidian:
     interface: magma-orc8r-obsidian
