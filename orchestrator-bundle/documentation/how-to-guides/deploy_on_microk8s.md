@@ -68,18 +68,12 @@ juju deploy magma-orc8r --overlay overlay.yaml --trust --channel=edge
 
 The deployment is completed when all services are in the `Active-Idle` state.
 
-## 4. Setup Orchestrator
+## 4. Create the orchestrator admin user
 
-Create the Orchestrator admin user:
+Create the user:
 
 ```bash
 juju run-action orc8r-orchestrator/0 create-orchestrator-admin-user
-```
-
-Get the master organization's username and password:
-
-```bash
-juju run-action nms-magmalte/0 get-admin-credentials --wait
 ```
 
 ## 5. Setup DNS
@@ -98,7 +92,14 @@ IP's of the specified Kubernetes services.
 
 > **_NOTE:_** External IP's can be retrieved with `kubectl get services -n <your model name> | grep LoadBalancer `
 
-## 7. Verify the deployment
+
+## 6. Verify the deployment
+
+Get the master organization's username and password:
+
+```bash
+juju run-action nms-magmalte/0 get-admin-credentials --wait
+```
 
 Confirm successful deployment by visiting `https://master.nms.<your domain>` and logging in
-with the `<admin email>` and `<admin password>` provided above.
+with the `admin-username` and `admin-password` outputted here.
