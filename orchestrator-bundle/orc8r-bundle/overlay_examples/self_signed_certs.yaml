@@ -1,4 +1,0 @@
-applications:
-  orc8r-certifier:
-    options:
-      domain: pizza.com
