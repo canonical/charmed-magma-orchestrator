@@ -56,9 +56,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Say hello
-        run: |
-          echo "Hello I'm the runner from prodstack"
       # - name: Setup operator environment
       #   run: |
       #     echo "# Install core snap"
@@ -110,6 +107,11 @@ jobs:
       #     for charm in ${charms}; do
       #       tox -c "${charm}" -e integration
       #     done
+      - name: Run integration tests for eventd
+        run: |
+          set -eux
+          tox -c ./orchestrator-bundle/orc8r-eventd-operator -e integration
+
       # - name: Clean up
       #   if: always()
       #   run: |
