@@ -32,3 +32,4 @@ jobs:
           upload-image: "false"
           channel: "${{ steps.channel.outputs.name }}"
           charm-path: ./orchestrator-bundle/orc8r-service-registry-operator
+          tag-prefix: "magma-orc8r-service-registry"

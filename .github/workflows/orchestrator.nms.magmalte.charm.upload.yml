@@ -32,3 +32,4 @@ jobs:
           upload-image: "false"
           channel: "${{ steps.channel.outputs.name }}"
           charm-path: ./orchestrator-bundle/nms-magmalte-operator
+          tag-prefix: "nms-magmalte"
