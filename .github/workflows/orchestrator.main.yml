@@ -100,19 +100,20 @@ jobs:
           sleep 180  # Microk8s needs time to initialize properly
           /usr/bin/sg microk8s -c "juju bootstrap --debug --verbose microk8s integration-tests --model-default test-mode=true --model-default automatically-retry-hooks=false --model-default logging-config='<root>=DEBUG'  --bootstrap-constraints=''"
 
-      # - name: Run integration tests
-      #   run: |
-      #     set -eux
-      #     #charms="$(find ./orchestrator-bundle/ -name tox.ini | grep operator)"
-      #     charms="./orchestrator-bundle/orc8r-bootstrapper-operator ./orchestrator-bundle/orc8r-nginx-operator"
-      #     for charm in ${charms}; do
-      #       tox -c "${charm}" -e integration
-      #     done
-
-      - name: Integration tests for eventd
+      - name: Run integration tests
         run: |
           set -eux
-          tox -c ./orchestrator-bundle/orc8r-eventd-operator -e integration
+          #charms="$(find ./orchestrator-bundle/ -name tox.ini | grep operator)"
+          #charms="./orchestrator-bundle/orc8r-bootstrapper-operator ./orchestrator-bundle/orc8r-nginx-operator"
+          charms="accessd analytics configurator ctraced device directoryd dispatcher eventd ha lte metricsd obsidian smsd state streamer subscriberdb subscriberdb-cache tenants"
+          for charm in ${charms}; do
+            tox -c "./orchestrator-bundle/magma-${charm}-operator" -e integration
+          done
+
+      # - name: Integration tests for eventd
+      #   run: |
+      #     set -eux
+      #     tox -c ./orchestrator-bundle/orc8r-eventd-operator -e integration
 
       - name: Clean up
         if: always()
