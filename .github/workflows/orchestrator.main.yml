@@ -108,7 +108,6 @@ jobs:
           #charms="$(find ./orchestrator-bundle/ -name tox.ini | grep operator)"
           #charms="./orchestrator-bundle/orc8r-bootstrapper-operator ./orchestrator-bundle/orc8r-nginx-operator"
           charms="accessd analytics configurator ctraced device directoryd dispatcher eventd ha lte metricsd obsidian smsd state streamer subscriberdb subscriberdb-cache tenants"
-
           for charm in ${charms}; do
             tox -c ./orchestrator-bundle/magma-${charm}-operator -e integration
           done
