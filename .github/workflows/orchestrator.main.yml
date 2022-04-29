@@ -112,7 +112,7 @@ jobs:
             tox -c ./orchestrator-bundle/orc8r-${charm}-operator -e integration
           done
 
-      # - name: Integration tests for eventd
+      # - name: Integration tests for one charm
       #   run: |
       #     set -eux
       #     tox -c ./orchestrator-bundle/orc8r-eventd-operator -e integration
