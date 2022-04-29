@@ -108,7 +108,7 @@ jobs:
           charms="accessd analytics configurator ctraced device directoryd dispatcher eventd ha lte metricsd obsidian smsd state streamer subscriberdb subscriberdb-cache tenants"
 
           for charm in ${charms}; do
-            tox -c "./orchestrator-bundle/magma-${charm}-operator" -e integration
+            tox -c ./orchestrator-bundle/magma-${charm}-operator -e integration
           done
 
       # - name: Integration tests for eventd
