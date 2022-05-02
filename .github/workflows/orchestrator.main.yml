@@ -6,50 +6,50 @@ on:
       - fix-integration-tests
 
 jobs:
-    # orchestrator-lint-report:
-    #   name: Lint report
-    #   runs-on: ubuntu-latest
-    #   steps:
-    #     - uses: actions/checkout@v2
-    #     - name: Install tox
-    #       run: pip install tox
-    #     - name: Run tests using tox
-    #       run: |
-    #         set -eux
-    #         charms="$(find ./orchestrator-bundle/ -name tox.ini)"
-    #         for charm in ${charms}; do
-    #           tox -c "${charm}" -e lint
-    #         done
+  # orchestrator-lint-report:
+  #   name: Lint report
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - name: Install tox
+  #       run: pip install tox
+  #     - name: Run tests using tox
+  #       run: |
+  #         set -eux
+  #         charms="$(find ./orchestrator-bundle/ -name tox.ini)"
+  #         for charm in ${charms}; do
+  #           tox -c "${charm}" -e lint
+  #         done
 
-    # orchestrator-static-analysis:
-    #   name: Static analysis
-    #   runs-on: ubuntu-latest
-    #   steps:
-    #     - uses: actions/checkout@v2
-    #     - name: Install tox
-    #       run: pip install tox
-    #     - name: Run tests using tox
-    #       run: |
-    #         set -eux
-    #         charms="$(find ./orchestrator-bundle/ -name tox.ini)"
-    #         for charm in ${charms}; do
-    #           tox -c "${charm}" -e static
-    #         done
+  # orchestrator-static-analysis:
+  #   name: Static analysis
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - name: Install tox
+  #       run: pip install tox
+  #     - name: Run tests using tox
+  #       run: |
+  #         set -eux
+  #         charms="$(find ./orchestrator-bundle/ -name tox.ini)"
+  #         for charm in ${charms}; do
+  #           tox -c "${charm}" -e static
+  #         done
 
-    # orchestrator-unit-tests-with-coverage:
-    #   name: Unit tests
-    #   runs-on: ubuntu-latest
-    #   steps:
-    #     - uses: actions/checkout@v2
-    #     - name: Install tox
-    #       run: pip install tox
-    #     - name: Run tests using tox
-    #       run: |
-    #         set -eux
-    #         charms="$(find ./orchestrator-bundle/ -name tox.ini)"
-    #         for charm in ${charms}; do
-    #           tox -c "${charm}" -e unit
-    #         done
+  # orchestrator-unit-tests-with-coverage:
+  #   name: Unit tests
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - name: Install tox
+  #       run: pip install tox
+  #     - name: Run tests using tox
+  #       run: |
+  #         set -eux
+  #         charms="$(find ./orchestrator-bundle/ -name tox.ini)"
+  #         for charm in ${charms}; do
+  #           tox -c "${charm}" -e unit
+  #         done
 
   orchestrator-integration-test:
     name: Integration tests
@@ -57,7 +57,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-        
+
       - name: Setup operator environment
         run: |
           echo "# Install core snap"
@@ -101,15 +101,16 @@ jobs:
           echo "# Bootstrap controller"
           sleep 180  # Microk8s needs time to initialize properly
           /usr/bin/sg microk8s -c "juju bootstrap --debug --verbose microk8s integration-tests --model-default test-mode=true --model-default automatically-retry-hooks=false --model-default logging-config='<root>=DEBUG'  --bootstrap-constraints=''"
+
       # TODO: Add certifier and certifier-related charms
       - name: Run integration tests
-      run: |
-        set -eux
-        #charms="$(find ./orchestrator-bundle/ -name tox.ini | grep operator)"
-        charms="accessd analytics configurator ctraced device directoryd dispatcher eventd ha lte metricsd obsidian smsd state streamer subscriberdb subscriberdb-cache tenants"
-        for charm in ${charms}; do
-          tox -c ./orchestrator-bundle/orc8r-${charm}-operator -e integration
-        done
+        run: |
+          set -eux
+          #charms="$(find ./orchestrator-bundle/ -name tox.ini | grep operator)"
+          charms="accessd analytics configurator ctraced device directoryd dispatcher eventd ha lte metricsd obsidian smsd state streamer subscriberdb subscriberdb-cache tenants"
+          for charm in ${charms}; do
+            tox -c ./orchestrator-bundle/orc8r-${charm}-operator -e integration
+          done
       - name: Clean up
         if: always()
         run: |
