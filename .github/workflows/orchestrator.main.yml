@@ -51,7 +51,7 @@ jobs:
 
   orchestrator-integration-test:
     name: Integration tests
-    runs-on: integration-testing
+    runs-on: prodstack-github-runner
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -111,6 +111,7 @@ jobs:
           for charm in ${charms}; do
             tox -c ./orchestrator-bundle/orc8r-${charm}-operator -e integration
           done
+
       - name: Clean up
         if: always()
         run: |
