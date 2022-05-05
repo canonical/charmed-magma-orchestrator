@@ -3,9 +3,9 @@
 # See LICENSE file for licensing details.
 
 import logging
+import time
 from pathlib import Path
 
-import time
 import pytest
 import yaml
 from pytest_operator.plugin import OpsTest  # type: ignore[import]  # noqa: F401
