@@ -109,8 +109,7 @@ jobs:
         run: |
           set -eux
           #charms="$(find ./orchestrator-bundle/ -name tox.ini | grep operator)"
-          #charms="accessd analytics configurator ctraced device directoryd dispatcher eventd ha lte metricsd obsidian smsd state streamer subscriberdb subscriberdb-cache tenants"
-          charms="lte"
+          charms="accessd analytics configurator ctraced device directoryd dispatcher eventd ha lte metricsd obsidian smsd state streamer subscriberdb subscriberdb-cache tenants"
           for charm in ${charms}; do
             tox -c ./orchestrator-bundle/orc8r-${charm}-operator -e integration
           done
