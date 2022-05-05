@@ -1,55 +1,55 @@
 name: main-branch
 
 on:
-  push:
+  pull_request:
     branches:
-      - fix-integration-tests
+      - main
 
 jobs:
-  # orchestrator-lint-report:
-  #   name: Lint report
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     - name: Install tox
-  #       run: pip install tox
-  #     - name: Run tests using tox
-  #       run: |
-  #         set -eux
-  #         charms="$(find ./orchestrator-bundle/ -name tox.ini)"
-  #         for charm in ${charms}; do
-  #           tox -c "${charm}" -e lint
-  #         done
+  orchestrator-lint-report:
+    name: Lint report
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: |
+          set -eux
+          charms="$(find ./orchestrator-bundle/ -name tox.ini)"
+          for charm in ${charms}; do
+            tox -c "${charm}" -e lint
+          done
 
-  # orchestrator-static-analysis:
-  #   name: Static analysis
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     - name: Install tox
-  #       run: pip install tox
-  #     - name: Run tests using tox
-  #       run: |
-  #         set -eux
-  #         charms="$(find ./orchestrator-bundle/ -name tox.ini)"
-  #         for charm in ${charms}; do
-  #           tox -c "${charm}" -e static
-  #         done
+  orchestrator-static-analysis:
+    name: Static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: |
+          set -eux
+          charms="$(find ./orchestrator-bundle/ -name tox.ini)"
+          for charm in ${charms}; do
+            tox -c "${charm}" -e static
+          done
 
-  # orchestrator-unit-tests-with-coverage:
-  #   name: Unit tests
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     - name: Install tox
-  #       run: pip install tox
-  #     - name: Run tests using tox
-  #       run: |
-  #         set -eux
-  #         charms="$(find ./orchestrator-bundle/ -name tox.ini)"
-  #         for charm in ${charms}; do
-  #           tox -c "${charm}" -e unit
-  #         done
+  orchestrator-unit-tests-with-coverage:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: |
+          set -eux
+          charms="$(find ./orchestrator-bundle/ -name tox.ini)"
+          for charm in ${charms}; do
+            tox -c "${charm}" -e unit
+          done
 
   orchestrator-integration-test:
     name: Integration tests
