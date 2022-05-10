@@ -63,7 +63,9 @@ class TestOrc8rBootstrapper:
             config={"domain": "example.com"},
             trust=True,
         )
-        await ops_test.model.wait_for_idle(apps=[CERTIFIER_APPLICATION_NAME], status="blocked", timeout=1000)
+        await ops_test.model.wait_for_idle(
+            apps=[CERTIFIER_APPLICATION_NAME], status="blocked", timeout=1000
+        )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
         )
