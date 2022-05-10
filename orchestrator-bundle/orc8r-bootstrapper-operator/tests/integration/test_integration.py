@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 
 import logging
-import time
 from pathlib import Path
 
 import pytest
@@ -35,11 +34,10 @@ class TestOrc8rBootstrapper:
         await ops_test.model.deploy(
             charm, resources=resources, application_name=APPLICATION_NAME, trust=True
         )
-        time.sleep(10)
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
         )
-        time.sleep(10)
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="orc8r-certifier:certifier"
         )
@@ -65,7 +63,7 @@ class TestOrc8rBootstrapper:
             config={"domain": "example.com"},
             trust=True,
         )
-        time.sleep(10)
+        await ops_test.model.wait_for_idle(apps=[CERTIFIER_APPLICATION_NAME], status="blocked", timeout=1000)
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
         )
