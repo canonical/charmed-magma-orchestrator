@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 
 import logging
-import time
 from pathlib import Path
 
 import pytest
@@ -39,11 +38,10 @@ class TestNmsNginxProxy:
         await ops_test.model.deploy(
             charm, resources=resources, application_name=APPLICATION_NAME, trust=True
         )
-        time.sleep(10)
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="orc8r-certifier:certifier"
         )
-        time.sleep(10)
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="nms-magmalte:magmalte"
         )
@@ -69,7 +67,9 @@ class TestNmsNginxProxy:
             config={"domain": "example.com"},
             trust=True,
         )
-        time.sleep(10)
+        await ops_test.model.wait_for_idle(
+            apps=[CERTIFIER_APPLICATION_NAME], status="blocked", timeout=1000
+        )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
         )
@@ -88,11 +88,12 @@ class TestNmsNginxProxy:
         await ops_test.model.deploy(
             charm, resources=resources, application_name=NMS_MAGMALTE_APPLICATION_NAME, trust=True
         )
-        time.sleep(10)
+        await ops_test.model.wait_for_idle(
+            apps=[NMS_MAGMALTE_APPLICATION_NAME], status="blocked", timeout=1000
+        )
         await ops_test.model.add_relation(
             relation1=NMS_MAGMALTE_APPLICATION_NAME, relation2="postgresql-k8s:db"
         )
-        time.sleep(10)
         await ops_test.model.add_relation(
             relation1=NMS_MAGMALTE_APPLICATION_NAME, relation2="orc8r-certifier:certifier"
         )

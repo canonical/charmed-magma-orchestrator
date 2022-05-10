@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 
 import logging
-import time
 from pathlib import Path
 
 import pytest
