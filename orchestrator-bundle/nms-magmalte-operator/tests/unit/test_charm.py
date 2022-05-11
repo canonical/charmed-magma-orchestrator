@@ -186,3 +186,53 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
 
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
+
+    @patch("ops.model.Container.exec")
+    @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
+    @patch("charm.MagmaNmsMagmalteCharm._create_nms_admin_user")
+    @patch("ops.charm.ActionEvent")
+    def test_given_juju_action_when_callback_is_invoked_create_nms_admin_user_is_called(
+        self, action_event, _create_nms_admin_user, _, mock_exec
+    ):
+        mock_exec.return_value = MockExec()
+        self.harness.charm._create_nms_admin_user_action(action_event)
+        _create_nms_admin_user.assert_called_once()
+
+    @patch("ops.model.Container.exec")
+    @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
+    @patch("charm.MagmaNmsMagmalteCharm._create_nms_admin_user")
+    @patch("ops.charm.ActionEvent")
+    def test_given_juju_action_when_user_creation_fails_then_action_raises_an_error(
+        self, action_event, _create_nms_admin_user, _, mock_exec
+    ):
+        _create_nms_admin_user.return_value = Exception()
+        self.harness.charm._create_nms_admin_user_action(action_event)
+        self.assertRaises(Exception, self.harness.charm._create_nms_admin_user_action)
+
+    @patch("charm.MagmaNmsMagmalteCharm._relations_ready", new_callable=PropertyMock)
+    def test_given_juju_action_when_relation_is_not_realized_then_get_admin_credentials_fails(
+        self, relations_ready
+    ):
+        relations_ready.return_value = False
+        action_event = Mock()
+        self.harness.charm._on_get_admin_credentials(action_event)
+        self.assertEqual(
+            action_event.fail.call_args,
+            [("Relations aren't yet set up. Please try again in a few minutes",)],
+        )
+
+    @patch("charm.MagmaNmsMagmalteCharm._relations_ready", new_callable=PropertyMock)
+    @patch("charm.MagmaNmsMagmalteCharm._get_admin_username")
+    @patch("charm.MagmaNmsMagmalteCharm._get_admin_password")
+    @patch("ops.charm.ActionEvent")
+    def test_given_juju_action_when_relation_is_realized_then_get_admin_credentials_returns_values(
+        self, action_event, _get_admin_password, _get_admin_username, relations_ready
+    ):
+        relations_ready.return_value = True
+        _get_admin_password.return_value = "password"
+        _get_admin_username.return_value = "username"
+        self.harness.charm._on_get_admin_credentials(action_event)
+        self.assertEqual(
+            action_event.set_results.call_args,
+            [({"admin-username": "username", "admin-password": "password"},)],
+        )
