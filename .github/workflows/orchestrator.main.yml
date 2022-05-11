@@ -112,11 +112,11 @@ jobs:
           #charms="$(find ./orchestrator-bundle/ -name tox.ini | grep operator)"
           #charms="accessd analytics configurator ctraced device directoryd dispatcher eventd ha lte metricsd obsidian smsd state streamer subscriberdb subscriberdb-cache tenants"
           charms=" certifier orchestrator bootstrapper nginx"
-          for charm in ${charms}; do
-            tox -c ./orchestrator-bundle/orc8r-${charm}-operator -e integration
-          done
-          tox -c ../orchestrator-bundle/nms-nginx-proxy-operator -e integration
-          tox -c ../orchestrator-bundle/nms-magmalte-operator -e integration
+          #for charm in ${charms}; do
+          #  tox -c ./orchestrator-bundle/orc8r-${charm}-operator -e integration
+          #done
+          tox -c ./orchestrator-bundle/nms-nginx-proxy-operator -e integration
+          tox -c ./orchestrator-bundle/nms-magmalte-operator -e integration
 
       - name: Clean up
         if: always()
