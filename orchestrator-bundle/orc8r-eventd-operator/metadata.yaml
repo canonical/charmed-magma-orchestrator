@@ -23,8 +23,8 @@ containers:
 resources:
   magma-orc8r-eventd-image:
     type: oci-image
-    description: OCI image for magma-orc8r-eventd (docker.artifactory.magmacore.org/controller:1.6.0)
-    upstream-source: docker.artifactory.magmacore.org/controller:1.6.0
+    description: OCI image for magma-orc8r-eventd (docker.artifactory.magmacore.org/controller:1.7.0)
+    upstream-source: docker.artifactory.magmacore.org/controller:1.7.0
 
 storage:
   config:

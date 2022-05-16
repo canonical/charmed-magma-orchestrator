@@ -13,4 +13,4 @@ juju deploy magma-orc8r-metricsd orc8r-metricsd
 
 ## OCI Images
 
-Default: docker.artifactory.magmacore.org/controller:1.6.0
+Default: docker.artifactory.magmacore.org/controller:1.7.0
