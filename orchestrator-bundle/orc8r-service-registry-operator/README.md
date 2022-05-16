@@ -13,4 +13,4 @@ juju deploy magma-orc8r-service-registry orc8r-service-registry
 
 ## OCI Images
 
-Default: docker.artifactory.magmacore.org/controller:1.6.0
+Default: docker.artifactory.magmacore.org/controller:1.7.0
