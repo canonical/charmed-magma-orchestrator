@@ -1,9 +1,10 @@
 name: main-branch
 
+# TODO: Change this to on PR to main branch
 on:
-  pull_request:
+  push:
     branches:
-      - main
+      - integration-tests-draft
 
 jobs:
   orchestrator-lint-report:
