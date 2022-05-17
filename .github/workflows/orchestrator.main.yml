@@ -54,7 +54,7 @@ jobs:
 
   orchestrator-integration-test:
     name: Integration tests
-    runs-on: prodstack-github-runner
+    runs-on: self-hosted
     steps:
       - name: Checkout
         uses: actions/checkout@v2
