@@ -6,6 +6,7 @@ from unittest.mock import Mock, PropertyMock, patch
 
 from ops import testing
 from ops.model import ActiveStatus, BlockedStatus
+from ops.pebble import ExecError
 from pgconnstr import ConnectionString  # type: ignore[import]
 
 from charm import MagmaNmsMagmalteCharm
@@ -14,11 +15,18 @@ testing.SIMULATE_CAN_CONNECT = True
 
 
 class MockExec:
+    def __init__(self, *args, **kwargs):
+        if "raise_exec_error" in kwargs:
+            self.raise_exec_error = True
+        else:
+            self.raise_exec_error = False
+
     def exec(self, *args, **kwargs):
         pass
 
     def wait_output(self, *args, **kwargs):
-        pass
+        if hasattr(self, "raise_exec_error") and self.raise_exec_error:
+            raise ExecError(command=["blob"], exit_code=1234, stdout="", stderr="")
 
 
 class TestCharm(unittest.TestCase):
@@ -116,7 +124,6 @@ class TestCharm(unittest.TestCase):
     def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_nms_magmalte_service_content(
         self, relations_ready, patch_namespace, _, get_db_connection_string, mock_exec
     ):
-        mock_exec.return_value = MockExec()
         namespace = "whatever"
         relations_ready.return_value = True
         patch_namespace.return_value = namespace
@@ -165,7 +172,6 @@ class TestCharm(unittest.TestCase):
     ):
         relations_ready.return_value = True
         get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
-        mock_exec.return_value = MockExec()
         event = Mock()
 
         self.harness.charm.on.magma_nms_magmalte_pebble_ready.emit(event)
@@ -180,7 +186,6 @@ class TestCharm(unittest.TestCase):
         self, relations_ready, get_db_connection_string, _, mock_exec
     ):
         relations_ready.return_value = True
-        mock_exec.return_value = MockExec()
         get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
 
         self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
@@ -189,25 +194,22 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.exec")
     @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
-    @patch("charm.MagmaNmsMagmalteCharm._create_nms_admin_user")
     @patch("ops.charm.ActionEvent")
-    def test_given_juju_action_when_callback_is_invoked_create_nms_admin_user_is_called(
-        self, action_event, _create_nms_admin_user, _, mock_exec
+    def test_given_juju_action_when_create_nms_admin_user_is_called_command_executed_on_container(
+        self, action_event, _, mock_exec
     ):
-        mock_exec.return_value = MockExec()
         self.harness.charm._create_nms_admin_user_action(action_event)
-        _create_nms_admin_user.assert_called_once()
+        mock_exec.assert_called_once()
 
     @patch("ops.model.Container.exec")
     @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
-    @patch("charm.MagmaNmsMagmalteCharm._create_nms_admin_user")
     @patch("ops.charm.ActionEvent")
     def test_given_juju_action_when_user_creation_fails_then_action_raises_an_error(
-        self, action_event, _create_nms_admin_user, _, mock_exec
+        self, action_event, _, mock_exec
     ):
-        _create_nms_admin_user.return_value = Exception()
-        self.harness.charm._create_nms_admin_user_action(action_event)
-        self.assertRaises(Exception, self.harness.charm._create_nms_admin_user_action)
+        mock_exec.return_value = MockExec(raise_exec_error=True)
+        with self.assertRaises(ExecError):
+            self.harness.charm._create_nms_admin_user_action(action_event)
 
     @patch("charm.MagmaNmsMagmalteCharm._relations_ready", new_callable=PropertyMock)
     def test_given_juju_action_when_relation_is_not_realized_then_get_admin_credentials_fails(
