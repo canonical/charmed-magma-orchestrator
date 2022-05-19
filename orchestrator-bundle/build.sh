@@ -1,14 +1,13 @@
 #!/bin/bash
 
-set -euo pipefail
+set -eo pipefail
 
 function build() {
   charm="$1"
     pushd "${charm}-operator/"
     charmcraft pack $DESTRUCTIVE_MODE
     mv "magma-${charm}_ubuntu-20.04-amd64.charm" "${charm}.charm"
-    $MOVE_CHAMS_TO_DIR
-    popd
+    eval $MOVE_TO_DIR
 }
 
 charms="
