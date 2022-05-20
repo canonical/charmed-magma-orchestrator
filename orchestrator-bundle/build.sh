@@ -8,6 +8,7 @@ function build() {
     charmcraft pack $DESTRUCTIVE_MODE
     mv "magma-${charm}_ubuntu-20.04-amd64.charm" "${charm}.charm"
     eval $MOVE_TO_DIR
+    popd
 }
 
 charms="
