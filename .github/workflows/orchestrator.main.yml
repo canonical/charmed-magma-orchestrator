@@ -119,10 +119,12 @@ jobs:
       - name: Run integration tests
         run: |
           set -eux
-          charms="$(find ./orchestrator-bundle/ -name tox.ini | grep operator)"
-          for charm in ${charms}; do
-            tox -c "${charm}" -e integration
-          done
+          #charms="$(find ./orchestrator-bundle/ -name tox.ini | grep operator)"
+          #for charm in ${charms}; do
+          #  tox -c "${charm}" -e integration
+          #done
+
+          tox -c "./orchestrator-bundle/orc8r-nginx-operator/tox.ini" -e integration
 
       - name: Clean up
         if: always()
