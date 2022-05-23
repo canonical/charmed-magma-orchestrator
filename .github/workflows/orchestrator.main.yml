@@ -116,15 +116,13 @@ jobs:
           /usr/bin/sudo apt-get --no-install-recommends -y -oDpkg::Use-Pty=0 --allow-downgrades install python3-venv=3.8.2-0ubuntu2 python3.8-venv=3.8.10-0ubuntu1~20.04.4
           /usr/bin/sudo apt-get --no-install-recommends -y -oDpkg::Use-Pty=0 --allow-downgrades install cargo=0.58.0-0ubuntu1~20.04.1 libffi-dev=3.3-4 libssh2-1=1.8.0-2.1build1 libssl-dev=1.1.1f-1ubuntu2.13 libstd-rust-1.57=1.57.0+dfsg1+llvm-0ubuntu1~20.04.1 libstd-rust-dev=1.57.0+dfsg1+llvm-0ubuntu1~20.04.1 rustc=1.57.0+dfsg1+llvm-0ubuntu1~20.04.1
 
-      - name: Run integration tests.
+      - name: Run integration tests
         run: |
           set -eux
-          #charms="$(find ./orchestrator-bundle/ -name tox.ini | grep operator)"
-          #for charm in ${charms}; do
-          #  tox -c "${charm}" -e integration
-          #done
-
-          tox -c "./orchestrator-bundle/orc8r-nginx-operator/tox.ini" -e integration
+          charms="$(find ./orchestrator-bundle/ -name tox.ini | grep operator)"
+          for charm in ${charms}; do
+            tox -c "${charm}" -e integration
+          done
 
       - name: Clean up
         if: always()
