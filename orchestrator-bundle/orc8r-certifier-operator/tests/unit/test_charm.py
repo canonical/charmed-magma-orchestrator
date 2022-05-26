@@ -4,10 +4,6 @@
 import unittest
 from unittest.mock import Mock, PropertyMock, call, patch
 
-import httpx
-from lightkube.core.exceptions import ApiError
-from lightkube.models.meta_v1 import ObjectMeta
-from lightkube.resources.core_v1 import Secret
 from ops import testing
 from ops.model import BlockedStatus
 from pgconnstr import ConnectionString  # type: ignore[import]
@@ -75,25 +71,30 @@ class TestCharm(unittest.TestCase):
             self.harness.charm._on_database_relation_joined(db_event)
         self.assertEqual(db_event.database, self.TEST_DB_NAME)
 
-    @patch("charm.MagmaOrc8rCertifierCharm._certs_are_mounted")
+    @patch("charm.MagmaOrc8rCertifierCharm._certs_are_stored")
     @patch("charm.MagmaOrc8rCertifierCharm._get_db_connection_string", new_callable=PropertyMock)
     @patch("charm.MagmaOrc8rCertifierCharm._namespace", new_callable=PropertyMock)
+    @patch("charm.MagmaOrc8rCertifierCharm._certificates_relation_created")
     @patch("charm.MagmaOrc8rCertifierCharm._db_relation_created")
     @patch("charm.MagmaOrc8rCertifierCharm._db_relation_established")
     def test_given_pebble_ready_when_get_plan_then_plan_is_filled_with_magma_orc8r_certifier_service_content(  # noqa: E501
         self,
         db_relation_established,
         db_relation_created,
+        certificates_relation_created,
         patch_namespace,
         patch_db_string,
-        patch_certs_mounted,
+        patch_certs_stored,
     ):
         namespace = "whatever"
-        patch_certs_mounted.return_value = True
+        patch_certs_stored.return_value = True
         db_relation_established.return_value = True
         db_relation_created.return_value = True
+        certificates_relation_created.return_value = True
         patch_namespace.return_value = namespace
         patch_db_string.return_value = self.TEST_DB_CONNECTION_STRING
+        key_values = {"domain": "whatever domain"}
+        self.harness.update_config(key_values=key_values)
 
         self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
 
@@ -129,26 +130,6 @@ class TestCharm(unittest.TestCase):
         updated_plan = self.harness.get_container_pebble_plan("magma-orc8r-certifier").to_dict()
         self.assertEqual(expected_plan, updated_plan)
 
-    @patch("charm.MagmaOrc8rCertifierCharm._namespace", new_callable=PropertyMock)
-    @patch("lightkube.Client.delete")
-    @patch("lightkube.core.client.GenericSyncClient")
-    def test_given_charm_when_remove_event_then_k8s_secrets_are_deleted(
-        self, _, patch_delete, patch_namespace
-    ):
-        namespace = "whatever"
-        patch_namespace.return_value = namespace
-
-        self.harness.charm.on.remove.emit()
-
-        patch_delete.assert_has_calls(
-            [
-                call(Secret, name="nms-certs", namespace=namespace),
-                call(Secret, name="orc8r-certs", namespace=namespace),
-            ]
-        )
-
-    @patch("charm.MagmaOrc8rCertifierCharm._mount_certifier_certs", Mock)
-    @patch("charm.MagmaOrc8rCertifierCharm._create_magma_orc8r_secrets", Mock)
     @patch("ops.model.Container.push")
     def test_given_pebble_ready_when_install_then_metricsd_config_file_is_created(
         self, patch_push
@@ -170,66 +151,71 @@ class TestCharm(unittest.TestCase):
 
     def test_given_default_domain_config_when_config_changed_then_status_is_blocked(self):
         key_values = {"domain": ""}
+        self.harness.container_pebble_ready("magma-orc8r-certifier")
 
         self.harness.update_config(key_values=key_values)
 
         assert self.harness.charm.unit.status == BlockedStatus("Config 'domain' is not valid")
 
-    @patch("charm.MagmaOrc8rCertifierCharm._namespace", new_callable=PropertyMock)
-    @patch("lightkube.Client.get")
-    @patch("lightkube.Client.create")
-    @patch("lightkube.core.client.GenericSyncClient")
-    @patch("charm.MagmaOrc8rCertifierCharm._certs_are_mounted")
-    @patch("charm.MagmaOrc8rCertifierCharm._generate_self_signed_ssl_certs")
-    def test_given_good_domain_config_when_config_changed_then_kubernetes_secrets_are_created(
-        self,
-        _,
-        patch_certs_mounted,
-        ___,
-        patch_lightkube_create,
-        patch_lightkube_get,
-        patch_namespace,
+    @patch(
+        "charms.tls_certificates_interface.v0.tls_certificates.InsecureCertificatesRequires.request_certificate"  # noqa: E501,W505
+    )
+    def test_given_correct_domain_when_certificates_relation_joined_then_certificates_are_requested(  # noqa: E501
+        self, patch_request_certificates
     ):
-        patch_certs_mounted.return_value = True
-        namespace = "whatever_namespace"
-        key_values = {"domain": "whateverdomain", "use-self-signed-ssl-certs": "true"}
-        nms_cert_data = {
-            "water": "300g",
-            "yeast": "1g",
-            "flour": "300g",
-        }
-        orc8r_certs_data = {"prep": "1hr", "cooking": "30min"}
-        patch_lightkube_get.side_effect = ApiError(
-            response=httpx.Response(status_code=400, json={}),
+        common_name = "whatever.domain"
+        key_values = {"domain": common_name}
+        relation_id = self.harness.add_relation(
+            relation_name="certificates", remote_app="whatever app"
         )
-        self.harness.container_pebble_ready("magma-orc8r-certifier")
-        patch_namespace.return_value = namespace
-        self.harness.charm._nms_certs_data = nms_cert_data
-        self.harness.charm._orc8r_certs_data = orc8r_certs_data
-
         self.harness.update_config(key_values=key_values)
 
-        secret_1 = Secret(
-            apiVersion="v1",
-            data=nms_cert_data,
-            metadata=ObjectMeta(
-                labels={"app.kubernetes.io/name": "magma-orc8r-certifier"},
-                name="nms-certs",
-                namespace=namespace,
-            ),
-            kind="Secret",
-            type="Opaque",
-        )
-        secret_2 = Secret(
-            apiVersion="v1",
-            data=orc8r_certs_data,
-            metadata=ObjectMeta(
-                labels={"app.kubernetes.io/name": "magma-orc8r-certifier"},
-                name="orc8r-certs",
-                namespace=namespace,
-            ),
-            kind="Secret",
-            type="Opaque",
+        self.harness.add_relation_unit(
+            relation_id=relation_id, remote_unit_name="whatever unit name"
         )
 
-        patch_lightkube_create.assert_has_calls([call(secret_1), call(secret_2)])
+        calls = [call(cert_type="server", common_name=common_name)]
+        patch_request_certificates.assert_has_calls(calls)
+
+    @patch(
+        "charms.tls_certificates_interface.v0.tls_certificates.InsecureCertificatesRequires.request_certificate"  # noqa: E501,W505
+    )
+    def test_given_domain_not_set_when_certificates_relation_joined_then_certificates_arent_set(  # noqa: E501
+        self, patch_request_certificates
+    ):
+        key_values = {"domain": ""}
+        relation_id = self.harness.add_relation(
+            relation_name="certificates", remote_app="whatever app"
+        )
+        self.harness.update_config(key_values=key_values)
+
+        self.harness.add_relation_unit(
+            relation_id=relation_id, remote_unit_name="whatever unit name"
+        )
+
+        self.assertEqual(0, patch_request_certificates.call_count)
+
+    @patch("ops.model.Container.push")
+    def test_given_pebble_ready_when_certificate_available_then_certificate_and_key_are_pushed_to_workload(  # noqa: E501
+        self, patch_push
+    ):
+        common_name = "whatever.domain"
+        certificate = "whatever certificate"
+        private_key = "whatever private key"
+        key_values = {"domain": common_name}
+        self.harness.update_config(key_values=key_values)
+        self.harness.container_pebble_ready("magma-orc8r-certifier")
+        event = Mock()
+        event.certificate_data = {
+            "common_name": common_name,
+            "cert": certificate,
+            "key": private_key,
+        }
+
+        self.harness.charm._on_certificate_available(event)
+
+        calls = [
+            call("/var/opt/magma/certs/certifier.pem", certificate),
+            call("/var/opt/magma/certs/certifier.key", private_key),
+        ]
+        patch_push.assert_has_calls(calls)

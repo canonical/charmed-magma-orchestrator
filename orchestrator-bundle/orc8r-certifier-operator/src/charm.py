@@ -32,10 +32,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     ALERTMANAGER_URL = "http://orc8r-alertmanager:9093"
     ALERTMANAGER_CONFIGURER_URL = "http://orc8r-alertmanager:9101"
 
-    # BASE_CERTS_PATH_OBJECT = Path(BASE_CERTS_PATH)
-    # CERTIFIER_CERT_PATH_OBJECT = BASE_CERTS_PATH_OBJECT / "certifier.pem"
-    # CERTIFIER_KEY_PATH_OBJECT = BASE_CERTS_PATH_OBJECT / "certifier.key"
-
     on = CertificatesRequirerCharmEvents()
 
     def __init__(self, *args):
@@ -62,13 +58,19 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self._db.on.database_relation_joined, self._on_database_relation_joined
         )
         self.framework.observe(self.on.certificate_available, self._on_certificate_available)
-        self.framework.observe(self.on.certificates_relation_joined, self._on_relation_joined)
+        self.framework.observe(
+            self.on.certificates_relation_joined, self._on_certificates_relation_joined
+        )
 
-    def _on_relation_joined(self, event):
-        domain_name = self.model.config["domain"]
+    def _on_certificates_relation_joined(self, event):
+        domain_name = self.model.config.get("domain")
+        if not self._domain_config_is_valid:
+            logger.info("Domain config is not valid")
+            event.defer()
+            return
         self.certificates.request_certificate(
             cert_type="server",
-            common_name=domain_name,
+            common_name=domain_name,  # type: ignore[arg-type]
         )
 
     def _on_certificate_available(self, event):
@@ -107,11 +109,11 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             logger.warning("Config 'domain' not valid")
             event.defer()
             return
-        if not self._db_relations_created:
+        if not self._db_relation_created:
             self.unit.status = BlockedStatus("Waiting for database relation to be created")
             event.defer()
             return
-        if not self._certificates_relations_created:
+        if not self._certificates_relation_created:
             self.unit.status = BlockedStatus("Waiting for certificates relation to be created")
             event.defer()
             return
@@ -150,11 +152,11 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             event.database = self.DB_NAME
 
     @property
-    def _db_relations_created(self) -> bool:
+    def _db_relation_created(self) -> bool:
         return self._relation_created("db")
 
     @property
-    def _certificates_relations_created(self) -> bool:
+    def _certificates_relation_created(self) -> bool:
         return self._relation_created("certificates")
 
     def _relation_created(self, relation_name: str) -> bool:
@@ -225,7 +227,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         """Returns DB connection string provided by the DB relation."""
         try:
             db_relation = self.model.get_relation("db")
-            return ConnectionString(db_relation.data[db_relation.app]["master"])
+            return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[index, union-attr]  # noqa: E501
         except (AttributeError, KeyError):
             return None
 
