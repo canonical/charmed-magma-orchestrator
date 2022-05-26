@@ -1,69 +1,9 @@
 options:
-  use-self-signed-ssl-certs:
-    type: boolean
-    default: true
-    description: |
-      If set to true, set of self-signed SSL certs will be created.
-      For production deployments, trusted certs should be provided instead.
   passphrase:
     type: string
     default: password123
     description: |
       Passphrase used to open the admin_operator.pfx certificate
-  admin-operator-key-pem:
-    type: string
-    default:
-    description: |
-      Configuration item for production deployments. Shouldn't be used with use-self-signed-ssl-certs set to 'true'.
-      Use this item to provide Magma deployment with your trusted certs.
-  admin-operator-pem:
-    type: string
-    default:
-    description: |
-      Configuration item for production deployments. Shouldn't be used with use-self-signed-ssl-certs set to 'true'.
-      Use this item to provide Magma deployment with your trusted certs.
-  controller-crt:
-    type: string
-    default:
-    description: |
-      Configuration item for production deployments. Shouldn't be used with use-self-signed-ssl-certs set to 'true'.
-      Use this item to provide Magma deployment with your trusted certs.
-  controller-key:
-    type: string
-    default:
-    description: |
-      Configuration item for production deployments. Shouldn't be used with use-self-signed-ssl-certs set to 'true'.
-      Use this item to provide Magma deployment with your trusted certs.
-  bootstrapper-key:
-    type: string
-    default:
-    description: |
-      Configuration item for production deployments. Shouldn't be used with use-self-signed-ssl-certs set to 'true'.
-      Use this item to provide Magma deployment with your trusted certs.
-  certifier-key:
-    type: string
-    default:
-    description: |
-      Configuration item for production deployments. Shouldn't be used with use-self-signed-ssl-certs set to 'true'.
-      Use this item to provide Magma deployment with your trusted certs.
-  certifier-pem:
-    type: string
-    default:
-    description: |
-      Configuration item for production deployments. Shouldn't be used with use-self-signed-ssl-certs set to 'true'.
-      Use this item to provide Magma deployment with your trusted certs.
-  rootCA-key:
-    type: string
-    default:
-    description: |
-      Configuration item for production deployments. Shouldn't be used with use-self-signed-ssl-certs set to 'true'.
-      Use this item to provide Magma deployment with your trusted certs.
-  rootCA-pem:
-    type: string
-    default:
-    description: |
-      Configuration item for production deployments. Shouldn't be used with use-self-signed-ssl-certs set to 'true'.
-      Use this item to provide Magma deployment with your trusted certs.
   domain:
     type: string
     default:

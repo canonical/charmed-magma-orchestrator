@@ -15,6 +15,8 @@ containers:
     mounts:
       - storage: config
         location: /var/opt/magma/configs/orc8r
+      - storage: certs
+        location: /var/opt/magma/certs
 
 resources:
   magma-orc8r-certifier-image:
@@ -27,11 +29,13 @@ storage:
     type: filesystem
     description: Configs storage
     minimum-size: 1M
-
-provides:
-  certifier:
-    interface: magma-orc8r-certifier
+  certs:
+    type: filesystem
+    description: Certs storage
+    minimum-size: 1M
 
 requires:
   db:
     interface: pgsql
+  certificates:
+    interface: tls-certificates

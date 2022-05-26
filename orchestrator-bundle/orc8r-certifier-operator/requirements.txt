@@ -2,4 +2,4 @@ git+https://github.com/canonical/operator/#egg=ops
 ops-lib-pgsql
 lightkube
 lightkube-models
-cryptography
+jsonschema
