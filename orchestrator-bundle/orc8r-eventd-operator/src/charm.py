@@ -72,7 +72,7 @@ class MagmaOrc8rEventdCharm(CharmBase):
 
     def _get_elasticsearch_config(self) -> tuple:
         elasticsearch_url = self.model.config.get("elasticsearch-url")
-        elasticsearch_url_split = elasticsearch_url.split(":")
+        elasticsearch_url_split = elasticsearch_url.split(":")  # type: ignore[union-attr]
         return elasticsearch_url_split[0], elasticsearch_url_split[1]
 
     @property
