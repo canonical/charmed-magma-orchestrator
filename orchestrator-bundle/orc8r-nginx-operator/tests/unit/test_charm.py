@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import Mock, PropertyMock, patch
 
 from ops import testing
-from ops.model import BlockedStatus
+from ops.model import WaitingStatus
 
 from charm import MagmaOrc8rNginxCharm
 
@@ -29,19 +29,19 @@ class TestCharm(unittest.TestCase):
         self.harness.charm.on.magma_orc8r_nginx_pebble_ready.emit(event)
         self.assertEqual(
             self.harness.charm.unit.status,
-            BlockedStatus("Waiting for relations: bootstrapper, certifier, obsidian"),
+            WaitingStatus("Waiting for relations: bootstrapper, magma-orc8r-certifier, obsidian"),
         )
 
     def test_given_charm_when_pebble_ready_event_emitted_and_certifier_relation_is_established_but_bootstrapper_and_obsidian_relations_are_missing_then_charm_goes_to_blocked_state(  # noqa: E501
         self,
     ):
         event = Mock()
-        relation_id = self.harness.add_relation("certifier", "magma-orc8r-certifier")
+        relation_id = self.harness.add_relation("magma-orc8r-certifier", "magma-orc8r-certifier")
         self.harness.add_relation_unit(relation_id, "magma-orc8r-certifier/0")
         self.harness.charm.on.magma_orc8r_nginx_pebble_ready.emit(event)
         self.assertEqual(
             self.harness.charm.unit.status,
-            BlockedStatus("Waiting for relations: bootstrapper, obsidian"),
+            WaitingStatus("Waiting for relations: bootstrapper, obsidian"),
         )
 
     def test_given_charm_when_pebble_ready_event_emitted_and_bootstrapper_relation_is_established_but_certifier_and_obsidian_relations_are_missing_then_charm_goes_to_blocked_state(  # noqa: E501
@@ -53,7 +53,7 @@ class TestCharm(unittest.TestCase):
         self.harness.charm.on.magma_orc8r_nginx_pebble_ready.emit(event)
         self.assertEqual(
             self.harness.charm.unit.status,
-            BlockedStatus("Waiting for relations: certifier, obsidian"),
+            WaitingStatus("Waiting for relations: magma-orc8r-certifier, obsidian"),
         )
 
     def test_given_charm_when_pebble_ready_event_emitted_and_all_relations_established_then_create_additional_orc8r_nginx_services_is_called(  # noqa: E501
@@ -66,7 +66,9 @@ class TestCharm(unittest.TestCase):
         ) as mock:
             relation_id = self.harness.add_relation("bootstrapper", "magma-orc8r-bootstrapper")
             self.harness.add_relation_unit(relation_id, "magma-orc8r-bootstrapper/0")
-            relation_id = self.harness.add_relation("certifier", "magma-orc8r-certifier")
+            relation_id = self.harness.add_relation(
+                "magma-orc8r-certifier", "magma-orc8r-certifier"
+            )
             self.harness.add_relation_unit(relation_id, "magma-orc8r-certifier/0")
             relation_id = self.harness.add_relation("obsidian", "magma-orc8r-obsidian")
             self.harness.add_relation_unit(relation_id, "magma-orc8r-obsidian/0")
@@ -87,7 +89,9 @@ class TestCharm(unittest.TestCase):
         with patch.object(MagmaOrc8rNginxCharm, "_configure_pebble_layer", event) as mock:
             relation_id = self.harness.add_relation("bootstrapper", "magma-orc8r-bootstrapper")
             self.harness.add_relation_unit(relation_id, "magma-orc8r-bootstrapper/0")
-            relation_id = self.harness.add_relation("certifier", "magma-orc8r-certifier")
+            relation_id = self.harness.add_relation(
+                "magma-orc8r-certifier", "magma-orc8r-certifier"
+            )
             self.harness.add_relation_unit(relation_id, "magma-orc8r-certifier/0")
             relation_id = self.harness.add_relation("obsidian", "magma-orc8r-obsidian")
             self.harness.add_relation_unit(relation_id, "magma-orc8r-obsidian/0")

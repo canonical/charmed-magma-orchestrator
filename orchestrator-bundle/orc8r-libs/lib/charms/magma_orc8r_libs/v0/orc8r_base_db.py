@@ -58,13 +58,7 @@ import logging
 import ops.lib
 from ops.charm import CharmBase
 from ops.framework import Object
-from ops.model import (
-    ActiveStatus,
-    BlockedStatus,
-    MaintenanceStatus,
-    ModelError,
-    WaitingStatus,
-)
+from ops.model import ActiveStatus, MaintenanceStatus, ModelError, WaitingStatus
 from ops.pebble import Layer
 from pgconnstr import ConnectionString  # type: ignore[import]
 
@@ -76,7 +70,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 9
+LIBPATCH = 10
 
 
 logger = logging.getLogger(__name__)
@@ -126,7 +120,7 @@ class Orc8rBase(Object):
 
     def _on_magma_orc8r_pebble_ready(self, event):
         if not self._db_relation_created:
-            self.charm.unit.status = BlockedStatus("Waiting for database relation to be created")
+            self.charm.unit.status = WaitingStatus("Waiting for database relation to be created")
             event.defer()
             return
         if not self._db_relation_established:
@@ -199,7 +193,7 @@ class Orc8rBase(Object):
         """Returns DB connection string provided by the DB relation."""
         try:
             db_relation = self.model.get_relation("db")
-            return ConnectionString(db_relation.data[db_relation.app]["master"])
+            return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[index, union-attr]  # noqa: E501
         except (AttributeError, KeyError):
             return None
 

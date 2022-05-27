@@ -23,9 +23,15 @@ resources:
     description: OCI image for magma-orc8r-orchestrator (docker.artifactory.magmacore.org/controller:1.6.0)
     upstream-source: docker.artifactory.magmacore.org/controller:1.6.0
 
+provides:
+  magma-orc8r-orchestrator:
+    interface: magma-orc8r-orchestrator
+
 requires:
-  certifier:
+  magma-orc8r-certifier:
     interface: magma-orc8r-certifier
+  metrics-endpoint:
+    interface: prometheus_scrape
 
 storage:
   config:

@@ -14,13 +14,27 @@ from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.apps_v1 import StatefulSet
 from lightkube.resources.core_v1 import Secret
 from lightkube.resources.core_v1 import Secret as SecretRes
-from ops.charm import CharmBase
+from ops.charm import (
+    CharmBase,
+    ConfigChangedEvent,
+    InstallEvent,
+    PebbleReadyEvent,
+    RelationChangedEvent,
+    RelationJoinedEvent,
+    RemoveEvent,
+)
 from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.model import (
+    ActiveStatus,
+    BlockedStatus,
+    MaintenanceStatus,
+    ModelError,
+    Relation,
+    WaitingStatus,
+)
 from ops.pebble import Layer, PathError
 from pgconnstr import ConnectionString  # type: ignore[import]
 
-from client_relations import ClientRelations
 from self_signed_certs_creator import (
     generate_ca,
     generate_certificate,
@@ -50,7 +64,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-certifier"
         self._container = self.unit.get_container(self._container_name)
-        self.client_relations = ClientRelations(self, "client_relations")
         self._db = pgsql.PostgreSQLClient(self, "db")
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(
@@ -58,6 +71,14 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         )
         self.framework.observe(
             self._db.on.database_relation_joined, self._on_database_relation_joined
+        )
+        self.framework.observe(
+            self.on.magma_orc8r_certifier_relation_joined,
+            self._on_magma_orc8r_certifier_relation_joined,
+        )
+        self.framework.observe(
+            self.on.magma_orc8r_certifier_relation_changed,
+            self._on_magma_orc8r_certifier_relation_changed,
         )
         self.framework.observe(self.on.remove, self._on_remove)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
@@ -84,14 +105,14 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         )
         self._container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
 
-    def _on_install(self, event):
+    def _on_install(self, event: InstallEvent):
         """Runs each time the charm is installed."""
         if not self._container.can_connect():
             event.defer()
             return
         self._write_metricsd_config_file()
 
-    def _on_config_changed(self, event):
+    def _on_config_changed(self, event: ConfigChangedEvent):
         if not self._domain_config_is_valid:
             self.unit.status = BlockedStatus("Config 'domain' is not valid")
             logger.warning("Config 'domain' not valid")
@@ -106,10 +127,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         if not self._certs_are_mounted:
             self._mount_certifier_certs()
 
-    def _on_magma_orc8r_certifier_pebble_ready(self, event):
+    def _on_magma_orc8r_certifier_pebble_ready(self, event: PebbleReadyEvent):
         """Triggered when pebble is ready."""
         if not self._db_relation_created:
-            self.unit.status = BlockedStatus("Waiting for database relation to be created")
+            self.unit.status = WaitingStatus("Waiting for database relation to be created")
             event.defer()
             return
         if not self._db_relation_established:
@@ -122,7 +143,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             return
         self._configure_magma_orc8r_certifier(event)
 
-    def _on_database_relation_joined(self, event):
+    def _on_database_relation_joined(self, event: RelationJoinedEvent):
         """
         Event handler for database relation change.
         - Sets the event.database field on the database joined event.
@@ -132,7 +153,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
           in the relation event.
         """
         if self.unit.is_leader():
-            event.database = self.DB_NAME
+            event.database = self.DB_NAME  # type: ignore[attr-defined]
 
     @property
     def _db_relation_created(self) -> bool:
@@ -167,7 +188,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         client.patch(StatefulSet, name=self.app.name, obj=stateful_set, namespace=self._namespace)
         logger.info("Additional volumes for certificates are mounted")
 
-    def _configure_magma_orc8r_certifier(self, event):
+    def _configure_magma_orc8r_certifier(self, event: PebbleReadyEvent):
         """Adds layer to pebble config if the proposed config is different from the current one."""
         if self._container.can_connect():
             self.unit.status = MaintenanceStatus("Configuring pod")
@@ -182,7 +203,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for container to be ready...")
             event.defer()
 
-    def _on_remove(self, event):
+    def _on_remove(self, event: RemoveEvent):
         self.unit.status = MaintenanceStatus("Removing Magma Orc8r secrets...")
 
         self._delete_k8s_secret(secret_name=self._nms_certs_secret_name)
@@ -401,7 +422,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         """Returns DB connection string provided by the DB relation."""
         try:
             db_relation = self.model.get_relation("db")
-            return ConnectionString(db_relation.data[db_relation.app]["master"])
+            return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[index, union-attr]  # noqa: E501
         except (AttributeError, KeyError):
             return None
 
@@ -438,6 +459,42 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     def _encode_in_base64(byte_string: bytes):
         """Encodes given byte string in Base64"""
         return base64.b64encode(byte_string).decode("utf-8")
+
+    def _on_magma_orc8r_certifier_relation_joined(self, event: RelationJoinedEvent):
+        if not self.unit.is_leader():
+            return
+        self._update_relation_active_status(
+            relation=event.relation, is_active=self._service_is_running
+        )
+
+    def _update_relation_active_status(self, relation: Relation, is_active: bool):
+        relation.data[self.unit].update(
+            {
+                "active": str(is_active),
+            }
+        )
+
+    @property
+    def _service_is_running(self) -> bool:
+        if self._container.can_connect():
+            try:
+                self._container.get_service(self._service_name)
+                return True
+            except ModelError:
+                pass
+        return False
+
+    def _on_magma_orc8r_certifier_relation_changed(self, event: RelationChangedEvent):
+        """Adds the domain field to relation's data bucket so that it can be used by the client.
+        To access data bucket, client should implement callback for on_relation_changed event.
+        To learn more about getting relation data, visit
+        [Juju docs](https://juju.is/docs/sdk/relations#heading--relation-data).
+        """
+        domain = self.model.config["domain"]
+
+        to_publish = [event.relation.data[self.unit]]
+        for bucket in to_publish:
+            bucket["domain"] = domain
 
     @property
     def _namespace(self) -> str:

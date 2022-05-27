@@ -28,5 +28,5 @@ provides:
 requires:
   db:
     interface: pgsql
-  certifier:
+  magma-orc8r-certifier:
     interface: magma-orc8r-certifier
