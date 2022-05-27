@@ -92,8 +92,10 @@ class Orc8rBase(Object):
         self.container_name = self.service_name = self.charm.meta.name
         self.container = self.charm.unit.get_container(self.container_name)
         service_name_with_underscores = self.service_name.replace("-", "_")
+        provided_relation_name = list(self.charm.meta.provides.keys())[0]
+        provided_relation_name_with_underscores = provided_relation_name.replace("-", "_")
         pebble_ready_event = getattr(
-            self.charm.on, f"{service_name_with_underscores}_pebble_ready"
+            self.charm.on, f"{provided_relation_name_with_underscores}_pebble_ready"
         )
         relation_joined_event = getattr(
             self.charm.on, f"{service_name_with_underscores}_relation_joined"
