@@ -18,7 +18,7 @@ CHARM_NAME = "magma-orc8r-accessd"
 
 class TestOrc8rAccessd:
     @pytest.fixture(scope="module")
-    async def setup(self, ops_test):
+    async def deploy_postgres(self, ops_test):
         await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
         await ops_test.model.wait_for_idle(apps=["postgresql-k8s"], status="active", timeout=1000)
 
