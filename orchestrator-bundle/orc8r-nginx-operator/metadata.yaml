@@ -21,7 +21,10 @@ resources:
 requires:
   bootstrapper:
     interface: magma-orc8r-bootstrapper
+    limit: 1
   magma-orc8r-certifier:
     interface: magma-orc8r-certifier
+    limit: 1
   obsidian:
     interface: magma-orc8r-obsidian
+    limit: 1

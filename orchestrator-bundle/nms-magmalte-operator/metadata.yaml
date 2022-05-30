@@ -28,5 +28,7 @@ provides:
 requires:
   db:
     interface: pgsql
+    limit: 1
   magma-orc8r-certifier:
     interface: magma-orc8r-certifier
+    limit: 1

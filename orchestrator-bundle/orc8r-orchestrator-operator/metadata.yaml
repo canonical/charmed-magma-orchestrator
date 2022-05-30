@@ -30,8 +30,10 @@ provides:
 requires:
   magma-orc8r-certifier:
     interface: magma-orc8r-certifier
+    limit: 1
   metrics-endpoint:
     interface: prometheus_scrape
+    limit: 1
 
 storage:
   config:

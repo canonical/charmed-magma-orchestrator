@@ -19,5 +19,7 @@ resources:
 requires:
   magma-orc8r-certifier:
     interface: magma-orc8r-certifier
+    limit: 1
   magmalte:
     interface: nms-magmalte
+    limit: 1

@@ -186,6 +186,9 @@ class Orc8rBase(Object):
         self._update_relation_active_status(
             relation=event.relation, is_active=self._service_is_running
         )
+        if not self._service_is_running:
+            event.defer()
+            return
 
     @property
     def _service_is_running(self) -> bool:
