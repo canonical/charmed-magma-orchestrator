@@ -20,7 +20,7 @@ from lightkube.resources.apps_v1 import StatefulSet
 from lightkube.resources.core_v1 import Service
 from ops.charm import CharmBase, PebbleReadyEvent, RelationChangedEvent, RemoveEvent
 from ops.main import main
-from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import Layer
 
 logger = logging.getLogger(__name__)
@@ -258,7 +258,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
         ]
         if missing_relations:
             msg = f"Waiting for relations: {', '.join(missing_relations)}"
-            self.unit.status = WaitingStatus(msg)
+            self.unit.status = BlockedStatus(msg)
             return False
         if not self._get_domain_name:
             self.unit.status = WaitingStatus(

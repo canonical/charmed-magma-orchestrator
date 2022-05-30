@@ -130,7 +130,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     def _on_magma_orc8r_certifier_pebble_ready(self, event: PebbleReadyEvent):
         """Triggered when pebble is ready."""
         if not self._db_relation_created:
-            self.unit.status = WaitingStatus("Waiting for database relation to be created")
+            self.unit.status = BlockedStatus("Waiting for database relation to be created")
             event.defer()
             return
         if not self._db_relation_established:

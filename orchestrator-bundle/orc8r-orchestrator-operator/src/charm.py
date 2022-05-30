@@ -217,7 +217,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         ]
         if missing_relations:
             msg = f"Waiting for relations: {', '.join(missing_relations)}"
-            self.unit.status = WaitingStatus(msg)
+            self.unit.status = BlockedStatus(msg)
             return False
         return True
 
