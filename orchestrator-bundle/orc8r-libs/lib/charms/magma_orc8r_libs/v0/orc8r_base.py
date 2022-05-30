@@ -210,10 +210,7 @@ class Orc8rBase(Object):
     @property
     def _relations_ready(self) -> bool:
         """Checks whether required relations are ready."""
-        missing_relations = [
-            relation for relation in self.required_relations if not self._relation_active(relation)
-        ]
-        if missing_relations:
+        if missing_relations := [relation for relation in self.required_relations if not self._relation_active(relation)]:
             msg = f"Waiting for relations: {', '.join(missing_relations)}"
             self.charm.unit.status = BlockedStatus(msg)
             return False
