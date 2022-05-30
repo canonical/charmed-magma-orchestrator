@@ -28,7 +28,6 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         super().__init__(*args)
         self._container_name = self._service_name = "magma-nms-nginx-proxy"
         self._container = self.unit.get_container(self._container_name)
-        self._context = {"namespace": self._namespace, "app_name": self.app.name}
         self.certificates = InsecureCertificatesRequires(self, "certificates")
         self.service_patcher = KubernetesServicePatch(
             charm=self,
@@ -95,14 +94,14 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         if certificate_data["common_name"] == self.model.config["domain"]:
             logger.info("Pushing certificate to workload")
             self._container.push(
-                f"{self.BASE_NGINX_PATH}/{self.CERTIFICATE_NAME}.pem",
-                certificate_data["cert"],
+                path=f"{self.BASE_NGINX_PATH}/{self.CERTIFICATE_NAME}.pem",
+                source=certificate_data["cert"],
             )
             self._container.push(
-                f"{self.BASE_NGINX_PATH}/{self.CERTIFICATE_NAME}.key.pem",
-                certificate_data["key"],
+                path=f"{self.BASE_NGINX_PATH}/{self.CERTIFICATE_NAME}.key.pem",
+                source=certificate_data["key"],
             )
-        self._on_magma_nms_nginx_proxy_pebble_ready(event)
+            self._on_magma_nms_nginx_proxy_pebble_ready(event)
 
     @property
     def _certs_are_stored(self) -> bool:
@@ -140,11 +139,11 @@ class MagmaNmsNginxProxyCharm(CharmBase):
 
     def _configure_pebble(self, event):
         if self._container.can_connect():
-            self.unit.status = MaintenanceStatus(
-                f"Configuring pebble layer for {self._service_name}..."
-            )
             plan = self._container.get_plan()
             if plan.services != self._pebble_layer.services:
+                self.unit.status = MaintenanceStatus(
+                    f"Configuring pebble layer for {self._service_name}..."
+                )
                 self._container.add_layer(self._container_name, self._pebble_layer, combine=True)
                 self._container.restart(self._service_name)
                 logger.info(f"Restarted container {self._service_name}")
@@ -180,10 +179,6 @@ class MagmaNmsNginxProxyCharm(CharmBase):
                 },
             }
         )
-
-    @property
-    def _namespace(self) -> str:
-        return self.model.name
 
     @property
     def _domain_config_is_valid(self) -> bool:

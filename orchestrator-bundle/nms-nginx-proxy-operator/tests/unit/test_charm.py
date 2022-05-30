@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, call, patch
 
 from ops import testing
 from ops.model import ActiveStatus, BlockedStatus
@@ -125,8 +125,47 @@ class TestCharm(unittest.TestCase):
         self.assertEqual("/etc/nginx/conf.d/nginx_proxy_ssl.conf", kwargs["path"])
         self.assertEqual(config_file, kwargs["source"])
 
-    def test_given_when_on_certificates_relation_joined_then_(self):
+    @patch(
+        "charms.tls_certificates_interface.v0.tls_certificates.InsecureCertificatesRequires.request_certificate"  # noqa: E501, W505
+    )
+    def test_given_domain_name_in_config_when_on_certificates_relation_joined_then_certificate_is_requested(  # noqa: E501
+        self, patch_request_certificate
+    ):
+        domain_name = "whatever.com"
+        key_values = {"domain": domain_name}
+        self.harness.update_config(key_values=key_values)
         event = Mock()
 
         self.harness.charm._on_certificates_relation_joined(event=event)
-        pass
+
+        args, kwargs = patch_request_certificate.call_args
+        self.assertEqual("server", kwargs["cert_type"])
+        self.assertEqual(domain_name, kwargs["common_name"])
+
+    @patch("ops.model.Container.push")
+    @patch("ops.model.Container.can_connect")
+    @patch("ops.model.Container.exists")
+    def test_given_certificates_arent_stored_when_on_certificates_available_then_certificate_and_key_are_stored(  # noqa: E501
+        self, patch_file_exists, patch_can_connect, patch_push
+    ):
+        patch_can_connect.return_value = True
+        patch_file_exists.return_value = False
+        certificate = "whatever certificate"
+        private_key = "whatever private key"
+        domain_name = "whatever.com"
+        key_values = {"domain": domain_name}
+        self.harness.update_config(key_values=key_values)
+        event = Mock()
+        event.certificate_data = {
+            "common_name": domain_name,
+            "cert": certificate,
+            "key": private_key,
+        }
+
+        self.harness.charm._on_certificate_available(event=event)
+
+        calls = [
+            call(path="/etc/nginx/conf.d/nms_nginx.pem", source=certificate),
+            call(path="/etc/nginx/conf.d/nms_nginx.key.pem", source=private_key),
+        ]
+        patch_push.assert_has_calls(calls=calls)
