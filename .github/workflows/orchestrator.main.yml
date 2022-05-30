@@ -1,6 +1,6 @@
 name: main-branch
 
-# TODO: Change this to on PR to main branch
+# TODO: Change to on PR to main branch
 on:
   push:
     branches:
@@ -110,6 +110,7 @@ jobs:
 
           echo "# Bootstrap controller"
           sleep 180  # Microk8s needs time to initialize properly
+          # TODO: Check if automatically-retry-hooks=false might be causing issues with bundle deployment.
           /usr/bin/sg microk8s -c "juju bootstrap --debug --verbose microk8s integration-tests --model-default test-mode=true --model-default automatically-retry-hooks=false --model-default logging-config='<root>=DEBUG'  --bootstrap-constraints=''"
 
           # Install dependencies
@@ -119,10 +120,14 @@ jobs:
       - name: Run integration tests
         run: |
           set -eux
-          charms="$(find ./orchestrator-bundle/ -name tox.ini | grep operator)"
-          for charm in ${charms}; do
-            tox -c "${charm}" -e integration
-          done
+
+          # TODO: Go back to all charms, right now only accessd.
+          #charms="$(find ./orchestrator-bundle/ -name tox.ini | grep operator)"
+          #for charm in ${charms}; do
+          #  tox -c "${charm}" -e integration
+          #done
+
+          tox -c "./orchestrator-bundle/orc8r-accessd-operator/tox.ini" -e integration
 
       - name: Clean up
         if: always()
