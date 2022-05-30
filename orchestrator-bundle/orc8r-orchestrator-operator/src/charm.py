@@ -26,7 +26,6 @@ from ops.model import (
     MaintenanceStatus,
     ModelError,
     Relation,
-    WaitingStatus,
 )
 from ops.pebble import APIError, ConnectionError, ExecError, Layer
 
