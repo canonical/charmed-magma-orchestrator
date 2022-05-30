@@ -14,12 +14,21 @@ summary: |
 containers:
   magma-nms-magmalte:
     resource: magma-nms-magmalte-image
+    mounts:
+      - storage: certs
+        location: /run/secrets
 
 resources:
   magma-nms-magmalte-image:
     type: oci-image
     description: OCI image for magma-nms-magmalte (docker.artifactory.magmacore.org/magmalte:1.6.0)
     upstream-source: docker.artifactory.magmacore.org/magmalte:1.6.0
+
+storage:
+  certs:
+    type: filesystem
+    description: Certs storage
+    minimum-size: 1M
 
 provides:
   magmalte:
@@ -28,5 +37,5 @@ provides:
 requires:
   db:
     interface: pgsql
-  certifier:
-    interface: magma-orc8r-certifier
+  certificates:
+    interface: tls-certificates

@@ -13,56 +13,33 @@ between NMS UI and MagmaLTE.<br>
 
 ## Usage
 
-**magma-nms-nginx-proxy** can be deployed via Juju command line using below commands:
-
 ```bash
-juju deploy magma-nms-nginx-proxy nms-nginx-proxy
+juju deploy magma-nms-magmalte nms-magmalte
+juju deploy vault-k8s
+juju deploy magma-nms-nginx-proxy nms-nginx-proxy --config domain=blabla.com
+juju relate nms-nginx-proxy nms-magmalte
+juju relate nms-nginx-proxy vault-k8s
 ```
 
 **IMPORTANT**: For now, deploying this charm must be done with an alias as shown above.
 
-To work correctly, **magma-nms-nginx-proxy** requires **magma-orc8r-certifier** and 
-**magma-nms-magmalte** (for details, check the _Relations_ section below).
+## Configuration
+- **domain** - Domain for self-signed certificates.
 
-To deploy **magma-orc8r-certifier** from Juju command line:
-
-```bash
-juju deploy magma-orc8r-certifier --config domain=example.com orc8r-certifier
-juju relate nms-nginx-proxy orc8r-certifier
-```
-
-To deploy **magma-nms-magmalte** from Juju command line:
-
-```bash
-juju deploy magma-nms-magmalte nms-magmalte
-juju relate nms-nginx-proxy nms-magmalte
-```
-
-## Load Balancer
-
-For NMS to be accessible from outside the Kubernetes cluster, you must enable the `metallb` loadbalancer
-in your microk8s cluster.
-```bash
-microk8s enable metallb
-```
-
-You will be asked to provide a range of IP's that can be used by metallb.
-
+> Note that once configs have been applied to orc8r-certifier, it is not possible to re-configure.
+> To change config, please re-deploy it with the correct config.
 
 ## Relations
 
-Currently supported relations are:
+### Provides
 
-- [magma-nms-magmalte](https://github.com/canonical/charmed-magma/tree/main/orchestrator-bundle/nms-magmalte-operator) - Magmalte is
-  a microservice built using express framework. It contains set of application and router level
-  middlewares. It uses sequelize ORM to connect to the NMS DB for servicing any routes involving DB
-  interaction.
-- [magma-orc8r-certifier](https://github.com/canonical/charmed-magma/tree/main/orchestrator-bundle/orc8r-certifier-operator) -
-  magma-orc8r-certifier maintains and verifies signed client certificates and their associated
-  identities.
-- [nginx-ingress-ingegrator](https://charmhub.io/nginx-ingress-integrator) - Nginx Ingress Integrator
-  generates an Nginx Ingress resource for sidecar charms using the Operator Framework. This 
-  resource can then be used by an Nginx Ingress Controller in a Kubernetes cluster to expose HTTP and HTTPS routes from outside the cluster to a charm running within the cluster.
+The nms-nginx-proxy charm does not provide any relationship.
+
+### Requires
+The nms-nginx-proxy charm relies on the following relationships:
+- `magmalte`: Relation to the NMS MagmaLTE service
+- `tls-certificates`: Relation to a tls-certificates provider. The current setup has only been 
+tested with relation to the `vault-k8s` charm
 
 ## OCI Images
 

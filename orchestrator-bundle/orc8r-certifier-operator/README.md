@@ -18,24 +18,16 @@ juju relate orc8r-certifier vault-k8s
 
 
 ## Configuration
-- **domain** - Domain for self-signed certs. Use only when **use-self-signed-ssl-certs** set to **True**
+- **domain** - Domain for self-signed certificates.
 
 > Note that once configs have been applied to orc8r-certifier, it is not possible to re-configure.
 > To change config, please re-deploy it with the correct config.
-
-### Usage
-
-```bash
-juju deploy ./magma-orc8r-certifier_ubuntu-20.04-amd64.charm orc8r-certifier \
- --config domain="whatever.domain" \
- --resource magma-orc8r-certifier-image=docker.artifactory.magmacore.org/controller:1.6.0
-```
 
 ## Relations
 
 ### Provides
 
-The magma-orc8r-certifier does not provide any relationship.
+The magma-orc8r-certifier charm does not provide any relationship.
 
 ### Requires
 The magma-orc8r-certifier service relies on the following relationships:

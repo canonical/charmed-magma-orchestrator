@@ -9,6 +9,15 @@ summary: |
 containers:
   magma-nms-nginx-proxy:
     resource: magma-nms-nginx-proxy-image
+    mounts:
+      - storage: nginx
+        location: /etc/nginx/conf.d
+
+storage:
+  nginx:
+    type: filesystem
+    description: Nginx config and certs storage
+    minimum-size: 1M
 
 resources:
   magma-nms-nginx-proxy-image:
@@ -17,7 +26,7 @@ resources:
     upstream-source: nginx:latest
 
 requires:
-  certifier:
-    interface: magma-orc8r-certifier
+  certificates:
+    interface: tls-certificates
   magmalte:
     interface: nms-magmalte

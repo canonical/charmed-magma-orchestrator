@@ -79,6 +79,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             logger.info("Cant connect to container - Won't push certificates to workload")
             event.defer()
             return
+        if self._certs_are_stored:
+            logger.info("Certificates are already stored - Not doing anything")
+            return
         certificate_data = event.certificate_data
         if certificate_data["common_name"] == self.model.config["domain"]:
             logger.info("Pushing certificate to workload")
@@ -103,7 +106,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._write_metricsd_config_file()
 
     def _on_magma_orc8r_certifier_pebble_ready(self, event):
-        """Triggered when pebble is ready."""
         if not self._domain_config_is_valid:
             self.unit.status = BlockedStatus("Config 'domain' is not valid")
             logger.warning("Config 'domain' not valid")
@@ -121,19 +123,13 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for database relation to be established")
             event.defer()
             return
-        if not self._certs_are_stored():
+        if not self._certs_are_stored:
             self.unit.status = WaitingStatus("Waiting for certs to be available")
             event.defer()
             return
         self._configure_magma_orc8r_certifier(event)
 
-    def _on_config_changed(self, event):
-        if not self._domain_config_is_valid:
-            self.unit.status = BlockedStatus("Config 'domain' is not valid")
-            logger.warning("Config 'domain' not valid")
-            event.defer()
-            return
-
+    @property
     def _certs_are_stored(self) -> bool:
         return self._container.exists(
             f"{self.BASE_CERTS_PATH}/certifier.pem"

@@ -15,6 +15,8 @@ applications:
     channel: edge
     scale: 1
     trust: true
+    options:
+      domain: example.com
   orc8r-accessd:
     charm: magma-orc8r-accessd
     channel: edge
@@ -172,12 +174,8 @@ applications:
     scale: 1
     trust: true
 relations:
-- - nms-magmalte:certifier
-  - orc8r-certifier:certifier
 - - nms-magmalte:db
   - postgresql-k8s:db
-- - nms-nginx-proxy:certifier
-  - orc8r-certifier:certifier
 - - nms-nginx-proxy:magmalte
   - nms-magmalte:magmalte
 - - orc8r-accessd:db
