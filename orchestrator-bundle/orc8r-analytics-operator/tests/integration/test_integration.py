@@ -16,13 +16,16 @@ APPLICATION_NAME = "orc8r-analytics"
 CHARM_NAME = "magma-orc8r-analytics"
 
 
-@pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest):
-    charm = await ops_test.build_charm(".")
-    resources = {
-        f"{CHARM_NAME}-image": METADATA["resources"][f"{CHARM_NAME}-image"]["upstream-source"],
-    }
-    await ops_test.model.deploy(
-        charm, resources=resources, application_name=APPLICATION_NAME, trust=True
-    )
-    await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
+class TestOrc8rAnalytics:
+    @pytest.fixture(scope="module")
+    async def build_and_deploy(self, ops_test):
+        charm = "/home/ubuntu/orc8r-packed-charms/orc8r-analytics.charm"
+        resources = {
+            f"{CHARM_NAME}-image": METADATA["resources"][f"{CHARM_NAME}-image"]["upstream-source"],
+        }
+        await ops_test.model.deploy(
+            charm, resources=resources, application_name=APPLICATION_NAME, trust=True
+        )
+
+    async def test_wait_for_idle(self, ops_test, build_and_deploy):
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
