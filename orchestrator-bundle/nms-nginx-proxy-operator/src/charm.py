@@ -17,7 +17,7 @@ from lightkube.models.core_v1 import (
 )
 from lightkube.resources.apps_v1 import StatefulSet
 from lightkube.resources.core_v1 import ConfigMap
-from ops.charm import CharmBase
+from ops.charm import CharmBase, PebbleReadyEvent, RelationChangedEvent, RemoveEvent
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import Layer
@@ -34,7 +34,9 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         self.framework.observe(
             self.on.magma_nms_nginx_proxy_pebble_ready, self._on_magma_nms_nginx_proxy_pebble_ready
         )
-        self.framework.observe(self.on.certifier_relation_changed, self._configure_nginx)
+        self.framework.observe(
+            self.on.magma_orc8r_certifier_relation_changed, self._configure_nginx
+        )
         self.framework.observe(self.on.remove, self._on_remove)
         self.service_patcher = KubernetesServicePatch(
             charm=self,
@@ -44,14 +46,14 @@ class MagmaNmsNginxProxyCharm(CharmBase):
             additional_labels={"app.kubernetes.io/part-of": "magma"},
         )
 
-    def _on_magma_nms_nginx_proxy_pebble_ready(self, event):
+    def _on_magma_nms_nginx_proxy_pebble_ready(self, event: PebbleReadyEvent):
         """Configures magma-nms-nginx-proxy pebble layer."""
         if not self._relations_ready:
             event.defer()
             return
         self._configure_pebble(event)
 
-    def _configure_pebble(self, event):
+    def _configure_pebble(self, event: PebbleReadyEvent):
         if self._container.can_connect():
             self.unit.status = MaintenanceStatus(
                 f"Configuring pebble layer for {self._service_name}..."
@@ -66,7 +68,7 @@ class MagmaNmsNginxProxyCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for container to be ready...")
             event.defer()
 
-    def _configure_nginx(self, event):
+    def _configure_nginx(self, event: RelationChangedEvent):
         if not self._nms_certs_mounted:
             self.unit.status = MaintenanceStatus("Mounting NMS certificates...")
             self._mount_certifier_certs()
@@ -112,7 +114,7 @@ class MagmaNmsNginxProxyCharm(CharmBase):
     @property
     def _relations_ready(self) -> bool:
         """Checks whether required relations are ready."""
-        required_relations = ["certifier", "magmalte"]
+        required_relations = ["magma-orc8r-certifier", "magmalte"]
         missing_relations = [
             relation for relation in required_relations if not self.model.get_relation(relation)
         ]
@@ -194,7 +196,7 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         except httpx.HTTPError:
             return False
 
-    def _on_remove(self, event):
+    def _on_remove(self, event: RemoveEvent):
         client = Client()
         client.delete(ConfigMap, name="nginx-proxy-etc", namespace=self._namespace)
 

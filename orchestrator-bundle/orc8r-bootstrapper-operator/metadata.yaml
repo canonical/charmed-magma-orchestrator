@@ -24,7 +24,9 @@ provides:
     interface: magma-orc8r-bootstrapper
 
 requires:
-  certifier:
+  magma-orc8r-certifier:
     interface: magma-orc8r-certifier
+    limit: 1
   db:
     interface: pgsql
+    limit: 1

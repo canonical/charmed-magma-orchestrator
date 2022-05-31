@@ -2,11 +2,10 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import PropertyMock, patch
+from unittest.mock import Mock, PropertyMock, patch
 
 from ops import testing
-from ops.model import BlockedStatus
-from ops.pebble import APIError
+from ops.model import ActiveStatus, BlockedStatus
 
 from charm import MagmaOrc8rOrchestratorCharm
 
@@ -54,6 +53,7 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(expected_plan, updated_plan)
 
     @patch("ops.model.Container.push")
+    @patch("charm.MagmaOrc8rOrchestratorCharm._relations_ready", PropertyMock(return_value=True))
     def test_given_pebble_ready_when_on_install_event_then_orchestrator_config_file_is_created(  # noqa: E501
         self, patch_push
     ):
@@ -69,6 +69,7 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.push")
+    @patch("charm.MagmaOrc8rOrchestratorCharm._relations_ready", PropertyMock(return_value=True))
     def test_given_new_charm_when_on_install_event_then_metricsd_config_file_is_created(
         self, patch_push
     ):
@@ -85,6 +86,7 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.push")
+    @patch("charm.MagmaOrc8rOrchestratorCharm._relations_ready", PropertyMock(return_value=True))
     def test_given_new_charm_when_on_install_event_then_analytics_config_file_is_created(
         self, patch_push
     ):
@@ -101,6 +103,7 @@ class TestCharm(unittest.TestCase):
             '"metricsPrefix": ""\n',
         )
 
+    @patch("charm.MagmaOrc8rOrchestratorCharm._relations_ready", PropertyMock(return_value=True))
     def test_given_default_elasticsearch_config_when_on_config_changed_event_then_status_is_blocked(  # noqa: E501
         self,
     ):
@@ -112,17 +115,12 @@ class TestCharm(unittest.TestCase):
             "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
         )
 
-    @patch("ops.model.Container.restart")
     @patch("ops.model.Container.push")
+    @patch("ops.model.Container.restart", Mock())
+    @patch("charm.MagmaOrc8rOrchestratorCharm._relations_ready", PropertyMock(return_value=True))
     def test_given_good_elasticsearch_config_when_on_config_changed_event_then_elasticsearch_config_file_is_created(  # noqa: E501
-        self, patch_push, patch_restart
+        self, patch_push
     ):
-        patch_restart.side_effect = APIError(
-            body={"bla": "blo"},
-            code=400,
-            status="whatever status",
-            message="whatever message",
-        )
         hostname = "blablabla"
         port = 80
         config = {"elasticsearch-url": f"{hostname}:{port}"}
@@ -134,8 +132,10 @@ class TestCharm(unittest.TestCase):
             "/var/opt/magma/configs/orc8r/elastic.yml",
             f'"elasticHost": "{hostname}"\n' f'"elasticPort": {port}\n',
         )
+        assert self.harness.charm.unit.status == ActiveStatus()
 
     @patch("ops.model.Container.push")
+    @patch("charm.MagmaOrc8rOrchestratorCharm._relations_ready", PropertyMock(return_value=True))
     def test_given_bad_elasticsearch_config_when_on_config_changed_event_then_status_is_blocked(
         self, _
     ):

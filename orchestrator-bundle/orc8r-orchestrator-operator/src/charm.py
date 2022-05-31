@@ -10,9 +10,23 @@ from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServ
 from lightkube import Client
 from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
 from lightkube.resources.apps_v1 import StatefulSet
-from ops.charm import CharmBase
+from ops.charm import (
+    ActionEvent,
+    CharmBase,
+    ConfigChangedEvent,
+    InstallEvent,
+    PebbleReadyEvent,
+    RelationChangedEvent,
+    RelationEvent,
+)
 from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
+from ops.model import (
+    ActiveStatus,
+    BlockedStatus,
+    MaintenanceStatus,
+    ModelError,
+    Relation,
+)
 from ops.pebble import APIError, ConnectionError, ExecError, Layer
 
 logger = logging.getLogger(__name__)
@@ -40,7 +54,12 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             self._on_magma_orc8r_orchestrator_pebble_ready,
         )
         self.framework.observe(
-            self.on.certifier_relation_changed, self._on_certifier_relation_changed
+            self.on.magma_orc8r_orchestrator_relation_joined,
+            self._on_magma_orc8r_orchestrator_relation_joined,
+        )
+        self.framework.observe(
+            self.on.magma_orc8r_certifier_relation_changed,
+            self._on_magma_orc8r_certifier_relation_changed,
         )
         self.framework.observe(
             self.on.create_orchestrator_admin_user_action,
@@ -73,7 +92,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             },
         )
 
-    def _on_install(self, event):
+    def _on_install(self, event: InstallEvent):
         if not self._container.can_connect():
             event.defer()
             return
@@ -122,7 +141,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         )
         self._container.push(f"{self.BASE_CONFIG_PATH}/elastic.yml", elastic_config)
 
-    def _on_elasticsearch_url_config_changed(self, event):
+    def _on_elasticsearch_url_config_changed(self, event: ConfigChangedEvent):
         # TODO: Elasticsearch url should be passed through a relationship (not a config)
         if not self._container.can_connect():
             event.defer()
@@ -140,7 +159,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                 "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
             )
 
-    def _create_orchestrator_admin_user_action(self, event):
+    def _create_orchestrator_admin_user_action(self, event: ActionEvent):
         process = self._container.exec(
             [
                 "/var/opt/magma/bin/accessc",
@@ -162,7 +181,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             for line in e.stderr.splitlines():
                 logger.error("    %s", line)
 
-    def _set_log_verbosity_action(self, event):
+    def _set_log_verbosity_action(self, event: ActionEvent):
         process = self._container.exec(
             [
                 "/var/opt/magma/bin/service303_cli",
@@ -182,7 +201,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             for line in e.stderr.splitlines():
                 logger.error("    %s", line)
 
-    def _on_magma_orc8r_orchestrator_pebble_ready(self, event):
+    def _on_magma_orc8r_orchestrator_pebble_ready(self, event: PebbleReadyEvent):
         if not self._relations_ready:
             event.defer()
             return
@@ -191,12 +210,9 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
     @property
     def _relations_ready(self) -> bool:
         """Checks whether required relations are ready."""
-        required_relations = ["certifier"]
+        required_relations = ["magma-orc8r-certifier", "metrics-endpoint"]
         missing_relations = [
-            relation
-            for relation in required_relations
-            if not self.model.get_relation(relation)
-            or len(self.model.get_relation(relation).units) == 0  # type: ignore[union-attr]  # noqa W503
+            relation for relation in required_relations if not self._relation_active(relation)
         ]
         if missing_relations:
             msg = f"Waiting for relations: {', '.join(missing_relations)}"
@@ -204,7 +220,15 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             return False
         return True
 
-    def _on_certifier_relation_changed(self, event):
+    def _relation_active(self, relation: str) -> bool:
+        try:
+            rel = self.model.get_relation(relation)
+            units = rel.units  # type: ignore[union-attr]
+            return bool(rel.data[next(iter(units))]["active"])  # type: ignore[union-attr]
+        except (KeyError, StopIteration):
+            return False
+
+    def _on_magma_orc8r_certifier_relation_changed(self, event: RelationChangedEvent):
         """Mounts certificates required by orc8r-orchestrator."""
         if not self._nms_certs_mounted:
             self.unit.status = MaintenanceStatus("Mounting NMS certificates...")
@@ -255,7 +279,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             ),
         ]
 
-    def _configure_orc8r(self, event):
+    def _configure_orc8r(self, event: PebbleReadyEvent):
         """Adds layer to pebble config if the proposed config is different from the current one."""
         try:
             plan = self._container.get_plan()
@@ -300,7 +324,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
 
     def _get_elasticsearch_config(self) -> tuple:
         elasticsearch_url = self.model.config.get("elasticsearch-url")
-        elasticsearch_url_split = elasticsearch_url.split(":")  # type: ignore [union-attr]
+        elasticsearch_url_split = elasticsearch_url.split(":")  # type: ignore[union-attr]
         return elasticsearch_url_split[0], elasticsearch_url_split[1]
 
     @property
@@ -312,6 +336,33 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             return True
         else:
             return False
+
+    def _on_magma_orc8r_orchestrator_relation_joined(self, event: RelationEvent):
+        if not self.unit.is_leader():
+            return
+        self._update_relation_active_status(
+            relation=event.relation, is_active=self._service_is_running
+        )
+        if not self._service_is_running:
+            event.defer()
+            return
+
+    def _update_relation_active_status(self, relation: Relation, is_active: bool):
+        relation.data[self.unit].update(
+            {
+                "active": str(is_active),
+            }
+        )
+
+    @property
+    def _service_is_running(self) -> bool:
+        if self._container.can_connect():
+            try:
+                self._container.get_service(self._service_name)
+                return True
+            except ModelError:
+                pass
+        return False
 
     @property
     def _namespace(self) -> str:

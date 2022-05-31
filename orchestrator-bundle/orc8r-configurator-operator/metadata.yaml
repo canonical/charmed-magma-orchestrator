@@ -22,3 +22,4 @@ resources:
 requires:
   db:
     interface: pgsql
+    limit: 1
