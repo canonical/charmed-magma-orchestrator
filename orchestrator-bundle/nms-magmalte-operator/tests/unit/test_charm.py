@@ -207,15 +207,13 @@ class TestCharm(unittest.TestCase):
     def test_given_juju_action_when_user_creation_fails_then_action_raises_an_error(
         self, action_event, _, mock_exec
     ):
-        mock_exec.return_value = MockExec(raise_exec_error=True)
+        mock_exec.side_effect = ExecError(["drop"], 1, "exec error", "mock exec error")
         with self.assertRaises(ExecError):
             self.harness.charm._create_nms_admin_user_action(action_event)
 
-    @patch("charm.MagmaNmsMagmalteCharm._relations_ready", new_callable=PropertyMock)
     def test_given_juju_action_when_relation_is_not_realized_then_get_admin_credentials_fails(
-        self, relations_ready
+        self,
     ):
-        relations_ready.return_value = False
         action_event = Mock()
         self.harness.charm._on_get_admin_credentials(action_event)
         self.assertEqual(
