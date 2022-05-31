@@ -4,7 +4,7 @@
 name: magma-orc8r-nginx
 description: |
   Proxies traffic between nms and obsidian.
-  
+
 summary: |
   Proxies traffic between nms and obsidian.
 
@@ -21,7 +21,10 @@ resources:
 requires:
   bootstrapper:
     interface: magma-orc8r-bootstrapper
-  certifier:
+    limit: 1
+  magma-orc8r-certifier:
     interface: magma-orc8r-certifier
+    limit: 1
   obsidian:
     interface: magma-orc8r-obsidian
+    limit: 1

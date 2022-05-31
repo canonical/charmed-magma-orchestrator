@@ -29,7 +29,7 @@ class TestCharm(unittest.TestCase):
         self.harness.charm.on.magma_nms_nginx_proxy_pebble_ready.emit(event)
         self.assertEqual(
             self.harness.charm.unit.status,
-            BlockedStatus("Waiting for relations: certifier, magmalte"),
+            BlockedStatus("Waiting for relations: magma-orc8r-certifier, magmalte"),
         )
 
     def test_given_charm_when_pebble_ready_event_emitted_and_certifier_relation_is_missing_then_charm_goes_to_blocked_state(  # noqa: E501
@@ -41,7 +41,7 @@ class TestCharm(unittest.TestCase):
         self.harness.charm.on.magma_nms_nginx_proxy_pebble_ready.emit(event)
         self.assertEqual(
             self.harness.charm.unit.status,
-            BlockedStatus("Waiting for relations: certifier"),
+            BlockedStatus("Waiting for relations: magma-orc8r-certifier"),
         )
 
     def test_given_charm_when_pebble_ready_event_emitted_and_magmalte_relation_is_missing_then_charm_goes_to_blocked_state(  # noqa: E501
@@ -49,7 +49,9 @@ class TestCharm(unittest.TestCase):
     ):
         self.harness.disable_hooks()
         event = Mock()
-        orc8r_relation_id = self.harness.add_relation("certifier", "orc8r-orchestrator")
+        orc8r_relation_id = self.harness.add_relation(
+            "magma-orc8r-certifier", "orc8r-orchestrator"
+        )
         self.harness.add_relation_unit(orc8r_relation_id, "orc8r-orchestrator/0")
         self.harness.enable_hooks()
         self.harness.charm.on.magma_nms_nginx_proxy_pebble_ready.emit(event)
@@ -63,7 +65,9 @@ class TestCharm(unittest.TestCase):
     ):
         self.harness.disable_hooks()
         event = Mock()
-        orc8r_relation_id = self.harness.add_relation("certifier", "orc8r-orchestrator")
+        orc8r_relation_id = self.harness.add_relation(
+            "magma-orc8r-certifier", "orc8r-orchestrator"
+        )
         self.harness.add_relation_unit(orc8r_relation_id, "orc8r-orchestrator/0")
         magmalte_relation_id = self.harness.add_relation("magmalte", "nms-magmalte")
         self.harness.add_relation_unit(magmalte_relation_id, "nms-magmalte/0")
@@ -75,7 +79,7 @@ class TestCharm(unittest.TestCase):
     def test_given_charm_when_certifier_relation_added_then_configure_nginx_action_called(self):
         event = Mock()
         with patch.object(MagmaNmsNginxProxyCharm, "_configure_nginx", event) as mock:
-            relation_id = self.harness.add_relation("certifier", "orc8r-certifier")
+            relation_id = self.harness.add_relation("magma-orc8r-certifier", "orc8r-certifier")
             self.harness.add_relation_unit(relation_id, "orc8r-certifier/0")
             self.harness.update_relation_data(relation_id, "orc8r-certifier/0", {"key": "value"})
         mock.assert_called_once()

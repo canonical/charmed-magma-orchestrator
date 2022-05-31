@@ -9,7 +9,7 @@ from lightkube import Client
 from lightkube.core.exceptions import ApiError
 from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
 from lightkube.resources.apps_v1 import StatefulSet
-from ops.charm import CharmBase
+from ops.charm import CharmBase, PebbleReadyEvent, RelationJoinedEvent
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import Layer
@@ -27,7 +27,8 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
             self._on_magma_orc8r_bootstrapper_pebble_ready,
         )
         self.framework.observe(
-            self.on.certifier_relation_joined, self._on_certifier_relation_joined
+            self.on.magma_orc8r_certifier_relation_joined,
+            self._on_magma_orc8r_certifier_relation_joined,
         )
         self._service_patcher = KubernetesServicePatch(
             charm=self,
@@ -35,10 +36,10 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
             additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
         )
 
-    def _on_magma_orc8r_bootstrapper_pebble_ready(self, event):
+    def _on_magma_orc8r_bootstrapper_pebble_ready(self, event: PebbleReadyEvent):
         """Triggered when pebble is ready."""
         if not self._certifier_relation_ready:
-            self.unit.status = BlockedStatus("Waiting for orc8r-certifier relation...")
+            self.unit.status = BlockedStatus("Waiting for magma-orc8r-certifier relation...")
             event.defer()
             return
         if not self._orc8r_certs_mounted:
@@ -47,12 +48,12 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
             return
         self._configure_pebble(event)
 
-    def _on_certifier_relation_joined(self, event):
+    def _on_magma_orc8r_certifier_relation_joined(self, event: RelationJoinedEvent):
         if not self._orc8r_certs_mounted:
             self.unit.status = MaintenanceStatus("Mounting certificates from orc8r-certifier...")
             self._mount_orc8r_certs()
 
-    def _configure_pebble(self, event):
+    def _configure_pebble(self, event: PebbleReadyEvent):
         """Adds layer to pebble config if the proposed config is different from the current one."""
         if self._container.can_connect():
             pebble_layer = self._pebble_layer
@@ -92,7 +93,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
     @property
     def _certifier_relation_ready(self) -> bool:
         """Checks whether certifier relation is ready."""
-        certifier_relation = self.model.get_relation("certifier")
+        certifier_relation = self.model.get_relation("magma-orc8r-certifier")
         if not certifier_relation or len(certifier_relation.units) == 0:
             return False
         return True

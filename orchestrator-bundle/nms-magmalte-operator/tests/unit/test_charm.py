@@ -68,14 +68,14 @@ class TestCharm(unittest.TestCase):
 
         self.assertEqual(
             self.harness.charm.unit.status,
-            BlockedStatus("Waiting for relation(s) to be created: certifier, db"),
+            BlockedStatus("Waiting for relation(s) to be created: magma-orc8r-certifier, db"),
         )
 
     def test_given_charm_when_pebble_ready_event_emitted_and_certifier_relation_is_established_but_db_relation_is_missing_then_charm_goes_to_blocked_state(  # noqa: E501
         self,
     ):
         event = Mock()
-        relation_id = self.harness.add_relation("certifier", "orc8r-certifier")
+        relation_id = self.harness.add_relation("magma-orc8r-certifier", "orc8r-certifier")
         self.harness.add_relation_unit(relation_id, "orc8r-certifier/0")
 
         self.harness.charm.on.magma_nms_magmalte_pebble_ready.emit(event)
