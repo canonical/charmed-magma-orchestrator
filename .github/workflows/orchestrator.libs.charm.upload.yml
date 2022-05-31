@@ -19,3 +19,15 @@ jobs:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
           charm-path: ./orchestrator-bundle/orc8r-libs
           upload-image: "false"
+
+      - name: Publish libs
+        env:
+          CHARMCRAFT_AUTH: "${{ secrets.CHARMCRAFT_AUTH }}"
+        run: |
+          set -eux
+          orc8r_libs_dir="./orchestrator-bundle/orc8r-libs/lib"
+          libs="$(find ${orc8r_libs_dir}/charms/magma_orc8r_libs/v0/ -name *.py -exec sh -c 'printf "%s\n" "${0%.*}"' {} ';' | sed "s#${orc8r_libs_dir}/##g" | sed "s#/#.#g")"
+          for lib in ${libs}; do
+            echo "Publishing ${lib}"
+            (cd ./orchestrator-bundle/orc8r-libs && charmcraft publish-lib ${lib})
+          done

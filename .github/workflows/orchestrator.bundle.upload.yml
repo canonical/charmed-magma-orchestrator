@@ -5,7 +5,7 @@ on:
     branches:
       - "main"
     paths:
-      - "orchestrator-bundle/orc8r-bundle"
+      - "orchestrator-bundle/orc8r-bundle/**"
 
 jobs:
   orc8r-bundle-charmhub-upload:
