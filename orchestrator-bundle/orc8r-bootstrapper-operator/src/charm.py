@@ -5,10 +5,10 @@
 import logging
 
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
-from lightkube import Client
-from lightkube.core.exceptions import ApiError
-from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
-from lightkube.resources.apps_v1 import StatefulSet
+from charms.tls_certificates_interface.v0.tls_certificates import (
+    CertificatesRequirerCharmEvents,
+    InsecureCertificatesRequires,
+)
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
@@ -18,82 +18,94 @@ logger = logging.getLogger(__name__)
 
 
 class MagmaOrc8rBootstrapperCharm(CharmBase):
+
+    CERTIFICATE_DIRECTORY = "/var/opt/magma/certs"
+    CERTIFICATE_COMMON_NAME = "whatever.domain"  # Not used
+    CERTIFICATE_NAME = "bootstrapper.key"
+
+    on = CertificatesRequirerCharmEvents()
+
     def __init__(self, *args):
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-bootstrapper"
         self._container = self.unit.get_container(self._container_name)
-        self.framework.observe(
-            self.on.magma_orc8r_bootstrapper_pebble_ready,
-            self._on_magma_orc8r_bootstrapper_pebble_ready,
-        )
-        self.framework.observe(
-            self.on.certifier_relation_joined, self._on_certifier_relation_joined
-        )
         self._service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[("grpc", 9180, 9088)],
             additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
         )
+        self.certificates = InsecureCertificatesRequires(self, "certificates")
+        self.framework.observe(
+            self.on.magma_orc8r_bootstrapper_pebble_ready,
+            self._on_magma_orc8r_bootstrapper_pebble_ready,
+        )
+        self.framework.observe(
+            self.on.certificates_relation_joined, self._on_certificates_relation_joined
+        )
+        self.framework.observe(self.on.certificate_available, self._on_certificate_available)
+
+    def _on_certificates_relation_joined(self, event):
+        self.certificates.request_certificate(
+            cert_type="server",
+            common_name=self.CERTIFICATE_COMMON_NAME,
+        )
+
+    def _on_certificate_available(self, event):
+        logger.info("Certificate is available")
+        if not self._container.can_connect():
+            logger.info("Cant connect to container - Won't push certificates to workload")
+            event.defer()
+            return
+        if self._certs_are_stored:
+            logger.info("Certificates are already stored - Doing nothing")
+            return
+        certificate_data = event.certificate_data
+        if certificate_data["common_name"] == self.CERTIFICATE_COMMON_NAME:
+            logger.info("Pushing certificate to workload")
+            self._container.push(
+                path=f"{self.CERTIFICATE_DIRECTORY}/{self.CERTIFICATE_NAME}",
+                source=certificate_data["key"],
+            )
+            self._on_magma_orc8r_bootstrapper_pebble_ready(event)
+
+    @property
+    def _certs_are_stored(self) -> bool:
+        return self._container.exists(f"{self.CERTIFICATE_DIRECTORY}/{self.CERTIFICATE_NAME}")
 
     def _on_magma_orc8r_bootstrapper_pebble_ready(self, event):
         """Triggered when pebble is ready."""
-        if not self._certifier_relation_ready:
-            self.unit.status = BlockedStatus("Waiting for orc8r-certifier relation...")
+        if not self._certificates_relation_ready:
+            self.unit.status = BlockedStatus("Waiting for certificates relation")
             event.defer()
             return
-        if not self._orc8r_certs_mounted:
-            self.unit.status = WaitingStatus("Waiting for certs to be mounted")
+        if not self._certs_are_stored:
+            self.unit.status = WaitingStatus("Waiting for certs to be available")
             event.defer()
             return
         self._configure_pebble(event)
 
-    def _on_certifier_relation_joined(self, event):
-        if not self._orc8r_certs_mounted:
-            self.unit.status = MaintenanceStatus("Mounting certificates from orc8r-certifier...")
-            self._mount_orc8r_certs()
-
     def _configure_pebble(self, event):
         """Adds layer to pebble config if the proposed config is different from the current one."""
         if self._container.can_connect():
-            pebble_layer = self._pebble_layer
             plan = self._container.get_plan()
-            if plan.services != pebble_layer.services:
-                self._container.add_layer(self._container_name, pebble_layer, combine=True)
+            layer = self._pebble_layer
+            if plan.services != layer.services:
+                self.unit.status = MaintenanceStatus(
+                    f"Configuring pebble layer for {self._service_name}"
+                )
+                self._container.add_layer(self._container_name, layer, combine=True)
                 self._container.restart(self._service_name)
                 logger.info(f"Restarted container {self._service_name}")
                 self.unit.status = ActiveStatus()
         else:
-            self.unit.status = WaitingStatus("Waiting for container to be ready...")
+            self.unit.status = WaitingStatus("Waiting for container to be ready")
             event.defer()
 
-    def _mount_orc8r_certs(self) -> None:
-        """Patch the StatefulSet to include Orchestrator certs secret mount."""
-        self.unit.status = MaintenanceStatus(
-            "Mounting additional volumes required by the magma-orc8r-bootstrapper container..."
-        )
-        client = Client()
-        try:
-            stateful_set = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
-            stateful_set.spec.template.spec.volumes.extend(self._bootstrapper_volumes)  # type: ignore[attr-defined]  # noqa: E501
-            stateful_set.spec.template.spec.containers[1].volumeMounts.extend(  # type: ignore[attr-defined]  # noqa: E501
-                self._bootstrapper_volume_mounts
-            )
-            client.patch(
-                StatefulSet, name=self.app.name, obj=stateful_set, namespace=self._namespace
-            )
-        except ApiError as e:
-            logger.debug(
-                "Failed to mount additional volumes required by the magma-orc8r-bootstrapper "
-                "container!"
-            )
-            raise e
-        logger.info("Additional K8s resources for magma-orc8r-bootstrapper container applied!")
-
     @property
-    def _certifier_relation_ready(self) -> bool:
-        """Checks whether certifier relation is ready."""
-        certifier_relation = self.model.get_relation("certifier")
-        if not certifier_relation or len(certifier_relation.units) == 0:
+    def _certificates_relation_ready(self) -> bool:
+        """Checks whether certificates relation is ready."""
+        certificates_relation = self.model.get_relation("certificates")
+        if not certificates_relation or len(certificates_relation.units) == 0:
             return False
         return True
 
@@ -120,37 +132,6 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
                 },
             }
         )
-
-    @property
-    def _orc8r_certs_mounted(self) -> bool:
-        """Check to see if the Orchestrator certs have already been mounted."""
-        client = Client()
-        statefulset = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
-        return all(
-            volume_mount in statefulset.spec.template.spec.containers[1].volumeMounts  # type: ignore[attr-defined]  # noqa: E501
-            for volume_mount in self._bootstrapper_volume_mounts
-        )
-
-    @property
-    def _bootstrapper_volumes(self) -> list:
-        """Returns a list of volumes required by the magma-orc8r-bootstrapper container"""
-        return [
-            Volume(
-                name="certs",
-                secret=SecretVolumeSource(secretName="orc8r-certs"),
-            ),
-        ]
-
-    @property
-    def _bootstrapper_volume_mounts(self) -> list:
-        """Returns a list of volume mounts required by the magma-orc8r-bootstrapper container"""
-        return [
-            VolumeMount(
-                mountPath="/var/opt/magma/certs",
-                name="certs",
-                readOnly=True,
-            ),
-        ]
 
     @property
     def _namespace(self) -> str:

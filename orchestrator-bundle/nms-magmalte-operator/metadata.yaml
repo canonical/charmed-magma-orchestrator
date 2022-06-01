@@ -16,7 +16,7 @@ containers:
     resource: magma-nms-magmalte-image
     mounts:
       - storage: certs
-        location: /run/secrets
+        location: /var/opt/magma/certs
 
 resources:
   magma-nms-magmalte-image:
@@ -33,6 +33,8 @@ storage:
 provides:
   magmalte:
     interface: nms-magmalte
+  admin-operator:
+    interface: admin-operator
 
 requires:
   db:

@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import Mock, PropertyMock, call, patch
+from unittest.mock import Mock, call, patch
 
 from ops import testing
 from ops.model import BlockedStatus
@@ -28,7 +28,9 @@ class TestCharm(unittest.TestCase):
 
     @patch("charm.KubernetesServicePatch", lambda charm, ports, additional_labels: None)
     def setUp(self):
+        self.model_name = "whatever"
         self.harness = testing.Harness(MagmaOrc8rCertifierCharm)
+        self.harness.set_model_name(name=self.model_name)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
         self.maxDiff = None
@@ -71,30 +73,28 @@ class TestCharm(unittest.TestCase):
             self.harness.charm._on_database_relation_joined(db_event)
         self.assertEqual(db_event.database, self.TEST_DB_NAME)
 
-    @patch("charm.MagmaOrc8rCertifierCharm._certs_are_stored")
-    @patch("charm.MagmaOrc8rCertifierCharm._get_db_connection_string", new_callable=PropertyMock)
-    @patch("charm.MagmaOrc8rCertifierCharm._namespace", new_callable=PropertyMock)
-    @patch("charm.MagmaOrc8rCertifierCharm._certificates_relation_created")
-    @patch("charm.MagmaOrc8rCertifierCharm._db_relation_created")
-    @patch("charm.MagmaOrc8rCertifierCharm._db_relation_established")
+    @patch("ops.model.Container.exists")
+    @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined")
     def test_given_pebble_ready_when_get_plan_then_plan_is_filled_with_magma_orc8r_certifier_service_content(  # noqa: E501
-        self,
-        db_relation_established,
-        db_relation_created,
-        certificates_relation_created,
-        patch_namespace,
-        patch_db_string,
-        patch_certs_stored,
+        self, _, patch_file_exists
     ):
-        namespace = "whatever"
-        patch_certs_stored.return_value = True
-        db_relation_established.return_value = True
-        db_relation_created.return_value = True
-        certificates_relation_created.return_value = True
-        patch_namespace.return_value = namespace
-        patch_db_string.return_value = self.TEST_DB_CONNECTION_STRING
-        key_values = {"domain": "whatever domain"}
-        self.harness.update_config(key_values=key_values)
+        patch_file_exists.return_value = True
+        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        certificates_relation_id = self.harness.add_relation(
+            relation_name="certificates", remote_app="vault-k8s"
+        )
+        self.harness.add_relation_unit(
+            relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
+        )
+        self.harness.add_relation_unit(
+            relation_id=certificates_relation_id, remote_unit_name="vault-k8s/0"
+        )
+        key_values = {"master": self.TEST_DB_CONNECTION_STRING}
+        self.harness.update_relation_data(
+            relation_id=db_relation_id, app_or_unit="postgresql-k8s", key_values=key_values
+        )
+        config_key_values = {"domain": "whatever domain"}
+        self.harness.update_config(key_values=config_key_values)
 
         self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
 
@@ -122,7 +122,7 @@ class TestCharm(unittest.TestCase):
                         "SQL_DIALECT": "psql",
                         "SERVICE_HOSTNAME": "magma-orc8r-certifier",
                         "SERVICE_REGISTRY_MODE": "k8s",
-                        "SERVICE_REGISTRY_NAMESPACE": namespace,
+                        "SERVICE_REGISTRY_NAMESPACE": self.model_name,
                     },
                 }
             },

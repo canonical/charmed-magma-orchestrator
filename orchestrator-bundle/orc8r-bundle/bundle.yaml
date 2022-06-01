@@ -180,8 +180,6 @@ relations:
   - nms-magmalte:magmalte
 - - orc8r-accessd:db
   - postgresql-k8s:db
-- - orc8r-bootstrapper:certifier
-  - orc8r-certifier:certifier
 - - orc8r-certifier:db
   - postgresql-k8s:db
 - - orc8r-configurator:db

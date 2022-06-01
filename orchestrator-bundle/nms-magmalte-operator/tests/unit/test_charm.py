@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import Mock, PropertyMock, call, patch
+from unittest.mock import Mock, call, patch
 
 from ops import testing
 from ops.model import ActiveStatus, BlockedStatus
@@ -38,7 +38,9 @@ class TestCharm(unittest.TestCase):
         "charm.KubernetesServicePatch", lambda charm, ports, service_name, additional_labels: None
     )
     def setUp(self):
+        self.model_name = "whatever"
         self.harness = testing.Harness(MagmaNmsMagmalteCharm)
+        self.harness.set_model_name(name=self.model_name)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
 
@@ -83,48 +85,44 @@ class TestCharm(unittest.TestCase):
             BlockedStatus("Waiting for relation(s) to be created: db"),
         )
 
-    @patch("charm.MagmaNmsMagmalteCharm.DB_NAME", new_callable=PropertyMock)
     @patch("ops.model.Unit.is_leader")
     def test_given_pod_is_leader_when_database_relation_joined_event_then_database_is_set_correctly(  # noqa: E501
-        self, _, mock_db_name
+        self,
+        _,
     ):
-        mock_db_name.return_value = self.TEST_DB_NAME
-        postgres_db_name = self.TEST_DB_NAME
-        postgres_host = "bread"
-        postgres_password = "water"
-        postgres_username = "yeast"
-        postgres_port = self.TEST_DB_PORT
-
         db_event = self._fake_db_event(
-            postgres_db_name,
-            postgres_username,
-            postgres_password,
-            postgres_host,
-            postgres_port,
+            postgres_db_name=self.TEST_DB_NAME,
+            postgres_username="yeast",
+            postgres_password="water",
+            postgres_host="bread",
+            postgres_port=self.TEST_DB_PORT,
         )
         self.harness.charm._on_database_relation_joined(db_event)
 
         self.assertEqual(db_event.database, self.TEST_DB_NAME)
 
+    @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined")
     @patch("ops.model.Container.exec")
-    @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
-    @patch("charm.MagmaNmsMagmalteCharm._namespace", new_callable=PropertyMock)
-    @patch("charm.MagmaNmsMagmalteCharm._certs_are_stored", new_callable=PropertyMock)
-    @patch("charm.MagmaNmsMagmalteCharm._relations_ready", new_callable=PropertyMock)
+    @patch("ops.model.Container.exists")
     def test_given_relations_are_ready_when_pebble_ready_then_pebble_plan_is_filled_with_magma_nms_magmalte_service_content(  # noqa: E501
-        self,
-        relations_ready,
-        patch_certs_are_stored,
-        patch_namespace,
-        get_db_connection_string,
-        mock_exec,
+        self, patch_file_exists, mock_exec, _
     ):
+        certificates_relation_id = self.harness.add_relation(
+            relation_name="certificates", remote_app="icey-vault-k8s"
+        )
+        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        self.harness.add_relation_unit(
+            relation_id=certificates_relation_id, remote_unit_name="icey-vault-k8s/0"
+        )
+        self.harness.add_relation_unit(
+            relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
+        )
+        key_values = {"master": self.TEST_DB_CONNECTION_STRING}
+        self.harness.update_relation_data(
+            relation_id=db_relation_id, app_or_unit="postgresql-k8s", key_values=key_values
+        )
         mock_exec.return_value = MockExec()
-        namespace = "whatever"
-        relations_ready.return_value = True
-        patch_certs_are_stored.return_value = True
-        patch_namespace.return_value = namespace
-        get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
+        patch_file_exists.return_value = True
 
         self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
         expected_plan = {
@@ -139,7 +137,7 @@ class TestCharm(unittest.TestCase):
                     "environment": {
                         "API_CERT_FILENAME": "/run/secrets/admin_operator.pem",
                         "API_PRIVATE_KEY_FILENAME": "/run/secrets/admin_operator.key.pem",
-                        "API_HOST": f"orc8r-nginx-proxy.{namespace}.svc.cluster.local",
+                        "API_HOST": f"orc8r-nginx-proxy.{self.model_name}.svc.cluster.local",
                         "PORT": "8081",
                         "HOST": "0.0.0.0",
                         "MYSQL_HOST": self.TEST_DB_CONNECTION_STRING.host,
@@ -159,17 +157,28 @@ class TestCharm(unittest.TestCase):
         updated_plan = self.harness.get_container_pebble_plan("magma-nms-magmalte").to_dict()
         self.assertEqual(expected_plan, updated_plan)
 
+    @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined")
     @patch("ops.model.Container.exec")
-    @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
-    @patch("charm.MagmaNmsMagmalteCharm._certs_are_stored", new_callable=PropertyMock)
-    @patch("charm.MagmaNmsMagmalteCharm._relations_ready")
+    @patch("ops.model.Container.exists")
     def test_given_relations_are_established_when_pebble_ready_then_charm_goes_to_active_state(  # noqa: E501
-        self, relations_ready, patch_certs_are_stored, get_db_connection_string, mock_exec
+        self, patch_file_exists, mock_exec, _
     ):
-        relations_ready.return_value = True
-        patch_certs_are_stored.return_value = True
+        certificates_relation_id = self.harness.add_relation(
+            relation_name="certificates", remote_app="icey-vault-k8s"
+        )
+        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        self.harness.add_relation_unit(
+            relation_id=certificates_relation_id, remote_unit_name="icey-vault-k8s/0"
+        )
+        self.harness.add_relation_unit(
+            relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
+        )
+        key_values = {"master": "whatever"}
+        self.harness.update_relation_data(
+            relation_id=db_relation_id, app_or_unit="postgresql-k8s", key_values=key_values
+        )
+        patch_file_exists.return_value = True
         mock_exec.return_value = MockExec()
-        get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
 
         self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
 

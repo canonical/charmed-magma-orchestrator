@@ -6,7 +6,6 @@ import logging
 
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from charms.tls_certificates_interface.v0.tls_certificates import (
-    CertificatesRequirerCharmEvents,
     InsecureCertificatesRequires,
 )
 from ops.charm import CharmBase
@@ -21,8 +20,6 @@ class MagmaNmsNginxProxyCharm(CharmBase):
     BASE_NGINX_PATH = "/etc/nginx/conf.d"
     NGINX_CONFIG_FILE_NAME = "nginx_proxy_ssl.conf"
     CERTIFICATE_NAME = "nms_nginx"
-
-    on = CertificatesRequirerCharmEvents()
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -43,7 +40,9 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         self.framework.observe(
             self.on.certificates_relation_joined, self._on_certificates_relation_joined
         )
-        self.framework.observe(self.on.certificate_available, self._on_certificate_available)
+        self.framework.observe(
+            self.certificates.on.certificate_available, self._on_certificate_available
+        )
 
     def _on_install(self, event):
         if not self._container.can_connect():

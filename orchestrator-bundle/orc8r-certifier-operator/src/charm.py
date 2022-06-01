@@ -7,7 +7,6 @@ import logging
 import ops.lib
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from charms.tls_certificates_interface.v0.tls_certificates import (
-    CertificatesRequirerCharmEvents,
     InsecureCertificatesRequires,
 )
 from ops.charm import CharmBase
@@ -32,8 +31,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     ALERTMANAGER_URL = "http://orc8r-alertmanager:9093"
     ALERTMANAGER_CONFIGURER_URL = "http://orc8r-alertmanager:9101"
 
-    on = CertificatesRequirerCharmEvents()
-
     def __init__(self, *args):
         """An instance of this object everytime an event occurs."""
         super().__init__(*args)
@@ -57,7 +54,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self.framework.observe(
             self._db.on.database_relation_joined, self._on_database_relation_joined
         )
-        self.framework.observe(self.on.certificate_available, self._on_certificate_available)
+        self.framework.observe(
+            self.certificates.on.certificate_available, self._on_certificate_available
+        )
         self.framework.observe(
             self.on.certificates_relation_joined, self._on_certificates_relation_joined
         )

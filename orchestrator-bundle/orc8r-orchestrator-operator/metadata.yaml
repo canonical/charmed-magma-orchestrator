@@ -16,6 +16,8 @@ containers:
     mounts:
       - storage: config
         location: /var/opt/magma/configs/orc8r
+      - storage: certs
+        location: /var/opt/magma/certs
 
 resources:
   magma-orc8r-orchestrator-image:
@@ -24,11 +26,15 @@ resources:
     upstream-source: docker.artifactory.magmacore.org/controller:1.6.0
 
 requires:
-  certifier:
-    interface: magma-orc8r-certifier
+  admin-operator:
+    interface: admin-operator
 
 storage:
   config:
     type: filesystem
     description: Configs storage
+    minimum-size: 1M
+  certs:
+    type: filesystem
+    description: Certs storage
     minimum-size: 1M
