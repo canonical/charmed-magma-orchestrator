@@ -29,6 +29,7 @@ OBSIDIAN_CHARM_NAME = "magma-orc8r-obsidian"
 
 class TestOrc8rNginx:
     @pytest.fixture(scope="module")
+    @pytest.mark.abort_on_fail
     async def setup(self, ops_test):
         await self._deploy_postgresql(ops_test)
         await self._deploy_orc8r_certifier(ops_test)
@@ -108,6 +109,7 @@ class TestOrc8rNginx:
         )
         
     @pytest.fixture(scope="module")
+    @pytest.mark.abort_on_fail
     async def build_and_deploy(self, ops_test, setup):
         charm = await ops_test.build_charm(".")
         resources = {
@@ -116,7 +118,8 @@ class TestOrc8rNginx:
         await ops_test.model.deploy(
             charm, resources=resources, application_name=APPLICATION_NAME, trust=True
         )
-        
+
+    @pytest.mark.abort_on_fail
     async def test_wait_for_blocked_status(self, ops_test, build_and_deploy):
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
         

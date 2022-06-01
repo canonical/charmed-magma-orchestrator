@@ -18,8 +18,9 @@ CHARM_NAME = "magma-orc8r-analytics"
 
 class TestOrc8rAnalytics:
     @pytest.fixture(scope="module")
+    @pytest.mark.abort_on_fail
     async def build_and_deploy(self, ops_test):
-        charm = "/home/ubuntu/orc8r-packed-charms/orc8r-analytics.charm"
+        charm = await ops_test.build_charm(".")
         resources = {
             f"{CHARM_NAME}-image": METADATA["resources"][f"{CHARM_NAME}-image"]["upstream-source"],
         }
