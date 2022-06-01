@@ -18,6 +18,7 @@ CHARM_NAME = "magma-orc8r-service-registry"
 
 class TestOrc8rServiceRegristry:
     @pytest.fixture(scope="module")
+    @pytest.mark.abort_on_fail
     async def build_and_deploy(self, ops_test):
         charm = await ops_test.build_charm(".")
         resources = {

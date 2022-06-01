@@ -18,12 +18,13 @@ CHARM_NAME = "magma-orc8r-smsd"
 
 class TestOrc8rSmsd:
     @pytest.fixture(scope="module")
+    @pytest.mark.abort_on_fail
     async def setup(self, ops_test):
         await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
         await ops_test.model.wait_for_idle(apps=["postgresql-k8s"], status="active", timeout=1000)
 
-    @pytest.mark.abort_on_fail
     @pytest.fixture(scope="module")
+    @pytest.mark.abort_on_fail
     async def build_and_deploy(self, ops_test, setup):
         charm = await ops_test.build_charm(".")
         resources = {
@@ -32,7 +33,8 @@ class TestOrc8rSmsd:
         await ops_test.model.deploy(
             charm, resources=resources, application_name=APPLICATION_NAME, trust=True
         )
-        
+    
+    @pytest.mark.abort_on_fail
     async def test_wait_for_blocked_status(self, ops_test, setup, build_and_deploy):
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
         

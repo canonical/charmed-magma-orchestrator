@@ -21,6 +21,7 @@ CERTIFIER_CHARM_NAME = "magma-orc8r-certifier"
 
 class TestNmsMagmaLTE:
     @pytest.fixture(scope="module")
+    @pytest.mark.abort_on_fail
     async def setup(self, ops_test):
         await self._deploy_postgresql(ops_test)
         await self._deploy_orc8r_certifier(ops_test)
@@ -32,7 +33,7 @@ class TestNmsMagmaLTE:
 
     @staticmethod
     async def _deploy_orc8r_certifier(ops_test):
-        charm = "/home/ubuntu/orc8r-packed-charms/orc8r-certifier.charm"
+        charm = await ops_test.build_charm("../orc8r-certifier-operator/")
         resources = {
             f"{CERTIFIER_CHARM_NAME}-image": CERTIFIER_METADATA["resources"][
                 f"{CERTIFIER_CHARM_NAME}-image"
@@ -56,8 +57,9 @@ class TestNmsMagmaLTE:
         )
 
     @pytest.fixture(scope="module")
+    @pytest.mark.abort_on_fail
     async def build_and_deploy_charm(self, ops_test):
-        charm = "/home/ubuntu/orc8r-packed-charms/nms-magmalte.charm"
+        charm = await ops_test.build_charm(".")
         resources = {
             f"{CHARM_NAME}-image": METADATA["resources"][f"{CHARM_NAME}-image"]["upstream-source"],
         }
@@ -68,7 +70,6 @@ class TestNmsMagmaLTE:
     async def test_wait_for_blocked_status(self, ops_test, build_and_deploy_charm):
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
 
-    @pytest.mark.abort_on_fail
     async def test_relate_and_wait_for_idle(self, ops_test, setup, build_and_deploy_charm):
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"

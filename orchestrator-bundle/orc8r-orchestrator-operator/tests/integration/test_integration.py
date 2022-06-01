@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
+
 import logging
 from pathlib import Path
 
@@ -20,6 +21,7 @@ CERTIFIER_CHARM_NAME = "magma-orc8r-certifier"
 
 class TestOrchestrator:
     @pytest.fixture(scope="module")
+    @pytest.mark.abort_on_fail
     async def setup(self, ops_test):
         await self._deploy_postgresql(ops_test)
         await self._deploy_orc8r_certifier(ops_test)
@@ -55,6 +57,7 @@ class TestOrchestrator:
         )
 
     @pytest.fixture(scope="module")
+    @pytest.mark.abort_on_fail
     async def build_and_deploy(self, ops_test, setup):
         charm = await ops_test.build_charm(".")
         resources = {
@@ -68,6 +71,7 @@ class TestOrchestrator:
             relation1=APPLICATION_NAME, relation2="orc8r-certifier:certifier"
         )
 
+    @pytest.mark.abort_on_fail
     async def test_wait_for_blocked_status(self, ops_test, setup, build_and_deploy):
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
 

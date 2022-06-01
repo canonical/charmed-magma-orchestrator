@@ -4,7 +4,6 @@
 
 import logging
 from pathlib import Path
-from unittest import async_case
 
 import pytest
 import yaml
@@ -19,6 +18,7 @@ CHARM_NAME = "magma-orc8r-streamer"
 
 class TestOrc8rStreamer:
     @pytest.fixture(scope="module")
+    @pytest.mark.abort_on_fail
     async def build_and_deploy(self, ops_test):
         charm = await ops_test.build_charm(".")
         resources = {
