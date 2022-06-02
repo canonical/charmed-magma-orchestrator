@@ -4,7 +4,9 @@
 import unittest
 
 from ops import testing
-from test_charms.test_admin_operator_provider.src.charm import MagmaNmsMagmalteCharm
+from test_charms.test_admin_operator_provider.src.charm import (  # type: ignore[import]  # noqa: E501
+    MagmaNmsMagmalteCharm,
+)
 
 
 class TestAdminOperatorProvides(unittest.TestCase):
@@ -15,7 +17,7 @@ class TestAdminOperatorProvides(unittest.TestCase):
         self.relationship_name = "magmalte"
 
     def test_given_magmalte_relation_relation_when_set_certificate_then_certificate_is_added_to_relation_data(  # noqa: E501
-            self
+        self,
     ):
         certificate = "whatever cert"
         relation_id = self.harness.add_relation(

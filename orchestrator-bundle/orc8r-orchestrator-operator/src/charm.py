@@ -205,9 +205,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
 
     @property
     def _admin_operator_cert_stored(self) -> bool:
-        return self._container.exists(
-            f"{self.BASE_CERTS_PATH}/admin_operator.pem"
-        )
+        return self._container.exists(f"{self.BASE_CERTS_PATH}/admin_operator.pem")
 
     @property
     def _admin_operator_relation_created(self) -> bool:
@@ -266,7 +264,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
 
     def _get_elasticsearch_config(self) -> tuple:
         elasticsearch_url = self.model.config.get("elasticsearch-url")
-        elasticsearch_url_split = elasticsearch_url.split(":")
+        elasticsearch_url_split = elasticsearch_url.split(":")  # type: ignore[union-attr]
         return elasticsearch_url_split[0], elasticsearch_url_split[1]
 
     @property

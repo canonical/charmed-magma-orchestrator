@@ -48,7 +48,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 5
+LIBPATCH = 6
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +105,7 @@ class AdminOperatorProvides(Object):
     def set_certificate(self, certificate: str, relation_id: int):
         relation = self.model.get_relation(
             relation_name=self.relationship_name, relation_id=relation_id)
-        relation.data[self.model.unit]["certificate"] = certificate
+        relation.data[self.model.unit]["certificate"] = certificate  # type: ignore[union-attr]
 
     def _on_relation_joined(self, event):
         self.on.certificate_request.emit(relation_id=event.relation.id)

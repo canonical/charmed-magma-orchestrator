@@ -87,7 +87,9 @@ class MagmaNmsMagmalteCharm(CharmBase):
             event.defer()
             return
         certificate_string = certificate.read()
-        self.admin_operator.set_certificate(relation_id=event.relation_id, certificate=certificate_string)
+        self.admin_operator.set_certificate(
+            relation_id=event.relation_id, certificate=certificate_string  # type: ignore[arg-type]
+        )
 
     def _on_certificates_relation_joined(self, event):
         self.certificates.request_certificate(

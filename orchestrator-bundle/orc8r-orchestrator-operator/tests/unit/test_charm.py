@@ -19,18 +19,19 @@ class TestCharm(unittest.TestCase):
         lambda charm, ports, additional_labels, additional_annotations: None,
     )
     def setUp(self):
+        self.model_name = "whatever name"
         self.harness = testing.Harness(MagmaOrc8rOrchestratorCharm)
+        self.harness.set_model_name(name=self.model_name)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
 
-    @patch("charm.MagmaOrc8rOrchestratorCharm._namespace", new_callable=PropertyMock)
-    @patch("charm.MagmaOrc8rOrchestratorCharm._relations_ready")
-    def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_nms_magmalte_service_content(
-        self, relations_ready, patch_namespace
+    @patch("ops.model.Container.exists")
+    def test_given_relations_created_when_pebble_ready_then_service_is_added_to_pebble_plan(
+        self, file_exists
     ):
-        namespace = "whatever"
-        relations_ready.return_value = True
-        patch_namespace.return_value = namespace
+        file_exists.return_value = True
+        relation_id = self.harness.add_relation(relation_name="admin-operator", remote_app="whatever")
+        self.harness.add_relation_unit(relation_id=relation_id, remote_unit_name="whatever/0")
         expected_plan = {
             "services": {
                 "magma-orc8r-orchestrator": {
@@ -44,12 +45,14 @@ class TestCharm(unittest.TestCase):
                     "environment": {
                         "SERVICE_HOSTNAME": "magma-orc8r-orchestrator",
                         "SERVICE_REGISTRY_MODE": "k8s",
-                        "SERVICE_REGISTRY_NAMESPACE": namespace,
+                        "SERVICE_REGISTRY_NAMESPACE": self.model_name,
                     },
                 },
             },
         }
+
         self.harness.container_pebble_ready("magma-orc8r-orchestrator")
+
         updated_plan = self.harness.get_container_pebble_plan("magma-orc8r-orchestrator").to_dict()
         self.assertEqual(expected_plan, updated_plan)
 

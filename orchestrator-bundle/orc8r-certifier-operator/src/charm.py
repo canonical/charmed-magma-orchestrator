@@ -6,7 +6,9 @@ import logging
 
 import ops.lib
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
-from charms.tls_certificates_interface.v0.tls_certificates import InsecureCertificatesRequires
+from charms.tls_certificates_interface.v0.tls_certificates import (
+    InsecureCertificatesRequires,
+)
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
