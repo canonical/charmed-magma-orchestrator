@@ -1,0 +1,5 @@
+options:
+  domain:
+    type: string
+    default:
+    description: Orchestrator domain.

@@ -87,6 +87,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         self._container.push(
             path=f"{self.BASE_CERTS_PATH}/admin_operator.pem", source=event.certificate
         )
+        self._on_magma_orc8r_orchestrator_pebble_ready(event)
 
     def _write_config_files(self):
         self._write_orchestrator_config()

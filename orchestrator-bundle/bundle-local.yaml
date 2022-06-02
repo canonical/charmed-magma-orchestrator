@@ -17,6 +17,8 @@ applications:
     trust: true
     resources:
       magma-nms-nginx-proxy-image: nginx:latest
+    options:
+      domain: example.com
   orc8r-accessd:
     charm: ./orc8r-accessd-operator/orc8r-accessd.charm
     scale: 1
@@ -105,6 +107,8 @@ applications:
     trust: true
     resources:
       magma-orc8r-nginx-image: docker.artifactory.magmacore.org/nginx:1.6.0
+    options:
+      domain: example.com
   orc8r-obsidian:
     charm: ./orc8r-obsidian-operator/orc8r-obsidian.charm
     scale: 1
@@ -198,18 +202,20 @@ applications:
     options:
       metrics_count_limit: 500000
 relations:
-- - nms-magmalte:certifier
-  - orc8r-certifier:certifier
+- - nms-magmalte
+  - vault-k8s
+- - orc8r-orchestrator
+  - nms-magmalte
 - - nms-magmalte:db
   - postgresql-k8s:db
-- - nms-nginx-proxy:certifier
-  - orc8r-certifier:certifier
+- - nms-nginx-proxy
+  - vault-k8s
 - - nms-nginx-proxy:magmalte
   - nms-magmalte:magmalte
 - - orc8r-accessd:db
   - postgresql-k8s:db
-- - orc8r-bootstrapper:certifier
-  - orc8r-certifier:certifier
+- - orc8r-bootstrapper
+  - vault-k8s
 - - orc8r-certifier:db
   - postgresql-k8s:db
 - - orc8r-configurator:db
@@ -224,12 +230,8 @@ relations:
   - postgresql-k8s:db
 - - orc8r-nginx:bootstrapper
   - orc8r-bootstrapper:bootstrapper
-- - orc8r-nginx:certifier
-  - orc8r-certifier:certifier
 - - orc8r-nginx:obsidian
   - orc8r-obsidian:obsidian
-- - orc8r-orchestrator:certifier
-  - orc8r-certifier:certifier
 - - orc8r-policydb:db
   - postgresql-k8s:db
 - - orc8r-prometheus:alertmanager

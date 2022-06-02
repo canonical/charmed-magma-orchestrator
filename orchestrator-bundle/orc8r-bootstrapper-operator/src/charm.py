@@ -5,10 +5,7 @@
 import logging
 
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
-from charms.tls_certificates_interface.v0.tls_certificates import (
-    CertificatesRequirerCharmEvents,
-    InsecureCertificatesRequires,
-)
+from charms.tls_certificates_interface.v0.tls_certificates import InsecureCertificatesRequires
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
@@ -22,8 +19,6 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
     CERTIFICATE_DIRECTORY = "/var/opt/magma/certs"
     CERTIFICATE_COMMON_NAME = "whatever.domain"  # Not used
     CERTIFICATE_NAME = "bootstrapper.key"
-
-    on = CertificatesRequirerCharmEvents()
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -42,7 +37,8 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         self.framework.observe(
             self.on.certificates_relation_joined, self._on_certificates_relation_joined
         )
-        self.framework.observe(self.on.certificate_available, self._on_certificate_available)
+        self.framework.observe(
+            self.certificates.on.certificate_available, self._on_certificate_available)
 
     def _on_certificates_relation_joined(self, event):
         self.certificates.request_certificate(

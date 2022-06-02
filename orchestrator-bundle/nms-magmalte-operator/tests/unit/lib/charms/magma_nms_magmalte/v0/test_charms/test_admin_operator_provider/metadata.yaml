@@ -1,0 +1,20 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: magma-nms-magmalte
+description: Charm for unit testing
+summary: Charm for unit testing
+
+containers:
+  magma-nms-magmalte:
+    resource: magma-nms-magmalte-image
+
+resources:
+  magma-nms-magmalte-image:
+    type: oci-image
+    description: OCI image for magma-nms-magmalte (docker.artifactory.magmacore.org/magmalte:1.6.0)
+    upstream-source: docker.artifactory.magmacore.org/magmalte:1.6.0
+
+provides:
+  magmalte:
+    interface: nms-magmalte

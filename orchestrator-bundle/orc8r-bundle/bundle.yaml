@@ -96,6 +96,8 @@ applications:
     channel: edge
     scale: 1
     trust: true
+    options:
+      domain: example.com
   orc8r-obsidian:
     charm: magma-orc8r-obsidian
     channel: edge
@@ -194,12 +196,8 @@ relations:
   - postgresql-k8s:db
 - - orc8r-nginx:bootstrapper
   - orc8r-bootstrapper:bootstrapper
-- - orc8r-nginx:certifier
-  - orc8r-certifier:certifier
 - - orc8r-nginx:obsidian
   - orc8r-obsidian:obsidian
-- - orc8r-orchestrator:certifier
-  - orc8r-certifier:certifier
 - - orc8r-policydb:db
   - postgresql-k8s:db
 - - orc8r-prometheus:alertmanager

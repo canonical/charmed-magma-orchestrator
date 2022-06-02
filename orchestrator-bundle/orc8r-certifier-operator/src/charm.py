@@ -6,9 +6,7 @@ import logging
 
 import ops.lib
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
-from charms.tls_certificates_interface.v0.tls_certificates import (
-    InsecureCertificatesRequires,
-)
+from charms.tls_certificates_interface.v0.tls_certificates import InsecureCertificatesRequires
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
@@ -86,6 +84,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             logger.info("Pushing certificate to workload")
             self._container.push(f"{self.BASE_CERTS_PATH}/certifier.pem", certificate_data["cert"])
             self._container.push(f"{self.BASE_CERTS_PATH}/certifier.key", certificate_data["key"])
+            self._on_magma_orc8r_certifier_pebble_ready(event)
 
     def _write_metricsd_config_file(self):
         metricsd_config = (
@@ -170,10 +169,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     def _configure_magma_orc8r_certifier(self, event):
         """Adds layer to pebble config if the proposed config is different from the current one."""
         if self._container.can_connect():
-            self.unit.status = MaintenanceStatus("Configuring pod")
             plan = self._container.get_plan()
             layer = self._pebble_layer
             if plan.services != layer.services:
+                self.unit.status = MaintenanceStatus("Configuring pod")
                 self._container.add_layer(self._container_name, layer, combine=True)
                 self._container.restart(self._service_name)
                 logger.info(f"Restarted container {self._service_name}")

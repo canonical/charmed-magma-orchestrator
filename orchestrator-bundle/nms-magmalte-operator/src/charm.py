@@ -10,7 +10,9 @@ import time
 import ops.lib
 from charms.magma_nms_magmalte.v0.admin_operator import AdminOperatorProvides
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
-from charms.tls_certificates_interface.v0.tls_certificates import InsecureCertificatesRequires
+from charms.tls_certificates_interface.v0.tls_certificates import (
+    InsecureCertificatesRequires,
+)
 from ops.charm import ActionEvent, CharmBase
 from ops.framework import StoredState
 from ops.main import main
@@ -84,9 +86,8 @@ class MagmaNmsMagmalteCharm(CharmBase):
             logger.info("Certificate not yet available")
             event.defer()
             return
-        self.admin_operator.set_certificate(
-            relation_id=event.relation_id, certificate=certificate
-        )
+        certificate_string = certificate.read()
+        self.admin_operator.set_certificate(relation_id=event.relation_id, certificate=certificate_string)
 
     def _on_certificates_relation_joined(self, event):
         self.certificates.request_certificate(

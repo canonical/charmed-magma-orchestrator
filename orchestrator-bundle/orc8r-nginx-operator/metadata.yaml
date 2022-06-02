@@ -11,6 +11,9 @@ summary: |
 containers:
   magma-orc8r-nginx:
     resource: magma-orc8r-nginx-image
+    mounts:
+      - storage: certs
+        location: /var/opt/magma/certs
 
 resources:
   magma-orc8r-nginx-image:
@@ -19,9 +22,15 @@ resources:
     upstream-source: docker.artifactory.magmacore.org/nginx:1.6.0
 
 requires:
+  certificates:
+    interface: tls-certificates
   bootstrapper:
     interface: magma-orc8r-bootstrapper
-  certifier:
-    interface: magma-orc8r-certifier
   obsidian:
     interface: magma-orc8r-obsidian
+
+storage:
+  certs:
+    type: filesystem
+    description: Certs storage
+    minimum-size: 1M

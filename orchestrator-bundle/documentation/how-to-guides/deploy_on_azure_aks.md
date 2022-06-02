@@ -29,7 +29,13 @@ From your Ubuntu machine, create an `overlay.yaml` file that contains the follow
 
 ```yaml
 applications:
+  nms-nginx-proxy:
+    options:
+      domain: <your domain name>
   orc8r-certifier:
+    options:
+      domain: <your domain name>
+  orc8r-nginx:
     options:
       domain: <your domain name>
 ```
