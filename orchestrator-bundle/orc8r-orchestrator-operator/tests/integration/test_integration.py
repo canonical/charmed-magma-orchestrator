@@ -68,7 +68,7 @@ class TestOrchestrator:
         )
 
         await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="orc8r-certifier:certifier"
+            relation1=APPLICATION_NAME, relation2="orc8r-certifier:magma-orc8r-certifier"
         )
 
     @pytest.mark.abort_on_fail
