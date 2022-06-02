@@ -27,6 +27,6 @@ class TestObsidian:
         await ops_test.model.deploy(
             charm, resources=resources, application_name=APPLICATION_NAME, trust=True
         )
-    
+
     async def test_wait_for_idle(self, ops_test, build_and_deploy):
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
