@@ -84,7 +84,7 @@ class TestOrc8rNginx:
             relation1=BOOTSTRAPPER_APPLICATION_NAME, relation2="postgresql-k8s:db"
         )
         await ops_test.model.add_relation(
-            relation1=BOOTSTRAPPER_APPLICATION_NAME, relation2="orc8r-certifier:certifier"
+            relation1=BOOTSTRAPPER_APPLICATION_NAME, relation2="orc8r-certifier:magma-orc8r-certifier"
         )
         await ops_test.model.wait_for_idle(
             apps=[BOOTSTRAPPER_APPLICATION_NAME], status="active", timeout=1000
@@ -125,7 +125,7 @@ class TestOrc8rNginx:
 
     async def test_relate_and_wait_for_idle(self, ops_test, build_and_deploy):
         await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="orc8r-certifier:certifier"
+            relation1=APPLICATION_NAME, relation2="orc8r-certifier:magma-orc8r-certifier"
         )
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="orc8r-bootstrapper:bootstrapper"
