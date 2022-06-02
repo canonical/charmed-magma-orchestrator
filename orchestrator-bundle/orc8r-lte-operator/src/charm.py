@@ -76,8 +76,8 @@ class MagmaOrc8rLteCharm(CharmBase):
             '"metricExportURL": ""\n'
             '"metricsPrefix": ""\n'
         )
-        self._orc8r_base._container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
-        self._orc8r_base._container.push(
+        self._orc8r_base.container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
+        self._orc8r_base.container.push(
             f"{self.BASE_CONFIG_PATH}/analytics.yml", analytics_config
         )
 
