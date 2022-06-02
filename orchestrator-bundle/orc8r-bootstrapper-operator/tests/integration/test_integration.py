@@ -55,7 +55,7 @@ class TestOrc8rBootstrapper:
         await ops_test.model.wait_for_idle(
             apps=[CERTIFIER_APPLICATION_NAME], status="active", timeout=1000
         )
-        
+
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail
     async def build_and_deploy(self, ops_test, setup):
@@ -70,7 +70,7 @@ class TestOrc8rBootstrapper:
     @pytest.mark.abort_on_fail
     async def test_wait_for_blocked_status(self, ops_test, setup, build_and_deploy):
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
-    
+
     async def test_relate_and_wait_for_idle(self, ops_test, setup, build_and_deploy):
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
@@ -79,4 +79,3 @@ class TestOrc8rBootstrapper:
             relation1=APPLICATION_NAME, relation2="orc8r-certifier:certifier"
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
-

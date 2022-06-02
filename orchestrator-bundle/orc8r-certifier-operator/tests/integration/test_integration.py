@@ -22,7 +22,7 @@ class TestOrc8rCertifier:
     async def setup(self, ops_test):
         await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
         await ops_test.model.wait_for_idle(apps=["postgresql-k8s"], status="active", timeout=1000)
-        
+
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail
     async def build_and_deploy(self, ops_test, setup):
@@ -37,7 +37,7 @@ class TestOrc8rCertifier:
             config={"domain": "example.com"},
             trust=True,
         )
-    
+
     @pytest.mark.abort_on_fail
     async def test_wait_for_blocked_status(self, ops_test, setup, build_and_deploy):
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)

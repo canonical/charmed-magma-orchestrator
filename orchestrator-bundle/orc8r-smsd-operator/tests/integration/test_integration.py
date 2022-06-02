@@ -33,11 +33,11 @@ class TestOrc8rSmsd:
         await ops_test.model.deploy(
             charm, resources=resources, application_name=APPLICATION_NAME, trust=True
         )
-    
+
     @pytest.mark.abort_on_fail
     async def test_wait_for_blocked_status(self, ops_test, setup, build_and_deploy):
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
-        
+
     async def test_relate_and_wait_for_idle(self, ops_test, setup, build_and_deploy):
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
