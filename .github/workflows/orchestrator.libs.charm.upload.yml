@@ -29,7 +29,7 @@ jobs:
           charms.magma_orc8r_libs.v0.orc8r_base 
           charms.magma_orc8r_libs.v0.orc8r_base_db
           "
-          for lib in ${libs}; do
+          for lib in ${orc8r_libs}; do
             echo "Publishing ${lib}"
             (cd ./orchestrator-bundle/orc8r-libs && charmcraft publish-lib ${lib})
           done
