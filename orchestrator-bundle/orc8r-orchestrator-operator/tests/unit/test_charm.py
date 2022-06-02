@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import PropertyMock, patch
+from unittest.mock import patch
 
 from ops import testing
 from ops.model import BlockedStatus
@@ -30,7 +30,9 @@ class TestCharm(unittest.TestCase):
         self, file_exists
     ):
         file_exists.return_value = True
-        relation_id = self.harness.add_relation(relation_name="admin-operator", remote_app="whatever")
+        relation_id = self.harness.add_relation(
+            relation_name="admin-operator", remote_app="whatever"
+        )
         self.harness.add_relation_unit(relation_id=relation_id, remote_unit_name="whatever/0")
         expected_plan = {
             "services": {
