@@ -1,10 +1,9 @@
 name: main-branch
 
-# TODO: Change to "on PR to main branch"
 on:
   push:
     branches:
-      - integration-tests-draft
+      - main
 
 jobs:
   orchestrator-lint-report:
