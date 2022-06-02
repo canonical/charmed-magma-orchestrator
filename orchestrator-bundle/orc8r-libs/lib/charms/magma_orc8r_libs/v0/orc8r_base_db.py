@@ -56,15 +56,10 @@ provides:
 import logging
 
 import ops.lib
+import psycopg2  # type: ignore[import]
 from ops.charm import CharmBase
 from ops.framework import Object
-from ops.model import (
-    ActiveStatus,
-    BlockedStatus,
-    MaintenanceStatus,
-    ModelError,
-    WaitingStatus,
-)
+from ops.model import ActiveStatus, MaintenanceStatus, ModelError, WaitingStatus
 from ops.pebble import Layer
 from pgconnstr import ConnectionString  # type: ignore[import]
 
@@ -76,7 +71,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 9
+LIBPATCH = 8
 
 
 logger = logging.getLogger(__name__)
@@ -98,8 +93,10 @@ class Orc8rBase(Object):
         self.container_name = self.service_name = self.charm.meta.name
         self.container = self.charm.unit.get_container(self.container_name)
         service_name_with_underscores = self.service_name.replace("-", "_")
+        provided_relation_name = list(self.charm.meta.provides.keys())[0]
+        provided_relation_name_with_underscores = provided_relation_name.replace("-", "_")
         pebble_ready_event = getattr(
-            self.charm.on, f"{service_name_with_underscores}_pebble_ready"
+            self.charm.on, f"{provided_relation_name_with_underscores}_pebble_ready"
         )
         relation_joined_event = getattr(
             self.charm.on, f"{service_name_with_underscores}_relation_joined"
@@ -126,7 +123,7 @@ class Orc8rBase(Object):
 
     def _on_magma_orc8r_pebble_ready(self, event):
         if not self._db_relation_created:
-            self.charm.unit.status = BlockedStatus("Waiting for database relation to be created")
+            self.charm.unit.status = WaitingStatus("Waiting for database relation to be created")
             event.defer()
             return
         if not self._db_relation_established:
@@ -188,18 +185,28 @@ class Orc8rBase(Object):
 
     @property
     def _db_relation_established(self) -> bool:
-        """Validates that database relation is ready (that there is a relation and that credentials
-        have been passed)."""
-        if not self._get_db_connection_string:
+        """Validates that database relation is ready (that there is a relation, credentials have
+        been passed and the database can be connected to)."""
+        db_connection_string = self._get_db_connection_string
+        if not db_connection_string:
             return False
-        return True
+        try:
+            psycopg2.connect(
+                f"dbname='{self.DB_NAME}' "
+                f"user='{db_connection_string.user}' "
+                f"host='{db_connection_string.host}' "
+                f"password='{db_connection_string.password}'"
+            )
+            return True
+        except psycopg2.OperationalError:
+            return False
 
     @property
     def _get_db_connection_string(self):
         """Returns DB connection string provided by the DB relation."""
         try:
             db_relation = self.model.get_relation("db")
-            return ConnectionString(db_relation.data[db_relation.app]["master"])
+            return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[index, union-attr]  # noqa: E501
         except (AttributeError, KeyError):
             return None
 

@@ -13,7 +13,13 @@ from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServ
 from lightkube import Client
 from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
 from lightkube.resources.apps_v1 import StatefulSet
-from ops.charm import ActionEvent, CharmBase
+from ops.charm import (
+    ActionEvent,
+    CharmBase,
+    PebbleReadyEvent,
+    RelationChangedEvent,
+    RelationJoinedEvent,
+)
 from ops.framework import StoredState
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
@@ -44,7 +50,8 @@ class MagmaNmsMagmalteCharm(CharmBase):
             self._db.on.database_relation_joined, self._on_database_relation_joined
         )
         self.framework.observe(
-            self.on.certifier_relation_changed, self._on_certifier_relation_changed
+            self.on.magma_orc8r_certifier_relation_changed,
+            self._on_magma_orc8r_certifier_relation_changed,
         )
         self.framework.observe(
             self.on.get_admin_credentials_action, self._on_get_admin_credentials
@@ -62,7 +69,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             },
         )
 
-    def _on_magma_nms_magmalte_pebble_ready(self, event):
+    def _on_magma_nms_magmalte_pebble_ready(self, event: PebbleReadyEvent):
         if not self._relations_ready:
             event.defer()
             return
@@ -85,7 +92,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         logger.info(message)
         raise TimeoutError(message)
 
-    def _on_database_relation_joined(self, event):
+    def _on_database_relation_joined(self, event: RelationJoinedEvent):
         """
         Event handler for database relation change.
         - Sets the event.database field on the database joined event.
@@ -95,17 +102,17 @@ class MagmaNmsMagmalteCharm(CharmBase):
           in the relation event.
         """
         if self.unit.is_leader():
-            event.database = self.DB_NAME
+            event.database = self.DB_NAME  # type: ignore[attr-defined]
         else:
             event.defer()
 
-    def _on_certifier_relation_changed(self, event):
+    def _on_magma_orc8r_certifier_relation_changed(self, event: RelationChangedEvent):
         """Mounts certificates required by the magma-nms-magmalte."""
         if not self._nms_certs_mounted:
             self.unit.status = MaintenanceStatus("Mounting NMS certificates...")
             self._mount_certifier_certs()
 
-    def _configure_pebble(self, event):
+    def _configure_pebble(self, event: PebbleReadyEvent):
         """Adds layer to pebble config if the proposed config is different from the current one."""
         if self._container.can_connect():
             plan = self._container.get_plan()
@@ -175,7 +182,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             }
         )
 
-    def _create_nms_admin_user_action(self, event):
+    def _create_nms_admin_user_action(self, event: ActionEvent):
         self._create_nms_admin_user(
             email=event.params["email"],
             password=event.params["password"],
@@ -249,7 +256,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
     @property
     def _relations_ready(self) -> bool:
         """Checks whether required relations are ready."""
-        required_relations = ["certifier", "db"]
+        required_relations = ["magma-orc8r-certifier", "db"]
         if missing_relations := [
             relation for relation in required_relations if not self.model.get_relation(relation)
         ]:
@@ -279,9 +286,9 @@ class MagmaNmsMagmalteCharm(CharmBase):
     def _domain_name(self):
         """Returns domain name provided by the orc8r-certifier relation."""
         try:
-            certifier_relation = self.model.get_relation("certifier")
-            units = certifier_relation.units
-            return certifier_relation.data[next(iter(units))]["domain"]
+            certifier_relation = self.model.get_relation("magma-orc8r-certifier")
+            units = certifier_relation.units  # type: ignore[union-attr]
+            return certifier_relation.data[next(iter(units))]["domain"]  # type: ignore[union-attr]
         except (KeyError, StopIteration):
             return None
 
@@ -290,7 +297,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         """Returns DB connection string provided by the DB relation."""
         try:
             db_relation = self.model.get_relation("db")
-            return ConnectionString(db_relation.data[db_relation.app]["master"])
+            return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[index, union-attr]  # noqa: E501
         except (AttributeError, KeyError):
             return None
 

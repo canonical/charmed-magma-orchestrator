@@ -59,7 +59,13 @@ import logging
 
 from ops.charm import CharmBase
 from ops.framework import Object
-from ops.model import ActiveStatus, MaintenanceStatus, ModelError, WaitingStatus
+from ops.model import (
+    ActiveStatus,
+    BlockedStatus,
+    MaintenanceStatus,
+    ModelError,
+    WaitingStatus,
+)
 from ops.pebble import Layer
 
 # The unique Charmhub library identifier, never change it
@@ -81,18 +87,22 @@ class Orc8rBase(Object):
         self,
         charm: CharmBase,
         startup_command: str,
+        required_relations: list = None,
         additional_environment_variables: dict = None,
     ):
         super().__init__(charm, "orc8r-base")
         self.charm = charm
         self.startup_command = startup_command
+        self.required_relations = required_relations or []
         self.container_name = self.service_name = self.charm.meta.name
         service_name_with_underscores = self.service_name.replace("-", "_")
+        provided_relation_name = list(self.charm.meta.provides.keys())[0]
+        provided_relation_name_with_underscores = provided_relation_name.replace("-", "_")
         pebble_ready_event = getattr(
             self.charm.on, f"{service_name_with_underscores}_pebble_ready"
         )
         relation_joined_event = getattr(
-            self.charm.on, f"{service_name_with_underscores}_relation_joined"
+            self.charm.on, f"{provided_relation_name_with_underscores}_relation_joined"
         )
         self.container = self.charm.unit.get_container(self.container_name)
         self.framework.observe(pebble_ready_event, self._on_magma_orc8r_pebble_ready)
@@ -104,6 +114,9 @@ class Orc8rBase(Object):
             self.additional_environment_variables = {}
 
     def _on_magma_orc8r_pebble_ready(self, event):
+        if not self._relations_ready:
+            event.defer()
+            return
         self._configure_orc8r(event)
 
     def _configure_orc8r(self, event):
@@ -173,6 +186,9 @@ class Orc8rBase(Object):
         self._update_relation_active_status(
             relation=event.relation, is_active=self._service_is_running
         )
+        if not self._service_is_running:
+            event.defer()
+            return
 
     @property
     def _service_is_running(self) -> bool:
@@ -190,3 +206,22 @@ class Orc8rBase(Object):
                 "active": str(is_active),
             }
         )
+
+    @property
+    def _relations_ready(self) -> bool:
+        """Checks whether required relations are ready."""
+        if missing_relations := [
+            relation for relation in self.required_relations if not self._relation_active(relation)
+        ]:
+            msg = f"Waiting for relations: {', '.join(missing_relations)}"
+            self.charm.unit.status = BlockedStatus(msg)
+            return False
+        return True
+
+    def _relation_active(self, relation) -> bool:
+        try:
+            rel = self.model.get_relation(relation)
+            units = rel.units  # type: ignore[union-attr]
+            return bool(rel.data[next(iter(units))]["active"])  # type: ignore[union-attr]
+        except (KeyError, StopIteration):
+            return False
