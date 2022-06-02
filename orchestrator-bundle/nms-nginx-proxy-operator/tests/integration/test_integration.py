@@ -78,7 +78,8 @@ class TestNmsNginxProxy:
             relation1=NMS_MAGMALTE_APPLICATION_NAME, relation2="postgresql-k8s:db"
         )
         await ops_test.model.add_relation(
-            relation1=NMS_MAGMALTE_APPLICATION_NAME, relation2="orc8r-certifier:magma-orc8r-certifier"
+            relation1=NMS_MAGMALTE_APPLICATION_NAME,
+            relation2="orc8r-certifier:magma-orc8r-certifier",
         )
         await ops_test.model.wait_for_idle(
             apps=[NMS_MAGMALTE_APPLICATION_NAME], status="active", timeout=1000
