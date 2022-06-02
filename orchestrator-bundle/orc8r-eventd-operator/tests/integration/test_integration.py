@@ -15,6 +15,7 @@ METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 APPLICATION_NAME = "orc8r-eventd"
 CHARM_NAME = "magma-orc8r-eventd"
 
+
 class TestOrc8rEventd:
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail
@@ -26,6 +27,6 @@ class TestOrc8rEventd:
         await ops_test.model.deploy(
             charm, resources=resources, application_name=APPLICATION_NAME, trust=True
         )
-    
+
     async def test_wait_for_idle(self, ops_test, build_and_deploy):
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)

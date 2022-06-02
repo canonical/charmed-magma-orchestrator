@@ -30,7 +30,6 @@ class TestNmsNginxProxy:
         await self._deploy_orc8r_certifier(ops_test)
         await self._deploy_nms_magmalte(ops_test)
 
-
     @staticmethod
     async def _deploy_postgresql(ops_test):
         await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
@@ -60,7 +59,6 @@ class TestNmsNginxProxy:
         await ops_test.model.wait_for_idle(
             apps=[CERTIFIER_APPLICATION_NAME], status="active", timeout=1000
         )
-        
 
     @staticmethod
     async def _deploy_nms_magmalte(ops_test):
@@ -85,7 +83,7 @@ class TestNmsNginxProxy:
         await ops_test.model.wait_for_idle(
             apps=[NMS_MAGMALTE_APPLICATION_NAME], status="active", timeout=1000
         )
-        
+
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail
     async def build_and_deploy_charm(self, ops_test, setup):
@@ -96,7 +94,7 @@ class TestNmsNginxProxy:
         await ops_test.model.deploy(
             charm, resources=resources, application_name=APPLICATION_NAME, trust=True
         )
-    
+
     @pytest.mark.abort_on_fail
     async def test_wait_for_blocked_status(self, ops_test, build_and_deploy_charm):
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
