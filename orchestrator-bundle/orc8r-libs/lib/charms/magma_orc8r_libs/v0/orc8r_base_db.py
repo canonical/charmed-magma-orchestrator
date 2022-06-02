@@ -59,7 +59,13 @@ import ops.lib
 import psycopg2  # type: ignore[import]
 from ops.charm import CharmBase
 from ops.framework import Object
-from ops.model import ActiveStatus, MaintenanceStatus, ModelError, WaitingStatus
+from ops.model import (
+    ActiveStatus,
+    BlockedStatus,
+    MaintenanceStatus,
+    ModelError,
+    WaitingStatus,
+)
 from ops.pebble import Layer
 from pgconnstr import ConnectionString  # type: ignore[import]
 
@@ -71,7 +77,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 8
+LIBPATCH = 9
 
 
 logger = logging.getLogger(__name__)
@@ -123,12 +129,12 @@ class Orc8rBase(Object):
 
     def _on_magma_orc8r_pebble_ready(self, event):
         if not self._db_relation_created:
-            self.charm.unit.status = WaitingStatus("Waiting for database relation to be created")
+            self.charm.unit.status = BlockedStatus("Waiting for database relation to be created")
             event.defer()
             return
         if not self._db_relation_established:
             self.charm.unit.status = WaitingStatus(
-                "Waiting for database relation to be established..."
+                "Waiting for database relation to be established"
             )
             event.defer()
             return
