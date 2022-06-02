@@ -20,7 +20,6 @@ jobs:
           for charm in ${charms}; do
             tox -c "${charm}" -e lint
           done
-
   orchestrator-static-analysis:
     name: Static analysis
     runs-on: ubuntu-latest
@@ -35,7 +34,6 @@ jobs:
           for charm in ${charms}; do
             tox -c "${charm}" -e static
           done
-
   orchestrator-unit-tests-with-coverage:
     name: Unit tests
     runs-on: ubuntu-latest
