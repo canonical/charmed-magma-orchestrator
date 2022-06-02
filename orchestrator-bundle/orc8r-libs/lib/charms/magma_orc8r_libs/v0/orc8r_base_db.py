@@ -56,6 +56,7 @@ provides:
 import logging
 
 import ops.lib
+import psycopg2  # type: ignore[import]
 from ops.charm import CharmBase
 from ops.framework import Object
 from ops.model import ActiveStatus, MaintenanceStatus, ModelError, WaitingStatus
@@ -70,7 +71,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 10
+LIBPATCH = 11
 
 
 logger = logging.getLogger(__name__)
@@ -184,11 +185,21 @@ class Orc8rBase(Object):
 
     @property
     def _db_relation_established(self) -> bool:
-        """Validates that database relation is ready (that there is a relation and that credentials
-        have been passed)."""
-        if not self._get_db_connection_string:
+        """Validates that database relation is ready (that there is a relation, credentials have
+        been passed and the database can be connected to)."""
+        db_connection_string = self._get_db_connection_string
+        if not db_connection_string:
             return False
-        return True
+        try:
+            psycopg2.connect(
+                f"dbname='{self.DB_NAME}' "
+                f"user='{db_connection_string.user}' "
+                f"host='{db_connection_string.host}' "
+                f"password='{db_connection_string.password}'"
+            )
+            return True
+        except psycopg2.OperationalError:
+            return False
 
     @property
     def _get_db_connection_string(self):
