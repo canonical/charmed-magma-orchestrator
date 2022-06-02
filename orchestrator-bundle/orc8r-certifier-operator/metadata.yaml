@@ -29,9 +29,10 @@ storage:
     minimum-size: 1M
 
 provides:
-  certifier:
+  magma-orc8r-certifier:
     interface: magma-orc8r-certifier
 
 requires:
   db:
     interface: pgsql
+    limit: 1
