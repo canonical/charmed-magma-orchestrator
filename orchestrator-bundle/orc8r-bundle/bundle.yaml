@@ -175,13 +175,24 @@ applications:
     channel: stable
     scale: 1
     trust: true
+  vault-k8s:
+    charm: vault-k8s
+    channel: edge
+    scale: 1
+    trust: true
 relations:
+- - nms-magmalte
+  - vault-k8s
 - - nms-magmalte:db
   - postgresql-k8s:db
+- - nms-nginx-proxy
+  - vault-k8s
 - - nms-nginx-proxy:magmalte
   - nms-magmalte:magmalte
 - - orc8r-accessd:db
   - postgresql-k8s:db
+- - orc8r-bootstrapper
+  - vault-k8s
 - - orc8r-certifier:db
   - postgresql-k8s:db
 - - orc8r-configurator:db
@@ -198,6 +209,8 @@ relations:
   - orc8r-bootstrapper:bootstrapper
 - - orc8r-nginx:obsidian
   - orc8r-obsidian:obsidian
+- - orc8r-orchestrator
+  - nms-magmalte
 - - orc8r-policydb:db
   - postgresql-k8s:db
 - - orc8r-prometheus:alertmanager
