@@ -60,12 +60,8 @@ class MagmaOrc8rAnalyticsCharm(CharmBase):
             '"metricExportURL": ""\n'
             '"metricsPrefix": ""\n'
         )
-        self._orc8r_base.container.push(
-            f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config
-        )
-        self._orc8r_base.container.push(
-            f"{self.BASE_CONFIG_PATH}/analytics.yml", analytics_config
-        )
+        self._orc8r_base.container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
+        self._orc8r_base.container.push(f"{self.BASE_CONFIG_PATH}/analytics.yml", analytics_config)
 
 
 if __name__ == "__main__":
