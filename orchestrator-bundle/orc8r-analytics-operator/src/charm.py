@@ -12,7 +12,7 @@ class MagmaOrc8rAnalyticsCharm(CharmBase):
 
     BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
 
-    # TODO: The various URL's should be provided through relationships.
+    # TODO: The various URL's should be provided through relationships
     PROMETHEUS_URL = "http://orc8r-prometheus:9090"
     PROMETHEUS_CONFIGURER_URL = "http://orc8r-prometheus:9100"
     ALERTMANAGER_URL = "http://orc8r-alertmanager:9093"
