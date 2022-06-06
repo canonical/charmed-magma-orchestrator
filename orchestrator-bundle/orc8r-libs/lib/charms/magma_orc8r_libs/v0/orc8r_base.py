@@ -53,6 +53,7 @@ from ops.model import (
     BlockedStatus,
     MaintenanceStatus,
     ModelError,
+    Relation,
     WaitingStatus,
 )
 from ops.pebble import Layer
@@ -193,7 +194,7 @@ class Orc8rBase(Object):
                 pass
         return False
 
-    def _update_relation_active_status(self, relation, is_active: bool):
+    def _update_relation_active_status(self, relation: Relation, is_active: bool):
         relation.data[self.charm.unit].update(
             {
                 "active": str(is_active),
@@ -213,11 +214,8 @@ class Orc8rBase(Object):
 
     def _relation_active(self, relation_name: str) -> bool:
         try:
-            relation = self.model.get_relation(relation_name)
-            if relation:
-                units = relation.units
-                return relation.data[next(iter(units))]["active"] == "True"
-            else:
-                return False
+            rel = self.model.get_relation(relation_name)  # type: ignore[arg-type]
+            units = rel.units  # type: ignore[union-attr]
+            return rel.data[next(iter(units))]["active"] == "True"  # type: ignore[union-attr]
         except (AttributeError, KeyError, StopIteration):
             return False
