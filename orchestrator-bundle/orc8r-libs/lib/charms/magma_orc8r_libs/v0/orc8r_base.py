@@ -57,13 +57,14 @@ provides:
 
 import logging
 
-from ops.charm import CharmBase
+from ops.charm import CharmBase, PebbleReadyEvent, RelationJoinedEvent
 from ops.framework import Object
 from ops.model import (
     ActiveStatus,
     BlockedStatus,
     MaintenanceStatus,
     ModelError,
+    Relation,
     WaitingStatus,
 )
 from ops.pebble import Layer
@@ -76,7 +77,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 9
+LIBPATCH = 10
 
 
 logger = logging.getLogger(__name__)
@@ -113,13 +114,13 @@ class Orc8rBase(Object):
         else:
             self.additional_environment_variables = {}
 
-    def _on_magma_orc8r_pebble_ready(self, event):
+    def _on_magma_orc8r_pebble_ready(self, event: PebbleReadyEvent):
         if not self._relations_ready:
             event.defer()
             return
         self._configure_orc8r(event)
 
-    def _configure_orc8r(self, event):
+    def _configure_orc8r(self, event: PebbleReadyEvent):
         """
         Adds layer to pebble config if the proposed config is different from the current one
         """
@@ -180,7 +181,7 @@ class Orc8rBase(Object):
                 relation=relation, is_active=self._service_is_running
             )
 
-    def _on_relation_joined(self, event):
+    def _on_relation_joined(self, event: RelationJoinedEvent):
         if not self.charm.unit.is_leader():
             return
         self._update_relation_active_status(
@@ -200,10 +201,10 @@ class Orc8rBase(Object):
                 pass
         return False
 
-    def _update_relation_active_status(self, relation, is_active: bool):
+    def _update_relation_active_status(self, relation: Relation, is_active: bool):
         relation.data[self.charm.unit].update(
             {
-                "active": str(is_active),
+                "active": is_active,
             }
         )
 
@@ -218,10 +219,10 @@ class Orc8rBase(Object):
             return False
         return True
 
-    def _relation_active(self, relation) -> bool:
+    def _relation_active(self, relation: Relation) -> bool:
         try:
             rel = self.model.get_relation(relation)
             units = rel.units  # type: ignore[union-attr]
-            return bool(rel.data[next(iter(units))]["active"])  # type: ignore[union-attr]
+            return rel.data[next(iter(units))]["active"]  # type: ignore[union-attr]
         except (KeyError, StopIteration):
             return False

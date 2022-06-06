@@ -224,7 +224,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         try:
             rel = self.model.get_relation(relation)
             units = rel.units  # type: ignore[union-attr]
-            return bool(rel.data[next(iter(units))]["active"])  # type: ignore[union-attr]
+            return rel.data[next(iter(units))]["active"]  # type: ignore[union-attr]
         except (KeyError, StopIteration):
             return False
 
@@ -350,7 +350,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
     def _update_relation_active_status(self, relation: Relation, is_active: bool):
         relation.data[self.unit].update(
             {
-                "active": str(is_active),
+                "active": is_active,
             }
         )
 

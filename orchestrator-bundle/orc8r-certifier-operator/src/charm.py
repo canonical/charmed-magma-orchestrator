@@ -6,6 +6,7 @@ import base64
 import logging
 
 import ops.lib
+import psycopg2  # type: ignore[import]
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from lightkube import Client
 from lightkube.core.exceptions import ApiError
@@ -166,9 +167,19 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     def _db_relation_established(self) -> bool:
         """Validates that database relation is established (that there is a relation and that
         credentials have been passed)."""
-        if not self._get_db_connection_string:
+        db_connection_string = self._get_db_connection_string
+        if not db_connection_string:
             return False
-        return True
+        try:
+            psycopg2.connect(
+                f"dbname='{self.DB_NAME}' "
+                f"user='{db_connection_string.user}' "
+                f"host='{db_connection_string.host}' "
+                f"password='{db_connection_string.password}'"
+            )
+            return True
+        except psycopg2.OperationalError:
+            return False
 
     def _create_magma_orc8r_secrets(self):
         self.unit.status = MaintenanceStatus("Creating Magma Orc8r secrets...")
@@ -473,7 +484,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     def _update_relation_active_status(self, relation: Relation, is_active: bool):
         relation.data[self.unit].update(
             {
-                "active": str(is_active),
+                "active": is_active,
             }
         )
 
@@ -490,14 +501,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     def _on_magma_orc8r_certifier_relation_changed(self, event: RelationChangedEvent):
         """Adds the domain field to relation's data bucket so that it can be used by the client.
         To access data bucket, client should implement callback for on_relation_changed event.
-        To learn more about getting relation data, visit
-        [Juju docs](https://juju.is/docs/sdk/relations#heading--relation-data).
         """
         domain = self.model.config["domain"]
-
-        to_publish = [event.relation.data[self.unit]]
-        for bucket in to_publish:
-            bucket["domain"] = domain
+        event.relation.data[self.unit].update({"domain": domain})
 
     @property
     def _namespace(self) -> str:
