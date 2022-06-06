@@ -129,7 +129,7 @@ class TestOrc8rNginx:
             relation1=APPLICATION_NAME, relation2="orc8r-certifier:magma-orc8r-certifier"
         )
         await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="orc8r-bootstrapper:bootstrapper"
+            relation1=APPLICATION_NAME, relation2="orc8r-bootstrapper:magma-orc8r-bootstrapper"
         )
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="orc8r-obsidian:obsidian"
