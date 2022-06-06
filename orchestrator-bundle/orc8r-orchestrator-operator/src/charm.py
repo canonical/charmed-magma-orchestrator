@@ -402,7 +402,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
     def _update_relation_active_status(self, relation: Relation, is_active: bool):
         relation.data[self.unit].update(
             {
-                "active": str(is_active),
+                "active": is_active,
             }
         )
 
