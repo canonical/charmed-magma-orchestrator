@@ -221,7 +221,7 @@ class Orc8rBase(Object):
 
     def _relation_active(self, relation: Relation) -> bool:
         try:
-            rel = self.model.get_relation(relation)
+            rel = self.model.get_relation(relation)  # type: ignore[arg-type]
             units = rel.units  # type: ignore[union-attr]
             return rel.data[next(iter(units))]["active"]  # type: ignore[union-attr]
         except (KeyError, StopIteration):

@@ -186,7 +186,7 @@ class Orc8rBase(Object):
           in the relation event.
         """
         if self.charm.unit.is_leader():
-            event.database = self.DB_NAME
+            event.database = self.DB_NAME  # type: ignore[attr-defined]
         else:
             event.defer()
 
