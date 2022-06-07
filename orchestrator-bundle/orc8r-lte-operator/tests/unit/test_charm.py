@@ -25,6 +25,7 @@ class Test(unittest.TestCase):
     )
     def setUp(self):
         self.harness = testing.Harness(MagmaOrc8rLteCharm)
+        self.harness.set_can_connect("magma-orc8r-lte", True)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
 
