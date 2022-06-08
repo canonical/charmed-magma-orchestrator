@@ -3,3 +3,4 @@ ops-lib-pgsql
 lightkube
 lightkube-models
 jsonschema
+cryptography

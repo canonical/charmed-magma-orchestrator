@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 class MagmaNmsNginxProxyCharm(CharmBase):
     BASE_NGINX_PATH = "/etc/nginx/conf.d"
     NGINX_CONFIG_FILE_NAME = "nginx_proxy_ssl.conf"
-    CERTIFICATE_NAME = "nms_nginx"
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -56,8 +55,8 @@ class MagmaNmsNginxProxyCharm(CharmBase):
             "server {\n"
             "listen 443;\n"
             "ssl on;\n"
-            f"ssl_certificate {self.BASE_NGINX_PATH}/{self.CERTIFICATE_NAME}.pem;\n"
-            f"ssl_certificate_key {self.BASE_NGINX_PATH}/{self.CERTIFICATE_NAME}.key.pem;\n"
+            f"ssl_certificate {self.BASE_NGINX_PATH}/nms_nginx.pem;\n"
+            f"ssl_certificate_key {self.BASE_NGINX_PATH}/nms_nginx.key.pem;\n"
             "location / {\n"
             "proxy_pass http://magmalte:8081;\n"
             "proxy_set_header Host $http_host;\n"
@@ -93,20 +92,19 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         if certificate_data["common_name"] == self.model.config["domain"]:
             logger.info("Pushing certificate to workload")
             self._container.push(
-                path=f"{self.BASE_NGINX_PATH}/{self.CERTIFICATE_NAME}.pem",
+                path=f"{self.BASE_NGINX_PATH}/nms_nginx.pem",
                 source=certificate_data["cert"],
             )
             self._container.push(
-                path=f"{self.BASE_NGINX_PATH}/{self.CERTIFICATE_NAME}.key.pem",
+                path=f"{self.BASE_NGINX_PATH}/nms_nginx.key.pem",
                 source=certificate_data["key"],
             )
             self._on_magma_nms_nginx_proxy_pebble_ready(event)
 
     @property
     def _certs_are_stored(self) -> bool:
-        return self._container.exists(
-            f"{self.BASE_NGINX_PATH}/{self.CERTIFICATE_NAME}.pem"
-        ) and self._container.exists(f"{self.BASE_NGINX_PATH}/{self.CERTIFICATE_NAME}.key.pem")
+        return self._container.exists(f"{self.BASE_NGINX_PATH}/nms_nginx.pem") and \
+               self._container.exists(f"{self.BASE_NGINX_PATH}/nms_nginx.key.pem")
 
     @property
     def _nginx_config_file_is_stored(self) -> bool:

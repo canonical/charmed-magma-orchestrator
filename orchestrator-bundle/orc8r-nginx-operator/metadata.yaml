@@ -22,8 +22,10 @@ resources:
     upstream-source: docker.artifactory.magmacore.org/nginx:1.6.0
 
 requires:
-  certificates:
-    interface: tls-certificates
+  cert-controller:
+    interface: cert-controller
+  cert-certifier:
+    interface: cert-certifier
   bootstrapper:
     interface: magma-orc8r-bootstrapper
   obsidian:

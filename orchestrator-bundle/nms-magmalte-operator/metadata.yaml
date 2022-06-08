@@ -33,11 +33,9 @@ storage:
 provides:
   magmalte:
     interface: nms-magmalte
-  admin-operator:
-    interface: admin-operator
 
 requires:
   db:
     interface: pgsql
-  certificates:
-    interface: tls-certificates
+  cert-admin-operator:
+    interface: cert-admin-operator

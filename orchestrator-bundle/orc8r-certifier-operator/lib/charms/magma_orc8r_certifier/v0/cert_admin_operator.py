@@ -1,17 +1,18 @@
+
 """
 
 ## Getting started
 
 ```shell
-charmcraft fetch-lib charms.magma_nms_magmalte.v0.admin_operator
+charmcraft fetch-lib charms.magma_orc8r_certifier.v0.cert_admin_operator
 ```
 
 ### Requirer Charm
 
 ```python
-class AdminOperatorRequires(Object):
+class CertAdminOperatorRequires(Object):
 
-    on = AdminOperatorRequirerCharmEvents()
+    on = CertAdminOperatorRequirerCharmEvents()
 
     def __init__(self, charm, relationship_name: str):
         self.relationship_name = relationship_name
@@ -33,22 +34,22 @@ class AdminOperatorRequires(Object):
 
 """
 
-
-import logging
-
-from ops.charm import CharmEvents
-from ops.framework import EventBase, EventSource, Object
-
-
 # The unique Charmhub library identifier, never change it
-LIBID = "02c2b79320ac460eb4309a9c3fbd4605"
+LIBID = "6ca3a0b88afc4bebafbaa49514afb18f"
 
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 6
+LIBPATCH = 1
+
+
+import logging
+
+from ops.charm import CharmEvents
+from ops.framework import EventBase, EventSource, Object
+
 
 logger = logging.getLogger(__name__)
 
@@ -68,30 +69,33 @@ class CertificateRequestEvent(EventBase):
 
 
 class CertificateAvailableEvent(EventBase):
-    def __init__(self, handle, certificate: str):
+    def __init__(self, handle, certificate: str, private_key: str):
         super().__init__(handle)
         self.certificate = certificate
+        self.private_key = private_key
 
     def snapshot(self):
         return {
             "certificate": self.certificate,
+            "private_key": self.private_key
         }
 
     def restore(self, snapshot):
         self.certificate = snapshot["certificate"]
+        self.private_key = snapshot["private_key"]
 
 
-class AdminOperatorProviderCharmEvents(CharmEvents):
+class CertAdminOperatorProviderCharmEvents(CharmEvents):
     certificate_request = EventSource(CertificateRequestEvent)
 
 
-class AdminOperatorRequirerCharmEvents(CharmEvents):
+class CertAdminOperatorRequirerCharmEvents(CharmEvents):
     certificate_available = EventSource(CertificateAvailableEvent)
 
 
-class AdminOperatorProvides(Object):
+class CertAdminOperatorProvides(Object):
 
-    on = AdminOperatorProviderCharmEvents()
+    on = CertAdminOperatorProviderCharmEvents()
 
     def __init__(self, charm, relationship_name: str):
         self.relationship_name = relationship_name
@@ -102,18 +106,19 @@ class AdminOperatorProvides(Object):
         )
         self.certificate = None
 
-    def set_certificate(self, certificate: str, relation_id: int):
+    def set_certificate(self, relation_id: int, certificate: str, private_key: str):
         relation = self.model.get_relation(
             relation_name=self.relationship_name, relation_id=relation_id)
         relation.data[self.model.unit]["certificate"] = certificate  # type: ignore[union-attr]
+        relation.data[self.model.unit]["private_key"] = private_key
 
     def _on_relation_joined(self, event):
         self.on.certificate_request.emit(relation_id=event.relation.id)
 
 
-class AdminOperatorRequires(Object):
+class CertAdminOperatorRequires(Object):
 
-    on = AdminOperatorRequirerCharmEvents()
+    on = CertAdminOperatorRequirerCharmEvents()
 
     def __init__(self, charm, relationship_name: str):
         self.relationship_name = relationship_name
@@ -130,6 +135,7 @@ class AdminOperatorRequires(Object):
         logger.info(f"Raw relation data: {event.relation.data}")
         relation_data = event.relation.data
         certificate = relation_data[event.unit].get("certificate")
-        if certificate:
+        private_key = relation_data[event.unit].get("private_key")
+        if certificate and private_key:
             logger.info(f"Certificate available: {certificate}")
-            self.on.certificate_available.emit(certificate=certificate)
+            self.on.certificate_available.emit(certificate=certificate, private_key=private_key)

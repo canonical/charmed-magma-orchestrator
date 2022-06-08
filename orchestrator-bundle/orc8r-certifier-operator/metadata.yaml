@@ -39,3 +39,11 @@ requires:
     interface: pgsql
   certificates:
     interface: tls-certificates
+
+provides:
+  cert-admin-operator:
+    interface: cert-admin-operator
+  cert-controller:
+    interface: cert-controller
+  cert-certifier:
+    interface: cert-certifier

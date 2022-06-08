@@ -5,6 +5,11 @@
 import logging
 
 import ops.lib
+from charms.magma_orc8r_certifier.v0.cert_admin_operator import (
+    CertAdminOperatorProvides,
+)
+from charms.magma_orc8r_certifier.v0.cert_certifier import CertCertifierProvides
+from charms.magma_orc8r_certifier.v0.cert_controller import CertControllerProvides
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from charms.tls_certificates_interface.v0.tls_certificates import (
     InsecureCertificatesRequires,
@@ -14,6 +19,14 @@ from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import Layer
 from pgconnstr import ConnectionString  # type: ignore[import]
+
+from application_certificates import (
+    generate_ca,
+    generate_certificate,
+    generate_csr,
+    generate_pfx_package,
+    generate_private_key,
+)
 
 logger = logging.getLogger(__name__)
 pgsql = ops.lib.use("pgsql", 1, "postgresql-charmers@lists.launchpad.net")
@@ -36,6 +49,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         super().__init__(*args)
 
         self.certificates = InsecureCertificatesRequires(self, "certificates")
+        self.cert_admin_operator = CertAdminOperatorProvides(self, "cert-admin-operator")
+        self.cert_certifier = CertCertifierProvides(self, "cert-certifier")
+        self.cert_controller = CertControllerProvides(self, "cert-controller")
         self._container_name = self._service_name = "magma-orc8r-certifier"
         self._container = self.unit.get_container(self._container_name)
         self._db = pgsql.PostgreSQLClient(self, "db")
@@ -60,6 +76,75 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self.framework.observe(
             self.on.certificates_relation_joined, self._on_certificates_relation_joined
         )
+        self.framework.observe(
+            self.cert_admin_operator.on.certificate_request,
+            self._on_admin_operator_certificate_request,
+        )
+        self.framework.observe(
+            self.cert_certifier.on.certificate_request, self._on_certifier_certificate_request
+        )
+        self.framework.observe(
+            self.cert_controller.on.certificate_request, self._on_controller_certificate_request
+        )
+
+    def _on_admin_operator_certificate_request(self, event):
+        if not self._container.can_connect():
+            logger.info("Container not yet available")
+            event.defer()
+            return
+        try:
+            certificate = self._container.pull(path=f"{self.BASE_CERTS_PATH}/admin_operator.pem")
+            private_key = self._container.pull(
+                path=f"{self.BASE_CERTS_PATH}/admin_operator.key.pem"
+            )
+        except ops.pebble.PathError:
+            logger.info("Certificate 'admin-operator' not yet available")
+            event.defer()
+            return
+        certificate_string = certificate.read()
+        private_key_string = private_key.read()
+        self.cert_admin_operator.set_certificate(
+            relation_id=event.relation_id,
+            certificate=certificate_string,  # type: ignore[arg-type]
+            private_key=private_key_string,  # type: ignore[arg-type]
+        )
+
+    def _on_certifier_certificate_request(self, event):
+        if not self._container.can_connect():
+            logger.info("Container not yet available")
+            event.defer()
+            return
+        try:
+            certificate = self._container.pull(path=f"{self.BASE_CERTS_PATH}/certifier.pem")
+        except ops.pebble.PathError:
+            logger.info("Certificate 'certifier not' yet available")
+            event.defer()
+            return
+        certificate_string = certificate.read()
+        self.cert_certifier.set_certificate(
+            relation_id=event.relation_id,
+            certificate=certificate_string,  # type: ignore[arg-type]
+        )
+
+    def _on_controller_certificate_request(self, event):
+        if not self._container.can_connect():
+            logger.info("Container not yet available")
+            event.defer()
+            return
+        try:
+            certificate = self._container.pull(path=f"{self.BASE_CERTS_PATH}/controller.crt")
+            private_key = self._container.pull(path=f"{self.BASE_CERTS_PATH}/controller.key")
+        except ops.pebble.PathError:
+            logger.info("Certificate 'controller not' yet available")
+            event.defer()
+            return
+        certificate_string = certificate.read()
+        private_key_string = private_key.read()
+        self.cert_controller.set_certificate(
+            relation_id=event.relation_id,
+            certificate=certificate_string,  # type: ignore[arg-type]
+            private_key=private_key_string,  # type: ignore[arg-type]
+        )
 
     def _on_certificates_relation_joined(self, event):
         domain_name = self.model.config.get("domain")
@@ -69,24 +154,34 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             return
         self.certificates.request_certificate(
             cert_type="server",
-            common_name=domain_name,  # type: ignore[arg-type]
+            common_name=f"*.{domain_name}",
         )
 
     def _on_certificate_available(self, event):
         logger.info("Certificate is available")
+        domain_name = self.model.config["domain"]
         if not self._container.can_connect():
             logger.info("Cant connect to container - Won't push certificates to workload")
             event.defer()
             return
-        if self._certs_are_stored:
+        certificate_data = event.certificate_data
+        if not self._ca_is_stored:
+            logger.info("Pushing CA certificate to workload")
+            self._container.push(f"{self.BASE_CERTS_PATH}/rootCA.pem", certificate_data["ca"])
+        if self._root_certs_are_stored:
             logger.info("Certificates are already stored - Not doing anything")
             return
-        certificate_data = event.certificate_data
-        if certificate_data["common_name"] == self.model.config["domain"]:
-            logger.info("Pushing certificate to workload")
-            self._container.push(f"{self.BASE_CERTS_PATH}/certifier.pem", certificate_data["cert"])
-            self._container.push(f"{self.BASE_CERTS_PATH}/certifier.key", certificate_data["key"])
-            self._on_magma_orc8r_certifier_pebble_ready(event)
+        if certificate_data["common_name"] == f"*.{domain_name}":
+            logger.info("Pushing controller certificate to workload")
+            self._container.push(
+                path=f"{self.BASE_CERTS_PATH}/controller.crt", source=certificate_data["cert"]
+            )
+            self._container.push(
+                path=f"{self.BASE_CERTS_PATH}/controller.key", source=certificate_data["key"]
+            )
+        if self._root_certs_are_stored and not self._application_certs_are_stored:
+            self._generate_application_certificates()
+        self._on_magma_orc8r_certifier_pebble_ready(event)
 
     def _write_metricsd_config_file(self):
         metricsd_config = (
@@ -123,17 +218,71 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for database relation to be established")
             event.defer()
             return
-        if not self._certs_are_stored:
+        if not self._root_certs_are_stored:
+            self.unit.status = WaitingStatus("Waiting for certs to be available")
+            event.defer()
+            return
+        if not self._application_certs_are_stored:
             self.unit.status = WaitingStatus("Waiting for certs to be available")
             event.defer()
             return
         self._configure_magma_orc8r_certifier(event)
 
+    def _generate_application_certificates(self):
+        """
+        Generates admin operator certificates.
+        """
+        logger.info("Generating Application Certificates")
+        certifier_key = generate_private_key()
+        certifier_pem = generate_ca(
+            private_key=certifier_key,
+            subject=f"certifier.{self.model.config['domain']}",
+        )
+        admin_operator_key_pem = generate_private_key()
+        admin_operator_csr = generate_csr(
+            private_key=admin_operator_key_pem,
+            subject="admin_operator",
+        )
+        admin_operator_pem = generate_certificate(
+            csr=admin_operator_csr,
+            ca=certifier_pem,
+            ca_key=certifier_key,
+        )
+        admin_operator_pfx = generate_pfx_package(
+            private_key=admin_operator_key_pem,
+            certificate=admin_operator_pem,
+            password=self.model.config["passphrase"],
+        )
+        self._container.push(f"{self.BASE_CERTS_PATH}/certifier.pem", certifier_pem)
+        self._container.push(f"{self.BASE_CERTS_PATH}/certifier.key", certifier_key)
+        self._container.push(f"{self.BASE_CERTS_PATH}/admin_operator.pem", admin_operator_pem)
+        self._container.push(
+            f"{self.BASE_CERTS_PATH}/admin_operator.key.pem", admin_operator_key_pem
+        )
+        self._container.push(f"{self.BASE_CERTS_PATH}/admin_operator.pfx", admin_operator_pfx)
+
     @property
-    def _certs_are_stored(self) -> bool:
-        return self._container.exists(
-            f"{self.BASE_CERTS_PATH}/certifier.pem"
-        ) and self._container.exists(f"{self.BASE_CERTS_PATH}/certifier.key")
+    def _root_certs_are_stored(self) -> bool:
+        return (
+            self._container.exists(f"{self.BASE_CERTS_PATH}/controller.crt")
+            and self._container.exists(f"{self.BASE_CERTS_PATH}/controller.key")  # noqa: W503
+        )
+
+    @property
+    def _application_certs_are_stored(self) -> bool:
+        return (
+            self._container.exists(f"{self.BASE_CERTS_PATH}/admin_operator.pem")
+            and self._container.exists(  # noqa: W503, E501
+                f"{self.BASE_CERTS_PATH}/admin_operator.key.pem"
+            )
+            and self._container.exists(f"{self.BASE_CERTS_PATH}/admin_operator.pfx")  # noqa: W503
+            and self._container.exists(f"{self.BASE_CERTS_PATH}/certifier.pem")  # noqa: W503
+            and self._container.exists(f"{self.BASE_CERTS_PATH}/certifier.key")  # noqa: W503
+        )
+
+    @property
+    def _ca_is_stored(self):
+        return self._container.exists(f"{self.BASE_CERTS_PATH}/rootCA.pem")
 
     def _on_database_relation_joined(self, event):
         """
@@ -197,10 +346,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                         "/var/opt/magma/bin/certifier "
                         f"-cac={self.BASE_CERTS_PATH}/certifier.pem "
                         f"-cak={self.BASE_CERTS_PATH}/certifier.key "
-                        f"-vpnc={self.BASE_CERTS_PATH}/vpn_ca.crt "
-                        f"-vpnk={self.BASE_CERTS_PATH}/vpn_ca.key "
-                        "-logtostderr=true "
-                        "-v=0",
+                        "-logtostderr=true " "-v=0",
                         "environment": {
                             "DATABASE_SOURCE": f"dbname={self.DB_NAME} "
                             f"user={self._get_db_connection_string.user} "

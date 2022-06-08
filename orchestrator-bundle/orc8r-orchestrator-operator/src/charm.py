@@ -5,7 +5,7 @@
 import logging
 import re
 
-from charms.magma_nms_magmalte.v0.admin_operator import AdminOperatorRequires
+from charms.magma_orc8r_certifier.v0.cert_admin_operator import CertAdminOperatorRequires
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from ops.charm import CharmBase
 from ops.main import main
@@ -31,7 +31,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
     def __init__(self, *args):
         """An instance of this object everytime an event occurs."""
         super().__init__(*args)
-        self._admin_operator = AdminOperatorRequires(self, "admin-operator")
+        self._admin_operator = CertAdminOperatorRequires(self, "cert-admin-operator")
         self._container_name = self._service_name = "magma-orc8r-orchestrator"
         self._container = self.unit.get_container(self._container_name)
         self._service_patcher = KubernetesServicePatch(
@@ -209,7 +209,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
 
     @property
     def _admin_operator_relation_created(self) -> bool:
-        return self._relation_created("admin-operator")
+        return self._relation_created("cert-admin-operator")
 
     def _relation_created(self, relation_name: str) -> bool:
         if not self.model.get_relation(relation_name):

@@ -3,3 +3,8 @@ options:
     type: string
     default:
     description: Orchestrator domain.
+  passphrase:
+    type: string
+    default: password123
+    description: |
+      Passphrase used to open the admin_operator.pfx certificate

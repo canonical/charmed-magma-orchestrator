@@ -6,9 +6,9 @@ import logging
 from typing import List
 
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
-from charms.tls_certificates_interface.v0.tls_certificates import (
-    InsecureCertificatesRequires,
-)
+
+from charms.magma_orc8r_certifier.v0.cert_certifier import CertCertifierRequires
+from charms.magma_orc8r_certifier.v0.cert_controller import CertControllerRequires
 from httpx import HTTPStatusError
 from lightkube import Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
@@ -30,9 +30,10 @@ class MagmaOrc8rNginxCharm(CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
+        self._certifier_cert = CertCertifierRequires(self, "cert-certifier")
+        self._controller_cert = CertControllerRequires(self, "cert-controller")
         self._container_name = self._service_name = "magma-orc8r-nginx"
         self._container = self.unit.get_container(self._container_name)
-        self.certificates = InsecureCertificatesRequires(self, "certificates")
         self.service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[
@@ -52,60 +53,40 @@ class MagmaOrc8rNginxCharm(CharmBase):
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.remove, self._on_remove)
         self.framework.observe(
-            self.certificates.on.certificate_available, self._on_certificate_available
+            self._certifier_cert.on.certificate_available, self._on_certifier_certificate_available
         )
         self.framework.observe(
-            self.on.certificates_relation_joined, self._on_certificates_relation_joined
+            self._controller_cert.on.certificate_available, self._on_controller_certificate_available
         )
+
+    def _on_certifier_certificate_available(self, event):
+        logger.info("Certifier certificate available")
+        if not self._container.can_connect():
+            logger.info("Can't connect to container - Deferring")
+            event.defer()
+            return
+        self._container.push(
+            path=f"{self.BASE_CERTS_PATH}/certifier.pem", source=event.certificate
+        )
+        self._on_magma_orc8r_nginx_pebble_ready(event)
+
+    def _on_controller_certificate_available(self, event):
+        logger.info("Controller certificate available")
+        if not self._container.can_connect():
+            logger.info("Can't connect to container - Deferring")
+            event.defer()
+            return
+        self._container.push(
+            path=f"{self.BASE_CERTS_PATH}/controller.crt", source=event.certificate
+        )
+        self._container.push(
+            path=f"{self.BASE_CERTS_PATH}/controller.key", source=event.private_key
+        )
+        self._on_magma_orc8r_nginx_pebble_ready(event)
 
     def _on_install(self, event):
         self._generate_nginx_config()
         self._create_additional_orc8r_nginx_services()
-
-    def _on_certificate_available(self, event):
-        logger.info("Certificate is available")
-        if not self._container.can_connect():
-            logger.info("Cant connect to container - Won't push certificates to workload")
-            event.defer()
-            return
-        if self._certs_are_stored:
-            logger.info("Certificates are already stored - Not doing anything")
-            return
-        certificate_data = event.certificate_data
-        domain_name = self.model.config["domain"]
-
-        if certificate_data["common_name"] == f"*.{domain_name}":
-            logger.info("Pushing certificate to workload")
-            self._container.push(
-                path=f"{self.BASE_CERTS_PATH}/controller.crt", source=certificate_data["cert"]
-            )
-            self._container.push(
-                path=f"{self.BASE_CERTS_PATH}/controller.key", source=certificate_data["key"]
-            )
-        if certificate_data["common_name"] == f"certifier.{domain_name}":
-            logger.info("Pushing certificate to workload")
-            self._container.push(
-                path=f"{self.BASE_CERTS_PATH}/certifier.pem", source=certificate_data["cert"]
-            )
-            self._container.push(
-                path=f"{self.BASE_CERTS_PATH}/certifier.key", source=certificate_data["key"]
-            )
-        self._on_magma_orc8r_nginx_pebble_ready(event)
-
-    def _on_certificates_relation_joined(self, event):
-        domain_name = self.model.config.get("domain")
-        if not self._domain_config_is_valid:
-            logger.info("Domain config is not valid")
-            event.defer()
-            return
-        self.certificates.request_certificate(
-            cert_type="server",
-            common_name=f"*.{domain_name}",
-        )
-        self.certificates.request_certificate(
-            cert_type="server",
-            common_name=f"certifier.{domain_name}",
-        )
 
     def _on_magma_orc8r_nginx_pebble_ready(self, event):
         if not self._relations_ready:
@@ -272,7 +253,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
     @property
     def _relations_ready(self) -> bool:
         """Checks whether required relations are ready."""
-        required_relations = ["bootstrapper", "obsidian", "certificates"]
+        required_relations = ["bootstrapper", "obsidian", "cert-certifier", "cert-controller"]
         missing_relations = [
             relation
             for relation in required_relations
@@ -311,7 +292,6 @@ class MagmaOrc8rNginxCharm(CharmBase):
             self._container.exists(f"{self.BASE_CERTS_PATH}/controller.crt")
             and self._container.exists(f"{self.BASE_CERTS_PATH}/controller.key")  # noqa: W503
             and self._container.exists(f"{self.BASE_CERTS_PATH}/certifier.pem")  # noqa: W503
-            and self._container.exists(f"{self.BASE_CERTS_PATH}/certifier.key")  # noqa: W503
         )
 
 

@@ -8,11 +8,9 @@ import string
 import time
 
 import ops.lib
-from charms.magma_nms_magmalte.v0.admin_operator import AdminOperatorProvides
+from charms.magma_orc8r_certifier.v0.cert_admin_operator import CertAdminOperatorRequires
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
-from charms.tls_certificates_interface.v0.tls_certificates import (
-    InsecureCertificatesRequires,
-)
+
 from ops.charm import ActionEvent, CharmBase
 from ops.framework import StoredState
 from ops.main import main
@@ -28,7 +26,6 @@ class MagmaNmsMagmalteCharm(CharmBase):
 
     DB_NAME = "magma_dev"
     GRAFANA_URL = "orc8r-user-grafana:3000"
-    CERTIFICATE_COMMON_NAME = "admin_operator"
     BASE_CERTS_PATH = "/run/secrets"
     _stored = StoredState()
 
@@ -49,8 +46,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
                 "app.kubernetes.io/component": "magmalte",
             },
         )
-        self.certificates = InsecureCertificatesRequires(self, "certificates")
-        self.admin_operator = AdminOperatorProvides(self, "admin-operator")
+        self.admin_operator = CertAdminOperatorRequires(self, "cert-admin-operator")
         self.framework.observe(
             self.on.magma_nms_magmalte_pebble_ready, self._on_magma_nms_magmalte_pebble_ready
         )
@@ -64,67 +60,29 @@ class MagmaNmsMagmalteCharm(CharmBase):
             self.on.create_nms_admin_user_action, self._create_nms_admin_user_action
         )
         self.framework.observe(
-            self.on.certificates_relation_joined, self._on_certificates_relation_joined
-        )
-        self.framework.observe(
-            self.certificates.on.certificate_available, self._on_certificate_available
-        )
-        self.framework.observe(
-            self.admin_operator.on.certificate_request, self._on_admin_operator_certificate_request
-        )
-
-    def _on_admin_operator_certificate_request(self, event):
-        if not self._container.can_connect():
-            logger.info("Container not yet available")
-            event.defer()
-            return
-        try:
-            certificate = self._container.pull(
-                path=f"{self.BASE_CERTS_PATH}/{self.CERTIFICATE_COMMON_NAME}.pem"
-            )
-        except ops.pebble.PathError:
-            logger.info("Certificate not yet available")
-            event.defer()
-            return
-        certificate_string = certificate.read()
-        self.admin_operator.set_certificate(
-            relation_id=event.relation_id, certificate=certificate_string  # type: ignore[arg-type]
-        )
-
-    def _on_certificates_relation_joined(self, event):
-        self.certificates.request_certificate(
-            cert_type="server",
-            common_name=self.CERTIFICATE_COMMON_NAME,
+            self.admin_operator.on.certificate_available, self._on_certificate_available
         )
 
     def _on_certificate_available(self, event):
-        logger.info("Certificate is available")
+        logger.info("Admin Operator certificate available")
         if not self._container.can_connect():
-            logger.info("Cant connect to container - Won't push certificates to workload")
+            logger.info("Can't connect to container - Deferring")
             event.defer()
             return
-        if self._certs_are_stored:
-            logger.info("Certificates are already stored - Doing nothing")
-            return
-        certificate_data = event.certificate_data
-        if certificate_data["common_name"] == self.CERTIFICATE_COMMON_NAME:
-            logger.info("Pushing certificate to workload")
-            self._container.push(
-                f"{self.BASE_CERTS_PATH}/{self.CERTIFICATE_COMMON_NAME}.pem",
-                certificate_data["cert"],
-            )
-            self._container.push(
-                f"{self.BASE_CERTS_PATH}/{self.CERTIFICATE_COMMON_NAME}.key.pem",
-                certificate_data["key"],
-            )
-            self._on_magma_nms_magmalte_pebble_ready(event)
+        self._container.push(
+            path=f"{self.BASE_CERTS_PATH}/admin_operator.pem", source=event.certificate
+        )
+        self._container.push(
+            path=f"{self.BASE_CERTS_PATH}/admin_operator.key.pem", source=event.private_key
+        )
+        self._on_magma_nms_magmalte_pebble_ready(event)
 
     @property
     def _certs_are_stored(self) -> bool:
         return self._container.exists(
-            f"{self.BASE_CERTS_PATH}/{self.CERTIFICATE_COMMON_NAME}.pem"
+            f"{self.BASE_CERTS_PATH}/admin_operator.pem"
         ) and self._container.exists(
-            f"{self.BASE_CERTS_PATH}/{self.CERTIFICATE_COMMON_NAME}.key.pem"
+            f"{self.BASE_CERTS_PATH}/admin_operator.key.pem"
         )
 
     def _on_magma_nms_magmalte_pebble_ready(self, event):
@@ -272,7 +230,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
     @property
     def _relations_ready(self) -> bool:
         """Checks whether required relations are ready."""
-        required_relations = ["certificates", "db"]
+        required_relations = ["cert-admin-operator", "db"]
         if missing_relations := [
             relation for relation in required_relations if not self.model.get_relation(relation)
         ]:
