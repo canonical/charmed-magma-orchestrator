@@ -115,7 +115,16 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         for service_name in service_list:
             try:
                 service = client.get(Service, service_name, namespace=self._namespace)
-                service_dict[service_name] = service.status.loadBalancer.ingress[0].ip  # type: ignore[attr-defined]  # noqa: E501
+                ingresses = service.status.loadBalancer.ingress
+                if ingresses:
+                    ip = ingresses[0].ip
+                    hostname = ingresses[0].hostname
+                    if hostname:
+                        service_dict[service_name] = hostname
+                    else:
+                        service_dict[service_name] = ip
+                else:
+                    service_dict[service_name] = "NA"
             except ApiError:
                 service_dict[service_name] = "NA"
                 logger.info(f"Service {service_name} does not exist")
