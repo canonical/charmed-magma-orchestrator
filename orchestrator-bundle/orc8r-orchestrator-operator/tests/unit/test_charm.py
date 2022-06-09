@@ -147,3 +147,8 @@ class TestCharm(unittest.TestCase):
         assert self.harness.charm.unit.status == BlockedStatus(
             "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
         )
+
+    def test_given_relation_is_not_created_when_pebble_ready_then_status_is_blocked(self):
+        self.harness.container_pebble_ready(container_name="magma-orc8r-orchestrator")
+
+        assert isinstance(self.harness.charm.unit.status, BlockedStatus)

@@ -220,11 +220,14 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             return False
         return True
 
-    def _relation_active(self, relation: str) -> bool:
+    def _relation_active(self, relation_name: str) -> bool:
         try:
-            rel = self.model.get_relation(relation)
-            units = rel.units  # type: ignore[union-attr]
-            return bool(rel.data[next(iter(units))]["active"])  # type: ignore[union-attr]
+            relation = self.model.get_relation(relation_name)
+            if relation:
+                units = relation.units
+                return bool(relation.data[next(iter(units))]["active"])
+            else:
+                return False
         except (KeyError, StopIteration):
             return False
 
