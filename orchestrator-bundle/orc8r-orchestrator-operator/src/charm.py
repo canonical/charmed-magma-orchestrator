@@ -115,7 +115,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         for service_name in service_list:
             try:
                 service = client.get(Service, service_name, namespace=self._namespace)
-                ingresses = service.status.loadBalancer.ingress
+                ingresses = service.status.loadBalancer.ingress  # type: ignore[attr-defined]
                 if ingresses:
                     ip = ingresses[0].ip
                     hostname = ingresses[0].hostname
