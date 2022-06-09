@@ -7,7 +7,7 @@ from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServ
 from ops.charm import CharmBase
 
 
-class MagmaOrc8rDummyCharmWithoutRelation(CharmBase):
+class MagmaOrc8rDummyCharm(CharmBase):
     """Charm the service."""
 
     def __init__(self, *args):
@@ -30,7 +30,7 @@ class MagmaOrc8rDummyCharmWithoutRelation(CharmBase):
         self._orc8r_base = Orc8rBase(self, startup_command=startup_command)
 
 
-class MagmaOrc8rDummyCharmWithRelation(CharmBase):
+class MagmaOrc8rDummyCharmWithRequiredRelation(CharmBase):
     """Charm the service."""
 
     def __init__(self, *args):
