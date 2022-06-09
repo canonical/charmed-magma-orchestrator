@@ -2,10 +2,13 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import PropertyMock, patch
+from unittest.mock import Mock, PropertyMock, patch
 
 from ops import testing
-from test_orc8r_base_charm.src.charm import MagmaOrc8rDummyCharm  # type: ignore[import]
+from test_orc8r_base_charm.src.charm import (  # type: ignore[import]
+    MagmaOrc8rDummyCharmWithoutRelation,
+    MagmaOrc8rDummyCharmWithRelation,
+)
 
 testing.SIMULATE_CAN_CONNECT = True
 
@@ -16,7 +19,7 @@ class TestCharm(unittest.TestCase):
         lambda charm, ports, additional_labels: None,
     )
     def setUp(self):
-        self.harness = testing.Harness(MagmaOrc8rDummyCharm)
+        self.harness = testing.Harness(MagmaOrc8rDummyCharmWithoutRelation)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
 
@@ -49,3 +52,24 @@ class TestCharm(unittest.TestCase):
 
         updated_plan = self.harness.get_container_pebble_plan("magma-orc8r-dummy").to_dict()
         self.assertEqual(expected_plan, updated_plan)
+
+
+class TestCharmWithRelation(unittest.TestCase):
+    @patch(
+        "test_orc8r_base_charm.src.charm.KubernetesServicePatch",
+        lambda charm, ports, additional_labels: None,
+    )
+    def setUp(self):
+        self.harness = testing.Harness(MagmaOrc8rDummyCharmWithRelation)
+        self.addCleanup(self.harness.cleanup)
+        self.harness.begin()
+
+    @patch("ops.charm.PebbleReadyEvent.defer")
+    def test_given_relation_is_not_created_when_pebble_ready_then_event_is_deferred(
+        self, patch_defer
+    ):
+        event = Mock()
+
+        self.harness.charm.on.magma_orc8r_dummy_pebble_ready.emit(event)
+
+        patch_defer.assert_called()
