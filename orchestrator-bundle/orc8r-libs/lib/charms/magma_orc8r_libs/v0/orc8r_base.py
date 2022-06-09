@@ -4,31 +4,23 @@
 """# Orc8rBase Library.
 This library is designed to enable developers to easily create new charms for Magma orc8r. This
 library contains all the logic necessary to wait for necessary relations and be deployed.
-
 When initialised, this library binds a handler to the parent charm's `pebble_ready`
 event. This will ensure that the service is configured when this event is triggered.
-
 The constructor simply takes the following:
 - Reference to the parent charm (CharmBase)
 - The startup command (str)
-
 ## Getting Started
 To get started using the library, you just need to fetch the library using `charmcraft`.
 ```shell
 cd some-charm
 charmcraft fetch-lib charms.magma_orc8r_libs.v0.orc8r_base
 ```
-
 Then, to initialise the library:
-
 ```python
-
 from charms.magma_orc8r_libs.v0.orc8r_base import Orc8rBase
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from ops.charm import CharmBase
 from ops.main import main
-
-
 class MagmaOrc8rHACharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
@@ -42,16 +34,13 @@ class MagmaOrc8rHACharm(CharmBase):
         )
         self._orc8r_base = Orc8rBase(self, startup_command=startup_command)
 ```
-
 Charms that leverage this library also need to specify a `provides` relation in their
 `metadata.yaml` file. For example:
-
 ```yaml
 provides:
   magma-orc8r-ha:
     interface: magma-orc8r-ha
 ```
-
 """
 
 
@@ -76,7 +65,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 9
+LIBPATCH = 11
 
 
 logger = logging.getLogger(__name__)
@@ -96,17 +85,21 @@ class Orc8rBase(Object):
         self.required_relations = required_relations or []
         self.container_name = self.service_name = self.charm.meta.name
         service_name_with_underscores = self.service_name.replace("-", "_")
-        provided_relation_name = list(self.charm.meta.provides.keys())[0]
-        provided_relation_name_with_underscores = provided_relation_name.replace("-", "_")
+        provided_relations = self.charm.meta.provides.keys()
+        if self.container_name in provided_relations:
+            service_status_relation_name = self.container_name
+            service_status_relation_name_with_underscores = service_status_relation_name.replace(
+                "-", "_"
+            )
+            relation_joined_event = getattr(
+                self.charm.on, f"{service_status_relation_name_with_underscores}_relation_joined"
+            )
+            self.framework.observe(relation_joined_event, self._on_relation_joined)
         pebble_ready_event = getattr(
             self.charm.on, f"{service_name_with_underscores}_pebble_ready"
         )
-        relation_joined_event = getattr(
-            self.charm.on, f"{provided_relation_name_with_underscores}_relation_joined"
-        )
         self.container = self.charm.unit.get_container(self.container_name)
         self.framework.observe(pebble_ready_event, self._on_magma_orc8r_pebble_ready)
-        self.framework.observe(relation_joined_event, self._on_relation_joined)
 
         if additional_environment_variables:
             self.additional_environment_variables = additional_environment_variables
@@ -218,10 +211,13 @@ class Orc8rBase(Object):
             return False
         return True
 
-    def _relation_active(self, relation) -> bool:
+    def _relation_active(self, relation_name: str) -> bool:
         try:
-            rel = self.model.get_relation(relation)
-            units = rel.units  # type: ignore[union-attr]
-            return bool(rel.data[next(iter(units))]["active"])  # type: ignore[union-attr]
+            relation = self.model.get_relation(relation_name)
+            if relation:
+                units = relation.units
+                return bool(relation.data[next(iter(units))]["active"])
+            else:
+                return False
         except (KeyError, StopIteration):
             return False
