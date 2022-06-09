@@ -4,6 +4,14 @@
 import unittest
 from unittest.mock import Mock, PropertyMock, patch
 
+import httpx
+from lightkube.core.exceptions import ApiError
+from lightkube.models.core_v1 import (
+    LoadBalancerIngress,
+    LoadBalancerStatus,
+    Service,
+    ServiceStatus,
+)
 from ops import testing
 from ops.model import ActiveStatus, BlockedStatus
 
@@ -13,6 +21,22 @@ testing.SIMULATE_CAN_CONNECT = True
 
 
 class TestCharm(unittest.TestCase):
+    @staticmethod
+    def k8s_load_balancer_service(ip: str) -> Service:
+        return Service(
+            apiVersion="v1",
+            kind="Service",
+            status=ServiceStatus(
+                loadBalancer=LoadBalancerStatus(
+                    ingress=[
+                        LoadBalancerIngress(
+                            ip=ip,
+                        )
+                    ]
+                )
+            ),
+        )
+
     @patch(
         "charm.KubernetesServicePatch",
         lambda charm, ports, additional_labels, additional_annotations: None,
@@ -146,4 +170,57 @@ class TestCharm(unittest.TestCase):
 
         assert self.harness.charm.unit.status == BlockedStatus(
             "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
+        )
+
+    def test_given_relation_is_not_created_when_pebble_ready_then_status_is_blocked(self):
+
+        self.harness.container_pebble_ready(container_name="magma-orc8r-orchestrator")
+
+        assert isinstance(self.harness.charm.unit.status, BlockedStatus)
+
+    @patch("lightkube.Client.get")
+    @patch("lightkube.core.client.GenericSyncClient")
+    def test_given_k8s_services_exist_when_get_load_balancer_services_action_then_services_are_returned(  # noqa: E501
+        self, _, patch_k8s_get
+    ):
+        event = Mock()
+        ip_1 = "whatever ip 1"
+        ip_2 = "whatever ip 2"
+        ip_3 = "whatever ip 3"
+        ip_4 = "whatever ip 4"
+        service_1 = self.k8s_load_balancer_service(ip=ip_1)
+        service_2 = self.k8s_load_balancer_service(ip=ip_2)
+        service_3 = self.k8s_load_balancer_service(ip=ip_3)
+        service_4 = self.k8s_load_balancer_service(ip=ip_4)
+        patch_k8s_get.side_effect = [service_1, service_2, service_3, service_4]
+
+        self.harness.charm._on_get_load_balancer_services_action(event)
+
+        event.set_results.assert_called_with(
+            {
+                "nginx-proxy": ip_1,
+                "orc8r-clientcert-nginx": ip_2,
+                "orc8r-nginx-proxy": ip_3,
+                "orc8r-bootstrap-nginx": ip_4,
+            }
+        )
+
+    @patch("lightkube.Client.get")
+    @patch("lightkube.core.client.GenericSyncClient")
+    def test_given_k8s_api_exception_when_get_load_balancer_services_action_then_service_ips_are_returned_with_na(  # noqa: E501
+        self, _, patch_k8s_get
+    ):
+        event = Mock()
+        api_error = ApiError(response=httpx.Response(status_code=400, json={"key": "value"}))
+        patch_k8s_get.side_effect = [api_error, api_error, api_error, api_error]
+
+        self.harness.charm._on_get_load_balancer_services_action(event)
+
+        event.set_results.assert_called_with(
+            {
+                "nginx-proxy": "NA",
+                "orc8r-clientcert-nginx": "NA",
+                "orc8r-nginx-proxy": "NA",
+                "orc8r-bootstrap-nginx": "NA",
+            }
         )

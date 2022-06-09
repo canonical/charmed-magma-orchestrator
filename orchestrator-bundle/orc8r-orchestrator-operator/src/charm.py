@@ -8,8 +8,10 @@ from typing import List
 
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from lightkube import Client
+from lightkube.core.exceptions import ApiError
 from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
 from lightkube.resources.apps_v1 import StatefulSet
+from lightkube.resources.core_v1 import Service
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -66,6 +68,10 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             self._create_orchestrator_admin_user_action,
         )
         self.framework.observe(self.on.set_log_verbosity_action, self._set_log_verbosity_action)
+        self.framework.observe(
+            self.on.get_load_balancer_services_action,
+            self._on_get_load_balancer_services_action,
+        )
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_elasticsearch_url_config_changed)
         self._service_patcher = KubernetesServicePatch(
@@ -91,6 +97,30 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                 "/magma/v1/networks/:network_id,",
             },
         )
+
+    def _on_get_load_balancer_services_action(self, event: ActionEvent):
+        load_balancer_services = self._get_load_balancer_services()
+        event.set_results(load_balancer_services)
+
+    def _get_load_balancer_services(self) -> dict:
+        """Returns Load balancer service addresses needed for Magma orc8r to be accessible"""
+        service_dict = dict()
+        service_list = [
+            "nginx-proxy",
+            "orc8r-clientcert-nginx",
+            "orc8r-nginx-proxy",
+            "orc8r-bootstrap-nginx",
+        ]
+        client = Client()
+        for service_name in service_list:
+            try:
+                service = client.get(Service, service_name, namespace=self._namespace)
+                service_dict[service_name] = service.status.loadBalancer.ingress[0].ip  # type: ignore[attr-defined]  # noqa: E501
+            except ApiError:
+                service_dict[service_name] = "NA"
+                logger.info(f"Service {service_name} does not exist")
+
+        return service_dict
 
     def _on_install(self, event: InstallEvent):
         if not self._container.can_connect():
@@ -220,11 +250,14 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             return False
         return True
 
-    def _relation_active(self, relation: str) -> bool:
+    def _relation_active(self, relation_name: str) -> bool:
         try:
-            rel = self.model.get_relation(relation)
-            units = rel.units  # type: ignore[union-attr]
-            return bool(rel.data[next(iter(units))]["active"])  # type: ignore[union-attr]
+            relation = self.model.get_relation(relation_name)
+            if relation:
+                units = relation.units
+                return bool(relation.data[next(iter(units))]["active"])
+            else:
+                return False
         except (KeyError, StopIteration):
             return False
 

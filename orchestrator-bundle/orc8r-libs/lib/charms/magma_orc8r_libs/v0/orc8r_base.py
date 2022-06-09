@@ -76,7 +76,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 9
+LIBPATCH = 10
 
 
 logger = logging.getLogger(__name__)
@@ -218,10 +218,13 @@ class Orc8rBase(Object):
             return False
         return True
 
-    def _relation_active(self, relation) -> bool:
+    def _relation_active(self, relation_name: str) -> bool:
         try:
-            rel = self.model.get_relation(relation)
-            units = rel.units  # type: ignore[union-attr]
-            return bool(rel.data[next(iter(units))]["active"])  # type: ignore[union-attr]
+            relation = self.model.get_relation(relation_name)
+            if relation:
+                units = relation.units
+                return bool(relation.data[next(iter(units))]["active"])
+            else:
+                return False
         except (KeyError, StopIteration):
             return False

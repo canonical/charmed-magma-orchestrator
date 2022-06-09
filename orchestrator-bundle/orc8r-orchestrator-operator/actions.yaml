@@ -14,3 +14,6 @@ set-log-verbosity:
       type: string
       description: Service name (ex. obsidian)
   required: [level, service]
+
+get-load-balancer-services:
+  description: Retrieves load balancer services
