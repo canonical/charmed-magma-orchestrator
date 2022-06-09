@@ -8,10 +8,10 @@ from typing import List
 
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from lightkube import Client
-from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
 from lightkube.core.exceptions import ApiError
-from lightkube.resources.core_v1 import Service
+from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
 from lightkube.resources.apps_v1 import StatefulSet
+from lightkube.resources.core_v1 import Service
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -115,8 +115,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         for service_name in service_list:
             try:
                 service = client.get(Service, service_name, namespace=self._namespace)
-                service_dict[service_name] = service.status.loadBalancer.ingress[
-                    0].ip  # type: ignore[attr-defined]  # noqa: E501
+                service_dict[service_name] = service.status.loadBalancer.ingress[0].ip  # type: ignore[attr-defined]  # noqa: E501
             except ApiError:
                 service_dict[service_name] = "NA"
                 logger.info(f"Service {service_name} does not exist")
