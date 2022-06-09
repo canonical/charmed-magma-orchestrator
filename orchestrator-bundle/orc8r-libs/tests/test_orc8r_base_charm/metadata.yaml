@@ -23,3 +23,8 @@ provides:
   magma-orc8r-dummy:
     interface:
       magma-orc8r-dummy
+
+requires:
+  magma-orc8r-whatever:
+    interface:
+      magma-orc8r-whatever

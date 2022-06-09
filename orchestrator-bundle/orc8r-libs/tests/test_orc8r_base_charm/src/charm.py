@@ -51,5 +51,5 @@ class MagmaOrc8rDummyCharmWithRequiredRelation(CharmBase):
             "-v=0"
         )
         self._orc8r_base = Orc8rBase(
-            self, startup_command=startup_command, required_relations=["aaaa"]
+            self, startup_command=startup_command, required_relations=["magma-orc8r-whatever"]
         )
