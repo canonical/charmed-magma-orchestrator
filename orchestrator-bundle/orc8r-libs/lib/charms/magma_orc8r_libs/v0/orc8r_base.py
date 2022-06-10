@@ -216,7 +216,7 @@ class Orc8rBase(Object):
             relation = self.model.get_relation(relation_name)
             if relation:
                 units = relation.units
-                return bool(relation.data[next(iter(units))]["active"])
+                return relation.data[next(iter(units))]["active"] == "True"
             else:
                 return False
         except (KeyError, StopIteration):
