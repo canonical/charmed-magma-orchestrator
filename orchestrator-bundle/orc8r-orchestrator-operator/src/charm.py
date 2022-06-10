@@ -4,11 +4,10 @@
 
 import logging
 import re
-from typing import List
+from typing import Dict, List
 
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from lightkube import Client
-from lightkube.core.exceptions import ApiError
 from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
 from lightkube.resources.apps_v1 import StatefulSet
 from lightkube.resources.core_v1 import Service
@@ -102,33 +101,21 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         load_balancer_services = self._get_load_balancer_services()
         event.set_results(load_balancer_services)
 
-    def _get_load_balancer_services(self) -> dict:
-        """Returns Load balancer service addresses needed for Magma orc8r to be accessible"""
+    def _get_load_balancer_services(self) -> Dict[str, str]:
+        """Returns all Load balancer service addresses."""
         service_dict = dict()
-        service_list = [
-            "nginx-proxy",
-            "orc8r-clientcert-nginx",
-            "orc8r-nginx-proxy",
-            "orc8r-bootstrap-nginx",
-        ]
         client = Client()
-        for service_name in service_list:
-            try:
-                service = client.get(Service, service_name, namespace=self._namespace)
-                ingresses = service.status.loadBalancer.ingress  # type: ignore[attr-defined]
-                if ingresses:
-                    ip = ingresses[0].ip
-                    hostname = ingresses[0].hostname
-                    if hostname:
-                        service_dict[service_name] = hostname
-                    else:
-                        service_dict[service_name] = ip
+        service_list = client.list(res=Service, namespace=self._namespace)
+        for service in service_list:
+            service_name = service.metadata.name
+            ingresses = service.status.loadBalancer.ingress
+            if ingresses:
+                ip = ingresses[0].ip
+                hostname = ingresses[0].hostname
+                if hostname:
+                    service_dict[service_name] = hostname
                 else:
-                    service_dict[service_name] = "NA"
-            except ApiError:
-                service_dict[service_name] = "NA"
-                logger.info(f"Service {service_name} does not exist")
-
+                    service_dict[service_name] = ip
         return service_dict
 
     def _on_install(self, event: InstallEvent):
