@@ -4,12 +4,13 @@
 
 import logging
 import re
-from typing import List
+from typing import Dict, List
 
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from lightkube import Client
 from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
 from lightkube.resources.apps_v1 import StatefulSet
+from lightkube.resources.core_v1 import Service
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -66,6 +67,10 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             self._create_orchestrator_admin_user_action,
         )
         self.framework.observe(self.on.set_log_verbosity_action, self._set_log_verbosity_action)
+        self.framework.observe(
+            self.on.get_load_balancer_services_action,
+            self._on_get_load_balancer_services_action,
+        )
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_elasticsearch_url_config_changed)
         self._service_patcher = KubernetesServicePatch(
@@ -91,6 +96,27 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                 "/magma/v1/networks/:network_id,",
             },
         )
+
+    def _on_get_load_balancer_services_action(self, event: ActionEvent):
+        load_balancer_services = self._get_load_balancer_services()
+        event.set_results(load_balancer_services)
+
+    def _get_load_balancer_services(self) -> Dict[str, str]:
+        """Returns all Load balancer service addresses."""
+        service_dict = dict()
+        client = Client()
+        service_list = client.list(res=Service, namespace=self._namespace)
+        for service in service_list:
+            service_name = service.metadata.name
+            ingresses = service.status.loadBalancer.ingress
+            if ingresses:
+                ip = ingresses[0].ip
+                hostname = ingresses[0].hostname
+                if hostname:
+                    service_dict[service_name] = hostname
+                else:
+                    service_dict[service_name] = ip
+        return service_dict
 
     def _on_install(self, event: InstallEvent):
         if not self._container.can_connect():
