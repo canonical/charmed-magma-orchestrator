@@ -41,6 +41,11 @@ class TestCharm(unittest.TestCase):
         "user=test_db_user"
     )
     TEST_DOMAIN_NAME = "test.domain.com"
+    CREATE_USER_ACTION_EVENT_PARAMS = {
+        "email": "test@test.test",
+        "organization": "test-org",
+        "password": "password123",
+    }
 
     @patch(
         "charm.KubernetesServicePatch", lambda charm, ports, service_name, additional_labels: None
@@ -194,12 +199,29 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.exec")
     @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
-    @patch("ops.charm.ActionEvent")
-    def test_given_juju_action_when_create_nms_admin_user_is_called_command_executed_on_container(
-        self, action_event, _, mock_exec
+    def test_given_username_email_and_password_are_provided_when_create_nms_admin_user_juju_action_then_pebble_command_is_executed(  # noqa: E501
+        self, _, mock_exec
     ):
+        action_event = Mock(params=self.CREATE_USER_ACTION_EVENT_PARAMS)
         self.harness.charm._create_nms_admin_user_action(action_event)
+        args, _ = mock_exec.call_args
         mock_exec.assert_called_once()
+        call_command = [
+            "/usr/local/bin/yarn",
+            "setAdminPassword",
+            "test-org",
+            "test@test.test",
+            "password123",
+        ]
+        self.assertIn(call_command, args)
+
+    def test_given_one_of_username_email_and_password_is_missing_when_create_nms_admin_user_juju_action_then_action_fails(  # noqa: E501
+        self,
+    ):
+        action_event_params_org_is_missing = {"email": "test@test.test", "password": "password123"}
+        action_event = Mock(params=action_event_params_org_is_missing)
+        with self.assertRaises(KeyError):
+            self.harness.charm._create_nms_admin_user_action(action_event)
 
     @patch("ops.model.Container.exec")
     @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
@@ -222,15 +244,13 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("charm.MagmaNmsMagmalteCharm._relations_ready", new_callable=PropertyMock)
-    @patch("charm.MagmaNmsMagmalteCharm._get_admin_username")
-    @patch("charm.MagmaNmsMagmalteCharm._get_admin_password")
     @patch("ops.charm.ActionEvent")
     def test_given_juju_action_when_relation_is_realized_then_get_admin_credentials_returns_values(
-        self, action_event, _get_admin_password, _get_admin_username, relations_ready
+        self, action_event, relations_ready
     ):
         relations_ready.return_value = True
-        _get_admin_password.return_value = "password"
-        _get_admin_username.return_value = "username"
+        self.harness.charm._stored.admin_username = "username"
+        self.harness.charm._stored.admin_password = "password"
         self.harness.charm._on_get_admin_credentials(action_event)
         self.assertEqual(
             action_event.set_results.call_args,
