@@ -272,6 +272,6 @@ class Orc8rBase(Object):
     def _update_relation_active_status(self, relation: Relation, is_active: bool):
         relation.data[self.charm.unit].update(
             {
-                "active": is_active,
+                "active": str(is_active),
             }
         )

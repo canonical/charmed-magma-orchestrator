@@ -111,9 +111,15 @@ class Orc8rBase(Object):
         if not self._relations_created:
             event.defer()
             return
+<<<<<<< HEAD
+=======
+        print("C")
+>>>>>>> 8c36a67 (Fixing service status in relation data)
         if not self._relations_ready:
             event.defer()
             return
+        print("A")
+        print("B")
         self._configure_orc8r(event)
 
     def _configure_orc8r(self, event: PebbleReadyEvent):
@@ -200,7 +206,7 @@ class Orc8rBase(Object):
     def _update_relation_active_status(self, relation: Relation, is_active: bool):
         relation.data[self.charm.unit].update(
             {
-                "active": is_active,
+                "active": str(is_active),
             }
         )
 

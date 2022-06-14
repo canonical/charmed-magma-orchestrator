@@ -20,7 +20,6 @@ from ops.charm import (
     ConfigChangedEvent,
     InstallEvent,
     PebbleReadyEvent,
-    RelationChangedEvent,
     RelationJoinedEvent,
     RemoveEvent,
 )
@@ -165,6 +164,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self.unit.status = MaintenanceStatus("Removing Magma Orc8r secrets")
         self._delete_k8s_secret(secret_name=self._nms_certs_secret_name)
         self._delete_k8s_secret(secret_name=self._orc8r_certs_secret_name)
+<<<<<<< HEAD
 
     def _write_metricsd_config_file(self):
         metricsd_config = (
@@ -175,40 +175,21 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             '"profile": "prometheus"\n'
         )
         self._container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
+=======
+>>>>>>> 8c36a67 (Fixing service status in relation data)
 
-    @property
-    def _db_relation_established(self) -> bool:
-        """Validates that database relation is established (that there is a relation and that
-        credentials have been passed)."""
-        db_connection_string = self._get_db_connection_string
-        if not db_connection_string:
-            return False
-        try:
-            psycopg2.connect(
-                f"dbname='{self.DB_NAME}' "
-                f"user='{db_connection_string.user}' "
-                f"host='{db_connection_string.host}' "
-                f"password='{db_connection_string.password}'"
-            )
-            return True
-        except psycopg2.OperationalError:
-            return False
-
-    def _create_magma_orc8r_secrets(self):
-        self.unit.status = MaintenanceStatus("Creating Magma Orc8r secrets...")
-        self._get_certificates()
-        self._create_secrets()
-
-    def _mount_certifier_certs(self):
-        """Patch the StatefulSet to include certs secret mount."""
-        self.unit.status = MaintenanceStatus("Mounting additional volumes")
-        logger.info("Mounting volumes for certificates")
-        client = Client()
-        stateful_set = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
-        stateful_set.spec.template.spec.volumes.extend(self._magma_orc8r_certifier_volumes)  # type: ignore[attr-defined]  # noqa: E501
-        stateful_set.spec.template.spec.containers[1].volumeMounts.extend(  # type: ignore[attr-defined]  # noqa: E501
-            self._magma_orc8r_certifier_volume_mounts
+    def _write_metricsd_config_file(self):
+        metricsd_config = (
+            f'prometheusQueryAddress: "{self.PROMETHEUS_URL}"\n'
+            f'alertmanagerApiURL: "{self.ALERTMANAGER_URL}/api/v2"\n'
+            f'prometheusConfigServiceURL: "{self.PROMETHEUS_CONFIGURER_URL}/v1"\n'
+            f'alertmanagerConfigServiceURL: "{self.ALERTMANAGER_CONFIGURER_URL}/v1"\n'
+            '"profile": "prometheus"\n'
         )
+<<<<<<< HEAD
+=======
+        self._container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
+>>>>>>> 8c36a67 (Fixing service status in relation data)
 
     def _configure_magma_orc8r_certifier(self, event: PebbleReadyEvent):
         """Adds layer to pebble config if the proposed config is different from the current one."""
@@ -239,8 +220,18 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     def _update_domain_name_in_relation_data(self, relation):
         """Updates the domain field inside the relation data bucket."""
         domain = self.model.config["domain"]
+<<<<<<< HEAD
         relation.data[self.unit].update({"domain": domain})
 
+=======
+        relation.data[self.unit].update({"domain": domain})  # type: ignore[union-attr]
+
+    def _create_magma_orc8r_secrets(self):
+        self.unit.status = MaintenanceStatus("Creating Magma Orc8r secrets")
+        self._get_certificates()
+        self._create_secrets()
+
+>>>>>>> 8c36a67 (Fixing service status in relation data)
     def _get_certificates(self):
         if self.model.config["use-self-signed-ssl-certs"]:
             self._generate_self_signed_ssl_certs()
@@ -387,6 +378,22 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             raise e
         return True
 
+<<<<<<< HEAD
+=======
+    def _mount_certifier_certs(self):
+        """Patch the StatefulSet to include certs secret mount."""
+        self.unit.status = MaintenanceStatus("Mounting additional volumes")
+        logger.info("Mounting volumes for certificates")
+        client = Client()
+        stateful_set = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
+        stateful_set.spec.template.spec.volumes.extend(self._magma_orc8r_certifier_volumes)  # type: ignore[attr-defined]  # noqa: E501
+        stateful_set.spec.template.spec.containers[1].volumeMounts.extend(  # type: ignore[attr-defined]  # noqa: E501
+            self._magma_orc8r_certifier_volume_mounts
+        )
+        client.patch(StatefulSet, name=self.app.name, obj=stateful_set, namespace=self._namespace)
+        logger.info("Additional volumes for certificates are mounted")
+
+>>>>>>> 8c36a67 (Fixing service status in relation data)
     def _delete_k8s_secret(self, secret_name: str) -> None:
         """Delete Kubernetes secrets created by the create_secrets method."""
         client = Client()
@@ -407,6 +414,27 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             return False
         return True
 
+<<<<<<< HEAD
+=======
+    @property
+    def _db_relation_established(self) -> bool:
+        """Validates that database relation is established (that there is a relation and that
+        credentials have been passed)."""
+        db_connection_string = self._get_db_connection_string
+        if not db_connection_string:
+            return False
+        try:
+            psycopg2.connect(
+                f"dbname='{self.DB_NAME}' "
+                f"user='{db_connection_string.user}' "
+                f"host='{db_connection_string.host}' "
+                f"password='{db_connection_string.password}'"
+            )
+            return True
+        except psycopg2.OperationalError:
+            return False
+
+>>>>>>> 8c36a67 (Fixing service status in relation data)
     @property
     def _pebble_layer(self) -> Layer:
         return Layer(
@@ -515,13 +543,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             except ModelError:
                 pass
         return False
-
-    def _on_magma_orc8r_certifier_relation_changed(self, event: RelationChangedEvent):
-        """Adds the domain field to relation's data bucket so that it can be used by the client.
-        To access data bucket, client should implement callback for on_relation_changed event.
-        """
-        domain = self.model.config["domain"]
-        event.relation.data[self.unit].update({"domain": domain})
 
     @property
     def _namespace(self) -> str:
