@@ -49,3 +49,38 @@ class TestCharm(unittest.TestCase):
 
         updated_plan = self.harness.get_container_pebble_plan("magma-orc8r-dummy").to_dict()
         self.assertEqual(expected_plan, updated_plan)
+
+    @patch(
+        "charms.magma_orc8r_libs.v0.orc8r_base.Orc8rBase.namespace",
+        PropertyMock(return_value="qwerty"),
+    )
+    def test_given_magma_orc8r_orchestrator_service_running_when_metrics_magma_orc8r_orchestrator_relation_joined_event_emitted_then_active_key_in_relation_data_is_set_to_true(  # noqa: E501
+        self,
+    ):
+        self.harness.set_can_connect("magma-orc8r-dummy", True)
+        container = self.harness.model.unit.get_container("magma-orc8r-dummy")
+        self.harness.charm.on.magma_orc8r_dummy_pebble_ready.emit(container)
+        self.harness.set_leader(True)
+        relation_id = self.harness.add_relation("magma-orc8r-dummy", "orc8r-dummy")
+        self.harness.add_relation_unit(relation_id, "magma-orc8r-dummy/0")
+
+        self.assertEqual(
+            self.harness.get_relation_data(relation_id, "magma-orc8r-dummy/0"),
+            {"active": "True"},
+        )
+
+    @patch(
+        "charms.magma_orc8r_libs.v0.orc8r_base.Orc8rBase.namespace",
+        PropertyMock(return_value="qwerty"),
+    )
+    def test_given_magma_orc8r_orchestrator_service_not_running_when_magma_orc8r_orchestrator_relation_joined_event_emitted_then_active_key_in_relation_data_is_set_to_false(  # noqa: E501
+        self,
+    ):
+        self.harness.set_leader(True)
+        relation_id = self.harness.add_relation("magma-orc8r-dummy", "orc8r-dummy")
+        self.harness.add_relation_unit(relation_id, "magma-orc8r-dummy/0")
+
+        self.assertEqual(
+            self.harness.get_relation_data(relation_id, "magma-orc8r-dummy/0"),
+            {"active": "False"},
+        )

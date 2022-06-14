@@ -9,6 +9,7 @@ import time
 from typing import List
 
 import ops.lib
+import psycopg2  # type: ignore[import]
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from lightkube import Client
 from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
@@ -22,7 +23,14 @@ from ops.charm import (
 )
 from ops.framework import StoredState
 from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.model import (
+    ActiveStatus,
+    BlockedStatus,
+    MaintenanceStatus,
+    ModelError,
+    Relation,
+    WaitingStatus,
+)
 from ops.pebble import ExecError, Layer
 from pgconnstr import ConnectionString  # type: ignore[import]
 
@@ -54,6 +62,10 @@ class MagmaNmsMagmalteCharm(CharmBase):
             self._on_magma_orc8r_certifier_relation_changed,
         )
         self.framework.observe(
+            self.on.magma_nms_magmalte_relation_joined,
+            self._on_magma_nms_magmalte_relation_joined,
+        )
+        self.framework.observe(
             self.on.get_admin_credentials_action, self._on_get_admin_credentials
         )
         self.framework.observe(
@@ -70,7 +82,20 @@ class MagmaNmsMagmalteCharm(CharmBase):
         )
 
     def _on_magma_nms_magmalte_pebble_ready(self, event: PebbleReadyEvent):
+        if not self._relations_created:
+            event.defer()
+            return
         if not self._relations_ready:
+            event.defer()
+            return
+        if not self._nms_certs_mounted:
+            self.unit.status = WaitingStatus("Waiting for NMS certificates to be mounted")
+            event.defer()
+            return
+        if not self._container.can_connect():
+            self.unit.status = WaitingStatus(
+                "Waiting for magma-nms-magmalte container to be ready"
+            )
             event.defer()
             return
         self._configure_pebble(event)
@@ -108,9 +133,42 @@ class MagmaNmsMagmalteCharm(CharmBase):
 
     def _on_magma_orc8r_certifier_relation_changed(self, event: RelationChangedEvent):
         """Mounts certificates required by the magma-nms-magmalte."""
+        if not self._certifier_relation_ready:
+            self.unit.status = WaitingStatus(
+                "Waiting for magma-orc8r-certifier relation to be ready"
+            )
+            event.defer()
+            return
         if not self._nms_certs_mounted:
-            self.unit.status = MaintenanceStatus("Mounting NMS certificates...")
+            self.unit.status = MaintenanceStatus("Mounting NMS certificates")
             self._mount_certifier_certs()
+
+    def _on_magma_nms_magmalte_relation_joined(self, event: RelationJoinedEvent):
+        if not self.unit.is_leader():
+            return
+        self._update_relation_active_status(
+            relation=event.relation, is_active=self._service_is_running
+        )
+        if not self._service_is_running:
+            event.defer()
+            return
+
+    def _update_relation_active_status(self, relation: Relation, is_active: bool):
+        relation.data[self.unit].update(
+            {
+                "active": str(is_active),
+            }
+        )
+
+    @property
+    def _service_is_running(self) -> bool:
+        if self._container.can_connect():
+            try:
+                self._container.get_service(self._service_name)
+                return True
+            except ModelError:
+                pass
+        return False
 
     def _configure_pebble(self, event: PebbleReadyEvent):
         """Adds layer to pebble config if the proposed config is different from the current one."""
@@ -119,20 +177,30 @@ class MagmaNmsMagmalteCharm(CharmBase):
             layer = self._pebble_layer
             if plan.services != layer.services:
                 self.unit.status = MaintenanceStatus(
-                    f"Configuring pebble layer for {self._service_name}..."
+                    f"Configuring pebble layer for {self._service_name}"
                 )
                 self._container.add_layer(self._container_name, layer, combine=True)
                 self._container.restart(self._service_name)
                 logger.info(f"Restarted container {self._service_name}")
+                self._update_relations()
                 self.unit.status = ActiveStatus()
         else:
-            self.unit.status = WaitingStatus("Waiting for container to be ready...")
+            self.unit.status = WaitingStatus("Waiting for container to be ready")
             event.defer()
+
+    def _update_relations(self):
+        if not self.unit.is_leader():
+            return
+        relations = self.model.relations[self.meta.name]
+        for relation in relations:
+            self._update_relation_active_status(
+                relation=relation, is_active=self._service_is_running
+            )
 
     def _mount_certifier_certs(self) -> None:
         """Patch the StatefulSet to include NMS certs secret mount."""
         self.unit.status = MaintenanceStatus(
-            "Mounting additional volumes required by the magma-nms-magmalte container..."
+            "Mounting additional volumes required by the magma-nms-magmalte container"
         )
         client = Client()
         stateful_set = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
@@ -202,9 +270,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         )
 
     def _create_nms_admin_user(self, email: str, password: str, organization: str):
-        """
-        Creates Admin user for the master organization in NMS.
-        """
+        """Creates Admin user for the master organization in NMS."""
         logger.info("Creating admin user for NMS")
         process = self._container.exec(
             [
@@ -254,7 +320,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         ]
 
     @property
-    def _relations_ready(self) -> bool:
+    def _relations_created(self) -> bool:
         """Checks whether required relations are ready."""
         required_relations = ["magma-orc8r-certifier", "db"]
         if missing_relations := [
@@ -264,13 +330,50 @@ class MagmaNmsMagmalteCharm(CharmBase):
                 f"Waiting for relation(s) to be created: {', '.join(missing_relations)}"
             )
             return False
-        if not self._domain_name:
-            self.unit.status = WaitingStatus("Waiting for certifier relation to be ready...")
-            return False
-        if not self._get_db_connection_string:
-            self.unit.status = WaitingStatus("Waiting for database relation to be established...")
+        return True
+
+    @property
+    def _relations_ready(self) -> bool:
+        """Checks whether required relations are ready."""
+        not_ready_relations = []
+        if not self._certifier_relation_ready:
+            not_ready_relations.append("magma-orc8r-certifier")
+        if not self._db_relation_ready:
+            not_ready_relations.append("db")
+        if not_ready_relations:
+            self.unit.status = WaitingStatus(
+                f"Waiting for relation(s) to be ready: {', '.join(not_ready_relations)}"
+            )
             return False
         return True
+
+    @property
+    def _certifier_relation_ready(self) -> bool:
+        """Checks whether certifier relation is ready."""
+        try:
+            rel = self.model.get_relation("magma-orc8r-certifier")
+            units = rel.units  # type: ignore[union-attr]
+            return rel.data[next(iter(units))]["active"] == "True"  # type: ignore[union-attr]
+        except (AttributeError, KeyError, StopIteration):
+            return False
+
+    @property
+    def _db_relation_ready(self) -> bool:
+        """Validates that database relation is ready (that there is a relation, credentials have
+        been passed and the database can be connected to)."""
+        db_connection_string = self._get_db_connection_string
+        if not db_connection_string:
+            return False
+        try:
+            psycopg2.connect(
+                f"dbname='{self.DB_NAME}' "
+                f"user='{db_connection_string.user}' "
+                f"host='{db_connection_string.host}' "
+                f"password='{db_connection_string.password}'"
+            )
+            return True
+        except psycopg2.OperationalError:
+            return False
 
     @property
     def _nms_certs_mounted(self) -> bool:

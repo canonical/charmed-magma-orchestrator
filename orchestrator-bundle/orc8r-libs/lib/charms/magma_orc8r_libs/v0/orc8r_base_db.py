@@ -103,10 +103,10 @@ class Orc8rBase(Object):
         provided_relation_name = list(self.charm.meta.provides.keys())[0]
         provided_relation_name_with_underscores = provided_relation_name.replace("-", "_")
         pebble_ready_event = getattr(
-            self.charm.on, f"{provided_relation_name_with_underscores}_pebble_ready"
+            self.charm.on, f"{service_name_with_underscores}_pebble_ready"
         )
         relation_joined_event = getattr(
-            self.charm.on, f"{service_name_with_underscores}_relation_joined"
+            self.charm.on, f"{provided_relation_name_with_underscores}_relation_joined"
         )
         self.framework.observe(pebble_ready_event, self._on_magma_orc8r_pebble_ready)
 
@@ -130,13 +130,11 @@ class Orc8rBase(Object):
 
     def _on_magma_orc8r_pebble_ready(self, event: PebbleReadyEvent):
         if not self._db_relation_created:
-            self.charm.unit.status = BlockedStatus("Waiting for database relation to be created")
+            self.charm.unit.status = BlockedStatus("Waiting for db relation to be created")
             event.defer()
             return
-        if not self._db_relation_established:
-            self.charm.unit.status = WaitingStatus(
-                "Waiting for database relation to be established"
-            )
+        if not self._db_relation_ready:
+            self.charm.unit.status = WaitingStatus("Waiting for db relation to be ready")
             event.defer()
             return
         self._configure_orc8r(event)
@@ -153,6 +151,7 @@ class Orc8rBase(Object):
                 self.container.add_layer(self.container_name, pebble_layer, combine=True)
                 self.container.restart(self.service_name)
                 logger.info(f"Restarted container {self.service_name}")
+                self._update_relations()
                 self.charm.unit.status = ActiveStatus()
         else:
             self.charm.unit.status = WaitingStatus("Waiting for container to be ready...")
@@ -191,7 +190,7 @@ class Orc8rBase(Object):
             event.defer()
 
     @property
-    def _db_relation_established(self) -> bool:
+    def _db_relation_ready(self) -> bool:
         """Validates that database relation is ready (that there is a relation, credentials have
         been passed and the database can be connected to)."""
         db_connection_string = self._get_db_connection_string
@@ -273,6 +272,6 @@ class Orc8rBase(Object):
     def _update_relation_active_status(self, relation: Relation, is_active: bool):
         relation.data[self.charm.unit].update(
             {
-                "active": is_active,
+                "active": str(is_active),
             }
         )

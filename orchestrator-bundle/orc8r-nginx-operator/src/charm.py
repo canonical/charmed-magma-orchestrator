@@ -249,7 +249,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
     @property
     def _relations_ready(self) -> bool:
         """Checks whether required relations are ready."""
-        required_relations = ["bootstrapper", "magma-orc8r-certifier", "obsidian"]
+        required_relations = ["magma-orc8r-bootstrapper", "magma-orc8r-certifier", "obsidian"]
         missing_relations = [
             relation
             for relation in required_relations
@@ -262,7 +262,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
             return False
         if not self._get_domain_name:
             self.unit.status = WaitingStatus(
-                "Waiting for magma-orc8r-certifier relation to be ready..."
+                "Waiting for magma-orc8r-certifier relation to be ready"
             )
             return False
         return True
