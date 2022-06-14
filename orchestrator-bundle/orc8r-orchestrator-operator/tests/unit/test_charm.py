@@ -173,30 +173,6 @@ class TestCharm(unittest.TestCase):
             "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
         )
 
-    @patch("charm.MagmaOrc8rOrchestratorCharm._mount_certifier_certs")
-    @patch(
-        "charm.MagmaOrc8rOrchestratorCharm._nms_certs_mounted", PropertyMock(return_value=False)
-    )
-    def test_given_charm_certifier_relation_active_when_certs_are_not_mounted_then_mount_orc8r_certs(  # noqa: E501
-        self, mock_mount_certifier_certs
-    ):
-        relation_id = self.harness.add_relation("magma-orc8r-certifier", "orc8r-certifier")
-        self.harness.add_relation_unit(relation_id, "orc8r-certifier/0")
-        self.harness.update_relation_data(relation_id, "orc8r-certifier/0", {"active": "True"})
-
-        mock_mount_certifier_certs.assert_called_once()
-
-    @patch("charm.MagmaOrc8rOrchestratorCharm._mount_certifier_certs")
-    @patch("charm.MagmaOrc8rOrchestratorCharm._nms_certs_mounted", PropertyMock(return_value=True))
-    def test_given_certifier_relation_active_when_certs_are_mounted_then_dont_mount_orc8r_certs(
-        self, mock_mount_certifier_certs
-    ):
-        relation_id = self.harness.add_relation("magma-orc8r-certifier", "orc8r-certifier")
-        self.harness.add_relation_unit(relation_id, "orc8r-certifier/0")
-        self.harness.update_relation_data(relation_id, "orc8r-certifier/0", {"active": "True"})
-
-        mock_mount_certifier_certs.assert_not_called()
-
     @patch("charm.MagmaOrc8rOrchestratorCharm._namespace", PropertyMock(return_value="qwerty"))
     @patch("charm.MagmaOrc8rOrchestratorCharm._relations_ready", PropertyMock(return_value=True))
     @patch("charm.MagmaOrc8rOrchestratorCharm._relations_created", PropertyMock(return_value=True))
@@ -291,38 +267,3 @@ class TestCharm(unittest.TestCase):
         self.harness.update_relation_data(relation_id, "orc8r-certifier/0", {"active": "True"})
 
         mock_mount_certifier_certs.assert_not_called()
-
-    @patch("charm.MagmaOrc8rOrchestratorCharm._namespace", PropertyMock(return_value="qwerty"))
-    @patch("charm.MagmaOrc8rOrchestratorCharm._relations_ready", PropertyMock(return_value=True))
-    @patch("charm.MagmaOrc8rOrchestratorCharm._relations_created", PropertyMock(return_value=True))
-    @patch("charm.MagmaOrc8rOrchestratorCharm._nms_certs_mounted", PropertyMock(return_value=True))
-    def test_given_magma_orc8r_orchestrator_service_running_when_metrics_magma_orc8r_orchestrator_relation_joined_event_emitted_then_active_key_in_relation_data_is_set_to_true(  # noqa: E501
-        self,
-    ):
-        self.harness.set_can_connect("magma-orc8r-orchestrator", True)
-        container = self.harness.model.unit.get_container("magma-orc8r-orchestrator")
-        self.harness.charm.on.magma_orc8r_orchestrator_pebble_ready.emit(container)
-        self.harness.set_leader(True)
-        relation_id = self.harness.add_relation("magma-orc8r-orchestrator", "orc8r-orchestrator")
-        self.harness.add_relation_unit(relation_id, "magma-orc8r-orchestrator/0")
-
-        self.assertEqual(
-            self.harness.get_relation_data(relation_id, "magma-orc8r-orchestrator/0"),
-            {"active": "True"},
-        )
-
-    @patch("charm.MagmaOrc8rOrchestratorCharm._namespace", PropertyMock(return_value="qwerty"))
-    @patch("charm.MagmaOrc8rOrchestratorCharm._relations_ready", PropertyMock(return_value=True))
-    @patch("charm.MagmaOrc8rOrchestratorCharm._relations_created", PropertyMock(return_value=True))
-    @patch("charm.MagmaOrc8rOrchestratorCharm._nms_certs_mounted", PropertyMock(return_value=True))
-    def test_given_magma_orc8r_orchestrator_service_not_running_when_magma_orc8r_orchestrator_relation_joined_event_emitted_then_active_key_in_relation_data_is_set_to_false(  # noqa: E501
-        self,
-    ):
-        self.harness.set_leader(True)
-        relation_id = self.harness.add_relation("magma-orc8r-orchestrator", "orc8r-orchestrator")
-        self.harness.add_relation_unit(relation_id, "magma-orc8r-orchestrator/0")
-
-        self.assertEqual(
-            self.harness.get_relation_data(relation_id, "magma-orc8r-orchestrator/0"),
-            {"active": "False"},
-        )
