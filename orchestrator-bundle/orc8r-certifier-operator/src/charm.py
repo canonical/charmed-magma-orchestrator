@@ -204,7 +204,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     def _update_domain_name_in_relation_data(self, relation):
         """Updates the domain field inside the relation data bucket."""
         domain = self.model.config["domain"]
-        relation.data[self.unit].update({"domain": domain})  # type: ignore[union-attr]
+        relation.data[self.unit].update({"domain": domain})
 
     def _create_magma_orc8r_secrets(self):
         self.unit.status = MaintenanceStatus("Creating Magma Orc8r secrets")
