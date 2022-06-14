@@ -6,7 +6,7 @@ import logging
 
 from charms.magma_orc8r_libs.v0.orc8r_base import Orc8rBase
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
-from ops.charm import CharmBase
+from ops.charm import CharmBase, InstallEvent
 from ops.main import main
 
 logger = logging.getLogger(__name__)
@@ -54,7 +54,10 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
         self._orc8r_base = Orc8rBase(self, startup_command=startup_command)
         self.framework.observe(self.on.install, self._on_install)
 
-    def _on_install(self, event):
+    def _on_install(self, event: InstallEvent):
+        if not self._orc8r_base.container.can_connect():
+            event.defer()
+            return
         self._write_config_file()
 
     def _write_config_file(self):
@@ -65,7 +68,7 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
             f'alertmanagerConfigServiceURL: "{self.ALERTMANAGER_CONFIGURER_URL}/v1"\n'
             '"profile": "prometheus"\n'
         )
-        self._orc8r_base._container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
+        self._orc8r_base.container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
 
     @property
     def _namespace(self) -> str:

@@ -4,6 +4,13 @@
 import unittest
 from unittest.mock import Mock, PropertyMock, patch
 
+from lightkube.models.core_v1 import (
+    LoadBalancerIngress,
+    LoadBalancerStatus,
+    Service,
+    ServiceStatus,
+)
+from lightkube.models.meta_v1 import ObjectMeta
 from ops import testing
 from ops.model import ActiveStatus, BlockedStatus
 
@@ -13,6 +20,23 @@ testing.SIMULATE_CAN_CONNECT = True
 
 
 class TestCharm(unittest.TestCase):
+    @staticmethod
+    def k8s_load_balancer_service(ip: str, name: str) -> Service:
+        return Service(
+            metadata=ObjectMeta(name=name),
+            apiVersion="v1",
+            kind="Service",
+            status=ServiceStatus(
+                loadBalancer=LoadBalancerStatus(
+                    ingress=[
+                        LoadBalancerIngress(
+                            ip=ip,
+                        )
+                    ]
+                )
+            ),
+        )
+
     @patch(
         "charm.KubernetesServicePatch",
         lambda charm, ports, additional_labels, additional_annotations: None,
@@ -206,4 +230,34 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(
             self.harness.get_relation_data(relation_id, "magma-orc8r-orchestrator/0"),
             {"active": "False"},
+
+    @patch("lightkube.Client.list")
+    @patch("lightkube.core.client.GenericSyncClient")
+    def test_given_k8s_services_exist_when_get_load_balancer_services_action_then_services_are_returned(  # noqa: E501
+        self, _, patch_k8s_list
+    ):
+        event = Mock()
+        ip_1 = "whatever ip 1"
+        ip_2 = "whatever ip 2"
+        ip_3 = "whatever ip 3"
+        ip_4 = "whatever ip 4"
+        name_1 = "whatever name 1"
+        name_2 = "whatever name 2"
+        name_3 = "whatever name 3"
+        name_4 = "whatever name 4"
+        service_1 = self.k8s_load_balancer_service(ip=ip_1, name=name_1)
+        service_2 = self.k8s_load_balancer_service(ip=ip_2, name=name_2)
+        service_3 = self.k8s_load_balancer_service(ip=ip_3, name=name_3)
+        service_4 = self.k8s_load_balancer_service(ip=ip_4, name=name_4)
+        patch_k8s_list.return_value = [service_1, service_2, service_3, service_4]
+
+        self.harness.charm._on_get_load_balancer_services_action(event)
+
+        event.set_results.assert_called_with(
+            {
+                name_1: ip_1,
+                name_2: ip_2,
+                name_3: ip_3,
+                name_4: ip_4,
+            }
         )
