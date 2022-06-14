@@ -20,7 +20,6 @@ from ops.charm import (
     ConfigChangedEvent,
     InstallEvent,
     PebbleReadyEvent,
-    RelationChangedEvent,
     RelationJoinedEvent,
     RemoveEvent,
 )
@@ -176,42 +175,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         )
         self._container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
 
-    @property
-    def _db_relation_established(self) -> bool:
-        """Validates that database relation is established (that there is a relation and that
-        credentials have been passed)."""
-        db_connection_string = self._get_db_connection_string
-        if not db_connection_string:
-            return False
-        try:
-            psycopg2.connect(
-                f"dbname='{self.DB_NAME}' "
-                f"user='{db_connection_string.user}' "
-                f"host='{db_connection_string.host}' "
-                f"password='{db_connection_string.password}'"
-            )
-            return True
-        except psycopg2.OperationalError:
-            return False
-
-    def _create_magma_orc8r_secrets(self):
-        self.unit.status = MaintenanceStatus("Creating Magma Orc8r secrets...")
-        self._get_certificates()
-        self._create_secrets()
-
-    def _mount_certifier_certs(self):
-        """Patch the StatefulSet to include certs secret mount."""
-        self.unit.status = MaintenanceStatus("Mounting additional volumes")
-        logger.info("Mounting volumes for certificates")
-        client = Client()
-        stateful_set = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
-        stateful_set.spec.template.spec.volumes.extend(self._magma_orc8r_certifier_volumes)  # type: ignore[attr-defined]  # noqa: E501
-        stateful_set.spec.template.spec.containers[1].volumeMounts.extend(  # type: ignore[attr-defined]  # noqa: E501
-            self._magma_orc8r_certifier_volume_mounts
-        )
-        client.patch(StatefulSet, name=self.app.name, obj=stateful_set, namespace=self._namespace)
-        logger.info("Additional volumes for certificates are mounted")
-
     def _configure_magma_orc8r_certifier(self, event: PebbleReadyEvent):
         """Adds layer to pebble config if the proposed config is different from the current one."""
         if self._container.can_connect():
@@ -242,6 +205,11 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         """Updates the domain field inside the relation data bucket."""
         domain = self.model.config["domain"]
         relation.data[self.unit].update({"domain": domain})
+
+    def _create_magma_orc8r_secrets(self):
+        self.unit.status = MaintenanceStatus("Creating Magma Orc8r secrets")
+        self._get_certificates()
+        self._create_secrets()
 
     def _get_certificates(self):
         if self.model.config["use-self-signed-ssl-certs"]:
@@ -389,6 +357,19 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             raise e
         return True
 
+    def _mount_certifier_certs(self):
+        """Patch the StatefulSet to include certs secret mount."""
+        self.unit.status = MaintenanceStatus("Mounting additional volumes")
+        logger.info("Mounting volumes for certificates")
+        client = Client()
+        stateful_set = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
+        stateful_set.spec.template.spec.volumes.extend(self._magma_orc8r_certifier_volumes)  # type: ignore[attr-defined]  # noqa: E501
+        stateful_set.spec.template.spec.containers[1].volumeMounts.extend(  # type: ignore[attr-defined]  # noqa: E501
+            self._magma_orc8r_certifier_volume_mounts
+        )
+        client.patch(StatefulSet, name=self.app.name, obj=stateful_set, namespace=self._namespace)
+        logger.info("Additional volumes for certificates are mounted")
+
     def _delete_k8s_secret(self, secret_name: str) -> None:
         """Delete Kubernetes secrets created by the create_secrets method."""
         client = Client()
@@ -408,6 +389,24 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         if not self.model.get_relation("db"):
             return False
         return True
+
+    @property
+    def _db_relation_established(self) -> bool:
+        """Validates that database relation is established (that there is a relation and that
+        credentials have been passed)."""
+        db_connection_string = self._get_db_connection_string
+        if not db_connection_string:
+            return False
+        try:
+            psycopg2.connect(
+                f"dbname='{self.DB_NAME}' "
+                f"user='{db_connection_string.user}' "
+                f"host='{db_connection_string.host}' "
+                f"password='{db_connection_string.password}'"
+            )
+            return True
+        except psycopg2.OperationalError:
+            return False
 
     @property
     def _pebble_layer(self) -> Layer:
@@ -517,13 +516,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             except ModelError:
                 pass
         return False
-
-    def _on_magma_orc8r_certifier_relation_changed(self, event: RelationChangedEvent):
-        """Adds the domain field to relation's data bucket so that it can be used by the client.
-        To access data bucket, client should implement callback for on_relation_changed event.
-        """
-        domain = self.model.config["domain"]
-        event.relation.data[self.unit].update({"domain": domain})
 
     @property
     def _namespace(self) -> str:

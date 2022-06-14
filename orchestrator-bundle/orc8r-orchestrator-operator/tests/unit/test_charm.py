@@ -272,25 +272,25 @@ class TestCharm(unittest.TestCase):
     @patch(
         "charm.MagmaOrc8rOrchestratorCharm._nms_certs_mounted", PropertyMock(return_value=False)
     )
-    def test_given_charm_with_certifier_relation_active_when_certs_are_not_mounted_then_mount_orc8r_certs(  # noqa: E501
-        self, mock_on_certifier_relation_changed
+    def test_given_certifier_relation_active_when_certs_are_not_mounted_then_mount_orc8r_certs(
+        self, mock_mount_certifier_certs
     ):
         relation_id = self.harness.add_relation("magma-orc8r-certifier", "orc8r-certifier")
         self.harness.add_relation_unit(relation_id, "orc8r-certifier/0")
         self.harness.update_relation_data(relation_id, "orc8r-certifier/0", {"active": "True"})
 
-        mock_on_certifier_relation_changed.assert_called_once()
+        mock_mount_certifier_certs.assert_called_once()
 
     @patch("charm.MagmaOrc8rOrchestratorCharm._mount_certifier_certs")
     @patch("charm.MagmaOrc8rOrchestratorCharm._nms_certs_mounted", PropertyMock(return_value=True))
-    def test_given_charm_with_certifier_relation_active_when_certs_are_mounted_then_dont_mount_orc8r_certs(  # noqa: E501
-        self, mock_on_certifier_relation_changed
+    def test_given_certifier_relation_active_when_certs_are_mounted_then_dont_mount_orc8r_certs(
+        self, mock_mount_certifier_certs
     ):
         relation_id = self.harness.add_relation("magma-orc8r-certifier", "orc8r-certifier")
         self.harness.add_relation_unit(relation_id, "orc8r-certifier/0")
         self.harness.update_relation_data(relation_id, "orc8r-certifier/0", {"active": "True"})
 
-        mock_on_certifier_relation_changed.assert_not_called()
+        mock_mount_certifier_certs.assert_not_called()
 
     @patch("charm.MagmaOrc8rOrchestratorCharm._namespace", PropertyMock(return_value="qwerty"))
     @patch("charm.MagmaOrc8rOrchestratorCharm._relations_ready", PropertyMock(return_value=True))
