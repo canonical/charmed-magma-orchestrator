@@ -230,6 +230,7 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(
             self.harness.get_relation_data(relation_id, "magma-orc8r-orchestrator/0"),
             {"active": "False"},
+        )
 
     @patch("lightkube.Client.list")
     @patch("lightkube.core.client.GenericSyncClient")
