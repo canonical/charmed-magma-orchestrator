@@ -173,7 +173,6 @@ class TestCharm(unittest.TestCase):
             "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
         )
 
-<<<<<<< HEAD
     @patch("charm.MagmaOrc8rOrchestratorCharm._mount_certifier_certs")
     @patch(
         "charm.MagmaOrc8rOrchestratorCharm._nms_certs_mounted", PropertyMock(return_value=False)
@@ -233,9 +232,6 @@ class TestCharm(unittest.TestCase):
             {"active": "False"},
         )
 
-=======
-<<<<<<< HEAD
->>>>>>> 8c36a67 (Fixing service status in relation data)
     @patch("lightkube.Client.list")
     @patch("lightkube.core.client.GenericSyncClient")
     def test_given_k8s_services_exist_when_get_load_balancer_services_action_then_services_are_returned(  # noqa: E501
@@ -271,7 +267,7 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready(container_name="magma-orc8r-orchestrator")
 
         assert isinstance(self.harness.charm.unit.status, BlockedStatus)
-=======
+
     @patch("charm.MagmaOrc8rOrchestratorCharm._mount_certifier_certs")
     @patch(
         "charm.MagmaOrc8rOrchestratorCharm._nms_certs_mounted", PropertyMock(return_value=False)
@@ -330,4 +326,3 @@ class TestCharm(unittest.TestCase):
             self.harness.get_relation_data(relation_id, "magma-orc8r-orchestrator/0"),
             {"active": "False"},
         )
->>>>>>> 12d33f6 (Fixing service status in relation data)
