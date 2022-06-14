@@ -46,7 +46,7 @@ provides:
 
 import logging
 
-from ops.charm import CharmBase
+from ops.charm import CharmBase, PebbleReadyEvent
 from ops.framework import Object
 from ops.model import (
     ActiveStatus,
@@ -107,7 +107,10 @@ class Orc8rBase(Object):
         else:
             self.additional_environment_variables = {}
 
-    def _on_magma_orc8r_pebble_ready(self, event):
+    def _on_magma_orc8r_pebble_ready(self, event: PebbleReadyEvent):
+        if not self._relations_created:
+            event.defer()
+            return
         if not self._relations_ready:
             event.defer()
             return
@@ -202,13 +205,26 @@ class Orc8rBase(Object):
         )
 
     @property
+    def _relations_created(self) -> bool:
+        """Checks whether required relations are created."""
+        if missing_relations := [
+            relation
+            for relation in self.required_relations
+            if not self.model.get_relation(relation)
+        ]:
+            msg = f"Waiting for relation(s) to be created: {', '.join(missing_relations)}"
+            self.charm.unit.status = BlockedStatus(msg)
+            return False
+        return True
+
+    @property
     def _relations_ready(self) -> bool:
         """Checks whether required relations are ready."""
         if missing_relations := [
             relation for relation in self.required_relations if not self._relation_active(relation)
         ]:
-            msg = f"Waiting for relations: {', '.join(missing_relations)}"
-            self.charm.unit.status = BlockedStatus(msg)
+            msg = f"Waiting for relation(s) to be ready: {', '.join(missing_relations)}"
+            self.charm.unit.status = WaitingStatus(msg)
             return False
         return True
 

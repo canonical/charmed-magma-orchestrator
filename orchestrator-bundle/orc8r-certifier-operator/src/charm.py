@@ -20,7 +20,6 @@ from ops.charm import (
     ConfigChangedEvent,
     InstallEvent,
     PebbleReadyEvent,
-    RelationChangedEvent,
     RelationJoinedEvent,
     RemoveEvent,
 )
@@ -180,17 +179,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self.unit.status = MaintenanceStatus("Creating Magma Orc8r secrets...")
         self._get_certificates()
         self._create_secrets()
-
-    def _mount_certifier_certs(self):
-        """Patch the StatefulSet to include certs secret mount."""
-        self.unit.status = MaintenanceStatus("Mounting additional volumes")
-        logger.info("Mounting volumes for certificates")
-        client = Client()
-        stateful_set = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
-        stateful_set.spec.template.spec.volumes.extend(self._magma_orc8r_certifier_volumes)  # type: ignore[attr-defined]  # noqa: E501
-        stateful_set.spec.template.spec.containers[1].volumeMounts.extend(  # type: ignore[attr-defined]  # noqa: E501
-            self._magma_orc8r_certifier_volume_mounts
-        )
 
     def _configure_magma_orc8r_certifier(self, event: PebbleReadyEvent):
         """Adds layer to pebble config if the proposed config is different from the current one."""
@@ -369,6 +357,19 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             raise e
         return True
 
+    def _mount_certifier_certs(self):
+        """Patch the StatefulSet to include certs secret mount."""
+        self.unit.status = MaintenanceStatus("Mounting additional volumes")
+        logger.info("Mounting volumes for certificates")
+        client = Client()
+        stateful_set = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
+        stateful_set.spec.template.spec.volumes.extend(self._magma_orc8r_certifier_volumes)  # type: ignore[attr-defined]  # noqa: E501
+        stateful_set.spec.template.spec.containers[1].volumeMounts.extend(  # type: ignore[attr-defined]  # noqa: E501
+            self._magma_orc8r_certifier_volume_mounts
+        )
+        client.patch(StatefulSet, name=self.app.name, obj=stateful_set, namespace=self._namespace)
+        logger.info("Additional volumes for certificates are mounted")
+
     def _delete_k8s_secret(self, secret_name: str) -> None:
         """Delete Kubernetes secrets created by the create_secrets method."""
         client = Client()
@@ -515,13 +516,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             except ModelError:
                 pass
         return False
-
-    def _on_magma_orc8r_certifier_relation_changed(self, event: RelationChangedEvent):
-        """Adds the domain field to relation's data bucket so that it can be used by the client.
-        To access data bucket, client should implement callback for on_relation_changed event.
-        """
-        domain = self.model.config["domain"]
-        event.relation.data[self.unit].update({"domain": domain})
 
     @property
     def _namespace(self) -> str:
