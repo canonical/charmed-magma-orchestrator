@@ -91,7 +91,7 @@ class TestCharm(unittest.TestCase):
         PropertyMock(return_value="qwerty"),
     )
     def test_given_magma_orc8r_orchestrator_service_running_when_metrics_magma_orc8r_orchestrator_relation_joined_event_emitted_then_active_key_in_relation_data_is_set_to_true(  # noqa: E501
-            self,
+        self,
     ):
         self.harness.set_can_connect("magma-orc8r-dummy", True)
         container = self.harness.model.unit.get_container("magma-orc8r-dummy")
@@ -110,7 +110,7 @@ class TestCharm(unittest.TestCase):
         PropertyMock(return_value="qwerty"),
     )
     def test_given_magma_orc8r_orchestrator_service_not_running_when_magma_orc8r_orchestrator_relation_joined_event_emitted_then_active_key_in_relation_data_is_set_to_false(  # noqa: E501
-            self,
+        self,
     ):
         self.harness.set_leader(True)
         relation_id = self.harness.add_relation("magma-orc8r-dummy", "orc8r-dummy")

@@ -115,13 +115,7 @@ class TestCharm(unittest.TestCase):
         container = self.harness.model.unit.get_container("magma-orc8r-bootstrapper")
         self.harness.charm.on.magma_orc8r_bootstrapper_pebble_ready.emit(container)
         self.harness.set_leader(True)
-<<<<<<< HEAD
         relation_id = self.harness.add_relation("magma-orc8r-bootstrapper", "orc8r-bootstrapper")
-=======
-        relation_id = self.harness.add_relation(
-            "magma-orc8r-bootstrapper", "orc8r-bootstrapper"
-        )
->>>>>>> 8c36a67 (Fixing service status in relation data)
         self.harness.add_relation_unit(relation_id, "magma-orc8r-bootstrapper/0")
 
         self.assertEqual(
@@ -145,20 +139,10 @@ class TestCharm(unittest.TestCase):
         self,
     ):
         self.harness.set_leader(True)
-<<<<<<< HEAD
         relation_id = self.harness.add_relation("magma-orc8r-bootstrapper", "orc8r-bootstrapper")
-=======
-        relation_id = self.harness.add_relation(
-            "magma-orc8r-bootstrapper", "orc8r-bootstrapper"
-        )
->>>>>>> 8c36a67 (Fixing service status in relation data)
         self.harness.add_relation_unit(relation_id, "magma-orc8r-bootstrapper/0")
 
         self.assertEqual(
             self.harness.get_relation_data(relation_id, "magma-orc8r-bootstrapper/0"),
             {"active": "False"},
-<<<<<<< HEAD
         )
-=======
-        )
->>>>>>> 8c36a67 (Fixing service status in relation data)

@@ -111,15 +111,9 @@ class Orc8rBase(Object):
         if not self._relations_created:
             event.defer()
             return
-<<<<<<< HEAD
-=======
-        print("C")
->>>>>>> 8c36a67 (Fixing service status in relation data)
         if not self._relations_ready:
             event.defer()
             return
-        print("A")
-        print("B")
         self._configure_orc8r(event)
 
     def _configure_orc8r(self, event: PebbleReadyEvent):
@@ -238,7 +232,7 @@ class Orc8rBase(Object):
 
     def _relation_active(self, relation_name: str) -> bool:
         try:
-            rel = self.model.get_relation(relation_name)  # type: ignore[arg-type]
+            rel = self.model.get_relation(relation_name)
             units = rel.units  # type: ignore[union-attr]
             return rel.data[next(iter(units))]["active"] == "True"  # type: ignore[union-attr]
         except (KeyError, StopIteration):
