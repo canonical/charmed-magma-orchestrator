@@ -131,7 +131,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
             rel = self.model.get_relation("magma-orc8r-certifier")
             units = rel.units  # type: ignore[union-attr]
             return rel.data[next(iter(units))]["active"] == "True"  # type: ignore[union-attr]
-        except (KeyError, StopIteration):
+        except (AttributeError, KeyError, StopIteration):
             return False
 
     @property

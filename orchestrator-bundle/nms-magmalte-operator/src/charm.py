@@ -392,7 +392,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             certifier_relation = self.model.get_relation("magma-orc8r-certifier")
             units = certifier_relation.units  # type: ignore[union-attr]
             return certifier_relation.data[next(iter(units))]["domain"]  # type: ignore[union-attr]
-        except (KeyError, StopIteration):
+        except (AttributeError, KeyError, StopIteration):
             return None
 
     @property
