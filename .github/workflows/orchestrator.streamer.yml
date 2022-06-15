@@ -3,7 +3,7 @@ name: orc8r-streamer
 on:
   push:
     paths:
-      - 'orchestrator-bundle/orc8r-streamer-operator/**'
+      - "orchestrator-bundle/orc8r-streamer-operator/**"
 
 jobs:
   orc8r-streamer-lint-report:
@@ -36,15 +36,15 @@ jobs:
       - name: Run tests using tox
         run: cd orchestrator-bundle/orc8r-streamer-operator && tox -e unit
 
-#  orc8r-streamer-integration-test:
-#    name: Integration tests (orc8r-streamer)
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v2
-#      - name: Setup operator environment
-#        uses: charmed-kubernetes/actions-operator@main
-#        with:
-#          provider: microk8s
-#      - name: Run integration tests
-#        run: cd orchestrator-bundle/orc8r-streamer-operator && tox -e integration
+  orc8r-streamer-integration-test:
+    name: Integration tests (orc8r-streamer)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+      - name: Run integration tests
+        run: cd orchestrator-bundle/orc8r-streamer-operator && tox -e integration
