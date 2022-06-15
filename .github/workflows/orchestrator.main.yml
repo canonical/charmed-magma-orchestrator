@@ -112,14 +112,14 @@ jobs:
           /usr/bin/sg microk8s -c "juju bootstrap --debug --verbose microk8s integration-tests --model-default test-mode=true --model-default automatically-retry-hooks=false --model-default logging-config='<root>=DEBUG'  --bootstrap-constraints=''"
 
           # Install dependencies
-          /usr/bin/sudo apt-get --no-install-recommends -y -oDpkg::Use-Pty=0 --allow-downgrades install python3-venv=3.8.2-0ubuntu2 python3.8-venv=3.8.10-0ubuntu1~20.04.4
+          /usr/bin/sudo apt-get --no-install-recommends -y -oDpkg::Use-Pty=0 --allow-downgrades install python3.8-venv=3.8.10-0ubuntu1~20.04.4
           /usr/bin/sudo apt-get --no-install-recommends -y -oDpkg::Use-Pty=0 --allow-downgrades install libffi-dev libssh2-1 libssl-dev libssl-dev libstd-rust-1.57 cargo libstd-rust-dev rustc
 
       - name: Run integration tests
         run: |
           set -eux
 
-          charms="$(find ./orchestrator-bundle/ -name tox.ini | grep operator)"
+          charms="$(find ./orchestrator-bundle/ -name tox.ini | grep operator | grep -wv orc8r-orchestrator)"
           for charm in ${charms}; do
             tox -c "${charm}" -e integration
           done
