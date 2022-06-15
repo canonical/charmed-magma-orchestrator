@@ -22,7 +22,7 @@ Example:
 ```python
 from charms.tls_certificates_interface.v0.tls_certificates import (
     Cert,
-    InsecureCertificatesProvides,
+    TLSCertificatesProvides,
 )
 from ops.charm import CharmBase
 
@@ -30,9 +30,9 @@ from ops.charm import CharmBase
 class ExampleProviderCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
-        self.insecure_certificates = InsecureCertificatesProvides(self, "certificates")
+        self.tls_certificates = TLSCertificatesProvides(self, "certificates")
         self.framework.observe(
-            self.insecure_certificates.on.certificates_request, self._on_certificate_request
+            self.tls_certificates.on.certificates_request, self._on_certificate_request
         )
 
     def _on_certificate_request(self, event):
@@ -41,7 +41,7 @@ class ExampleProviderCharm(CharmBase):
         cert_type = event.cert_type
         certificate = self._generate_certificate(common_name, sans, cert_type)
 
-        self.insecure_certificates.set_relation_certificate(
+        self.tls_certificates.set_relation_certificate(
             certificate=certificate, relation_id=event.relation.id
         )
 
@@ -55,7 +55,7 @@ class ExampleProviderCharm(CharmBase):
 Example:
 
 ```python
-from charms.tls_certificates_interface.v0.tls_certificates import InsecureCertificatesRequires
+from charms.tls_certificates_interface.v0.tls_certificates import TLSCertificatesRequires
 from ops.charm import CharmBase
 
 
@@ -63,11 +63,11 @@ class ExampleRequirerCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
 
-        self.insecure_certificates = InsecureCertificatesRequires(self, "certificates")
+        self.tls_certificates = TLSCertificatesRequires(self, "certificates")
         self.framework.observe(
-            self.insecure_certificates.on.certificate_available, self._on_certificate_available
+            self.tls_certificates.on.certificate_available, self._on_certificate_available
         )
-        self.insecure_certificates.request_certificate(
+        self.tls_certificates.request_certificate(
             cert_type="client",
             common_name="whatever common name",
         )
@@ -83,7 +83,7 @@ class ExampleRequirerCharm(CharmBase):
 """
 import json
 import logging
-from typing import Literal, TypedDict
+from typing import List, Literal, TypedDict
 
 from jsonschema import exceptions, validate  # type: ignore[import]
 from ops.charm import CharmEvents
@@ -97,7 +97,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 18
+LIBPATCH = 21
 
 REQUIRER_JSON_SCHEMA = {
     "$schema": "http://json-schema.org/draft-04/schema#",
@@ -222,6 +222,16 @@ class CertificateRequestEvent(EventBase):
 
 
 def _load_relation_data(raw_relation_data: dict) -> dict:
+    """Loads relation data from the relation data bag.
+
+    Json loads all data.
+
+    Args:
+        raw_relation_data: Relation data from the databag
+
+    Returns:
+        dict: Relation data in dict format.
+    """
     certificate_data = dict()
     for key in raw_relation_data:
         try:
@@ -243,7 +253,7 @@ class CertificatesRequirerCharmEvents(CharmEvents):
     certificate_available = EventSource(CertificateAvailableEvent)
 
 
-class InsecureCertificatesProvides(Object):
+class TLSCertificatesProvides(Object):
     """TLS certificates provider class to be instantiated by TLS certificates providers."""
 
     on = CertificatesProviderCharmEvents()
@@ -260,8 +270,11 @@ class InsecureCertificatesProvides(Object):
     def _relation_data_is_valid(certificates_data: dict) -> bool:
         """Uses JSON schema validator to validate relation data content.
 
-        :param certificates_data: Certificate data dictionary as retrieved from relation data.
-        :return: True/False depending on whether the relation data follows the json schema.
+        Args:
+            certificates_data (dict): Certificate data dictionary as retrieved from relation data.
+
+        Returns:
+            bool: True/False depending on whether the relation data follows the json schema.
         """
         try:
             validate(instance=certificates_data, schema=REQUIRER_JSON_SCHEMA)
@@ -269,11 +282,15 @@ class InsecureCertificatesProvides(Object):
         except exceptions.ValidationError:
             return False
 
-    def set_relation_certificate(self, certificate: Cert, relation_id: int):
+    def set_relation_certificate(self, certificate: Cert, relation_id: int) -> None:
         """Adds certificates to relation data.
 
-        :param certificate: Certificate object
-        :param relation_id: Relation ID
+        Args:
+            certificate (Cert): Certificate object
+            relation_id (int): Juju relation ID
+
+        Returns:
+            None
         """
         logging.info(f"Setting Certificate to {certificate} for {self.model.unit}")
         certificates_relation = self.model.get_relation(
@@ -293,17 +310,24 @@ class InsecureCertificatesProvides(Object):
         certificate_dict = {"key": certificate["key"], "cert": certificate["cert"]}
         relation_data[certificate["common_name"]] = json.dumps(certificate_dict)
 
-    def _on_relation_changed(self, event):
-        logger.info(f"Raw relation data: {event.relation.data}")
+    def _on_relation_changed(self, event) -> None:
+        """Handler triggerred on relation changed event.
+
+        Looks at cert_requests and client_cert_requests fields in relation data and emit
+        certificate request events for each entry.
+
+        Args:
+            event: Juju event
+
+        Returns:
+            None
+        """
         relation_data = _load_relation_data(event.relation.data[event.unit])
-        logger.info(f"Parsed relation data: {relation_data}")
         if not relation_data:
             logger.info("No relation data - Deferring")
-            event.defer()
             return
         if not self._relation_data_is_valid(relation_data):
-            logger.info("Relation data did not pass JSON Schema validation - Deferring")
-            event.defer()
+            logger.warning("Relation data did not pass JSON Schema validation - Deferring")
             return
         for server_cert_request in relation_data.get("cert_requests", {}):
             self.on.certificate_request.emit(
@@ -321,7 +345,7 @@ class InsecureCertificatesProvides(Object):
             )
 
 
-class InsecureCertificatesRequires(Object):
+class TLSCertificatesRequires(Object):
     """TLS certificates requirer class to be instantiated by TLS certificates requirers."""
 
     on = CertificatesRequirerCharmEvents()
@@ -347,27 +371,30 @@ class InsecureCertificatesRequires(Object):
         cert_type: Literal["client", "server"],
         common_name: str,
         sans: list = None,
-    ):
+    ) -> None:
         """Request TLS certificate to provider charm.
 
-        :param cert_type: Certificate type: "client" or "server". Specifies if certificates are
+        Args:
+            cert_type (stt): Certificate type: "client" or "server". Specifies if certificates are
             flagged for server or client authentication use. See RFC 5280 Section 4.2.1.12 for
             information about the Extended Key Usage field.
-        :param common_name: The requested CN for the certificate.
-        :param sans: Subject Alternative Name
-        :return: None
+            common_name (str): The requested CN for the certificate.
+            sans (list): Subject Alternative Name
+
+        Returns:
+            None
         """
         if not sans:
             sans = []
         logger.info("Received request to create certificate")
         relation = self.model.get_relation(self.relationship_name)
         if not relation:
-            logger.info(
+            message = (
                 f"Relation {self.relationship_name} does not exist - "
                 f"The certificate request can't be completed"
             )
-            return
-        logger.info(f"Relation data: {relation.data}")
+            logger.error(message)
+            raise RuntimeError(message)
         relation_data = _load_relation_data(relation.data[self.model.unit])
         certificate_key_mapping = {"client": "client_cert_requests", "server": "cert_requests"}
         new_certificate_request = {"common_name": common_name, "sans": sans}
@@ -386,6 +413,14 @@ class InsecureCertificatesRequires(Object):
 
     @staticmethod
     def _relation_data_is_valid(certificates_data: dict) -> bool:
+        """Checks whether relation data is valid based on json schema.
+
+        Args:
+            certificates_data: Certificate data in dict format.
+
+        Returns:
+            bool: Whether relation data is valid.
+        """
         try:
             validate(instance=certificates_data, schema=PROVIDER_JSON_SCHEMA)
             return True
@@ -393,7 +428,15 @@ class InsecureCertificatesRequires(Object):
             return False
 
     @staticmethod
-    def _parse_certificates_from_relation_data(relation_data: dict) -> list:
+    def _parse_certificates_from_relation_data(relation_data: dict) -> List[Cert]:
+        """Loops over all relation data and returns list of Cert objects.
+
+        Args:
+            relation_data: Relation data json formatted.
+
+        Returns:
+            list: List of certificates
+        """
         certificates = []
         ca = relation_data.pop("ca")
         relation_data.pop("chain")
@@ -407,13 +450,19 @@ class InsecureCertificatesRequires(Object):
                     )
         return certificates
 
-    def _on_relation_changed(self, event):
+    def _on_relation_changed(self, event) -> None:
+        """Handler triggerred on relation changed events.
+
+        Args:
+            event: Juju event
+
+        Returns:
+            None
+        """
         if self.model.unit.is_leader():
-            logger.info(f"Raw relation data: {event.relation.data}")
             relation_data = _load_relation_data(event.relation.data[event.unit])
-            logger.info(f"Parsed relation data: {relation_data}")
             if not self._relation_data_is_valid(relation_data):
-                logger.info("Relation data did not pass JSON Schema validation - Deferring")
+                logger.warning("Relation data did not pass JSON Schema validation - Deferring")
                 event.defer()
                 return
 
