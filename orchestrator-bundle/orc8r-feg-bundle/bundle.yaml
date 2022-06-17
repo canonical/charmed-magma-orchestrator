@@ -1,9 +1,11 @@
 bundle: kubernetes
-name: magma-orc8r
+name: magma-orc8r-federated
 description: |
   Orchestrator is a Magma service that provides a simple and consistent way to 
   configure and monitor the wireless network securely. The metrics acquired through the platform 
   allows you to see the analytics and traffic flows of the wireless users through the Magma web UI.
+  This bundles includes all orc8r charms as well as the ones necessary to manage federation 
+  gateways.
 applications:
   nms-magmalte:
     charm: magma-nms-magmalte
@@ -27,6 +29,11 @@ applications:
     trust: true
   orc8r-analytics:
     charm: magma-orc8r-analytics
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-base-acct:
+    charm: magma-orc8r-base-acct
     channel: edge
     scale: 1
     trust: true
@@ -86,6 +93,11 @@ applications:
     trust: true
   orc8r-ha:
     charm: magma-orc8r-ha
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-health:
+    charm: magma-orc8r-health
     channel: edge
     scale: 1
     trust: true
@@ -203,6 +215,8 @@ relations:
 - - orc8r-device:db
   - postgresql-k8s:db
 - - orc8r-directoryd:db
+  - postgresql-k8s:db
+- - orc8r-health:db
   - postgresql-k8s:db
 - - orc8r-lte:db
   - postgresql-k8s:db

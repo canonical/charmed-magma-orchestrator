@@ -1,0 +1,23 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: magma-orc8r-base-acct
+description: |
+  Basic Accounting Services used when deploying Federation Gateway.
+
+summary: |
+  Basic Accounting Services used when deploying Federation Gateway.
+
+containers:
+  magma-orc8r-base-acct:
+    resource: magma-orc8r-base-acct-image
+
+resources:
+  magma-orc8r-base-acct-image:
+    type: oci-image
+    description: OCI image for magma-orc8r-base-acct (docker.artifactory.magmacore.org/controller:1.6.0)
+    upstream-source: docker.artifactory.magmacore.org/controller:1.6.0
+
+provides:
+  magma-orc8r-base-acct:
+    interface: magma-orc8r-base-acct

@@ -7,17 +7,10 @@ Feg provides Mconfigs for configuration of FeG-related gateway service configura
 (FeG networks, federated gateways, etc.)
 
 ## Usage
-**magma-orc8r-feg** can be deployed via Juju command line using below commands:
+Deploy using Juju:
 
 ```bash
 juju deploy magma-orc8r-feg  orc8r-feg --trust
-```
-
-**IMPORTANT**: For now, deploying this charm must be done with an alias as shown above.
-
-Before running **juju deploy** command, make sure charm has been built using:
-```bash
-charmcraft pack
 ```
 
 ## OCI Images

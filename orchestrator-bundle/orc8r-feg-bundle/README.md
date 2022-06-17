@@ -9,8 +9,8 @@ allows you to see the analytics and traffic flows of the wireless users through 
 This charm bundle makes it easy to deploy the Orchestrator component in any Kubernetes environment,
 and it has been tested with all major public cloud platforms.
 
-As well as all the base orc8r charms, this bundle also includes the required charms to manage
-federation gateways.
+As well as all the base Orchestrator charms, this bundle also includes the required charms to 
+manage federation gateways.
 
 For more information about Magma, see the official documentation [here](https://magmacore.org/).
 
