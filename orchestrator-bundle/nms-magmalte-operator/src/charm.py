@@ -54,7 +54,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             self._on_magma_orc8r_certifier_relation_changed,
         )
         self.framework.observe(
-            self.on.get_admin_credentials_action, self._on_get_admin_credentials
+            self.on.get_master_admin_credentials_action, self._on_get_master_admin_credentials
         )
         self.framework.observe(
             self.on.create_nms_admin_user_action, self._create_nms_admin_user_action
@@ -189,7 +189,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             organization=event.params["organization"],
         )
 
-    def _on_get_admin_credentials(self, event: ActionEvent) -> None:
+    def _on_get_master_admin_credentials(self, event: ActionEvent) -> None:
         if not self._relations_ready:
             event.fail("Relations aren't yet set up. Please try again in a few minutes")
             return
@@ -203,7 +203,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
 
     def _create_nms_admin_user(self, email: str, password: str, organization: str):
         """
-        Creates Admin user for the master organization in NMS.
+        Creates Admin user for the given organization in NMS.
         """
         logger.info("Creating admin user for NMS")
         process = self._container.exec(
@@ -288,7 +288,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         try:
             certifier_relation = self.model.get_relation("magma-orc8r-certifier")
             units = certifier_relation.units  # type: ignore[union-attr]
-            return certifier_relation.data[next(iter(units))]["domain"]  # type: ignore[union-attr]
+            return certifier_relation.data[next(iter(units))]["domain"]  # type: ignore[union-attr]  # noqa: E501
         except (KeyError, StopIteration):
             return None
 
@@ -297,7 +297,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         """Returns DB connection string provided by the DB relation."""
         try:
             db_relation = self.model.get_relation("db")
-            return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[index, union-attr]  # noqa: E501
+            return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[union-attr, index]  # noqa: E501
         except (AttributeError, KeyError):
             return None
 
