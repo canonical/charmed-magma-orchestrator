@@ -112,7 +112,7 @@ script.
 Get the master organization's username and password:
 
 ```bash
-juju run-action nms-magmalte/0 get-admin-credentials --wait
+juju run-action nms-magmalte/0 get-master-admin-credentials --wait
 ```
 
 Confirm successful deployment by visiting `https://master.nms.<your domain>` and logging in

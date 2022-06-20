@@ -66,7 +66,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             self._on_magma_nms_magmalte_relation_joined,
         )
         self.framework.observe(
-            self.on.get_admin_credentials_action, self._on_get_admin_credentials
+            self.on.get_master_admin_credentials_action, self._on_get_master_admin_credentials
         )
         self.framework.observe(
             self.on.create_nms_admin_user_action, self._create_nms_admin_user_action
@@ -257,7 +257,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             organization=event.params["organization"],
         )
 
-    def _on_get_admin_credentials(self, event: ActionEvent) -> None:
+    def _on_get_master_admin_credentials(self, event: ActionEvent) -> None:
         if not self._relations_ready:
             event.fail("Relations aren't yet set up. Please try again in a few minutes")
             return
@@ -400,7 +400,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         """Returns DB connection string provided by the DB relation."""
         try:
             db_relation = self.model.get_relation("db")
-            return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[index, union-attr]  # noqa: E501
+            return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[union-attr, index]  # noqa: E501
         except (AttributeError, KeyError):
             return None
 

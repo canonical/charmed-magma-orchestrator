@@ -21,26 +21,10 @@ CERTIFIER_CHARM_NAME = "magma-orc8r-certifier"
 
 class TestOrc8rBootstrapper:
     @pytest.fixture(scope="module")
+    @pytest.mark.abort_on_fail
     async def setup(self, ops_test):
         await self._deploy_postgresql(ops_test)
         await self._deploy_orc8r_certifier(ops_test)
-
-    @pytest.mark.abort_on_fail
-    async def test_build_and_deploy(self, ops_test, setup):
-        charm = await ops_test.build_charm(".")
-        resources = {
-            f"{CHARM_NAME}-image": METADATA["resources"][f"{CHARM_NAME}-image"]["upstream-source"],
-        }
-        await ops_test.model.deploy(
-            charm, resources=resources, application_name=APPLICATION_NAME, trust=True
-        )
-        await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
-        )
-        await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="orc8r-certifier:certifier"
-        )
-        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
 
     @staticmethod
     async def _deploy_postgresql(ops_test):
@@ -62,9 +46,36 @@ class TestOrc8rBootstrapper:
             config={"domain": "example.com"},
             trust=True,
         )
+        await ops_test.model.wait_for_idle(
+            apps=[CERTIFIER_APPLICATION_NAME], status="blocked", timeout=1000
+        )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
         )
         await ops_test.model.wait_for_idle(
             apps=[CERTIFIER_APPLICATION_NAME], status="active", timeout=1000
         )
+
+    @pytest.fixture(scope="module")
+    @pytest.mark.abort_on_fail
+    async def build_and_deploy(self, ops_test, setup):
+        charm = await ops_test.build_charm(".")
+        resources = {
+            f"{CHARM_NAME}-image": METADATA["resources"][f"{CHARM_NAME}-image"]["upstream-source"],
+        }
+        await ops_test.model.deploy(
+            charm, resources=resources, application_name=APPLICATION_NAME, trust=True
+        )
+
+    @pytest.mark.abort_on_fail
+    async def test_wait_for_blocked_status(self, ops_test, setup, build_and_deploy):
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
+
+    async def test_relate_and_wait_for_idle(self, ops_test, setup, build_and_deploy):
+        await ops_test.model.add_relation(
+            relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
+        )
+        await ops_test.model.add_relation(
+            relation1=APPLICATION_NAME, relation2="orc8r-certifier:magma-orc8r-certifier"
+        )
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
