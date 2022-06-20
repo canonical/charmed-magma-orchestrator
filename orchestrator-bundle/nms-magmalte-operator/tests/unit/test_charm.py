@@ -25,7 +25,7 @@ class MockExec:
         pass
 
     def wait_output(self, *args, **kwargs):
-        if hasattr(self, "raise_exec_error") and self.raise_exec_error:
+        if self.raise_exec_error:
             raise ExecError(command=["blob"], exit_code=1234, stdout="", stderr="")
 
 
@@ -41,11 +41,6 @@ class TestCharm(unittest.TestCase):
         "user=test_db_user"
     )
     TEST_DOMAIN_NAME = "test.domain.com"
-    CREATE_USER_ACTION_EVENT_PARAMS = {
-        "email": "test@test.test",
-        "organization": "test-org",
-        "password": "password123",
-    }
 
     @patch(
         "charm.KubernetesServicePatch", lambda charm, ports, service_name, additional_labels: None
@@ -202,7 +197,13 @@ class TestCharm(unittest.TestCase):
     def test_given_username_email_and_password_are_provided_when_create_nms_admin_user_juju_action_then_pebble_command_is_executed(  # noqa: E501
         self, _, mock_exec
     ):
-        action_event = Mock(params=self.CREATE_USER_ACTION_EVENT_PARAMS)
+        action_event = Mock(
+            params={
+                "email": "test@test.test",
+                "organization": "test-org",
+                "password": "password123",
+            }
+        )
         self.harness.charm._create_nms_admin_user_action(action_event)
         args, _ = mock_exec.call_args
         mock_exec.assert_called_once()
@@ -233,7 +234,7 @@ class TestCharm(unittest.TestCase):
         with self.assertRaises(ExecError):
             self.harness.charm._create_nms_admin_user_action(action_event)
 
-    def test_given_juju_action_when_relation_is_not_realized_then_get_admin_credentials_fails(
+    def test_given_juju_action_when_relation_is_not_ready_then_get_admin_credentials_fails(
         self,
     ):
         action_event = Mock()
@@ -245,7 +246,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("charm.MagmaNmsMagmalteCharm._relations_ready", new_callable=PropertyMock)
     @patch("ops.charm.ActionEvent")
-    def test_given_juju_action_when_relation_is_realized_then_get_admin_credentials_returns_values(
+    def test_given_juju_action_when_relation_is_ready_then_get_admin_credentials_returns_values(
         self, action_event, relations_ready
     ):
         relations_ready.return_value = True
