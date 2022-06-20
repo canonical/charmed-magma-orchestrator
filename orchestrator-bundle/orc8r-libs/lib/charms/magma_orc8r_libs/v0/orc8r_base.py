@@ -74,11 +74,11 @@ logger = logging.getLogger(__name__)
 
 class Orc8rBase(Object):
     def __init__(
-            self,
-            charm: CharmBase,
-            startup_command: str,
-            required_relations: list = None,
-            additional_environment_variables: dict = None,
+        self,
+        charm: CharmBase,
+        startup_command: str,
+        required_relations: list = None,
+        additional_environment_variables: dict = None,
     ):
         super().__init__(charm, "orc8r-base")
         self.charm = charm
@@ -230,7 +230,7 @@ class Orc8rBase(Object):
 
     def _relation_active(self, relation_name: str) -> bool:
         try:
-            rel = self.model.get_relation(relation_name)  # type: ignore[arg-type]
+            rel = self.model.get_relation(relation_name)
             units = rel.units  # type: ignore[union-attr]
             return rel.data[next(iter(units))]["active"] == "True"  # type: ignore[union-attr]
         except (AttributeError, KeyError, StopIteration):
