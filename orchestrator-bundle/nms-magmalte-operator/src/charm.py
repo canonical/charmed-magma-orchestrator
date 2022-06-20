@@ -280,8 +280,8 @@ class MagmaNmsMagmalteCharm(CharmBase):
         """Returns domain name provided by the orc8r-certifier relation."""
         try:
             certifier_relation = self.model.get_relation("certifier")
-            units = certifier_relation.units
-            return certifier_relation.data[next(iter(units))]["domain"]
+            units = certifier_relation.units  # type: ignore[union-attr]
+            return certifier_relation.data[next(iter(units))]["domain"]  # type: ignore[union-attr]
         except (KeyError, StopIteration):
             return None
 
@@ -290,7 +290,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         """Returns DB connection string provided by the DB relation."""
         try:
             db_relation = self.model.get_relation("db")
-            return ConnectionString(db_relation.data[db_relation.app]["master"])
+            return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[union-attr, index]  # noqa: E501
         except (AttributeError, KeyError):
             return None
 
