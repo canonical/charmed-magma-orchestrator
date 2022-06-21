@@ -48,14 +48,15 @@ class MagmaOrc8rFEGRelayCharm(CharmBase):
 
     def _create_feg_hello_service(self) -> None:
         """Creates feg-hello kubernetes service."""
-        logger.info("Creating feg-hello kubernetes service")
         client = Client()
-        service = self._feg_hello_service()
+        service = self._feg_hello_service
         if self._service_created(service.metadata.name):
-            logger.info("Service already created - Doing nothing.")
+            logger.info("Kubernetes service feg-hello already created")
         else:
+            logger.info("Creating feg-hello kubernetes service")
             client.create(obj=service)
 
+    @property
     def _feg_hello_service(self) -> Service:
         """Returns feg-hello kubernetes service object."""
         return Service(
@@ -85,8 +86,9 @@ class MagmaOrc8rFEGRelayCharm(CharmBase):
 
     def _delete_feg_hello_service(self):
         """Deletes feg-hello service from kubernetes."""
+        logger.info("Deleting feg-hello kubernetes service")
         client = Client()
-        service = self._feg_hello_service()
+        service = self._feg_hello_service
         client.delete(Service, name=service.metadata.name, namespace=self._namespace)
 
     def _service_created(self, service_name: str) -> bool:
