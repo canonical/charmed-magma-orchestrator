@@ -67,10 +67,14 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._orc8r_certs_data = {}
         self._service_patcher = KubernetesServicePatch(
             charm=self,
-            ports=[("grpc", 9180, 9086)],
+            ports=[("grpc", 9180, 9086), ("http", 8080, 10089)],
             additional_labels={
                 "app.kubernetes.io/part-of": "orc8r-app",
                 "orc8r.io/analytics_collector": "true",
+                "orc8r.io/obsidian_handlers": "true",
+            },
+            additional_annotations={
+                "orc8r.io/obsidian_handlers_path_prefixes": "/magma/v1/user"  # noqa: E501
             },
         )
 
@@ -356,6 +360,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                         f"-cak={self.BASE_CERTS_PATH}/certifier.key "
                         f"-vpnc={self.BASE_CERTS_PATH}/vpn_ca.crt "
                         f"-vpnk={self.BASE_CERTS_PATH}/vpn_ca.key "
+                        "-run_echo_server=true "
                         "-logtostderr=true "
                         "-v=0",
                         "environment": {

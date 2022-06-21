@@ -30,7 +30,7 @@ class TestCharm(unittest.TestCase):
         "user=test_db_user"
     )
 
-    @patch("charm.KubernetesServicePatch", lambda charm, ports, additional_labels: None)
+    @patch("charm.KubernetesServicePatch", lambda charm, ports,  additional_annotations, additional_labels: None)
     def setUp(self):
         self.harness = testing.Harness(MagmaOrc8rCertifierCharm)
         self.addCleanup(self.harness.cleanup)
@@ -109,6 +109,7 @@ class TestCharm(unittest.TestCase):
                     "-cak=/var/opt/magma/certs/certifier.key "
                     "-vpnc=/var/opt/magma/certs/vpn_ca.crt "
                     "-vpnk=/var/opt/magma/certs/vpn_ca.key "
+                    "-run_echo_server=true "
                     "-logtostderr=true "
                     "-v=0",
                     "environment": {
