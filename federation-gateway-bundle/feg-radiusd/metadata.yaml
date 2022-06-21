@@ -1,0 +1,18 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: magma-feg-radiusd
+description: |
+  Fetches metrics from the running radius server and exports them.
+summary: |
+  Fetches metrics from the running radius server and exports them.
+
+containers:
+  magma-feg-radiusd:
+    resource: magma-feg-radiusd-image
+
+resources:
+  magma-feg-radiusd-image:
+    type: oci-image
+    description: OCI image for magma-feg-radiusd (docker.artifactory.magmacore.org/gateway_go:1.6.0)
+    upstream-source: docker.artifactory.magmacore.org/gateway_go:1.6.0
