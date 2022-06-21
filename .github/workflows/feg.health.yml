@@ -1,0 +1,50 @@
+name: feg-health
+
+on:
+  push:
+    paths:
+      - "federation-gateway-bundle/feg-health-operator/**"
+
+jobs:
+  feg-health-lint-report:
+    name: Lint report (feg-health)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-health-operator && tox -e lint
+
+  feg-health-static-analysis:
+    name: Static analysis (feg-health)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-health-operator && tox -e static
+
+  feg-health-unit-tests-with-coverage:
+    name: Unit tests (feg-health)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-health-operator && tox -e unit
+
+  feg-health-integration-test:
+    name: Integration tests (feg-health)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+      - name: Run integration tests
+        run: cd federation-gateway-bundle/feg-health-operator && tox -e integration
