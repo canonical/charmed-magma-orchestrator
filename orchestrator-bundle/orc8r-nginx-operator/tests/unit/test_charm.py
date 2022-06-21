@@ -11,6 +11,14 @@ from charm import MagmaOrc8rNginxCharm
 
 testing.SIMULATE_CAN_CONNECT = True
 
+'''
+class MockExec:
+    def exec(self, *args, **kwargs):
+        pass
+
+    def wait_output(self, *args, **kwargs):
+        return("test output",any)
+'''
 
 class TestCharm(unittest.TestCase):
     @patch(
@@ -101,3 +109,31 @@ class TestCharm(unittest.TestCase):
                 create_additional_orc8r_nginx_services.return_value = Mock()
                 self.harness.charm.on.magma_orc8r_nginx_pebble_ready.emit(event)
         mock.assert_called_once()
+
+    '''
+    def test(  # noqa: E501
+        self,
+    ):
+        event = Mock()
+        with patch("ops.model.Container.exec") as exec, patch(
+            "charm.MagmaOrc8rNginxCharm._relations_ready", new_callable=PropertyMock
+        ) as relations_ready:
+            exec.return_value = MockExec()
+            relations_ready.return_value=True
+            with patch(
+                "charm.MagmaOrc8rNginxCharm._get_domain_name", new_callable=PropertyMock
+            ) as domain_name, patch(
+                "charm.MagmaOrc8rNginxCharm._create_additional_orc8r_nginx_services",
+                new_callable=PropertyMock,
+            ) as create_additional_orc8r_nginx_services, patch(
+                "ops.model.Container.can_connect"
+            ) as can_connect, patch(
+                "ops.model.Container.get_plan"
+            ) as get_plan:
+                get_plan.return_value = Mock()
+                domain_name.return_value = "test.domain.com"
+                create_additional_orc8r_nginx_services.return_value = Mock()
+                can_connect.return_value=True
+                self.harness.charm.on.magma_orc8r_nginx_pebble_ready.emit(event)
+        exec.assert_called_once()
+        '''
