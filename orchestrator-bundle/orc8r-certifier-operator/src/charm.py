@@ -136,11 +136,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._update_relations()
 
     def _on_magma_orc8r_certifier_relation_joined(self, event: RelationJoinedEvent):
-        if not self.unit.is_leader():
-            return
-        self._update_relation_active_status(
-            relation=event.relation, is_active=self._service_is_running
-        )
+        self._update_relations()
         if not self._service_is_running:
             logger.warning(
                 f"Service {self._service_name} not running! Please wait for the service to start."
