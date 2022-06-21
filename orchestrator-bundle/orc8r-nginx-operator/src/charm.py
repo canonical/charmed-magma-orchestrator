@@ -57,6 +57,12 @@ class MagmaOrc8rNginxCharm(CharmBase):
         if not self._relations_ready:
             event.defer()
             return
+        if not self._get_domain_name:
+            self.unit.status = WaitingStatus(
+                "Waiting for magma-orc8r-certifier relation to be ready"
+            )
+            event.defer()
+            return
         self._create_additional_orc8r_nginx_services()
         self._configure_pebble_layer(event)
 
@@ -260,11 +266,6 @@ class MagmaOrc8rNginxCharm(CharmBase):
             msg = f"Waiting for relations: {', '.join(missing_relations)}"
             self.unit.status = BlockedStatus(msg)
             return False
-        if not self._get_domain_name:
-            self.unit.status = WaitingStatus(
-                "Waiting for magma-orc8r-certifier relation to be ready"
-            )
-            return False
         return True
 
     def _orc8r_nginx_service_created(self, service_name: str) -> bool:
@@ -289,11 +290,11 @@ class MagmaOrc8rNginxCharm(CharmBase):
     @property
     def _get_domain_name(self):
         """Gets domain name for the data bucket sent by certifier relation."""
-        certifier_relation = self.model.get_relation("magma-orc8r-certifier")
-        units = certifier_relation.units  # type: ignore[union-attr]
         try:
+            certifier_relation = self.model.get_relation("magma-orc8r-certifier")
+            units = certifier_relation.units  # type: ignore[union-attr]
             return certifier_relation.data[next(iter(units))]["domain"]  # type: ignore[union-attr]
-        except KeyError:
+        except (AttributeError, KeyError, StopIteration):
             return None
 
     @property
