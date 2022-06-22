@@ -120,14 +120,9 @@ jobs:
           set -eux
           ./orchestrator-bundle/build.sh
 
-      # - name: Run integration tests
-      #   run: |
-      #     set -eux
-
-      #     charms="$(find ./orchestrator-bundle/ -name tox.ini | grep operator | grep -wv orc8r-orchestrator)"
-      #     for charm in ${charms}; do
-      #       tox -c "${charm}" -e integration
-      #     done
+      - name: Deploy and wait for idle
+        run: |
+          tox -c "./orchestrator-bundle/orc8r-bundle/tox.ini" -e integration
 
       - name: Clean up
         if: always()

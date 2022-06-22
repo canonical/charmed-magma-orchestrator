@@ -5,7 +5,7 @@ set -euo pipefail
 function build() {
   charm="$1"
     pushd "${charm}-operator/"
-    charmcraft pack
+    sudo charmcraft pack --destructive-mode
     mv "magma-${charm}_ubuntu-20.04-amd64.charm" "${charm}.charm"
     popd
 }
