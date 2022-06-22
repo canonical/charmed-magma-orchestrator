@@ -1,0 +1,35 @@
+name: Upload charm orc8r-feg-relay-operator
+
+on:
+  push:
+    branches:
+      - "main"
+    paths:
+      - "orchestrator-bundle/orc8r-feg-relay-operator/**"
+
+jobs:
+  orc8r-feg-relay-charmhub-upload:
+    runs-on: ubuntu-latest
+    name: Charmhub upload orc8r-feg-relay-operator
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Check libraries
+        uses: canonical/charming-actions/check-libraries@1.0.2
+        with:
+          credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Select charmhub channel
+        uses: canonical/charming-actions/channel@1.0.2
+        id: channel
+
+      - name: Upload charm to charmhub
+        uses: canonical/charming-actions/upload-charm@1.0.2
+        with:
+          credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          upload-image: "false"
+          channel: "${{ steps.channel.outputs.name }}"
+          charm-path: ./orchestrator-bundle/orc8r-feg-relay-operator

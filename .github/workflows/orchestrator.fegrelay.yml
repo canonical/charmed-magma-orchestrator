@@ -1,0 +1,37 @@
+name: orc8r-feg-relay
+
+on:
+  push:
+    paths:
+      - "orchestrator-bundle/orc8r-feg-relay-operator/**"
+
+jobs:
+  orc8r-feg-relay-lint-report:
+    name: Lint report (orc8r-feg-relay)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/orc8r-feg-relay-operator && tox -e lint
+
+  orc8r-feg-relay-static-analysis:
+    name: Static analysis (orc8r-feg-relay)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/orc8r-feg-relay-operator && tox -e static
+
+  orc8r-feg-relay-unit-tests-with-coverage:
+    name: Unit tests (orc8r-feg-relay)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/orc8r-feg-relay-operator && tox -e unit
