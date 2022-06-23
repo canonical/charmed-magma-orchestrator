@@ -25,6 +25,6 @@ requires:
   magma-orc8r-certifier:
     interface: magma-orc8r-certifier
     limit: 1
-  obsidian:
+  magma-orc8r-obsidian:
     interface: magma-orc8r-obsidian
     limit: 1

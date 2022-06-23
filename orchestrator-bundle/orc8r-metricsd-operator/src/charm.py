@@ -51,7 +51,11 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
             "-logtostderr=true "
             "-v=0"
         )
-        self._orc8r_base = Orc8rBase(self, startup_command=startup_command)
+        self._orc8r_base = Orc8rBase(
+            self,
+            startup_command=startup_command,
+            required_relations=["magma-orc8r-orchestrator"],
+        )
         self.framework.observe(self.on.install, self._on_install)
 
     def _on_install(self, event: InstallEvent):

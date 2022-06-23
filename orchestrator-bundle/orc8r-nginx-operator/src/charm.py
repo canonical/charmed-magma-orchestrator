@@ -27,6 +27,13 @@ logger = logging.getLogger(__name__)
 
 
 class MagmaOrc8rNginxCharm(CharmBase):
+
+    REQUIRED_RELATIONS = [
+        "magma-orc8r-bootstrapper",
+        "magma-orc8r-certifier",
+        "magma-orc8r-obsidian",
+    ]
+
     def __init__(self, *args):
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-nginx"
@@ -54,6 +61,9 @@ class MagmaOrc8rNginxCharm(CharmBase):
         )
 
     def _on_magma_orc8r_nginx_pebble_ready(self, event: PebbleReadyEvent):
+        if not self._relations_created:
+            event.defer()
+            return
         if not self._relations_ready:
             event.defer()
             return
@@ -69,13 +79,13 @@ class MagmaOrc8rNginxCharm(CharmBase):
     def _on_magma_orc8r_certifier_relation_changed(self, event: RelationChangedEvent):
         """Mounts certificates required by the nms-magmalte."""
         if not self._orc8r_certs_mounted:
-            self.unit.status = MaintenanceStatus("Mounting NMS certificates...")
+            self.unit.status = MaintenanceStatus("Mounting NMS certificates")
             self._mount_certifier_certs()
 
     def _mount_certifier_certs(self) -> None:
         """Patch the StatefulSet to include certifier certs secret mount."""
         self.unit.status = MaintenanceStatus(
-            "Mounting additional volumes required by the magma-orc8r-nginx container..."
+            "Mounting additional volumes required by the magma-orc8r-nginx container"
         )
         client = Client()
         stateful_set = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
@@ -87,9 +97,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
         logger.info("Additional K8s resources for magma-orc8r-nginx container applied!")
 
     def _configure_pebble_layer(self, event: PebbleReadyEvent):
-        self.unit.status = MaintenanceStatus(
-            f"Configuring pebble layer for {self._service_name}..."
-        )
+        self.unit.status = MaintenanceStatus(f"Configuring pebble layer for {self._service_name}")
         pebble_layer = self._pebble_layer
         if self._container.can_connect():
             plan = self._container.get_plan()
@@ -100,7 +108,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
                 logger.info(f"Restarted container {self._service_name}")
                 self.unit.status = ActiveStatus()
         else:
-            self.unit.status = WaitingStatus(f"Waiting for {self._container} to be ready...")
+            self.unit.status = WaitingStatus(f"Waiting for {self._container} to be ready")
             event.defer()
             return
 
@@ -253,20 +261,36 @@ class MagmaOrc8rNginxCharm(CharmBase):
         ]
 
     @property
-    def _relations_ready(self) -> bool:
-        """Checks whether required relations are ready."""
-        required_relations = ["magma-orc8r-bootstrapper", "magma-orc8r-certifier", "obsidian"]
-        missing_relations = [
+    def _relations_created(self) -> bool:
+        if missing_relations := [
             relation
-            for relation in required_relations
+            for relation in self.REQUIRED_RELATIONS
             if not self.model.get_relation(relation)
-            or len(self.model.get_relation(relation).units) == 0  # type: ignore[union-attr]  # noqa: E501, W503
-        ]
-        if missing_relations:
-            msg = f"Waiting for relations: {', '.join(missing_relations)}"
+        ]:
+            msg = f"Waiting for relation(s) to be created: {', '.join(missing_relations)}"
             self.unit.status = BlockedStatus(msg)
             return False
         return True
+
+    @property
+    def _relations_ready(self) -> bool:
+        """Checks whether required relations are ready."""
+        not_ready_relations = [
+            relation for relation in self.REQUIRED_RELATIONS if not self._relation_active(relation)
+        ]
+        if not_ready_relations:
+            msg = f"Waiting for relation(s) to be ready: {', '.join(not_ready_relations)}"
+            self.unit.status = WaitingStatus(msg)
+            return False
+        return True
+
+    def _relation_active(self, relation_name: str) -> bool:
+        try:
+            rel = self.model.get_relation(relation_name)
+            units = rel.units  # type: ignore[union-attr]
+            return rel.data[next(iter(units))]["active"] == "True"  # type: ignore[union-attr]
+        except (AttributeError, KeyError, StopIteration):
+            return False
 
     def _orc8r_nginx_service_created(self, service_name: str) -> bool:
         """Checks whether given K8s service exists or not."""

@@ -222,12 +222,14 @@ relations:
   - postgresql-k8s:db
 - - orc8r-lte:db
   - postgresql-k8s:db
+- - orc8r-metricsd:magma-orc8r-orchestrator
+  - orc8r-orchestrator:magma-orc8r-orchestrator
 - - orc8r-nginx:magma-orc8r-bootstrapper
   - orc8r-bootstrapper:magma-orc8r-bootstrapper
 - - orc8r-nginx:magma-orc8r-certifier
   - orc8r-certifier:magma-orc8r-certifier
-- - orc8r-nginx:obsidian
-  - orc8r-obsidian:obsidian
+- - orc8r-nginx:magma-orc8r-obsidian
+  - orc8r-obsidian:magma-orc8r-obsidian
 - - orc8r-orchestrator:magma-orc8r-certifier
   - orc8r-certifier:magma-orc8r-certifier
 - - orc8r-orchestrator:metrics-endpoint
