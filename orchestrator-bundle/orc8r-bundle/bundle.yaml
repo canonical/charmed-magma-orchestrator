@@ -178,8 +178,8 @@ relations:
   - postgresql-k8s:db
 - - nms-nginx-proxy:magma-orc8r-certifier
   - orc8r-certifier:magma-orc8r-certifier
-- - nms-nginx-proxy:magmalte
-  - nms-magmalte:magmalte
+- - nms-nginx-proxy:magma-nms-magmalte
+  - nms-magmalte:magma-nms-magmalte
 - - orc8r-accessd:db
   - postgresql-k8s:db
 - - orc8r-bootstrapper:magma-orc8r-certifier
@@ -196,8 +196,8 @@ relations:
   - postgresql-k8s:db
 - - orc8r-lte:db
   - postgresql-k8s:db
-- - orc8r-nginx:bootstrapper
-  - orc8r-bootstrapper:bootstrapper
+- - orc8r-nginx:magma-orc8r-bootstrapper
+  - orc8r-bootstrapper:magma-orc8r-bootstrapper
 - - orc8r-nginx:magma-orc8r-certifier
   - orc8r-certifier:magma-orc8r-certifier
 - - orc8r-nginx:obsidian

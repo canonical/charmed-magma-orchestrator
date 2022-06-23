@@ -1,11 +1,11 @@
 type: "charm"
 bases:
   - build-on:
-    - name: "ubuntu"
-      channel: "20.04"
+      - name: "ubuntu"
+        channel: "20.04"
     run-on:
-    - name: "ubuntu"
-      channel: "20.04"
+      - name: "ubuntu"
+        channel: "20.04"
 
 parts:
   charm:
@@ -15,5 +15,7 @@ parts:
       - libssl-dev
       - rustc
       - cargo
+    charm-binary-python-packages:
+      - psycopg2-binary
     charm-python-packages:
       - setuptools

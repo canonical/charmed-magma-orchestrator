@@ -178,19 +178,16 @@ class TestCharm(unittest.TestCase):
     @patch("charm.MagmaOrc8rCertifierCharm._namespace", new_callable=PropertyMock)
     @patch("lightkube.Client.get")
     @patch("lightkube.Client.create")
-    @patch("lightkube.core.client.GenericSyncClient")
-    @patch("charm.MagmaOrc8rCertifierCharm._certs_are_mounted")
-    @patch("charm.MagmaOrc8rCertifierCharm._generate_self_signed_ssl_certs")
+    @patch("lightkube.core.client.GenericSyncClient", Mock())
+    @patch("charm.MagmaOrc8rCertifierCharm._certs_are_mounted", PropertyMock(return_value=True))
+    @patch("charm.MagmaOrc8rCertifierCharm._generate_self_signed_ssl_certs", Mock())
+    @patch("charm.MagmaOrc8rCertifierCharm._update_domain_name_in_relation_data", Mock())
     def test_given_good_domain_config_when_config_changed_then_kubernetes_secrets_are_created(
         self,
-        _,
-        patch_certs_mounted,
-        ___,
         patch_lightkube_create,
         patch_lightkube_get,
         patch_namespace,
     ):
-        patch_certs_mounted.return_value = True
         namespace = "whatever_namespace"
         key_values = {"domain": "whateverdomain", "use-self-signed-ssl-certs": "true"}
         nms_cert_data = {

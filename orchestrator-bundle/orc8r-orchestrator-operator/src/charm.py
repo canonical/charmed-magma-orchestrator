@@ -27,6 +27,7 @@ from ops.model import (
     MaintenanceStatus,
     ModelError,
     Relation,
+    WaitingStatus,
 )
 from ops.pebble import APIError, ConnectionError, ExecError, Layer
 
@@ -36,6 +37,7 @@ logger = logging.getLogger(__name__)
 class MagmaOrc8rOrchestratorCharm(CharmBase):
 
     BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
+    REQUIRED_RELATIONS = ["magma-orc8r-certifier", "metrics-endpoint"]
 
     # TODO: The various URL's should be provided through relationships
     PROMETHEUS_URL = "http://orc8r-prometheus:9090"
@@ -228,39 +230,60 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                 logger.error("    %s", line)
 
     def _on_magma_orc8r_orchestrator_pebble_ready(self, event: PebbleReadyEvent):
+        if not self._relations_created:
+            event.defer()
+            return
         if not self._relations_ready:
+            event.defer()
+            return
+        if not self._nms_certs_mounted:
+            self.unit.status = WaitingStatus("Waiting for NMS certificates to be mounted")
             event.defer()
             return
         self._configure_orc8r(event)
 
     @property
+    def _relations_created(self) -> bool:
+        if missing_relations := [
+            relation
+            for relation in self.REQUIRED_RELATIONS
+            if not self.model.get_relation(relation)
+        ]:
+            msg = f"Waiting for relation(s) to be created: {', '.join(missing_relations)}"
+            self.unit.status = BlockedStatus(msg)
+            return False
+        return True
+
+    @property
     def _relations_ready(self) -> bool:
         """Checks whether required relations are ready."""
-        required_relations = ["magma-orc8r-certifier", "metrics-endpoint"]
-        missing_relations = [
-            relation for relation in required_relations if not self._relation_active(relation)
+        not_ready_relations = [
+            relation for relation in self.REQUIRED_RELATIONS if not self._relation_active(relation)
         ]
-        if missing_relations:
-            msg = f"Waiting for relations: {', '.join(missing_relations)}"
-            self.unit.status = BlockedStatus(msg)
+        if not_ready_relations:
+            msg = f"Waiting for relation(s) to be ready: {', '.join(not_ready_relations)}"
+            self.unit.status = WaitingStatus(msg)
             return False
         return True
 
     def _relation_active(self, relation_name: str) -> bool:
         try:
-            relation = self.model.get_relation(relation_name)
-            if relation:
-                units = relation.units
-                return relation.data[next(iter(units))]["active"] == "True"
-            else:
-                return False
-        except (KeyError, StopIteration):
+            rel = self.model.get_relation(relation_name)
+            units = rel.units  # type: ignore[union-attr]
+            return rel.data[next(iter(units))]["active"] == "True"  # type: ignore[union-attr]
+        except (AttributeError, KeyError, StopIteration):
             return False
 
     def _on_magma_orc8r_certifier_relation_changed(self, event: RelationChangedEvent):
         """Mounts certificates required by orc8r-orchestrator."""
+        if not self._relation_active("magma-orc8r-certifier"):
+            self.unit.status = WaitingStatus(
+                "Waiting for magma-orc8r-certifier relation to be ready"
+            )
+            event.defer()
+            return
         if not self._nms_certs_mounted:
-            self.unit.status = MaintenanceStatus("Mounting NMS certificates...")
+            self.unit.status = MaintenanceStatus("Mounting NMS certificates")
             self._mount_certifier_certs()
 
     @property
@@ -276,7 +299,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
     def _mount_certifier_certs(self) -> None:
         """Patch the StatefulSet to include NMS certs secret mount."""
         self.unit.status = MaintenanceStatus(
-            "Mounting additional volumes required by the magma-orc8r-orchestrator container..."
+            "Mounting additional volumes required by the magma-orc8r-orchestrator container"
         )
         client = Client()
         stateful_set = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)

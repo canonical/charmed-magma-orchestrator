@@ -81,11 +81,8 @@ class TestOrc8rNginx:
             apps=[BOOTSTRAPPER_APPLICATION_NAME], status="blocked", timeout=1000
         )
         await ops_test.model.add_relation(
-            relation1=BOOTSTRAPPER_APPLICATION_NAME, relation2="postgresql-k8s:db"
-        )
-        await ops_test.model.add_relation(
             relation1=BOOTSTRAPPER_APPLICATION_NAME,
-            relation2="orc8r-certifier:magma-orc8r-certifier",  # noqa E501
+            relation2="orc8r-certifier:magma-orc8r-certifier",
         )
         await ops_test.model.wait_for_idle(
             apps=[BOOTSTRAPPER_APPLICATION_NAME], status="active", timeout=1000
@@ -129,7 +126,7 @@ class TestOrc8rNginx:
             relation1=APPLICATION_NAME, relation2="orc8r-certifier:magma-orc8r-certifier"
         )
         await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="orc8r-bootstrapper:bootstrapper"
+            relation1=APPLICATION_NAME, relation2="orc8r-bootstrapper:magma-orc8r-bootstrapper"
         )
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="orc8r-obsidian:obsidian"

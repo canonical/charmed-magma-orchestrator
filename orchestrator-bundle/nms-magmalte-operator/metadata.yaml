@@ -22,8 +22,8 @@ resources:
     upstream-source: docker.artifactory.magmacore.org/magmalte:1.6.0
 
 provides:
-  magmalte:
-    interface: nms-magmalte
+  magma-nms-magmalte:
+    interface: magma-nms-magmalte
 
 requires:
   db:

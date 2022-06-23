@@ -20,6 +20,6 @@ requires:
   magma-orc8r-certifier:
     interface: magma-orc8r-certifier
     limit: 1
-  magmalte:
-    interface: nms-magmalte
+  magma-nms-magmalte:
+    interface: magma-nms-magmalte
     limit: 1

@@ -6,6 +6,7 @@ import base64
 import logging
 
 import ops.lib
+import psycopg2  # type: ignore[import]
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from lightkube import Client
 from lightkube.core.exceptions import ApiError
@@ -19,7 +20,6 @@ from ops.charm import (
     ConfigChangedEvent,
     InstallEvent,
     PebbleReadyEvent,
-    RelationChangedEvent,
     RelationJoinedEvent,
     RemoveEvent,
 )
@@ -63,25 +63,25 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         """An instance of this object everytime an event occurs."""
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-certifier"
+        self.provided_relation_name = list(self.meta.provides.keys())[0]
+        provided_relation_name_with_underscores = self.provided_relation_name.replace("-", "_")
         self._container = self.unit.get_container(self._container_name)
         self._db = pgsql.PostgreSQLClient(self, "db")
+        relation_joined_event = getattr(
+            self.on, f"{provided_relation_name_with_underscores}_relation_joined"
+        )
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(
             self.on.magma_orc8r_certifier_pebble_ready, self._on_magma_orc8r_certifier_pebble_ready
         )
+        self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(
+            relation_joined_event, self._on_magma_orc8r_certifier_relation_joined
+        )
         self.framework.observe(
             self._db.on.database_relation_joined, self._on_database_relation_joined
         )
-        self.framework.observe(
-            self.on.magma_orc8r_certifier_relation_joined,
-            self._on_magma_orc8r_certifier_relation_joined,
-        )
-        self.framework.observe(
-            self.on.magma_orc8r_certifier_relation_changed,
-            self._on_magma_orc8r_certifier_relation_changed,
-        )
         self.framework.observe(self.on.remove, self._on_remove)
-        self.framework.observe(self.on.config_changed, self._on_config_changed)
         self._nms_certs_secret_name = "nms-certs"
         self._orc8r_certs_secret_name = "orc8r-certs"
         self._nms_certs_data = {}
@@ -95,37 +95,13 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             },
         )
 
-    def _write_metricsd_config_file(self):
-        metricsd_config = (
-            f'prometheusQueryAddress: "{self.PROMETHEUS_URL}"\n'
-            f'alertmanagerApiURL: "{self.ALERTMANAGER_URL}/api/v2"\n'
-            f'prometheusConfigServiceURL: "{self.PROMETHEUS_CONFIGURER_URL}/v1"\n'
-            f'alertmanagerConfigServiceURL: "{self.ALERTMANAGER_CONFIGURER_URL}/v1"\n'
-            '"profile": "prometheus"\n'
-        )
-        self._container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
-
     def _on_install(self, event: InstallEvent):
         """Runs each time the charm is installed."""
         if not self._container.can_connect():
+            self.unit.status = WaitingStatus("Waiting for container to be ready")
             event.defer()
             return
         self._write_metricsd_config_file()
-
-    def _on_config_changed(self, event: ConfigChangedEvent):
-        if not self._domain_config_is_valid:
-            self.unit.status = BlockedStatus("Config 'domain' is not valid")
-            logger.warning("Config 'domain' not valid")
-            event.defer()
-            return
-        if not self._secrets_are_created:
-            self._create_magma_orc8r_secrets()
-        if not self._container.can_connect():
-            logger.info("Can't connect to container - Deferring")
-            event.defer()
-            return
-        if not self._certs_are_mounted:
-            self._mount_certifier_certs()
 
     def _on_magma_orc8r_certifier_pebble_ready(self, event: PebbleReadyEvent):
         """Triggered when pebble is ready."""
@@ -143,6 +119,31 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             return
         self._configure_magma_orc8r_certifier(event)
 
+    def _on_config_changed(self, event: ConfigChangedEvent):
+        if not self._domain_config_is_valid:
+            self.unit.status = BlockedStatus("Config 'domain' is not valid")
+            logger.warning("Config 'domain' not valid")
+            event.defer()
+            return
+        if not self._secrets_are_created:
+            self._create_magma_orc8r_secrets()
+        if not self._container.can_connect():
+            self.unit.status = WaitingStatus("Waiting for container to be ready")
+            event.defer()
+            return
+        if not self._certs_are_mounted:
+            self._mount_certifier_certs()
+        self._update_relations()
+
+    def _on_magma_orc8r_certifier_relation_joined(self, event: RelationJoinedEvent):
+        self._update_relations()
+        if not self._service_is_running:
+            logger.warning(
+                f"Service {self._service_name} not running! Please wait for the service to start."
+            )
+            event.defer()
+            return
+
     def _on_database_relation_joined(self, event: RelationJoinedEvent):
         """
         Event handler for database relation change.
@@ -155,38 +156,20 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         if self.unit.is_leader():
             event.database = self.DB_NAME  # type: ignore[attr-defined]
 
-    @property
-    def _db_relation_created(self) -> bool:
-        """Checks whether required relations are ready."""
-        if not self.model.get_relation("db"):
-            return False
-        return True
+    def _on_remove(self, event: RemoveEvent):
+        self.unit.status = MaintenanceStatus("Removing Magma Orc8r secrets")
+        self._delete_k8s_secret(secret_name=self._nms_certs_secret_name)
+        self._delete_k8s_secret(secret_name=self._orc8r_certs_secret_name)
 
-    @property
-    def _db_relation_established(self) -> bool:
-        """Validates that database relation is established (that there is a relation and that
-        credentials have been passed)."""
-        if not self._get_db_connection_string:
-            return False
-        return True
-
-    def _create_magma_orc8r_secrets(self):
-        self.unit.status = MaintenanceStatus("Creating Magma Orc8r secrets...")
-        self._get_certificates()
-        self._create_secrets()
-
-    def _mount_certifier_certs(self):
-        """Patch the StatefulSet to include certs secret mount."""
-        self.unit.status = MaintenanceStatus("Mounting additional volumes")
-        logger.info("Mounting volumes for certificates")
-        client = Client()
-        stateful_set = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
-        stateful_set.spec.template.spec.volumes.extend(self._magma_orc8r_certifier_volumes)  # type: ignore[attr-defined]  # noqa: E501
-        stateful_set.spec.template.spec.containers[1].volumeMounts.extend(  # type: ignore[attr-defined]  # noqa: E501
-            self._magma_orc8r_certifier_volume_mounts
+    def _write_metricsd_config_file(self):
+        metricsd_config = (
+            f'prometheusQueryAddress: "{self.PROMETHEUS_URL}"\n'
+            f'alertmanagerApiURL: "{self.ALERTMANAGER_URL}/api/v2"\n'
+            f'prometheusConfigServiceURL: "{self.PROMETHEUS_CONFIGURER_URL}/v1"\n'
+            f'alertmanagerConfigServiceURL: "{self.ALERTMANAGER_CONFIGURER_URL}/v1"\n'
+            '"profile": "prometheus"\n'
         )
-        client.patch(StatefulSet, name=self.app.name, obj=stateful_set, namespace=self._namespace)
-        logger.info("Additional volumes for certificates are mounted")
+        self._container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
 
     def _configure_magma_orc8r_certifier(self, event: PebbleReadyEvent):
         """Adds layer to pebble config if the proposed config is different from the current one."""
@@ -198,52 +181,37 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                 self._container.add_layer(self._container_name, layer, combine=True)
                 self._container.restart(self._service_name)
                 logger.info(f"Restarted container {self._service_name}")
+                self._update_relations()
                 self.unit.status = ActiveStatus()
         else:
-            self.unit.status = WaitingStatus("Waiting for container to be ready...")
+            self.unit.status = WaitingStatus("Waiting for container to be ready")
             event.defer()
 
-    def _on_remove(self, event: RemoveEvent):
-        self.unit.status = MaintenanceStatus("Removing Magma Orc8r secrets...")
+    def _update_relations(self):
+        if not self.unit.is_leader():
+            return
+        relations = self.model.relations[self.provided_relation_name]
+        for relation in relations:
+            self._update_domain_name_in_relation_data(relation)
+            self._update_relation_active_status(
+                relation=relation, is_active=self._service_is_running
+            )
 
-        self._delete_k8s_secret(secret_name=self._nms_certs_secret_name)
-        self._delete_k8s_secret(secret_name=self._orc8r_certs_secret_name)
+    def _update_domain_name_in_relation_data(self, relation):
+        """Updates the domain field inside the relation data bucket."""
+        domain = self.model.config["domain"]
+        relation.data[self.unit].update({"domain": domain})
 
-    def _create_secrets(self):
-        logger.info("Creating k8s secrets")
-        self._create_k8s_secret(
-            secret_name=self._nms_certs_secret_name, secret_data=self._nms_certs_data
-        )
-        self._create_k8s_secret(
-            secret_name=self._orc8r_certs_secret_name, secret_data=self._orc8r_certs_data
-        )
+    def _create_magma_orc8r_secrets(self):
+        self.unit.status = MaintenanceStatus("Creating Magma Orc8r secrets")
+        self._get_certificates()
+        self._create_secrets()
 
-    def _create_k8s_secret(self, secret_name: str, secret_data: dict):
-        logger.info(f"Creating k8s secret for '{secret_name}'")
-        secret = Secret(
-            apiVersion="v1",
-            data=secret_data,
-            metadata=ObjectMeta(
-                labels={"app.kubernetes.io/name": self.app.name},
-                name=secret_name,
-                namespace=self._namespace,
-            ),
-            kind="Secret",
-            type="Opaque",
-        )
-        try:
-            client = Client()
-            client.create(secret)
-        except ApiError as e:
-            logger.info("Failed to create Secret: %s.", str(secret.to_dict()))
-            raise e
-        return True
-
-    def _delete_k8s_secret(self, secret_name: str) -> None:
-        """Delete Kubernetes secrets created by the create_secrets method."""
-        client = Client()
-        client.delete(SecretRes, name=secret_name, namespace=self._namespace)
-        logger.info("Deleted Kubernetes secrets!")
+    def _get_certificates(self):
+        if self.model.config["use-self-signed-ssl-certs"]:
+            self._generate_self_signed_ssl_certs()
+        else:
+            self._load_certificates_from_configs()
 
     def _generate_self_signed_ssl_certs(self):
         logger.info("Creating self-signed certificates...")
@@ -291,13 +259,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._orc8r_certs_data["certifier.pem"] = self._encode_in_base64(certifier_pem)
         self._orc8r_certs_data["admin_operator.pfx"] = self._encode_in_base64(admin_operator_pfx)
 
-    def _generate_bootstrapper_cert(self):
-        """
-        Generates bootstrapper certificate.
-        """
-        bootstrapper_key = generate_private_key()
-        self._orc8r_certs_data["bootstrapper.key"] = self._encode_in_base64(bootstrapper_key)
-
     def _generate_controller_cert(self):
         """
         Generates controller certificates. List of certificates:
@@ -329,11 +290,12 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._orc8r_certs_data["rootCA.key"] = self._encode_in_base64(rootca_key)
         self._orc8r_certs_data["rootCA.pem"] = self._encode_in_base64(rootca_pem)
 
-    def _get_certificates(self):
-        if self.model.config["use-self-signed-ssl-certs"]:
-            self._generate_self_signed_ssl_certs()
-        else:
-            self._load_certificates_from_configs()
+    def _generate_bootstrapper_cert(self):
+        """
+        Generates bootstrapper certificate.
+        """
+        bootstrapper_key = generate_private_key()
+        self._orc8r_certs_data["bootstrapper.key"] = self._encode_in_base64(bootstrapper_key)
 
     def _load_certificates_from_configs(self):
         self._nms_certs_data = {
@@ -360,6 +322,87 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             "rootCA.key": self._encode_in_base64(self.model.config["rootCA-key"].encode()),
             "rootCA.pem": self._encode_in_base64(self.model.config["rootCA-pem"].encode()),
         }
+
+    def _create_secrets(self):
+        logger.info("Creating k8s secrets")
+        self._create_k8s_secret(
+            secret_name=self._nms_certs_secret_name, secret_data=self._nms_certs_data
+        )
+        self._create_k8s_secret(
+            secret_name=self._orc8r_certs_secret_name, secret_data=self._orc8r_certs_data
+        )
+
+    def _create_k8s_secret(self, secret_name: str, secret_data: dict):
+        logger.info(f"Creating k8s secret for '{secret_name}'")
+        secret = Secret(
+            apiVersion="v1",
+            data=secret_data,
+            metadata=ObjectMeta(
+                labels={"app.kubernetes.io/name": self.app.name},
+                name=secret_name,
+                namespace=self._namespace,
+            ),
+            kind="Secret",
+            type="Opaque",
+        )
+        try:
+            client = Client()
+            client.create(secret)
+        except ApiError as e:
+            logger.info("Failed to create Secret: %s.", str(secret.to_dict()))
+            raise e
+        return True
+
+    def _mount_certifier_certs(self):
+        """Patch the StatefulSet to include certs secret mount."""
+        self.unit.status = MaintenanceStatus("Mounting additional volumes")
+        logger.info("Mounting volumes for certificates")
+        client = Client()
+        stateful_set = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
+        stateful_set.spec.template.spec.volumes.extend(self._magma_orc8r_certifier_volumes)  # type: ignore[attr-defined]  # noqa: E501
+        stateful_set.spec.template.spec.containers[1].volumeMounts.extend(  # type: ignore[attr-defined]  # noqa: E501
+            self._magma_orc8r_certifier_volume_mounts
+        )
+        client.patch(StatefulSet, name=self.app.name, obj=stateful_set, namespace=self._namespace)
+        logger.info("Additional volumes for certificates are mounted")
+
+    def _delete_k8s_secret(self, secret_name: str) -> None:
+        """Delete Kubernetes secrets created by the create_secrets method."""
+        client = Client()
+        client.delete(SecretRes, name=secret_name, namespace=self._namespace)
+        logger.info("Deleted Kubernetes secrets!")
+
+    def _update_relation_active_status(self, relation: Relation, is_active: bool):
+        relation.data[self.unit].update(
+            {
+                "active": str(is_active),
+            }
+        )
+
+    @property
+    def _db_relation_created(self) -> bool:
+        """Checks whether required relations are ready."""
+        if not self.model.get_relation("db"):
+            return False
+        return True
+
+    @property
+    def _db_relation_established(self) -> bool:
+        """Validates that database relation is established (that there is a relation and that
+        credentials have been passed)."""
+        db_connection_string = self._get_db_connection_string
+        if not db_connection_string:
+            return False
+        try:
+            psycopg2.connect(
+                f"dbname='{self.DB_NAME}' "
+                f"user='{db_connection_string.user}' "
+                f"host='{db_connection_string.host}' "
+                f"password='{db_connection_string.password}'"
+            )
+            return True
+        except psycopg2.OperationalError:
+            return False
 
     @property
     def _pebble_layer(self) -> Layer:
@@ -397,6 +440,44 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         )
 
     @property
+    def _get_db_connection_string(self):
+        """Returns DB connection string provided by the DB relation."""
+        try:
+            db_relation = self.model.get_relation("db")
+            return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[union-attr, index]  # noqa: E501
+        except (AttributeError, KeyError):
+            return None
+
+    @property
+    def _domain_config_is_valid(self) -> bool:
+        domain = self.model.config.get("domain")
+        if not domain:
+            return False
+        return True
+
+    @property
+    def _secrets_are_created(self) -> bool:
+        client = Client()
+        try:
+            client.get(res=Secret, name="orc8r-certs")
+            client.get(res=Secret, name="nms-certs")
+            logger.info("Secrets are already created")
+            return True
+        except ApiError:
+            logger.info("Kubernetes secrets are not already created")
+            return False
+
+    @property
+    def _certs_are_mounted(self) -> bool:
+        try:
+            self._container.pull(f"{self.BASE_CERTS_PATH}/certifier.pem")
+            logger.info("Certificates are already mounted to workload")
+            return True
+        except PathError:
+            logger.info("Certificates are not already mounted to workload")
+            return False
+
+    @property
     def _magma_orc8r_certifier_volumes(self) -> list:
         """Returns a list of volumes required by the magma-orc8r-certifier container."""
         return [
@@ -417,65 +498,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             ),
         ]
 
-    @property
-    def _get_db_connection_string(self):
-        """Returns DB connection string provided by the DB relation."""
-        try:
-            db_relation = self.model.get_relation("db")
-            return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[union-attr, index]  # noqa: E501
-        except (AttributeError, KeyError):
-            return None
-
-    @property
-    def _domain_config_is_valid(self) -> bool:
-        domain = self.model.config.get("domain")
-        if not domain:
-            return False
-        return True
-
-    @property
-    def _certs_are_mounted(self) -> bool:
-        try:
-            self._container.pull(f"{self.BASE_CERTS_PATH}/certifier.pem")
-            logger.info("Certificates are already mounted to workload")
-            return True
-        except PathError:
-            logger.info("Certificates are not already mounted to workload")
-            return False
-
-    @property
-    def _secrets_are_created(self) -> bool:
-        client = Client()
-        try:
-            client.get(res=Secret, name="orc8r-certs")
-            client.get(res=Secret, name="nms-certs")
-            logger.info("Secrets are already created")
-            return True
-        except ApiError:
-            logger.info("Kubernetes secrets are not already created")
-            return False
-
     @staticmethod
     def _encode_in_base64(byte_string: bytes):
         """Encodes given byte string in Base64"""
         return base64.b64encode(byte_string).decode("utf-8")
-
-    def _on_magma_orc8r_certifier_relation_joined(self, event: RelationJoinedEvent):
-        if not self.unit.is_leader():
-            return
-        self._update_relation_active_status(
-            relation=event.relation, is_active=self._service_is_running
-        )
-        if not self._service_is_running:
-            event.defer()
-            return
-
-    def _update_relation_active_status(self, relation: Relation, is_active: bool):
-        relation.data[self.unit].update(
-            {
-                "active": str(is_active),
-            }
-        )
 
     @property
     def _service_is_running(self) -> bool:
@@ -486,18 +512,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             except ModelError:
                 pass
         return False
-
-    def _on_magma_orc8r_certifier_relation_changed(self, event: RelationChangedEvent):
-        """Adds the domain field to relation's data bucket so that it can be used by the client.
-        To access data bucket, client should implement callback for on_relation_changed event.
-        To learn more about getting relation data, visit
-        [Juju docs](https://juju.is/docs/sdk/relations#heading--relation-data).
-        """
-        domain = self.model.config["domain"]
-
-        to_publish = [event.relation.data[self.unit]]
-        for bucket in to_publish:
-            bucket["domain"] = domain
 
     @property
     def _namespace(self) -> str:

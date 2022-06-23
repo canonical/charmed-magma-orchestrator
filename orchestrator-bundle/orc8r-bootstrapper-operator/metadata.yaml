@@ -20,13 +20,10 @@ resources:
     upstream-source: docker.artifactory.magmacore.org/controller:1.6.0
 
 provides:
-  bootstrapper:
+  magma-orc8r-bootstrapper:
     interface: magma-orc8r-bootstrapper
 
 requires:
   magma-orc8r-certifier:
     interface: magma-orc8r-certifier
-    limit: 1
-  db:
-    interface: pgsql
     limit: 1
