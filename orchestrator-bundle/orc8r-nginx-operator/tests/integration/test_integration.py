@@ -129,6 +129,6 @@ class TestOrc8rNginx:
             relation1=APPLICATION_NAME, relation2="orc8r-bootstrapper:magma-orc8r-bootstrapper"
         )
         await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="orc8r-obsidian:obsidian"
+            relation1=APPLICATION_NAME, relation2="orc8r-obsidian:magma-orc8r-obsidian"
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)

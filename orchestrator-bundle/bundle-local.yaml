@@ -238,10 +238,8 @@ relations:
   - postgresql-k8s:db
 - - orc8r-prometheus:alertmanager
   - orc8r-alertmanager:alerting
-- - orc8r-prometheus
-  - orc8r-prometheus-cache
-- - orc8r-prometheus
-  - orc8r-user-grafana
+- - orc8r-prometheus:metrics-endpoint
+  - orc8r-prometheus-cache:metrics-endpoint
 - - orc8r-smsd:db
   - postgresql-k8s:db
 - - orc8r-state:db
@@ -252,3 +250,5 @@ relations:
   - postgresql-k8s:db
 - - orc8r-tenants:db
   - postgresql-k8s:db
+- - orc8r-user-grafana:grafana-source
+  - orc8r-prometheus:grafana-source
