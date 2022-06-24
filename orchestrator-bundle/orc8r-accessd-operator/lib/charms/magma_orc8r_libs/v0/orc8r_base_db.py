@@ -14,7 +14,7 @@ To get started using the library, you just need to fetch the library using `char
 that you also need to add `ops-lib-pgsql` to your charm's `requirements.txt`.**
 ```shell
 cd some-charm
-charmcraft fetch-lib charms.magma_orc8r_libs.v0.orc8r_base
+charmcraft fetch-lib charms.magma_orc8r_libs.v0.orc8r_base_db
 echo <<-EOF >> requirements.txt
 ops-lib-pgsql
 EOF
@@ -78,7 +78,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 10
+LIBPATCH = 11
 
 
 logger = logging.getLogger(__name__)
