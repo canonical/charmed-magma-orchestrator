@@ -18,3 +18,7 @@ resources:
     type: oci-image
     description: OCI image for magma-orc8r-service-registry (docker.artifactory.magmacore.org/controller:1.6.0)
     upstream-source: docker.artifactory.magmacore.org/controller:1.6.0
+
+provides:
+  magma-orc8r-service-registry:
+    interface: magma-orc8r-service-registry
