@@ -79,7 +79,7 @@ class TestCharm(unittest.TestCase):
     @patch("charm.MagmaOrc8rCertifierCharm._get_db_connection_string", new_callable=PropertyMock)
     @patch("charm.MagmaOrc8rCertifierCharm._namespace", new_callable=PropertyMock)
     @patch("charm.MagmaOrc8rCertifierCharm._db_relation_created")
-    @patch("charm.MagmaOrc8rCertifierCharm._db_relation_established")
+    @patch("charm.MagmaOrc8rCertifierCharm._db_relation_ready")
     def test_given_pebble_ready_when_get_plan_then_plan_is_filled_with_magma_orc8r_certifier_service_content(  # noqa: E501
         self,
         db_relation_established,
