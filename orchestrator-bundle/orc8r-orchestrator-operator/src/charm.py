@@ -339,6 +339,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                 self._container.add_layer(self._container_name, self._pebble_layer, combine=True)
                 self._container.restart(self._service_name)
                 logger.info(f"Restarted container {self._service_name}")
+                self._update_relations()
                 self.unit.status = ActiveStatus()
         except ConnectionError:
             logger.error(
@@ -390,14 +391,14 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             return False
 
     def _on_magma_orc8r_orchestrator_relation_joined(self, event: RelationEvent):
-        if not self.unit.is_leader():
-            return
-        self._update_relation_active_status(
-            relation=event.relation, is_active=self._service_is_running
-        )
+        self._update_relations()
         if not self._service_is_running:
             event.defer()
             return
+        else:
+            logger.warning("===================================================================")
+            logger.warning("Orchestrator is active!")
+            logger.warning("===================================================================")
 
     def _update_relation_active_status(self, relation: Relation, is_active: bool):
         relation.data[self.unit].update(
@@ -415,6 +416,15 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             except ModelError:
                 pass
         return False
+
+    def _update_relations(self):
+        if not self.unit.is_leader():
+            return
+        relations = self.model.relations[self.meta.name]
+        for relation in relations:
+            self._update_relation_active_status(
+                relation=relation, is_active=self._service_is_running
+            )
 
     @property
     def _namespace(self) -> str:
