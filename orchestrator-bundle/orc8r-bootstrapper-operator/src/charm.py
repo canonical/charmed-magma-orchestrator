@@ -195,10 +195,6 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         if not self._service_is_running:
             event.defer()
             return
-        else:
-            logger.warning("===================================================================")
-            logger.warning("Bootstrapper is active!")
-            logger.warning("===================================================================")
 
     def _update_relation_active_status(self, relation: Relation, is_active: bool):
         relation.data[self.unit].update(
