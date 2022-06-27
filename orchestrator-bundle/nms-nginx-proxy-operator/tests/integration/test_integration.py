@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import logging
+import os
 from pathlib import Path
 
 import pytest
@@ -18,8 +19,10 @@ APPLICATION_NAME = "nms-nginx-proxy"
 CHARM_NAME = "magma-nms-nginx-proxy"
 CERTIFIER_APPLICATION_NAME = "orc8r-certifier"
 CERTIFIER_CHARM_NAME = "magma-orc8r-certifier"
+CERTIFIER_CHARM_FILE_NAME = "magma-orc8r-certifier_ubuntu-20.04-amd64.charm"
 NMS_MAGMALTE_APPLICATION_NAME = "nms-magmalte"
 NMS_MAGMALTE_CHARM_NAME = "magma-nms-magmalte"
+NMS_MAGMALTE_CHARM_FILE_NAME = "magma-nms-magmalte_ubuntu-20.04-amd64.charm"
 
 
 class TestNmsNginxProxy:
@@ -37,14 +40,16 @@ class TestNmsNginxProxy:
 
     @staticmethod
     async def _deploy_orc8r_certifier(ops_test):
-        charm = await ops_test.build_charm("../orc8r-certifier-operator/")
+        certifier_charm = os.path.join("../orc8r-certifier-operator", CERTIFIER_CHARM_FILE_NAME)
+        if not os.path.exists(certifier_charm):
+            certifier_charm = await ops_test.build_charm("../orc8r-certifier-operator/")
         resources = {
             f"{CERTIFIER_CHARM_NAME}-image": CERTIFIER_METADATA["resources"][
                 f"{CERTIFIER_CHARM_NAME}-image"
             ]["upstream-source"],
         }
         await ops_test.model.deploy(
-            charm,
+            certifier_charm,
             resources=resources,
             application_name=CERTIFIER_APPLICATION_NAME,
             config={"domain": "example.com"},
@@ -62,14 +67,19 @@ class TestNmsNginxProxy:
 
     @staticmethod
     async def _deploy_nms_magmalte(ops_test):
-        charm = await ops_test.build_charm("../nms-magmalte-operator/")
+        magmalte_charm = os.path.join("../nms-magmalte-operator", NMS_MAGMALTE_CHARM_FILE_NAME)
+        if not os.path.exists(magmalte_charm):
+            magmalte_charm = await ops_test.build_charm("../nms-magmalte-operator/")
         resources = {
             f"{NMS_MAGMALTE_CHARM_NAME}-image": NMS_MAGMALTE_METADATA["resources"][
                 f"{NMS_MAGMALTE_CHARM_NAME}-image"
             ]["upstream-source"],
         }
         await ops_test.model.deploy(
-            charm, resources=resources, application_name=NMS_MAGMALTE_APPLICATION_NAME, trust=True
+            magmalte_charm,
+            resources=resources,
+            application_name=NMS_MAGMALTE_APPLICATION_NAME,
+            trust=True
         )
         await ops_test.model.wait_for_idle(
             apps=[NMS_MAGMALTE_APPLICATION_NAME], status="blocked", timeout=1000
