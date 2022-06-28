@@ -67,7 +67,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._orc8r_certs_data = {}
         self._service_patcher = KubernetesServicePatch(
             charm=self,
-            ports=[("grpc", 9180, 9086), ("http", 8080, 10089)],
+            ports=[("grpc", 9180, 9086), ("http", 8080, 10089), ("grpc-internal", 9190, 9186)],
             additional_labels={
                 "app.kubernetes.io/part-of": "orc8r-app",
                 "orc8r.io/analytics_collector": "true",
