@@ -36,3 +36,5 @@ requires:
   db:
     interface: pgsql
     limit: 1
+  obsidian:
+    interface: magma-orc8r-obsidian
