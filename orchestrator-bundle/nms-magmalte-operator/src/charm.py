@@ -209,7 +209,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             ],
             timeout=30,
             environment=self._environment_variables,
-            working_dir="/usr/src/packages/magmalte",
+            working_dir="/usr/src/",
         )
         try:
             process.wait_output()
