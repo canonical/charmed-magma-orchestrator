@@ -14,7 +14,7 @@ class MagmaOrc8rAccessdCharm(CharmBase):
         super().__init__(*args)
         self._service_patcher = KubernetesServicePatch(
             charm=self,
-            ports=[("grpc", 9180, 9091)],
+            ports=[("grpc", 9180, 9091), ("grpc-internal", 9190, 9191)],
             additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
         )
         startup_command = (
