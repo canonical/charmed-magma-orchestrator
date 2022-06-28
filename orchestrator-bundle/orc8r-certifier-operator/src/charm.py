@@ -55,9 +55,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     # TODO: The various URL's should be provided through relationships
     PROMETHEUS_URL = "http://orc8r-prometheus:9090"
-    PROMETHEUS_CONFIGURER_URL = "http://orc8r-prometheus:9100"
     ALERTMANAGER_URL = "http://orc8r-alertmanager:9093"
-    ALERTMANAGER_CONFIGURER_URL = "http://orc8r-alertmanager:9101"
 
     def __init__(self, *args):
         """An instance of this object everytime an event occurs."""
@@ -165,8 +163,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         metricsd_config = (
             f'prometheusQueryAddress: "{self.PROMETHEUS_URL}"\n'
             f'alertmanagerApiURL: "{self.ALERTMANAGER_URL}/api/v2"\n'
-            f'prometheusConfigServiceURL: "{self.PROMETHEUS_CONFIGURER_URL}/v1"\n'
-            f'alertmanagerConfigServiceURL: "{self.ALERTMANAGER_CONFIGURER_URL}/v1"\n'
             '"profile": "prometheus"\n'
         )
         self._container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
