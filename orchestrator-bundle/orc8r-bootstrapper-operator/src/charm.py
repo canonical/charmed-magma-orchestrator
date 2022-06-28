@@ -138,6 +138,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
                         "-logtostderr=true "
                         "-v=0",
                         "environment": {
+                            "ORC8R_DOMAIN_NAME": self._domain_name,
                             "SERVICE_HOSTNAME": "magma-orc8r-bootstrapper",
                             "SERVICE_REGISTRY_MODE": "k8s",
                             "SERVICE_REGISTRY_NAMESPACE": self._namespace,
@@ -200,7 +201,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         """Returns DB connection string provided by the DB relation."""
         try:
             db_relation = self.model.get_relation("db")
-            return ConnectionString(db_relation.data[db_relation.app]["master"]) # why do we have db and master hard coded?
+            return ConnectionString(db_relation.data[db_relation.app]["master"])
         except (AttributeError, KeyError):
             return None
 
@@ -208,6 +209,17 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
     @property
     def _namespace(self) -> str:
         return self.model.name
+
+    @property
+    def _domain_name(self):
+        """Returns domain name provided by the orc8r-certifier relation."""
+        try:
+            certifier_relation = self.model.get_relation("certifier")
+            units = certifier_relation.units
+            return certifier_relation.data[next(iter(units))]["domain"]
+        except (KeyError, StopIteration):
+            return None
+
 
 
 if __name__ == "__main__":
