@@ -35,3 +35,5 @@ provides:
 requires:
   db:
     interface: pgsql
+  obsidian:
+    interface: magma-orc8r-obsidian

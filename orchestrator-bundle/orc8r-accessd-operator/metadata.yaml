@@ -18,6 +18,10 @@ resources:
     description: OCI image for magma-orc8r-accessd
     upstream-source: docker.artifactory.magmacore.org/controller:1.7.0
 
+provides:
+  accessd:
+    interface: magma-orc8r-accessd
+
 requires:
   db:
     interface: pgsql

@@ -26,6 +26,8 @@ resources:
 requires:
   certifier:
     interface: magma-orc8r-certifier
+  accessd:
+    interface: magma-orc8r-accessd
 
 storage:
   config:
