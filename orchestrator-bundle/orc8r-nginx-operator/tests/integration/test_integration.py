@@ -45,10 +45,11 @@ class TestOrc8rNginx:
         await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
         await ops_test.model.wait_for_idle(apps=["postgresql-k8s"], status="active", timeout=1000)
 
-    @staticmethod
-    async def _deploy_orc8r_certifier(ops_test):
-        certifier_charm = os.path.join("../orc8r-certifier-operator", CERTIFIER_CHARM_FILE_NAME)
-        if not os.path.exists(certifier_charm):
+    async def _deploy_orc8r_certifier(self, ops_test):
+        certifier_charm = self._find_charm(
+            "../orc8r-certifier-operator", CERTIFIER_CHARM_FILE_NAME
+        )
+        if not certifier_charm:
             certifier_charm = await ops_test.build_charm("../orc8r-certifier-operator/")
         resources = {
             f"{CERTIFIER_CHARM_NAME}-image": CERTIFIER_METADATA["resources"][
@@ -72,12 +73,11 @@ class TestOrc8rNginx:
             apps=[CERTIFIER_APPLICATION_NAME], status="active", timeout=1000
         )
 
-    @staticmethod
-    async def _deploy_bootstrapper(ops_test):
-        bootstrapper_charm = os.path.join(
+    async def _deploy_bootstrapper(self, ops_test):
+        bootstrapper_charm = self._find_charm(
             "../orc8r-bootstrapper-operator", BOOTSTRAPPER_CHARM_FILE_NAME
         )
-        if not os.path.exists(bootstrapper_charm):
+        if not bootstrapper_charm:
             bootstrapper_charm = await ops_test.build_charm("../orc8r-bootstrapper-operator/")
         resources = {
             f"{BOOTSTRAPPER_CHARM_NAME}-image": BOOTSTRAPPER_METADATA["resources"][
@@ -101,10 +101,9 @@ class TestOrc8rNginx:
             apps=[BOOTSTRAPPER_APPLICATION_NAME], status="active", timeout=1000
         )
 
-    @staticmethod
-    async def _deploy_orc8r_obsidian(ops_test):
-        obsidian_charm = os.path.join("../orc8r-obsidian-operator", OBSIDIAN_CHARM_FILE_NAME)
-        if not os.path.exists(obsidian_charm):
+    async def _deploy_orc8r_obsidian(self, ops_test):
+        obsidian_charm = self._find_charm("../orc8r-obsidian-operator", OBSIDIAN_CHARM_FILE_NAME)
+        if not obsidian_charm:
             obsidian_charm = await ops_test.build_charm("../orc8r-obsidian-operator/")
         resources = {
             f"{OBSIDIAN_CHARM_NAME}-image": OBSIDIAN_METADATA["resources"][
@@ -150,3 +149,10 @@ class TestOrc8rNginx:
             relation2="orc8r-obsidian:magma-orc8r-obsidian",
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
+
+    @staticmethod
+    def _find_charm(charm_dir: str, charm_file_name: str) -> str:
+        for root, _, files in os.walk(charm_dir):
+            for file in files:
+                if file == charm_file_name:
+                    return os.path.join(root, file)
