@@ -79,7 +79,7 @@ class TestNmsNginxProxy:
             magmalte_charm,
             resources=resources,
             application_name=NMS_MAGMALTE_APPLICATION_NAME,
-            trust=True
+            trust=True,
         )
         await ops_test.model.wait_for_idle(
             apps=[NMS_MAGMALTE_APPLICATION_NAME], status="blocked", timeout=1000

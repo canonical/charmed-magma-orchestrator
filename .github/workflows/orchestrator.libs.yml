@@ -36,6 +36,7 @@ jobs:
       - name: Run tests using tox
         run: cd orchestrator-bundle/orc8r-libs && tox -e unit
       - name: Archive charmcraft logs
+        if: failure()
         uses: actions/upload-artifact@v3
         with:
           name: charmcraft-logs
