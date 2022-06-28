@@ -5,6 +5,7 @@
 import logging
 import os
 from pathlib import Path
+from typing import Union
 
 import pytest
 import yaml
@@ -130,8 +131,9 @@ class TestOrc8rMetricsd:
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
 
     @staticmethod
-    def _find_charm(charm_dir: str, charm_file_name: str) -> str:
+    def _find_charm(charm_dir: str, charm_file_name: str) -> Union[str, None]:
         for root, _, files in os.walk(charm_dir):
             for file in files:
                 if file == charm_file_name:
                     return os.path.join(root, file)
+        return None
