@@ -196,12 +196,14 @@ relations:
   - postgresql-k8s:db
 - - orc8r-lte:db
   - postgresql-k8s:db
+- - orc8r-metricsd:magma-orc8r-orchestrator
+  - orc8r-orchestrator:magma-orc8r-orchestrator
 - - orc8r-nginx:magma-orc8r-bootstrapper
   - orc8r-bootstrapper:magma-orc8r-bootstrapper
 - - orc8r-nginx:magma-orc8r-certifier
   - orc8r-certifier:magma-orc8r-certifier
-- - orc8r-nginx:obsidian
-  - orc8r-obsidian:obsidian
+- - orc8r-nginx:magma-orc8r-obsidian
+  - orc8r-obsidian:magma-orc8r-obsidian
 - - orc8r-orchestrator:magma-orc8r-certifier
   - orc8r-certifier:magma-orc8r-certifier
 - - orc8r-orchestrator:metrics-endpoint
@@ -210,10 +212,8 @@ relations:
   - postgresql-k8s:db
 - - orc8r-prometheus:alertmanager
   - orc8r-alertmanager:alerting
-- - orc8r-prometheus
-  - orc8r-prometheus-cache
-- - orc8r-prometheus
-  - orc8r-user-grafana
+- - orc8r-prometheus:metrics-endpoint
+  - orc8r-prometheus-cache:metrics-endpoint
 - - orc8r-smsd:db
   - postgresql-k8s:db
 - - orc8r-state:db
@@ -224,3 +224,5 @@ relations:
   - postgresql-k8s:db
 - - orc8r-tenants:db
   - postgresql-k8s:db
+- - orc8r-user-grafana:grafana-source
+  - orc8r-prometheus:grafana-source

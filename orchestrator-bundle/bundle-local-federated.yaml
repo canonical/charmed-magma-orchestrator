@@ -1,5 +1,5 @@
 bundle: kubernetes
-name: magma-orc8r
+name: magma-orc8r-federated
 description: |
   Orchestrator is a Magma service that provides a simple and consistent way to 
   configure and monitor the wireless network securely. The metrics acquired through the platform 
@@ -29,6 +29,12 @@ applications:
     trust: true
     resources:
       magma-orc8r-analytics-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-base-acct:
+    charm: ./orc8r-base-acct-operator/magma-orc8r-base-acct.charm
+    scale: 1
+    trust: true
+    resources:
+      magma-orc8r-base-acct-image: docker.artifactory.magmacore.org/controller:1.6.0
   orc8r-bootstrapper:
     charm: ./orc8r-bootstrapper-operator/orc8r-bootstrapper.charm
     scale: 1
@@ -73,12 +79,30 @@ applications:
       elasticsearch-url: "orc8r-elasticsearch:1234"
     resources:
       magma-orc8r-eventd-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-feg:
+    charm: ./orc8r-feg-operator/magma-orc8r-feg.charm
+    scale: 1
+    trust: true
+    resources:
+      magma-orc8r-feg-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-feg-relay:
+    charm: ./orc8r-feg-relay-operator/magma-orc8r-feg-relay.charm
+    scale: 1
+    trust: true
+    resources:
+      magma-orc8r-feg-relay-image: docker.artifactory.magmacore.org/controller:1.6.0
   orc8r-ha:
     charm: ./orc8r-ha-operator/orc8r-ha.charm
     scale: 1
     trust: true
     resources:
       magma-orc8r-ha-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-health:
+    charm: ./orc8r-health-operator/magma-orc8r-health
+    scale: 1
+    trust: true
+    resources:
+      magma-orc8r-health-image: docker.artifactory.magmacore.org/controller:1.6.0
   orc8r-certifier:
     charm: ./orc8r-certifier-operator/orc8r-certifier.charm
     scale: 1
@@ -219,6 +243,8 @@ relations:
 - - orc8r-device:db
   - postgresql-k8s:db
 - - orc8r-directoryd:db
+  - postgresql-k8s:db
+- - orc8r-health:db
   - postgresql-k8s:db
 - - orc8r-lte:db
   - postgresql-k8s:db

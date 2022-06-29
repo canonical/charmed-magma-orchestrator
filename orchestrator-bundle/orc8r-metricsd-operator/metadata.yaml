@@ -24,6 +24,10 @@ provides:
   magma-orc8r-metricsd:
     interface: magma-orc8r-metricsd
 
+requires:
+  magma-orc8r-orchestrator:
+    interface: magma-orc8r-orchestrator
+
 storage:
   config:
     type: filesystem

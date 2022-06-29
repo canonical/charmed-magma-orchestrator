@@ -144,11 +144,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             self._mount_certifier_certs()
 
     def _on_magma_nms_magmalte_relation_joined(self, event: RelationJoinedEvent):
-        if not self.unit.is_leader():
-            return
-        self._update_relation_active_status(
-            relation=event.relation, is_active=self._service_is_running
-        )
+        self._update_relations()
         if not self._service_is_running:
             event.defer()
             return
@@ -288,7 +284,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             process.wait_output()
         except ExecError as e:
             logger.error("Exited with code %d. Stderr:", e.exit_code)
-            for line in e.stderr.splitlines():
+            for line in e.stderr.splitlines():  # type: ignore[union-attr]
                 logger.error("    %s", line)
             raise e
         logger.info("Successfully created admin user")

@@ -109,8 +109,8 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self.unit.status = BlockedStatus("Waiting for database relation to be created")
             event.defer()
             return
-        if not self._db_relation_established:
-            self.unit.status = WaitingStatus("Waiting for database relation to be established")
+        if not self._db_relation_ready:
+            self.unit.status = WaitingStatus("Waiting for db relation to be ready")
             event.defer()
             return
         if not self._certs_are_mounted:
@@ -387,7 +387,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         return True
 
     @property
-    def _db_relation_established(self) -> bool:
+    def _db_relation_ready(self) -> bool:
         """Validates that database relation is established (that there is a relation and that
         credentials have been passed)."""
         db_connection_string = self._get_db_connection_string

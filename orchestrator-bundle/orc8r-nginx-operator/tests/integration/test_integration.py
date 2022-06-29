@@ -123,12 +123,15 @@ class TestOrc8rNginx:
 
     async def test_relate_and_wait_for_idle(self, ops_test, build_and_deploy):
         await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="orc8r-certifier:magma-orc8r-certifier"
+            relation1=f"{APPLICATION_NAME}:magma-orc8r-certifier",
+            relation2="orc8r-certifier:magma-orc8r-certifier",
         )
         await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="orc8r-bootstrapper:magma-orc8r-bootstrapper"
+            relation1=f"{APPLICATION_NAME}:magma-orc8r-bootstrapper",
+            relation2="orc8r-bootstrapper:magma-orc8r-bootstrapper",
         )
         await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="orc8r-obsidian:obsidian"
+            relation1=f"{APPLICATION_NAME}:magma-orc8r-obsidian",
+            relation2="orc8r-obsidian:magma-orc8r-obsidian",
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
