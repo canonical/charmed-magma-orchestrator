@@ -120,7 +120,7 @@ jobs:
           set -eux
           ./orchestrator-bundle/build.sh
 
-      - name: Deploy bundle and wait for idle
+      - name: Run bundle integration tests
         run: |
           tox -c "./orchestrator-bundle/orc8r-bundle/tox.ini" -e integration
 
