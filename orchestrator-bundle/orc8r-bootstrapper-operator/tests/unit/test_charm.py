@@ -59,14 +59,16 @@ class TestCharm(unittest.TestCase):
             BlockedStatus("Waiting for magma-orc8r-certifier relation to be created"),
         )
 
+    @patch("charm.MagmaOrc8rBootstrapperCharm._domain_name", new_callable=PropertyMock)
     @patch("charm.MagmaOrc8rBootstrapperCharm._get_db_connection_string", new_callable=PropertyMock)
     @patch("charm.MagmaOrc8rBootstrapperCharm._namespace", new_callable=PropertyMock)
     @patch("charm.MagmaOrc8rBootstrapperCharm._orc8r_certs_mounted", PropertyMock(return_value=True))
     @patch("charm.MagmaOrc8rBootstrapperCharm._certifier_relation_ready", PropertyMock(return_value=True),)
     @patch("charm.MagmaOrc8rBootstrapperCharm._certifier_relation_created", PropertyMock(return_value=True),)
     def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_orc8r_bootstrapper_service_content(  # noqa: E501
-        self, certifier_relation_ready, orc8r_certs_mounted, patch_namespace,get_db_connection_string
+        self, certifier_relation_ready, orc8r_certs_mounted, patch_namespace,get_db_connection_string, domain_name
     ):
+        domain_name.return_value = "test.domain"
         namespace = "whatever"
         patch_namespace.return_value = namespace
         get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
@@ -82,6 +84,7 @@ class TestCharm(unittest.TestCase):
                     "-logtostderr=true "
                     "-v=0",
                     "environment": {
+                        "ORC8R_DOMAIN_NAME": "test.domain",
                         "SERVICE_HOSTNAME": "magma-orc8r-bootstrapper",
                         "SERVICE_REGISTRY_MODE": "k8s",
                         "SERVICE_REGISTRY_NAMESPACE": namespace,
