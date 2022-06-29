@@ -32,7 +32,6 @@ class TestCharm(unittest.TestCase):
         "port=1234 "
         "user=test_db_user"
     )
-    TEST_DOMAIN_NAME = "test.domain.com"
 
     @patch(
         "charm.KubernetesServicePatch", lambda charm, ports, service_name, additional_labels: None

@@ -59,13 +59,15 @@ class TestCharm(unittest.TestCase):
             BlockedStatus("Waiting for orc8r-certifier relation..."),
         )
 
+    @patch("charm.MagmaOrc8rBootstrapperCharm._domain_name", new_callable=PropertyMock)
     @patch("charm.MagmaOrc8rBootstrapperCharm._get_db_connection_string", new_callable=PropertyMock)
     @patch("charm.MagmaOrc8rBootstrapperCharm._namespace", new_callable=PropertyMock)
     @patch("charm.MagmaOrc8rBootstrapperCharm._orc8r_certs_mounted")
     @patch("charm.MagmaOrc8rBootstrapperCharm._certifier_relation_ready")
     def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_orc8r_bootstrapper_service_content(  # noqa: E501
-        self, certifier_relation_ready, orc8r_certs_mounted, patch_namespace,get_db_connection_string
+        self, certifier_relation_ready, orc8r_certs_mounted, patch_namespace,get_db_connection_string, domain_name
     ):
+        domain_name.return_value = "test.domain"
         namespace = "whatever"
         certifier_relation_ready.return_value = True
         orc8r_certs_mounted.return_value = True
@@ -83,6 +85,7 @@ class TestCharm(unittest.TestCase):
                     "-logtostderr=true "
                     "-v=0",
                     "environment": {
+                        "ORC8R_DOMAIN_NAME": "test.domain",
                         "SERVICE_HOSTNAME": "magma-orc8r-bootstrapper",
                         "SERVICE_REGISTRY_MODE": "k8s",
                         "SERVICE_REGISTRY_NAMESPACE": namespace,
