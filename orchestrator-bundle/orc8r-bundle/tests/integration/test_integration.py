@@ -30,4 +30,3 @@ class TestOrc8rBundle:
             await ops_test.model.wait_for_idle(status="active", timeout=1000)
         except Exception as e:
             logger.error(e)
-            pass
