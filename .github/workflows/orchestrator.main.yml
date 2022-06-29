@@ -124,6 +124,13 @@ jobs:
         run: |
           tox -c "./orchestrator-bundle/orc8r-bundle/tox.ini" -e integration
 
+      - name: Archive charmcraft logs
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: charmcraft-logs
+          path: /home/ubuntu/snap/charmcraft/common/cache/charmcraft/log/*.log
+
       - name: Clean up
         if: always()
         run: |

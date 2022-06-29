@@ -6,7 +6,7 @@ function build() {
   charm="$1"
     pushd "${charm}-operator/"
     sudo charmcraft pack --destructive-mode
-    mv "magma-${charm}_ubuntu-20.04-amd64.charm" "${charm}.charm"
+    mv -f "magma-${charm}_ubuntu-20.04-amd64.charm" "${charm}.charm"
     popd
 }
 

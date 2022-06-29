@@ -8,8 +8,6 @@ from pathlib import Path
 import pytest
 from pytest_operator.plugin import OpsTest  # type: ignore[import]  # noqa: F401
 
-from helpers import (cli_deploy_bundle)
-
 
 logger = logging.getLogger(__name__)
 
@@ -30,4 +28,4 @@ class TestOrc8rBundle:
         logger.info(stdout)
 
     async def test_wait_for_idle(self, ops_test: OpsTest, deploy_bundle):
-        await ops_test.model.wait_for_idle(status="active", timeout=1500)
+        await ops_test.model.wait_for_idle(status="active", timeout=20000)
