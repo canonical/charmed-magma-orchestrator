@@ -35,7 +35,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         super().__init__(*args)
         self._container_name = self._service_name = "magma-nms-magmalte"
         self._container = self.unit.get_container(self._container_name)
-        self._stored.set_default(admin_username="", admin_password="")
+        self._stored.set_default(admin_username="", admin_password="")  # type: ignore[union-attr, arg-type]  # noqa: E501
         self._db = pgsql.PostgreSQLClient(self, "db")
         self.framework.observe(
             self.on.magma_nms_magmalte_pebble_ready, self._on_magma_nms_magmalte_pebble_ready
@@ -215,7 +215,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             process.wait_output()
         except ExecError as e:
             logger.error("Exited with code %d. Stderr:", e.exit_code)
-            for line in e.stderr.splitlines():
+            for line in e.stderr.splitlines():  # type: ignore[union-attr]
                 logger.error("    %s", line)
             raise e
         logger.info("Successfully created admin user")
@@ -280,8 +280,8 @@ class MagmaNmsMagmalteCharm(CharmBase):
         """Returns domain name provided by the orc8r-certifier relation."""
         try:
             certifier_relation = self.model.get_relation("certifier")
-            units = certifier_relation.units
-            return certifier_relation.data[next(iter(units))]["domain"]
+            units = certifier_relation.units  # type: ignore[union-attr]
+            return certifier_relation.data[next(iter(units))]["domain"]  # type: ignore[union-attr]
         except (KeyError, StopIteration):
             return None
 
@@ -290,7 +290,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         """Returns DB connection string provided by the DB relation."""
         try:
             db_relation = self.model.get_relation("db")
-            return ConnectionString(db_relation.data[db_relation.app]["master"])
+            return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[union-attr, index]  # noqa: E501
         except (AttributeError, KeyError):
             return None
 
@@ -301,15 +301,15 @@ class MagmaNmsMagmalteCharm(CharmBase):
 
     def _get_admin_password(self) -> str:
         """Returns the password for the admin user."""
-        if not self._stored.admin_password:
-            self._stored.admin_password = self._generate_password()
-        return self._stored.admin_password
+        if not self._stored.admin_password:  # type: ignore[union-attr]
+            self._stored.admin_password = self._generate_password()  # type: ignore[union-attr]
+        return self._stored.admin_password  # type: ignore[union-attr, return-value]
 
     def _get_admin_username(self) -> str:
         """Returns the admin user."""
-        if not self._stored.admin_username:
-            self._stored.admin_username = f"admin@{self._domain_name}"
-        return self._stored.admin_username
+        if not self._stored.admin_username:  # type: ignore[union-attr]
+            self._stored.admin_username = f"admin@{self._domain_name}"  # type: ignore[union-attr]
+        return self._stored.admin_username  # type: ignore[union-attr, return-value]
 
     @staticmethod
     def _generate_password() -> str:

@@ -258,7 +258,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
             relation
             for relation in required_relations
             if not self.model.get_relation(relation)
-            or len(self.model.get_relation(relation).units) == 0  # noqa: W503
+            or len(self.model.get_relation(relation).units) == 0  # type: ignore[union-attr]  # noqa: W503  
         ]
         if missing_relations:
             msg = f"Waiting for relations: {', '.join(missing_relations)}"
@@ -292,9 +292,9 @@ class MagmaOrc8rNginxCharm(CharmBase):
     def _get_domain_name(self):
         """Gets domain name for the data bucket sent by certifier relation."""
         certifier_relation = self.model.get_relation("certifier")
-        units = certifier_relation.units
+        units = certifier_relation.units  # type: ignore[union-attr]
         try:
-            return certifier_relation.data[next(iter(units))]["domain"]
+            return certifier_relation.data[next(iter(units))]["domain"]  # type: ignore[union-attr]
         except KeyError:
             return None
 

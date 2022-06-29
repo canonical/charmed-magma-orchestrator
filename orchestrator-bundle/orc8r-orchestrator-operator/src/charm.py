@@ -159,7 +159,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             logger.info(f"Return message: {stdout}, {error}")
         except ExecError as e:
             logger.error("Exited with code %d. Stderr:", e.exit_code)
-            for line in e.stderr.splitlines():
+            for line in e.stderr.splitlines():  # type: ignore[union-attr]
                 logger.error("    %s", line)
 
     def _set_log_verbosity_action(self, event):
@@ -179,7 +179,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             logger.info(f"Return message: {stdout}, {error}")
         except ExecError as e:
             logger.error("Exited with code %d. Stderr:", e.exit_code)
-            for line in e.stderr.splitlines():
+            for line in e.stderr.splitlines():  # type: ignore[union-attr]
                 logger.error("    %s", line)
 
     def _on_magma_orc8r_orchestrator_pebble_ready(self, event):
@@ -196,7 +196,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             relation
             for relation in required_relations
             if not self.model.get_relation(relation)
-            or len(self.model.get_relation(relation).units) == 0  # noqa: W503
+            or len(self.model.get_relation(relation).units) == 0  # type: ignore[union-attr]  # noqa: W503
         ]
         if missing_relations:
             msg = f"Waiting for relations: {', '.join(missing_relations)}"
@@ -300,7 +300,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
 
     def _get_elasticsearch_config(self) -> tuple:
         elasticsearch_url = self.model.config.get("elasticsearch-url")
-        elasticsearch_url_split = elasticsearch_url.split(":")
+        elasticsearch_url_split = elasticsearch_url.split(":")  # type: ignore[union-attr]
         return elasticsearch_url_split[0], elasticsearch_url_split[1]
 
     @property

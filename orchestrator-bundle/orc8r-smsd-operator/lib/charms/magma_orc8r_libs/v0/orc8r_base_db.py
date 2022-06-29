@@ -178,7 +178,7 @@ class Orc8rBase(Object):
         """Returns DB connection string provided by the DB relation."""
         try:
             db_relation = self.model.get_relation("db")
-            return ConnectionString(db_relation.data[db_relation.app]["master"])
+            return ConnectionString(db_relation.data[db_relation.app]["master"])   # type: ignore[union-attr, index]
         except (AttributeError, KeyError):
             return None
 
