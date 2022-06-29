@@ -3,11 +3,9 @@
 # See LICENSE file for licensing details.
 
 import logging
-from pathlib import Path
 
 import pytest
 from pytest_operator.plugin import OpsTest  # type: ignore[import]  # noqa: F401
-
 
 logger = logging.getLogger(__name__)
 
