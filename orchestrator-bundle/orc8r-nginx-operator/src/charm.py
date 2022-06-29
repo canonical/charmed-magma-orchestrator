@@ -318,11 +318,19 @@ class MagmaOrc8rNginxCharm(CharmBase):
     @property
     def _get_domain_name(self):
         """Gets domain name for the data bucket sent by certifier relation."""
+<<<<<<< HEAD
         try:
             certifier_relation = self.model.get_relation("magma-orc8r-certifier")
             units = certifier_relation.units  # type: ignore[union-attr]
             return certifier_relation.data[next(iter(units))]["domain"]  # type: ignore[union-attr]
         except (AttributeError, KeyError, StopIteration):
+=======
+        certifier_relation = self.model.get_relation("certifier")
+        units = certifier_relation.units  # type: ignore[union-attr]
+        try:
+            return certifier_relation.data[next(iter(units))]["domain"]  # type: ignore[union-attr]
+        except KeyError:
+>>>>>>> fixes tox static analysis issues
             return None
 
     @property
