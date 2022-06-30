@@ -195,8 +195,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         missing_relations = [
             relation
             for relation in required_relations
-            if not self.model.get_relation(relation)
-            or len(self.model.get_relation(relation).units) == 0  # type: ignore[union-attr]  # noqa: W503
+            if not self.model.get_relation(relation) or len(self.model.get_relation(relation).units) == 0  # type: ignore[union-attr]  # noqa: E501
         ]
         if missing_relations:
             msg = f"Waiting for relations: {', '.join(missing_relations)}"

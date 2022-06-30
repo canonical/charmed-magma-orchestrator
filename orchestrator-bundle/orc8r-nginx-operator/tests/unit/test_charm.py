@@ -11,14 +11,15 @@ from charm import MagmaOrc8rNginxCharm
 
 testing.SIMULATE_CAN_CONNECT = True
 
-'''
+"""
 class MockExec:
     def exec(self, *args, **kwargs):
         pass
 
     def wait_output(self, *args, **kwargs):
         return("test output",any)
-'''
+"""
+
 
 class TestCharm(unittest.TestCase):
     @patch(
@@ -110,7 +111,7 @@ class TestCharm(unittest.TestCase):
                 self.harness.charm.on.magma_orc8r_nginx_pebble_ready.emit(event)
         mock.assert_called_once()
 
-    '''
+    """
     def test(  # noqa: E501
         self,
     ):
@@ -136,4 +137,4 @@ class TestCharm(unittest.TestCase):
                 can_connect.return_value=True
                 self.harness.charm.on.magma_orc8r_nginx_pebble_ready.emit(event)
         exec.assert_called_once()
-        '''
+        """

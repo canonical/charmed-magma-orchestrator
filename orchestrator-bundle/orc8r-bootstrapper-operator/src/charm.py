@@ -19,8 +19,9 @@ from pgconnstr import ConnectionString  # type: ignore[import]
 logger = logging.getLogger(__name__)
 pgsql = ops.lib.use("pgsql", 1, "postgresql-charmers@lists.launchpad.net")
 
+
 class MagmaOrc8rBootstrapperCharm(CharmBase):
-    
+
     DB_NAME = "magma_dev"
 
     def __init__(self, *args):
@@ -64,7 +65,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         if not self._orc8r_certs_mounted:
             self.unit.status = MaintenanceStatus("Mounting certificates from orc8r-certifier...")
             self._mount_orc8r_certs()
-    
+
     def _on_database_relation_joined(self, event):
         """
         Event handler for database relation change.
@@ -175,7 +176,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
                 secret=SecretVolumeSource(secretName="orc8r-certs"),
             ),
         ]
-    
+
     @property
     def _db_relation_established(self) -> bool:
         """Validates that database relation is established (that there is a relation and that
@@ -183,7 +184,6 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         if not self._get_db_connection_string:
             return False
         return True
-
 
     @property
     def _bootstrapper_volume_mounts(self) -> list:
@@ -195,16 +195,15 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
                 readOnly=True,
             ),
         ]
-    
+
     @property
     def _get_db_connection_string(self):
         """Returns DB connection string provided by the DB relation."""
         try:
             db_relation = self.model.get_relation("db")
-            return ConnectionString(db_relation.data[db_relation.app]["master"]) # type: ignore[union-attr, index]
+            return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[union-attr, index]  # noqa: E501
         except (AttributeError, KeyError):
             return None
-
 
     @property
     def _namespace(self) -> str:
@@ -219,7 +218,6 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
             return certifier_relation.data[next(iter(units))]["domain"]  # type: ignore[union-attr]
         except (KeyError, StopIteration):
             return None
-
 
 
 if __name__ == "__main__":
