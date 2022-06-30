@@ -23,4 +23,4 @@ The current setup has only been tested with relation to the `postgresql-k8s` cha
 
 ## OCI Images
 
-Default: docker.artifactory.magmacore.org/controller:1.7.0
+Default: docker-ci.artifactory.magmacore.org/controller:13029

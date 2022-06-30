@@ -14,13 +14,16 @@ containers:
 resources:
   magma-orc8r-state-image:
     type: oci-image
-    description: OCI image for magma-orc8r-state (docker.artifactory.magmacore.org/controller:1.7.0)
-    upstream-source: docker.artifactory.magmacore.org/controller:1.7.0
+    description: OCI image for magma-orc8r-state (docker-ci.artifactory.magmacore.org/controller:13029)
+    upstream-source: docker-ci.artifactory.magmacore.org/controller:13029
+<<<<<<< Updated upstream
 
 provides:
   magma-orc8r-state:
     interface: magma-orc8r-state
     limit: 1
+=======
+>>>>>>> Stashed changes
 
 requires:
   db:

@@ -14,4 +14,4 @@ juju relate orc8r-bootstrapper orc8r-certifier
 **IMPORTANT**: For now, deploying this charm must be done with an alias as shown above.
 
 ## OCI Images
-Default: docker.artifactory.magmacore.org/controller:1.7.0
+Default: docker-ci.artifactory.magmacore.org/controller:13029

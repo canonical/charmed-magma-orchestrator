@@ -15,8 +15,8 @@ containers:
 resources:
   magma-orc8r-nginx-image:
     type: oci-image
-    description: OCI image for magma-orc8r-nginx (docker.artifactory.magmacore.org/nginx:1.6.0)
-    upstream-source: docker.artifactory.magmacore.org/nginx:1.6.0
+    description: OCI image for magma-orc8r-nginx (docker-ci.artifactory.magmacore.org/nginx:13029)
+    upstream-source: docker-ci.artifactory.magmacore.org/nginx:13029
 
 requires:
   magma-orc8r-bootstrapper:

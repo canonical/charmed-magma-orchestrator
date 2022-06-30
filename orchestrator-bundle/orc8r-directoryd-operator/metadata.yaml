@@ -15,13 +15,16 @@ containers:
 resources:
   magma-orc8r-directoryd-image:
     type: oci-image
-    description: OCI image for magma-orc8r-directoryd (docker.artifactory.magmacore.org/controller:1.7.0)
-    upstream-source: docker.artifactory.magmacore.org/controller:1.7.0
+    description: OCI image for magma-orc8r-directoryd (docker-ci.artifactory.magmacore.org/controller:13029)
+    upstream-source: docker-ci.artifactory.magmacore.org/controller:13029
+<<<<<<< Updated upstream
 
 provides:
   magma-orc8r-directoryd:
     interface: magma-orc8r-directoryd
     limit: 1
+=======
+>>>>>>> Stashed changes
 
 requires:
   db:

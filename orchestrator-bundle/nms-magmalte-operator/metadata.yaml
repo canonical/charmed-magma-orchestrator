@@ -18,8 +18,8 @@ containers:
 resources:
   magma-nms-magmalte-image:
     type: oci-image
-    description: OCI image for magma-nms-magmalte (docker.artifactory.magmacore.org/magmalte:1.7.0)
-    upstream-source: docker.artifactory.magmacore.org/magmalte:1.7.0
+    description: OCI image for magma-nms-magmalte (docker-ci.artifactory.magmacore.org/magmalte:13029)
+    upstream-source: docker-ci.artifactory.magmacore.org/magmalte:13029
 
 provides:
   magma-nms-magmalte:

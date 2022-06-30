@@ -16,8 +16,8 @@ containers:
 resources:
   magma-orc8r-bootstrapper-image:
     type: oci-image
-    description: OCI image for magma-orc8r-bootstrapper (docker.artifactory.magmacore.org/controller:1.7.0)
-    upstream-source: docker.artifactory.magmacore.org/controller:1.7.0
+    description: OCI image for magma-orc8r-bootstrapper (docker-ci.artifactory.magmacore.org/controller:13029)
+    upstream-source: docker-ci.artifactory.magmacore.org/controller:13029
 
 provides:
   magma-orc8r-bootstrapper:

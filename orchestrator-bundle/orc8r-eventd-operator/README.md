@@ -26,4 +26,4 @@ charmcraft pack
 
 ## OCI Images
 
-Default: docker.artifactory.magmacore.org/controller:1.7.0
+Default: docker-ci.artifactory.magmacore.org/controller:13029
