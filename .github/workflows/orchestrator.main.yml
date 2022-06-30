@@ -31,7 +31,7 @@ jobs:
       - name: Run tests using tox
         run: |
           set -eux
-          charms="$(find ./orchestrator-bundle/ -name tox.ini -not -path "./orchestrator-bundle/orc8r-bundle/*")"
+          charms="$(find ./orchestrator-bundle/ -name tox.ini)"
           for charm in ${charms}; do
             tox -c "${charm}" -e static
           done
@@ -46,7 +46,7 @@ jobs:
       - name: Run tests using tox
         run: |
           set -eux
-          charms="$(find ./orchestrator-bundle/ -name tox.ini)"
+          charms="$(find ./orchestrator-bundle/ -name tox.ini  -not -path "./orchestrator-bundle/orc8r-bundle/*")"
           for charm in ${charms}; do
             tox -c "${charm}" -e unit
           done
