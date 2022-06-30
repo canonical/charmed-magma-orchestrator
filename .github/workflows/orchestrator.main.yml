@@ -124,6 +124,12 @@ jobs:
             tox -c "${charm}" -e integration
           done
 
+      - name: Archive charmcraft logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: charmcraft-logs
+          path: /home/runner/snap/charmcraft/common/cache/charmcraft/log/*.log
+
       - name: Clean up
         if: always()
         run: |

@@ -48,3 +48,9 @@ jobs:
           provider: microk8s
       - name: Run integration tests
         run: cd orchestrator-bundle/orc8r-ctraced-operator && tox -e integration
+      - name: Archive charmcraft logs
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: charmcraft-logs
+          path: /home/runner/snap/charmcraft/common/cache/charmcraft/log/*.log

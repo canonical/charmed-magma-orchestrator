@@ -3,7 +3,9 @@
 # See LICENSE file for licensing details.
 
 import logging
+import os
 from pathlib import Path
+from typing import Union
 
 import pytest
 import yaml
@@ -21,10 +23,13 @@ APPLICATION_NAME = "orc8r-nginx"
 CHARM_NAME = "magma-orc8r-nginx"
 CERTIFIER_APPLICATION_NAME = "orc8r-certifier"
 CERTIFIER_CHARM_NAME = "magma-orc8r-certifier"
+CERTIFIER_CHARM_FILE_NAME = "magma-orc8r-certifier_ubuntu-20.04-amd64.charm"
 BOOTSTRAPPER_APPLICATION_NAME = "orc8r-bootstrapper"
 BOOTSTRAPPER_CHARM_NAME = "magma-orc8r-bootstrapper"
+BOOTSTRAPPER_CHARM_FILE_NAME = "magma-orc8r-bootstrapper_ubuntu-20.04-amd64.charm"
 OBSIDIAN_APPLICATION_NAME = "orc8r-obsidian"
 OBSIDIAN_CHARM_NAME = "magma-orc8r-obsidian"
+OBSIDIAN_CHARM_FILE_NAME = "magma-orc8r-obsidian_ubuntu-20.04-amd64.charm"
 
 
 class TestOrc8rNginx:
@@ -41,16 +46,19 @@ class TestOrc8rNginx:
         await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
         await ops_test.model.wait_for_idle(apps=["postgresql-k8s"], status="active", timeout=1000)
 
-    @staticmethod
-    async def _deploy_orc8r_certifier(ops_test):
-        charm = await ops_test.build_charm("../orc8r-certifier-operator/")
+    async def _deploy_orc8r_certifier(self, ops_test):
+        certifier_charm = self._find_charm(
+            "../orc8r-certifier-operator", CERTIFIER_CHARM_FILE_NAME
+        )
+        if not certifier_charm:
+            certifier_charm = await ops_test.build_charm("../orc8r-certifier-operator/")
         resources = {
             f"{CERTIFIER_CHARM_NAME}-image": CERTIFIER_METADATA["resources"][
                 f"{CERTIFIER_CHARM_NAME}-image"
             ]["upstream-source"],
         }
         await ops_test.model.deploy(
-            charm,
+            certifier_charm,
             resources=resources,
             application_name=CERTIFIER_APPLICATION_NAME,
             config={"domain": "example.com"},
@@ -66,16 +74,22 @@ class TestOrc8rNginx:
             apps=[CERTIFIER_APPLICATION_NAME], status="active", timeout=1000
         )
 
-    @staticmethod
-    async def _deploy_bootstrapper(ops_test):
-        charm = await ops_test.build_charm("../orc8r-bootstrapper-operator/")
+    async def _deploy_bootstrapper(self, ops_test):
+        bootstrapper_charm = self._find_charm(
+            "../orc8r-bootstrapper-operator", BOOTSTRAPPER_CHARM_FILE_NAME
+        )
+        if not bootstrapper_charm:
+            bootstrapper_charm = await ops_test.build_charm("../orc8r-bootstrapper-operator/")
         resources = {
             f"{BOOTSTRAPPER_CHARM_NAME}-image": BOOTSTRAPPER_METADATA["resources"][
                 f"{BOOTSTRAPPER_CHARM_NAME}-image"
             ]["upstream-source"],
         }
         await ops_test.model.deploy(
-            charm, resources=resources, application_name=BOOTSTRAPPER_APPLICATION_NAME, trust=True
+            bootstrapper_charm,
+            resources=resources,
+            application_name=BOOTSTRAPPER_APPLICATION_NAME,
+            trust=True,
         )
         await ops_test.model.wait_for_idle(
             apps=[BOOTSTRAPPER_APPLICATION_NAME], status="blocked", timeout=1000
@@ -88,16 +102,17 @@ class TestOrc8rNginx:
             apps=[BOOTSTRAPPER_APPLICATION_NAME], status="active", timeout=1000
         )
 
-    @staticmethod
-    async def _deploy_orc8r_obsidian(ops_test):
-        charm = await ops_test.build_charm("../orc8r-obsidian-operator/")
+    async def _deploy_orc8r_obsidian(self, ops_test):
+        obsidian_charm = self._find_charm("../orc8r-obsidian-operator", OBSIDIAN_CHARM_FILE_NAME)
+        if not obsidian_charm:
+            obsidian_charm = await ops_test.build_charm("../orc8r-obsidian-operator/")
         resources = {
             f"{OBSIDIAN_CHARM_NAME}-image": OBSIDIAN_METADATA["resources"][
                 f"{OBSIDIAN_CHARM_NAME}-image"
             ]["upstream-source"],
         }
         await ops_test.model.deploy(
-            charm,
+            obsidian_charm,
             resources=resources,
             application_name=OBSIDIAN_APPLICATION_NAME,
             trust=True,
@@ -135,3 +150,11 @@ class TestOrc8rNginx:
             relation2="orc8r-obsidian:magma-orc8r-obsidian",
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
+
+    @staticmethod
+    def _find_charm(charm_dir: str, charm_file_name: str) -> Union[str, None]:
+        for root, _, files in os.walk(charm_dir):
+            for file in files:
+                if file == charm_file_name:
+                    return os.path.join(root, file)
+        return None

@@ -3,7 +3,9 @@
 # See LICENSE file for licensing details.
 
 import logging
+import os
 from pathlib import Path
+from typing import Union
 
 import pytest
 import yaml
@@ -20,8 +22,10 @@ APPLICATION_NAME = "orc8r-metricsd"
 CHARM_NAME = "magma-orc8r-metricsd"
 CERTIFIER_APPLICATION_NAME = "orc8r-certifier"
 CERTIFIER_CHARM_NAME = "magma-orc8r-certifier"
+CERTIFIER_CHARM_FILE_NAME = "magma-orc8r-certifier_ubuntu-20.04-amd64.charm"
 ORCHESTRATOR_APPLICATION_NAME = "orc8r-orchestrator"
 ORCHESTRATOR_CHARM_NAME = "magma-orc8r-orchestrator"
+ORCHESTRATOR_CHARM_FILE_NAME = "magma-orc8r-orchestrator_ubuntu-20.04-amd64.charm"
 
 
 class TestOrc8rMetricsd:
@@ -38,16 +42,19 @@ class TestOrc8rMetricsd:
         await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
         await ops_test.model.wait_for_idle(apps=["postgresql-k8s"], status="active", timeout=1000)
 
-    @staticmethod
-    async def _deploy_orc8r_certifier(ops_test):
-        charm = await ops_test.build_charm("../orc8r-certifier-operator/")
+    async def _deploy_orc8r_certifier(self, ops_test):
+        certifier_charm = self._find_charm(
+            "../orc8r-certifier-operator", CERTIFIER_CHARM_FILE_NAME
+        )
+        if not certifier_charm:
+            certifier_charm = await ops_test.build_charm("../orc8r-certifier-operator/")
         resources = {
             f"{CERTIFIER_CHARM_NAME}-image": CERTIFIER_METADATA["resources"][
                 f"{CERTIFIER_CHARM_NAME}-image"
             ]["upstream-source"],
         }
         await ops_test.model.deploy(
-            charm,
+            certifier_charm,
             resources=resources,
             application_name=CERTIFIER_APPLICATION_NAME,
             config={"domain": "example.com"},
@@ -72,16 +79,19 @@ class TestOrc8rMetricsd:
             trust=True,
         )
 
-    @staticmethod
-    async def _deploy_orc8r_orchestrator(ops_test):
-        charm = await ops_test.build_charm("../orc8r-orchestrator-operator/")
+    async def _deploy_orc8r_orchestrator(self, ops_test):
+        orchestrator_charm = self._find_charm(
+            "../orc8r-orchestrator-operator", ORCHESTRATOR_CHARM_FILE_NAME
+        )
+        if not orchestrator_charm:
+            orchestrator_charm = await ops_test.build_charm("../orc8r-orchestrator-operator/")
         resources = {
             f"{ORCHESTRATOR_CHARM_NAME}-image": ORCHESTRATOR_METADATA["resources"][
                 f"{ORCHESTRATOR_CHARM_NAME}-image"
             ]["upstream-source"],
         }
         await ops_test.model.deploy(
-            charm,
+            orchestrator_charm,
             resources=resources,
             application_name=ORCHESTRATOR_APPLICATION_NAME,
             trust=True,
@@ -119,3 +129,11 @@ class TestOrc8rMetricsd:
             relation2="orc8r-orchestrator:magma-orc8r-orchestrator",
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
+
+    @staticmethod
+    def _find_charm(charm_dir: str, charm_file_name: str) -> Union[str, None]:
+        for root, _, files in os.walk(charm_dir):
+            for file in files:
+                if file == charm_file_name:
+                    return os.path.join(root, file)
+        return None
