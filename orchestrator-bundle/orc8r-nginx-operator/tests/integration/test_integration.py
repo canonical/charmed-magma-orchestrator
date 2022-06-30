@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 CERTIFIER_METADATA = yaml.safe_load(Path("../orc8r-certifier-operator/metadata.yaml").read_text())
 BOOTSTRAPPER_METADATA = yaml.safe_load(
-    Path("../orc8r-bootstrapper-operator/metadata.yaml").read_text()
+
 )
 OBSIDIAN_METADATA = yaml.safe_load(Path("../orc8r-obsidian-operator/metadata.yaml").read_text())
 
