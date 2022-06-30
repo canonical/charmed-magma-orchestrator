@@ -17,14 +17,11 @@ resources:
     type: oci-image
     description: OCI image for magma-orc8r-policydb (docker-ci.artifactory.magmacore.org/controller:13029)
     upstream-source: docker-ci.artifactory.magmacore.org/controller:13029
-<<<<<<< Updated upstream
 
 provides:
   magma-orc8r-policydb:
     interface: magma-orc8r-policydb
     limit: 1
-=======
->>>>>>> Stashed changes
 
 requires:
   db:

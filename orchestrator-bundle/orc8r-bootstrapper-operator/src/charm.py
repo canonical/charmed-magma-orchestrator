@@ -56,6 +56,9 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         self.framework.observe(
             self._db.on.database_relation_joined, self._on_database_relation_joined
         )
+        self.framework.observe(
+            self._db.on.database_relation_joined, self._on_database_relation_joined
+        )
         self._service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[("grpc", 9180, 9088)],
@@ -78,6 +81,10 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
             return
         if not self._orc8r_certs_mounted:
             self.unit.status = WaitingStatus("Waiting for NMS certificates to be mounted")
+            event.defer()
+            return
+        if not self._db_relation_established:
+            self.unit.status = BlockedStatus("Waiting for database relation to be established")
             event.defer()
             return
         if not self._db_relation_established:
@@ -109,7 +116,11 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         if self.unit.is_leader():
             event.database = self.DB_NAME
 
+<<<<<<< HEAD
     def _configure_pebble(self, event: PebbleReadyEvent):
+=======
+    def _configure_pebble(self, event):
+>>>>>>> b33125ce86e0311d9d50b3e67fa87f9c277c0ebb
         """Adds layer to pebble config if the proposed config is different from the current one."""
         if self._container.can_connect():
             pebble_layer = self._pebble_layer

@@ -22,13 +22,10 @@ resources:
     type: oci-image
     description: OCI image for magma-orc8r-orchestrator (docker-ci.artifactory.magmacore.org/controller:13029)
     upstream-source: docker-ci.artifactory.magmacore.org/controller:13029
-<<<<<<< Updated upstream
 
 provides:
   magma-orc8r-orchestrator:
     interface: magma-orc8r-orchestrator
-=======
->>>>>>> Stashed changes
 
 requires:
   magma-orc8r-certifier:

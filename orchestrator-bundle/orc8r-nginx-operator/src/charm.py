@@ -96,8 +96,16 @@ class MagmaOrc8rNginxCharm(CharmBase):
         client.patch(StatefulSet, name=self.app.name, obj=stateful_set, namespace=self._namespace)
         logger.info("Additional K8s resources for magma-orc8r-nginx container applied!")
 
+<<<<<<< HEAD
     def _configure_pebble_layer(self, event: PebbleReadyEvent):
         self.unit.status = MaintenanceStatus(f"Configuring pebble layer for {self._service_name}")
+=======
+    def _configure_pebble_layer(self, event):
+
+        self.unit.status = MaintenanceStatus(
+            f"Configuring pebble layer for {self._service_name}..."
+        )
+>>>>>>> b33125ce86e0311d9d50b3e67fa87f9c277c0ebb
         pebble_layer = self._pebble_layer
         if self._container.can_connect():
             plan = self._container.get_plan()
