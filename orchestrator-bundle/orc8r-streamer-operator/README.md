@@ -14,4 +14,4 @@ juju deploy magma-orc8r-streamer orc8r-streamer
 
 ## OCI Images
 
-Default: docker-ci.artifactory.magmacore.org/controller:13029
+Default: docker.artifactory.magmacore.org/controller:1.7.0

@@ -13,4 +13,4 @@ juju deploy magma-orc8r-obsidian orc8r-obsidian
 
 ## OCI Images
 
-Default: docker-ci.artifactory.magmacore.org/controller:13029
+Default: docker.artifactory.magmacore.org/controller:1.7.0

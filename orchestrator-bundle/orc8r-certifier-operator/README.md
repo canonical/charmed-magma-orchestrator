@@ -49,7 +49,7 @@ juju deploy ./magma-orc8r-certifier_ubuntu-20.04-amd64.charm orc8r-certifier \
  --config certifier-pem="$(cat /home/ubuntu/certs/certifier.pem)" \
  --config rootCA-key="$(cat /home/ubuntu/certs/rootCA.key)" \
  --config rootCA-pem="$(cat /home/ubuntu/certs/rootCA.pem)" \
- --resource magma-orc8r-certifier-image=docker-ci.artifactory.magmacore.org/controller:13029
+ --resource magma-orc8r-certifier-image=docker.artifactory.magmacore.org/controller:1.7.0
 ```
 
 #### With self-signed certificates
@@ -57,7 +57,7 @@ juju deploy ./magma-orc8r-certifier_ubuntu-20.04-amd64.charm orc8r-certifier \
 ```bash
 juju deploy ./magma-orc8r-certifier_ubuntu-20.04-amd64.charm orc8r-certifier \
   --config domain=example.com \
-  --resource magma-orc8r-certifier-image=docker-ci.artifactory.magmacore.org/controller:13029
+  --resource magma-orc8r-certifier-image=docker.artifactory.magmacore.org/controller:1.7.0
 ```
 
 By default, the passphrase to open the `admin_operator.pfx` file is `password123`. This can be 
@@ -85,4 +85,4 @@ The current setup has only been tested with relation to the `postgresql-k8s` cha
 
 ## OCI Images
 
-Default: docker-ci.artifactory.magmacore.org/controller:13029
+Default: docker.artifactory.magmacore.org/controller:1.7.0
