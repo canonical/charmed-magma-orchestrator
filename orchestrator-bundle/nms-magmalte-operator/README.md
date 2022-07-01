@@ -58,4 +58,4 @@ Currently supported relations are:
 - [postgresql-k8s](https://charmhub.io/postgresql-k8s) - SQL store for magmalte service.
 
 ## OCI Images
-Default: docker.artifactory.magmacore.org/magmalte:1.6.0
+Default: docker-ci.artifactory.magmacore.org/magmalte:13029

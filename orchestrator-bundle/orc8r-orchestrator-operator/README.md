@@ -49,4 +49,4 @@ juju run-action orc8r-orchestrator/0 set-log-verbosity level=10 service=obsidian
 
 ## OCI Images
 
-Default: docker.artifactory.magmacore.org/controller:1.6.0
+Default: docker-ci.artifactory.magmacore.org/controller:13029

@@ -15,4 +15,4 @@ juju deploy magma-orc8r-feg  orc8r-feg --trust
 
 ## OCI Images
 
-Default: docker.artifactory.magmacore.org/controller:1.6.0
+Default: docker-ci.artifactory.magmacore.org/controller:13029

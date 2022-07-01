@@ -19,8 +19,8 @@ containers:
 resources:
   magma-orc8r-certifier-image:
     type: oci-image
-    description: OCI image for magma-orc8r-certifier (docker.artifactory.magmacore.org/controller:1.6.0)
-    upstream-source: docker.artifactory.magmacore.org/controller:1.6.0
+    description: OCI image for magma-orc8r-certifier (docker-ci.artifactory.magmacore.org/controller:13029)
+    upstream-source: docker-ci.artifactory.magmacore.org/controller:13029
 
 storage:
   config:
@@ -36,3 +36,5 @@ requires:
   db:
     interface: pgsql
     limit: 1
+  magma-orc8r-obsidian:
+    interface: magma-orc8r-obsidian

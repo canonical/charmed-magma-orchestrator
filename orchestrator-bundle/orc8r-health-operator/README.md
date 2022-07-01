@@ -13,4 +13,4 @@ juju deploy magma-orc8r-health  orc8r-health --trust
 
 ## OCI Images
 
-Default: docker.artifactory.magmacore.org/controller:1.6.0
+Default: docker-ci.artifactory.magmacore.org/controller:13029

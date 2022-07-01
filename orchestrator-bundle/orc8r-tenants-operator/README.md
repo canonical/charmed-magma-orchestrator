@@ -17,4 +17,4 @@ juju relate orc8r-tenants postgresql-k8s:db
 The magma-orc8r-tenants service relies on a relation to `postgresql-k8s`. 
 
 ## OCI Images
-Default: docker.artifactory.magmacore.org/controller:1.6.0
+Default: docker-ci.artifactory.magmacore.org/controller:13029
