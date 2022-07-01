@@ -61,7 +61,9 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("charm.MagmaOrc8rBootstrapperCharm._domain_name", new_callable=PropertyMock)
-    @patch("charm.MagmaOrc8rBootstrapperCharm._get_db_connection_string", new_callable=PropertyMock)
+    @patch(
+        "charm.MagmaOrc8rBootstrapperCharm._get_db_connection_string", new_callable=PropertyMock
+    )
     @patch("charm.MagmaOrc8rBootstrapperCharm._namespace", new_callable=PropertyMock)
     @patch(
         "charm.MagmaOrc8rBootstrapperCharm._orc8r_certs_mounted", PropertyMock(return_value=True)
@@ -230,32 +232,38 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("charm.MagmaOrc8rBootstrapperCharm._orc8r_certs_mounted")
-    @patch("charm.MagmaOrc8rBootstrapperCharm._get_db_connection_string", new_callable=PropertyMock)
+    @patch(
+        "charm.MagmaOrc8rBootstrapperCharm._get_db_connection_string", new_callable=PropertyMock
+    )
     @patch("charm.MagmaOrc8rBootstrapperCharm._configure_pebble")
     def test_given_charm_when_pebble_ready_event_emitted_and_relations_are_established_and_certs_mounted_configure_pebble_is_called(  # noqa: E501
-        self, mock_configure_pebble, get_db_connection_string, mock_orc8r_certs_mounted,
+        self,
+        mock_configure_pebble,
+        get_db_connection_string,
+        mock_orc8r_certs_mounted,
     ):
         relation_id = self.harness.add_relation("certifier", "orc8r-certifier")
         self.harness.add_relation_unit(relation_id, "orc8r-certifier/0")
 
-        mock_orc8r_certs_mounted.return_value=True
+        mock_orc8r_certs_mounted.return_value = True
         get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
 
-        event=Mock()
+        event = Mock()
         self.harness.charm.on.magma_orc8r_bootstrapper_pebble_ready.emit(event)
 
         mock_configure_pebble.assert_called_once()
 
     @patch("charm.MagmaOrc8rBootstrapperCharm._orc8r_certs_mounted")
-    @patch("charm.MagmaOrc8rBootstrapperCharm._get_db_connection_string", new_callable=PropertyMock)
+    @patch(
+        "charm.MagmaOrc8rBootstrapperCharm._get_db_connection_string", new_callable=PropertyMock
+    )
     def test_given_charm_when_pebble_ready_event_emitted_and_relations_are_established_and_certs_mounted_then_charm_goes_to_active_state(  # noqa: E501
         self, get_db_connection_string, mock_orc8r_certs_mounted
     ):
-        mock_orc8r_certs_mounted.return_value=True
+        mock_orc8r_certs_mounted.return_value = True
         relation_id = self.harness.add_relation("certifier", "orc8r-certifier")
         self.harness.add_relation_unit(relation_id, "orc8r-certifier/0")
         get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
         self.harness.container_pebble_ready(container_name="magma-orc8r-bootstrapper")
 
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
-

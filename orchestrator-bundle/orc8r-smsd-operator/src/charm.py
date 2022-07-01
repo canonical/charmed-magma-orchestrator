@@ -14,8 +14,7 @@ class MagmaOrc8rSmsdCharm(CharmBase):
         super().__init__(*args)
         self._service_patcher = KubernetesServicePatch(
             charm=self,
-            ports=[("grpc", 9180, 9120), ("http", 8080, 10086),
-                   ("grpc-internal", 9190, 9220)],
+            ports=[("grpc", 9180, 9120), ("http", 8080, 10086), ("grpc-internal", 9190, 9220)],
             additional_labels={
                 "app.kubernetes.io/part-of": "orc8r-app",
                 "orc8r.io/obsidian_handlers": "true",

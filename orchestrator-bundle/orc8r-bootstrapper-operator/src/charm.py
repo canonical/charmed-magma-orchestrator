@@ -31,6 +31,7 @@ from pgconnstr import ConnectionString  # type: ignore[import]
 logger = logging.getLogger(__name__)
 pgsql = ops.lib.use("pgsql", 1, "postgresql-charmers@lists.launchpad.net")
 
+
 class MagmaOrc8rBootstrapperCharm(CharmBase):
 
     DB_NAME = "magma_dev"
@@ -267,7 +268,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         """Returns DB connection string provided by the DB relation."""
         try:
             db_relation = self.model.get_relation("db")
-            return ConnectionString(db_relation.data[db_relation.app]["master"])
+            return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[union-attr, index]  # noqa: E501
         except (AttributeError, KeyError):
             return
 
@@ -280,8 +281,8 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         """Returns domain name provided by the orc8r-certifier relation."""
         try:
             certifier_relation = self.model.get_relation("certifier")
-            units = certifier_relation.units
-            return certifier_relation.data[next(iter(units))]["domain"]
+            units = certifier_relation.units  # type: ignore[union-attr]
+            return certifier_relation.data[next(iter(units))]["domain"]  # type: ignore[union-attr]
         except (KeyError, StopIteration):
             return None
 
