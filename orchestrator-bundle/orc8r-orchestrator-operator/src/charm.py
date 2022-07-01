@@ -75,7 +75,8 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         self.framework.observe(self.on.config_changed, self._on_elasticsearch_url_config_changed)
         self._service_patcher = KubernetesServicePatch(
             charm=self,
-            ports=[("grpc", 9180, 9112), ("http", 8080, 10112)],
+            ports=[("grpc", 9180, 9112), ("http", 8080, 10112),
+                   ("grpc-internal", 9190, 9212)],
             additional_labels={
                 "app.kubernetes.io/part-of": "orc8r-app",
                 "orc8r.io/analytics_collector": "true",
