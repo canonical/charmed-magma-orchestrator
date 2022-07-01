@@ -4,6 +4,7 @@
 
 import logging
 
+import ops.lib
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from lightkube import Client
 from lightkube.core.exceptions import ApiError
@@ -25,15 +26,20 @@ from ops.model import (
     WaitingStatus,
 )
 from ops.pebble import Layer
+from pgconnstr import ConnectionString  # type: ignore[import]
 
 logger = logging.getLogger(__name__)
-
+pgsql = ops.lib.use("pgsql", 1, "postgresql-charmers@lists.launchpad.net")
 
 class MagmaOrc8rBootstrapperCharm(CharmBase):
+
+    DB_NAME = "magma_dev"
+
     def __init__(self, *args):
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-bootstrapper"
         self._container = self.unit.get_container(self._container_name)
+        self._db = pgsql.PostgreSQLClient(self, "db")
         self.framework.observe(
             self.on.magma_orc8r_bootstrapper_pebble_ready,
             self._on_magma_orc8r_bootstrapper_pebble_ready,
@@ -70,6 +76,10 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for NMS certificates to be mounted")
             event.defer()
             return
+        if not self._db_relation_established:
+            self.unit.status = BlockedStatus("Waiting for database relation to be established")
+            event.defer()
+            return
         self._configure_pebble(event)
 
     def _on_magma_orc8r_certifier_relation_changed(self, event: RelationChangedEvent):
@@ -82,6 +92,18 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         if not self._orc8r_certs_mounted:
             self.unit.status = MaintenanceStatus("Mounting NMS certificates")
             self._mount_orc8r_certs()
+
+    def _on_database_relation_joined(self, event):
+        """
+        Event handler for database relation change.
+        - Sets the event.database field on the database joined event.
+        - Required because setting the database name is only possible
+          from inside the event handler per https://github.com/canonical/ops-lib-pgsql/issues/2
+        - Sets our database parameters based on what was provided
+          in the relation event.
+        """
+        if self.unit.is_leader():
+            event.database = self.DB_NAME
 
     def _configure_pebble(self, event: PebbleReadyEvent):
         """Adds layer to pebble config if the proposed config is different from the current one."""
@@ -151,8 +173,18 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
                         "-logtostderr=true "
                         "-v=0",
                         "environment": {
+                            "ORC8R_DOMAIN_NAME": self._domain_name,
+                            "SERVICE_HOSTNAME": "magma-orc8r-bootstrapper",
                             "SERVICE_REGISTRY_MODE": "k8s",
                             "SERVICE_REGISTRY_NAMESPACE": self._namespace,
+                            "DATABASE_SOURCE": f"dbname={self.DB_NAME} "
+                            f"user={self._get_db_connection_string.user} "
+                            f"password={self._get_db_connection_string.password} "
+                            f"host={self._get_db_connection_string.host} "
+                            f"port={self._get_db_connection_string.port} "
+                            f"sslmode=disable",
+                            "SQL_DRIVER": "postgres",
+                            "SQL_DIALECT": "psql",
                         },
                     }
                 },
@@ -168,6 +200,14 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
             volume_mount in statefulset.spec.template.spec.containers[1].volumeMounts  # type: ignore[attr-defined]  # noqa: E501
             for volume_mount in self._bootstrapper_volume_mounts
         )
+
+    @property
+    def _db_relation_established(self) -> bool:
+        """Validates that database relation is established (that there is a relation and that
+        credentials have been passed)."""
+        if not self._get_db_connection_string:
+            return False
+        return True
 
     @property
     def _bootstrapper_volumes(self) -> list:
@@ -223,8 +263,27 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
             )
 
     @property
+    def _get_db_connection_string(self):
+        """Returns DB connection string provided by the DB relation."""
+        try:
+            db_relation = self.model.get_relation("db")
+            return ConnectionString(db_relation.data[db_relation.app]["master"])
+        except (AttributeError, KeyError):
+            return
+
+    @property
     def _namespace(self) -> str:
         return self.model.name
+
+    @property
+    def _domain_name(self):
+        """Returns domain name provided by the orc8r-certifier relation."""
+        try:
+            certifier_relation = self.model.get_relation("certifier")
+            units = certifier_relation.units
+            return certifier_relation.data[next(iter(units))]["domain"]
+        except (KeyError, StopIteration):
+            return None
 
 
 if __name__ == "__main__":
