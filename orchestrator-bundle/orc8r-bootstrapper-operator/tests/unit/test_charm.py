@@ -144,7 +144,7 @@ class TestCharm(unittest.TestCase):
         mock_on_certifier_relation_changed.assert_not_called()
 
     def test_given_pod_is_leader_when_database_relation_joined_event_then_database_is_set_correctly(  # noqa: E501
-        self
+        self,
     ):
         postgres_db_name = self.TEST_DB_NAME
         postgres_host = "test_host"
@@ -169,8 +169,7 @@ class TestCharm(unittest.TestCase):
         event = Mock()
         relation_id = self.harness.add_relation("magma-orc8r-certifier", "orc8r-certifier")
         self.harness.add_relation_unit(relation_id, "orc8r-certifier/0")
-        self.harness.update_relation_data(
-            relation_id, "orc8r-certifier/0", {"active": "True"})
+        self.harness.update_relation_data(relation_id, "orc8r-certifier/0", {"active": "True"})
 
         mock_orc8r_certs_mounted.return_value = True
 
@@ -194,12 +193,12 @@ class TestCharm(unittest.TestCase):
         "charm.MagmaOrc8rBootstrapperCharm._orc8r_certs_mounted", PropertyMock(return_value=True)
     )
     @patch(
-        "charm.MagmaOrc8rBootstrapperCharm._db_relation_established", PropertyMock(
-            return_value=True)
+        "charm.MagmaOrc8rBootstrapperCharm._db_relation_established",
+        PropertyMock(return_value=True),
     )
     @patch(
-        "charm.MagmaOrc8rBootstrapperCharm._get_db_connection_string", PropertyMock(
-            return_value=TEST_DB_CONNECTION_STRING)
+        "charm.MagmaOrc8rBootstrapperCharm._get_db_connection_string",
+        PropertyMock(return_value=TEST_DB_CONNECTION_STRING),
     )
     def test_given_magma_orc8r_bootstrapper_service_running_when_magma_orc8r_bootstrapper_relation_joined_event_emitted_then_active_key_in_relation_data_is_set_to_true(  # noqa: E501
         self,
@@ -251,8 +250,7 @@ class TestCharm(unittest.TestCase):
     ):
         relation_id = self.harness.add_relation("magma-orc8r-certifier", "orc8r-certifier")
         self.harness.add_relation_unit(relation_id, "orc8r-certifier/0")
-        self.harness.update_relation_data(
-            relation_id, "orc8r-certifier/0", {"active": "True"})
+        self.harness.update_relation_data(relation_id, "orc8r-certifier/0", {"active": "True"})
 
         mock_orc8r_certs_mounted.return_value = True
         get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
@@ -272,8 +270,7 @@ class TestCharm(unittest.TestCase):
         mock_orc8r_certs_mounted.return_value = True
         relation_id = self.harness.add_relation("magma-orc8r-certifier", "orc8r-certifier")
         self.harness.add_relation_unit(relation_id, "orc8r-certifier/0")
-        self.harness.update_relation_data(
-            relation_id, "orc8r-certifier/0", {"active": "True"})
+        self.harness.update_relation_data(relation_id, "orc8r-certifier/0", {"active": "True"})
 
         get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
         self.harness.container_pebble_ready(container_name="magma-orc8r-bootstrapper")
