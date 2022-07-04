@@ -307,6 +307,9 @@ class TestCharm(unittest.TestCase):
                 "CONTROLLER_HOSTNAME": "controller.True",
                 "RESOLVER": "kube-dns.kube-system.svc.cluster.local valid=10s",
                 "SERVICE_REGISTRY_MODE": "k8s",
+                "SSL_CERTIFICATE": "/var/opt/magma/certs/controller.crt",
+                "SSL_CERTIFICATE_KEY": "/var/opt/magma/certs/controller.key",
+                "SSL_CLIENT_CERTIFICATE": "/var/opt/magma/certs/certifier.pem",
             },
         )
 
