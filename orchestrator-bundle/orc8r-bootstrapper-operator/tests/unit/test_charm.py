@@ -30,6 +30,7 @@ class TestCharm(unittest.TestCase):
     def setUp(self):
         self.harness = testing.Harness(MagmaOrc8rBootstrapperCharm)
         self.addCleanup(self.harness.cleanup)
+        self.harness.set_leader(True)
         self.harness.begin()
         self.maxDiff = None
 
@@ -142,11 +143,9 @@ class TestCharm(unittest.TestCase):
 
         mock_on_certifier_relation_changed.assert_not_called()
 
-    @patch("ops.model.Unit.is_leader")
     def test_given_pod_is_leader_when_database_relation_joined_event_then_database_is_set_correctly(  # noqa: E501
-        self, is_leader
+        self
     ):
-        is_leader.return_value = True
         postgres_db_name = self.TEST_DB_NAME
         postgres_host = "test_host"
         postgres_password = "password123"
@@ -168,8 +167,10 @@ class TestCharm(unittest.TestCase):
         self, mock_orc8r_certs_mounted
     ):
         event = Mock()
-        relation_id = self.harness.add_relation("certifier", "orc8r-certifier")
+        relation_id = self.harness.add_relation("magma-orc8r-certifier", "orc8r-certifier")
         self.harness.add_relation_unit(relation_id, "orc8r-certifier/0")
+        self.harness.update_relation_data(
+            relation_id, "orc8r-certifier/0", {"active": "True"})
 
         mock_orc8r_certs_mounted.return_value = True
 
@@ -192,13 +193,20 @@ class TestCharm(unittest.TestCase):
     @patch(
         "charm.MagmaOrc8rBootstrapperCharm._orc8r_certs_mounted", PropertyMock(return_value=True)
     )
+    @patch(
+        "charm.MagmaOrc8rBootstrapperCharm._db_relation_established", PropertyMock(
+            return_value=True)
+    )
+    @patch(
+        "charm.MagmaOrc8rBootstrapperCharm._get_db_connection_string", PropertyMock(
+            return_value=TEST_DB_CONNECTION_STRING)
+    )
     def test_given_magma_orc8r_bootstrapper_service_running_when_magma_orc8r_bootstrapper_relation_joined_event_emitted_then_active_key_in_relation_data_is_set_to_true(  # noqa: E501
         self,
     ):
         self.harness.set_can_connect("magma-orc8r-bootstrapper", True)
         container = self.harness.model.unit.get_container("magma-orc8r-bootstrapper")
         self.harness.charm.on.magma_orc8r_bootstrapper_pebble_ready.emit(container)
-        self.harness.set_leader(True)
         relation_id = self.harness.add_relation("magma-orc8r-bootstrapper", "orc8r-bootstrapper")
         self.harness.add_relation_unit(relation_id, "magma-orc8r-bootstrapper/0")
 
@@ -222,7 +230,6 @@ class TestCharm(unittest.TestCase):
     def test_given_magma_orc8r_bootstrapper_service_not_running_when_magma_orc8r_bootstrapper_relation_joined_event_emitted_then_active_key_in_relation_data_is_set_to_false(  # noqa: E501
         self,
     ):
-        self.harness.set_leader(True)
         relation_id = self.harness.add_relation("magma-orc8r-bootstrapper", "orc8r-bootstrapper")
         self.harness.add_relation_unit(relation_id, "magma-orc8r-bootstrapper/0")
 
@@ -242,8 +249,10 @@ class TestCharm(unittest.TestCase):
         get_db_connection_string,
         mock_orc8r_certs_mounted,
     ):
-        relation_id = self.harness.add_relation("certifier", "orc8r-certifier")
+        relation_id = self.harness.add_relation("magma-orc8r-certifier", "orc8r-certifier")
         self.harness.add_relation_unit(relation_id, "orc8r-certifier/0")
+        self.harness.update_relation_data(
+            relation_id, "orc8r-certifier/0", {"active": "True"})
 
         mock_orc8r_certs_mounted.return_value = True
         get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
@@ -261,8 +270,11 @@ class TestCharm(unittest.TestCase):
         self, get_db_connection_string, mock_orc8r_certs_mounted
     ):
         mock_orc8r_certs_mounted.return_value = True
-        relation_id = self.harness.add_relation("certifier", "orc8r-certifier")
+        relation_id = self.harness.add_relation("magma-orc8r-certifier", "orc8r-certifier")
         self.harness.add_relation_unit(relation_id, "orc8r-certifier/0")
+        self.harness.update_relation_data(
+            relation_id, "orc8r-certifier/0", {"active": "True"})
+
         get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
         self.harness.container_pebble_ready(container_name="magma-orc8r-bootstrapper")
 
