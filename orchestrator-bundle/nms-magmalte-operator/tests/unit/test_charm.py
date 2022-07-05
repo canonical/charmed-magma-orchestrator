@@ -1,13 +1,12 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 import unittest
 from unittest.mock import Mock, PropertyMock, patch
 
 from ops import testing
-from ops.pebble import ExecError
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.pebble import ExecError
 from pgconnstr import ConnectionString  # type: ignore[import]
 
 from charm import MagmaNmsMagmalteCharm
@@ -234,7 +233,7 @@ class TestCharm(unittest.TestCase):
         self,
     ):
         action_event = Mock()
-        self.harness.charm._on_get_admin_credentials(action_event)
+        self.harness.charm._on_get_master_admin_credentials(action_event)
         self.assertEqual(
             action_event.fail.call_args,
             [("Relations aren't yet set up. Please try again in a few minutes",)],
@@ -246,9 +245,9 @@ class TestCharm(unittest.TestCase):
         self, action_event, relations_ready
     ):
         relations_ready.return_value = True
-        self.harness.charm._stored.admin_username = "username"
-        self.harness.charm._stored.admin_password = "password"
-        self.harness.charm._on_get_admin_credentials(action_event)
+        self.harness.charm._stored.admin_username = "username"  # type: ignore[union-attr]
+        self.harness.charm._stored.admin_password = "password"  # type: ignore[union-attr]
+        self.harness.charm._on_get_master_admin_credentials(action_event)
         self.assertEqual(
             action_event.set_results.call_args,
             [({"admin-username": "username", "admin-password": "password"},)],
