@@ -6,6 +6,7 @@ from unittest.mock import Mock, PropertyMock, patch
 
 from ops import testing
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.pebble import ExecError
 from pgconnstr import ConnectionString  # type: ignore[import]
 
 from charm import MagmaNmsMagmalteCharm
@@ -14,11 +15,18 @@ testing.SIMULATE_CAN_CONNECT = True
 
 
 class MockExec:
+    def __init__(self, *args, **kwargs):
+        if "raise_exec_error" in kwargs:
+            self.raise_exec_error = True
+        else:
+            self.raise_exec_error = False
+
     def exec(self, *args, **kwargs):
         pass
 
     def wait_output(self, *args, **kwargs):
-        pass
+        if self.raise_exec_error:
+            raise ExecError(command=["blob"], exit_code=1234, stdout="", stderr="")
 
 
 class TestCharm(unittest.TestCase):
@@ -178,3 +186,69 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
 
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
+
+    @patch("ops.model.Container.exec")
+    @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
+    def test_given_username_email_and_password_are_provided_when_create_nms_admin_user_juju_action_then_pebble_command_is_executed(  # noqa: E501
+        self, _, mock_exec
+    ):
+        action_event = Mock(
+            params={
+                "email": "test@test.test",
+                "organization": "test-org",
+                "password": "password123",
+            }
+        )
+        self.harness.charm._create_nms_admin_user_action(action_event)
+        args, _ = mock_exec.call_args
+        mock_exec.assert_called_once()
+        call_command = [
+            "/usr/local/bin/yarn",
+            "setAdminPassword",
+            "test-org",
+            "test@test.test",
+            "password123",
+        ]
+        self.assertIn(call_command, args)
+
+    def test_given_one_of_username_email_and_password_is_missing_when_create_nms_admin_user_juju_action_then_action_fails(  # noqa: E501
+        self,
+    ):
+        action_event_params_org_is_missing = {"email": "test@test.test", "password": "password123"}
+        action_event = Mock(params=action_event_params_org_is_missing)
+        with self.assertRaises(KeyError):
+            self.harness.charm._create_nms_admin_user_action(action_event)
+
+    @patch("ops.model.Container.exec")
+    @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
+    @patch("ops.charm.ActionEvent")
+    def test_given_juju_action_when_user_creation_fails_then_action_raises_an_error(
+        self, action_event, _, mock_exec
+    ):
+        mock_exec.side_effect = ExecError(["drop"], 1, "exec error", "mock exec error")
+        with self.assertRaises(ExecError):
+            self.harness.charm._create_nms_admin_user_action(action_event)
+
+    def test_given_juju_action_when_relation_is_not_ready_then_get_admin_credentials_fails(
+        self,
+    ):
+        action_event = Mock()
+        self.harness.charm._on_get_master_admin_credentials(action_event)
+        self.assertEqual(
+            action_event.fail.call_args,
+            [("Relations aren't yet set up. Please try again in a few minutes",)],
+        )
+
+    @patch("charm.MagmaNmsMagmalteCharm._relations_ready", new_callable=PropertyMock)
+    @patch("ops.charm.ActionEvent")
+    def test_given_juju_action_when_relation_is_ready_then_get_admin_credentials_returns_values(
+        self, action_event, relations_ready
+    ):
+        relations_ready.return_value = True
+        self.harness.charm._stored.admin_username = "username"  # type: ignore[union-attr]
+        self.harness.charm._stored.admin_password = "password"  # type: ignore[union-attr]
+        self.harness.charm._on_get_master_admin_credentials(action_event)
+        self.assertEqual(
+            action_event.set_results.call_args,
+            [({"admin-username": "username", "admin-password": "password"},)],
+        )
