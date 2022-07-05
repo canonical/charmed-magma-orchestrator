@@ -3,7 +3,7 @@ name: nms-nginx-proxy
 on:
   push:
     paths:
-      - 'orchestrator-bundle/nms-nginx-proxy-operator/**'
+      - "orchestrator-bundle/nms-nginx-proxy-operator/**"
 
 jobs:
   nms-nginx-proxy-lint-report:
@@ -36,15 +36,21 @@ jobs:
       - name: Run tests using tox
         run: cd orchestrator-bundle/nms-nginx-proxy-operator && tox -e unit
 
-#  nms-nginx-proxy-integration-test:
-#    name: Integration tests (nms-nginx-proxy)
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v2
-#      - name: Setup operator environment
-#        uses: charmed-kubernetes/actions-operator@main
-#        with:
-#          provider: microk8s
-#      - name: Run integration tests
-#        run: cd orchestrator-bundle/nms-nginx-proxy-operator && tox -e integration
+  nms-nginx-proxy-integration-test:
+    name: Integration tests (nms-nginx-proxy)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+      - name: Run integration tests
+        run: cd orchestrator-bundle/nms-nginx-proxy-operator && tox -e integration
+      - name: Archive charmcraft logs
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: charmcraft-logs
+          path: /home/runner/snap/charmcraft/common/cache/charmcraft/log/*.log

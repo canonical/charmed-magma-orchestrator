@@ -21,5 +21,5 @@ resources:
     upstream-source: docker.artifactory.magmacore.org/controller:1.6.0
 
 provides:
-  obsidian:
+  magma-orc8r-obsidian:
     interface: magma-orc8r-obsidian

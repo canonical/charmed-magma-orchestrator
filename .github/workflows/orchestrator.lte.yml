@@ -3,7 +3,7 @@ name: orc8r-lte
 on:
   push:
     paths:
-      - 'orchestrator-bundle/orc8r-lte-operator/**'
+      - "orchestrator-bundle/orc8r-lte-operator/**"
 
 jobs:
   orc8r-lte-lint-report:
@@ -36,15 +36,21 @@ jobs:
       - name: Run tests using tox
         run: cd orchestrator-bundle/orc8r-lte-operator && tox -e unit
 
-#  orc8r-lte-integration-test:
-#    name: Integration tests (orc8r-lte)
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v2
-#      - name: Setup operator environment
-#        uses: charmed-kubernetes/actions-operator@main
-#        with:
-#          provider: microk8s
-#      - name: Run integration tests
-#        run: cd orchestrator-bundle/orc8r-lte-operator && tox -e integration
+  orc8r-lte-integration-test:
+    name: Integration tests (orc8r-lte)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+      - name: Run integration tests
+        run: cd orchestrator-bundle/orc8r-lte-operator && tox -e integration
+      - name: Archive charmcraft logs
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: charmcraft-logs
+          path: /home/runner/snap/charmcraft/common/cache/charmcraft/log/*.log

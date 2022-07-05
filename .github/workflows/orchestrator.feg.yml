@@ -1,0 +1,43 @@
+name: orc8r-feg
+
+on:
+  push:
+    paths:
+      - "orchestrator-bundle/orc8r-feg-operator/**"
+
+jobs:
+  orc8r-feg-lint-report:
+    name: Lint report (orc8r-feg)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/orc8r-feg-operator && tox -e lint
+
+  orc8r-feg-static-analysis:
+    name: Static analysis (orc8r-feg)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/orc8r-feg-operator && tox -e static
+
+  orc8r-feg-unit-tests-with-coverage:
+    name: Unit tests (orc8r-feg)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/orc8r-feg-operator && tox -e unit
+      - name: Archive charmcraft logs
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: charmcraft-logs
+          path: /home/runner/snap/charmcraft/common/cache/charmcraft/log/*.log

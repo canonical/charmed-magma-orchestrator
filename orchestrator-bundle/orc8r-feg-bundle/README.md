@@ -1,29 +1,24 @@
-# How-to: Deploy Magma Orchestrator on GCP with GKE
+# magma-orc8r-feg
 
-The goal of this document is to detail how to deploy Magma's Orchestrator on GCP with GKE. To do so,
-we will set up a GKE cluster, bootstrap a Juju controller, deploy Magma Orchestrator and configure A
-records.
+## Overview
 
-### Pre-requisites
+Orchestrator is a Magma service that provides a simple and consistent way to
+configure and monitor the wireless network securely. The metrics acquired through the platform
+allows you to see the analytics and traffic flows of the wireless users through the Magma web UI.
 
-- Ubuntu 20.04 machine with internet access
-- A public domain
+This charm bundle makes it easy to deploy the Orchestrator component in any Kubernetes environment,
+and it has been tested with all major public cloud platforms.
 
-## 1. Set up your management environment
+As well as all the base Orchestrator charms, this bundle also includes the required charms to 
+manage federation gateways.
 
-From a Ubuntu 20.04 machine, install the following tools:
+For more information about Magma, see the official documentation [here](https://magmacore.org/).
 
-- [Juju](https://juju.is/docs/olm/installing-juju)
-- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/)
+## Usage
 
-## 2. Deploy Kubernetes on GCP using GKE
+### Deploy the bundle
 
-Follow this [guide](<https://juju.is/docs/olm/google-kubernetes-engine-(gke)>) to deploy a
-Kubernetes cluster using GKE and bootstrap a Juju controller.
-
-## 3. Deploy charmed magma orchestrator
-
-From your Ubuntu machine, create an `overlay.yaml` file that contains the following:
+Create an `overlay.yaml` file that contains the following:
 
 ```yaml
 applications:
@@ -37,12 +32,13 @@ Replace `<your domain name>` with your domain name.
 Deploy orchestrator:
 
 ```bash
-juju deploy magma-orc8r --overlay overlay.yaml --trust --channel=edge
+juju deploy magma-orc8r-feg --overlay overlay.yaml --trust --channel=edge
 ```
 
 The deployment is completed when all services are in the `Active-Idle` state.
 
-## 4. Import the admin operator HTTPS certificate
+
+### Import the admin operator HTTPS certificate
 
 Retrieve the self-signed certificate:
 
@@ -53,7 +49,7 @@ juju scp --container="magma-orc8r-certifier" orc8r-certifier/0:/var/opt/magma/ce
 > The default password to open the admin_operator.pfx file is `password123`. To choose a different 
 > password, re-deploy orc8r-certifier with the `passphrase` juju config.
 
-## 5. Create the orchestrator admin user
+### Create the orchestrator admin user
 
 Create the user:
 
@@ -61,10 +57,15 @@ Create the user:
 juju run-action orc8r-orchestrator/0 create-orchestrator-admin-user
 ```
 
-## 6. Setup DNS
+### Setup DNS
 
-Navigate to the GCP Console -> GKE -> Services & Ingress and note the addresses associated to the
-following services:
+Retrieve the services that need to be exposed:
+
+```bash
+kubectl get services -n <your model> | grep LoadBalancer
+```
+
+Note the addresses associated to the following services:
 
 - `nginx-proxy`
 - `orc8r-bootstrap-nginx`
@@ -81,7 +82,7 @@ Create these A records in your managed domain:
 | `*.nms.<your domain>`                   | `<nginx-proxy External IP>`            |
 
 
-## 7. Verify the deployment
+## Verify the deployment
 
 Get the master organization's username and password:
 

@@ -35,6 +35,7 @@ class TestCharm(unittest.TestCase):
     def setUp(self):
         self.harness = testing.Harness(MagmaOrc8rDummyCharm)
         self.addCleanup(self.harness.cleanup)
+        self.harness.set_leader(True)
         self.harness.begin()
 
     @staticmethod
@@ -83,7 +84,7 @@ class TestCharm(unittest.TestCase):
         "charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase.namespace", new_callable=PropertyMock
     )
     @patch("charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._db_relation_created")
-    @patch("charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._db_relation_established")
+    @patch("charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._db_relation_ready")
     def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_orc8r_dummy_service_content(  # noqa: E501
         self,
         db_relation_established,
@@ -133,7 +134,7 @@ class TestCharm(unittest.TestCase):
         new_callable=PropertyMock,
     )
     @patch("charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._db_relation_created")
-    @patch("charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._db_relation_established")
+    @patch("charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._db_relation_ready")
     def test_db_relation_added_when_get_status_then_status_is_active(
         self, db_relation_established, db_relation_created, get_db_connection_string
     ):
@@ -144,3 +145,49 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready("magma-orc8r-dummy")
 
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
+
+    @patch(
+        "charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase.namespace",
+        PropertyMock(return_value="qwerty"),
+    )
+    @patch(
+        "charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._db_relation_created",
+        PropertyMock(return_value=True),
+    )
+    @patch(
+        "charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._db_relation_ready",
+        PropertyMock(return_value=True),
+    )
+    @patch(
+        "charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._get_db_connection_string",
+        new_callable=PropertyMock,
+    )
+    def test_given_magma_orc8r_dummy_service_running_when_metrics_magma_orc8r_dummy_relation_joined_event_emitted_then_active_key_in_relation_data_is_set_to_true(  # noqa: E501
+        self, mock_get_db_connection_string
+    ):
+        mock_get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
+        self.harness.set_can_connect("magma-orc8r-dummy", True)
+        container = self.harness.model.unit.get_container("magma-orc8r-dummy")
+        self.harness.charm.on.magma_orc8r_dummy_pebble_ready.emit(container)
+        relation_id = self.harness.add_relation("magma-orc8r-dummy", "orc8r-dummy")
+        self.harness.add_relation_unit(relation_id, "magma-orc8r-dummy/0")
+
+        self.assertEqual(
+            self.harness.get_relation_data(relation_id, "magma-orc8r-dummy/0"),
+            {"active": "True"},
+        )
+
+    @patch(
+        "charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase.namespace",
+        PropertyMock(return_value="qwerty"),
+    )
+    def test_given_magma_orc8r_dummy_service_not_running_when_magma_orc8r_dummy_relation_joined_event_emitted_then_active_key_in_relation_data_is_set_to_false(  # noqa: E501
+        self,
+    ):
+        relation_id = self.harness.add_relation("magma-orc8r-dummy", "orc8r-dummy")
+        self.harness.add_relation_unit(relation_id, "magma-orc8r-dummy/0")
+
+        self.assertEqual(
+            self.harness.get_relation_data(relation_id, "magma-orc8r-dummy/0"),
+            {"active": "False"},
+        )

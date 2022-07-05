@@ -4,31 +4,23 @@
 """# Orc8rBase Library.
 This library is designed to enable developers to easily create new charms for Magma orc8r. This
 library contains all the logic necessary to wait for necessary relations and be deployed.
-
 When initialised, this library binds a handler to the parent charm's `pebble_ready`
 event. This will ensure that the service is configured when this event is triggered.
-
 The constructor simply takes the following:
 - Reference to the parent charm (CharmBase)
 - The startup command (str)
-
 ## Getting Started
 To get started using the library, you just need to fetch the library using `charmcraft`.
 ```shell
 cd some-charm
 charmcraft fetch-lib charms.magma_orc8r_libs.v0.orc8r_base
 ```
-
 Then, to initialise the library:
-
 ```python
-
 from charms.magma_orc8r_libs.v0.orc8r_base import Orc8rBase
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from ops.charm import CharmBase
 from ops.main import main
-
-
 class MagmaOrc8rHACharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
@@ -42,24 +34,28 @@ class MagmaOrc8rHACharm(CharmBase):
         )
         self._orc8r_base = Orc8rBase(self, startup_command=startup_command)
 ```
-
 Charms that leverage this library also need to specify a `provides` relation in their
 `metadata.yaml` file. For example:
-
 ```yaml
 provides:
   magma-orc8r-ha:
     interface: magma-orc8r-ha
 ```
-
 """
 
 
 import logging
 
-from ops.charm import CharmBase
+from ops.charm import CharmBase, PebbleReadyEvent
 from ops.framework import Object
-from ops.model import ActiveStatus, MaintenanceStatus, ModelError, WaitingStatus
+from ops.model import (
+    ActiveStatus,
+    BlockedStatus,
+    MaintenanceStatus,
+    ModelError,
+    Relation,
+    WaitingStatus,
+)
 from ops.pebble import Layer
 
 # The unique Charmhub library identifier, never change it
@@ -70,7 +66,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 9
+LIBPATCH = 12
 
 
 logger = logging.getLogger(__name__)
@@ -81,29 +77,43 @@ class Orc8rBase(Object):
         self,
         charm: CharmBase,
         startup_command: str,
+        required_relations: list = None,
         additional_environment_variables: dict = None,
     ):
         super().__init__(charm, "orc8r-base")
         self.charm = charm
         self.startup_command = startup_command
+        self.required_relations = required_relations or []
         self.container_name = self.service_name = self.charm.meta.name
         service_name_with_underscores = self.service_name.replace("-", "_")
+        provided_relations = self.charm.meta.provides.keys()
+        if self.container_name in provided_relations:
+            service_status_relation_name = self.container_name
+            service_status_relation_name_with_underscores = service_status_relation_name.replace(
+                "-", "_"
+            )
+            relation_joined_event = getattr(
+                self.charm.on, f"{service_status_relation_name_with_underscores}_relation_joined"
+            )
+            self.framework.observe(relation_joined_event, self._on_relation_joined)
         pebble_ready_event = getattr(
             self.charm.on, f"{service_name_with_underscores}_pebble_ready"
         )
-        relation_joined_event = getattr(
-            self.charm.on, f"{service_name_with_underscores}_relation_joined"
-        )
         self.container = self.charm.unit.get_container(self.container_name)
         self.framework.observe(pebble_ready_event, self._on_magma_orc8r_pebble_ready)
-        self.framework.observe(relation_joined_event, self._on_relation_joined)
 
         if additional_environment_variables:
             self.additional_environment_variables = additional_environment_variables
         else:
             self.additional_environment_variables = {}
 
-    def _on_magma_orc8r_pebble_ready(self, event):
+    def _on_magma_orc8r_pebble_ready(self, event: PebbleReadyEvent):
+        if not self._relations_created:
+            event.defer()
+            return
+        if not self._relations_ready:
+            event.defer()
+            return
         self._configure_orc8r(event)
 
     def _configure_orc8r(self, event):
@@ -173,6 +183,9 @@ class Orc8rBase(Object):
         self._update_relation_active_status(
             relation=event.relation, is_active=self._service_is_running
         )
+        if not self._service_is_running:
+            event.defer()
+            return
 
     @property
     def _service_is_running(self) -> bool:
@@ -184,9 +197,41 @@ class Orc8rBase(Object):
                 pass
         return False
 
-    def _update_relation_active_status(self, relation, is_active: bool):
+    def _update_relation_active_status(self, relation: Relation, is_active: bool):
         relation.data[self.charm.unit].update(
             {
                 "active": str(is_active),
             }
         )
+
+    @property
+    def _relations_created(self) -> bool:
+        """Checks whether required relations are created."""
+        if missing_relations := [
+            relation
+            for relation in self.required_relations
+            if not self.model.get_relation(relation)
+        ]:
+            msg = f"Waiting for relation(s) to be created: {', '.join(missing_relations)}"
+            self.charm.unit.status = BlockedStatus(msg)
+            return False
+        return True
+
+    @property
+    def _relations_ready(self) -> bool:
+        """Checks whether required relations are ready."""
+        if missing_relations := [
+            relation for relation in self.required_relations if not self._relation_active(relation)
+        ]:
+            msg = f"Waiting for relation(s) to be ready: {', '.join(missing_relations)}"
+            self.charm.unit.status = WaitingStatus(msg)
+            return False
+        return True
+
+    def _relation_active(self, relation_name: str) -> bool:
+        try:
+            rel = self.model.get_relation(relation_name)
+            units = rel.units  # type: ignore[union-attr]
+            return rel.data[next(iter(units))]["active"] == "True"  # type: ignore[union-attr]
+        except (AttributeError, KeyError, StopIteration):
+            return False

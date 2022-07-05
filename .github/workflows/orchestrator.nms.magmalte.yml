@@ -3,7 +3,7 @@ name: nms-magmalte
 on:
   push:
     paths:
-      - 'orchestrator-bundle/nms-magmalte-operator/**'
+      - "orchestrator-bundle/nms-magmalte-operator/**"
 
 jobs:
   nms-magmalte-lint-report:
@@ -36,15 +36,21 @@ jobs:
       - name: Run tests using tox
         run: cd orchestrator-bundle/nms-magmalte-operator && tox -e unit
 
-#  nms-magmalte-integration-test:
-#    name: Integration tests (nms-magmalte)
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v2
-#      - name: Setup operator environment
-#        uses: charmed-kubernetes/actions-operator@main
-#        with:
-#          provider: microk8s
-#      - name: Run integration tests
-#        run: cd orchestrator-bundle/nms-magmalte-operator && tox -e integration
+  nms-magmalte-integration-test:
+    name: Integration tests (nms-magmalte)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+      - name: Run integration tests
+        run: cd orchestrator-bundle/nms-magmalte-operator && tox -e integration
+      - name: Archive charmcraft logs
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: charmcraft-logs
+          path: /home/runner/snap/charmcraft/common/cache/charmcraft/log/*.log

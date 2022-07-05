@@ -18,6 +18,12 @@ resources:
     description: OCI image for magma-orc8r-directoryd (docker.artifactory.magmacore.org/controller:1.6.0)
     upstream-source: docker.artifactory.magmacore.org/controller:1.6.0
 
+provides:
+  magma-orc8r-directoryd:
+    interface: magma-orc8r-directoryd
+    limit: 1
+
 requires:
   db:
     interface: pgsql
+    limit: 1

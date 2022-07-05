@@ -18,6 +18,12 @@ resources:
     description: OCI image for magma-orc8r-policydb (docker.artifactory.magmacore.org/controller:1.6.0)
     upstream-source: docker.artifactory.magmacore.org/controller:1.6.0
 
+provides:
+  magma-orc8r-policydb:
+    interface: magma-orc8r-policydb
+    limit: 1
+
 requires:
   db:
     interface: pgsql
+    limit: 1

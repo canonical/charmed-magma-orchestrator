@@ -49,11 +49,11 @@ class MagmaOrc8rEventdCharm(CharmBase):
     def _on_elasticsearch_url_config_changed(self, event):
         # TODO: Elasticsearch url should be passed through a relationship (not a config)
         if self._elasticsearch_config_is_valid:
-            if self._orc8r_base._container.can_connect():
+            if self._orc8r_base.container.can_connect():
                 self._write_config_file()
                 try:
                     logger.info("Restarting service")
-                    self._orc8r_base._container.restart(self._orc8r_base._service_name)
+                    self._orc8r_base.container.restart(self._orc8r_base.service_name)
                     self.unit.status = ActiveStatus()
                 except APIError:
                     logger.info("Service is not yet started, doing nothing")
@@ -68,11 +68,11 @@ class MagmaOrc8rEventdCharm(CharmBase):
         elastic_config = (
             f'"elasticHost": "{elasticsearch_url}"\n' f'"elasticPort": {elasticsearch_port}\n'
         )
-        self._orc8r_base._container.push(f"{self.BASE_CONFIG_PATH}/elastic.yml", elastic_config)
+        self._orc8r_base.container.push(f"{self.BASE_CONFIG_PATH}/elastic.yml", elastic_config)
 
     def _get_elasticsearch_config(self) -> tuple:
         elasticsearch_url = self.model.config.get("elasticsearch-url")
-        elasticsearch_url_split = elasticsearch_url.split(":")  # type: ignore [union-attr]
+        elasticsearch_url_split = elasticsearch_url.split(":")  # type: ignore[union-attr]
         return elasticsearch_url_split[0], elasticsearch_url_split[1]
 
     @property

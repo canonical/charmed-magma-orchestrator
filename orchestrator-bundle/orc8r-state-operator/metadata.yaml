@@ -17,6 +17,12 @@ resources:
     description: OCI image for magma-orc8r-state (docker.artifactory.magmacore.org/controller:1.6.0)
     upstream-source: docker.artifactory.magmacore.org/controller:1.6.0
 
+provides:
+  magma-orc8r-state:
+    interface: magma-orc8r-state
+    limit: 1
+
 requires:
   db:
     interface: pgsql
+    limit: 1

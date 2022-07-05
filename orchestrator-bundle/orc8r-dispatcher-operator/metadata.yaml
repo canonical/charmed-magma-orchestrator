@@ -16,3 +16,7 @@ resources:
     type: oci-image
     description: OCI image for magma-orc8r-dispatcher (docker.artifactory.magmacore.org/controller:1.6.0)
     upstream-source: docker.artifactory.magmacore.org/controller:1.6.0
+
+provides:
+  magma-orc8r-dispatcher:
+    interface: magma-orc8r-dispatcher

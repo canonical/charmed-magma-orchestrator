@@ -4,9 +4,9 @@ set -euo pipefail
 
 function build() {
   charm="$1"
-    pushd "${charm}-operator/"
+    pushd "orchestrator-bundle/${charm}-operator/"
     charmcraft pack
-    mv "magma-${charm}_ubuntu-20.04-amd64.charm" "${charm}.charm"
+    mv -f "magma-${charm}_ubuntu-20.04-amd64.charm" "${charm}.charm"
     popd
 }
 

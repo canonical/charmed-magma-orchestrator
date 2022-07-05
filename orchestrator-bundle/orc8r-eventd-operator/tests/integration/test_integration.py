@@ -14,15 +14,24 @@ METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 
 APPLICATION_NAME = "orc8r-eventd"
 CHARM_NAME = "magma-orc8r-eventd"
+CHARM_CONFIG = {"elasticsearch-url": "whatever.com:1234"}
 
 
-@pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest):
-    charm = await ops_test.build_charm(".")
-    resources = {
-        f"{CHARM_NAME}-image": METADATA["resources"][f"{CHARM_NAME}-image"]["upstream-source"],
-    }
-    await ops_test.model.deploy(
-        charm, resources=resources, application_name=APPLICATION_NAME, trust=True
-    )
-    await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
+class TestOrc8rEventd:
+    @pytest.fixture(scope="module")
+    @pytest.mark.abort_on_fail
+    async def build_and_deploy(self, ops_test):
+        charm = await ops_test.build_charm(".")
+        resources = {
+            f"{CHARM_NAME}-image": METADATA["resources"][f"{CHARM_NAME}-image"]["upstream-source"],
+        }
+        await ops_test.model.deploy(
+            charm,
+            resources=resources,
+            config=CHARM_CONFIG,
+            application_name=APPLICATION_NAME,
+            trust=True,
+        )
+
+    async def test_wait_for_idle(self, ops_test, build_and_deploy):
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)

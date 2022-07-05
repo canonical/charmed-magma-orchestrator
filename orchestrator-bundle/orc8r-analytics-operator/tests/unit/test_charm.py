@@ -25,6 +25,7 @@ class Test(unittest.TestCase):
     )
     def setUp(self):
         self.harness = testing.Harness(MagmaOrc8rAnalyticsCharm)
+        self.harness.set_can_connect("magma-orc8r-analytics", True)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
 
@@ -37,8 +38,6 @@ class Test(unittest.TestCase):
                 "/var/opt/magma/configs/orc8r/metricsd.yml",
                 'prometheusQueryAddress: "http://orc8r-prometheus:9090"\n'
                 'alertmanagerApiURL: "http://orc8r-alertmanager:9093/api/v2"\n'
-                'prometheusConfigServiceURL: "http://orc8r-prometheus:9100/v1"\n'
-                'alertmanagerConfigServiceURL: "http://orc8r-alertmanager:9101/v1"\n'
                 '"profile": "prometheus"\n',
             ),
             call(

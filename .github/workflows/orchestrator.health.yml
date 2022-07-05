@@ -1,0 +1,43 @@
+name: orc8r-health
+
+on:
+  push:
+    paths:
+      - "orchestrator-bundle/orc8r-health-operator/**"
+
+jobs:
+  orc8r-health-lint-report:
+    name: Lint report (orc8r-health)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/orc8r-health-operator && tox -e lint
+
+  orc8r-health-static-analysis:
+    name: Static analysis (orc8r-health)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/orc8r-health-operator && tox -e static
+
+  orc8r-health-unit-tests-with-coverage:
+    name: Unit tests (orc8r-health)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/orc8r-health-operator && tox -e unit
+      - name: Archive charmcraft logs
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: charmcraft-logs
+          path: /home/runner/snap/charmcraft/common/cache/charmcraft/log/*.log

@@ -18,7 +18,7 @@ from lightkube.models.core_v1 import (
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.apps_v1 import StatefulSet
 from lightkube.resources.core_v1 import Service
-from ops.charm import CharmBase
+from ops.charm import CharmBase, PebbleReadyEvent, RelationChangedEvent, RemoveEvent
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import Layer
@@ -27,6 +27,13 @@ logger = logging.getLogger(__name__)
 
 
 class MagmaOrc8rNginxCharm(CharmBase):
+
+    REQUIRED_RELATIONS = [
+        "magma-orc8r-bootstrapper",
+        "magma-orc8r-certifier",
+        "magma-orc8r-obsidian",
+    ]
+
     def __init__(self, *args):
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-nginx"
@@ -35,7 +42,8 @@ class MagmaOrc8rNginxCharm(CharmBase):
             self.on.magma_orc8r_nginx_pebble_ready, self._on_magma_orc8r_nginx_pebble_ready
         )
         self.framework.observe(
-            self.on.certifier_relation_changed, self._on_certifier_relation_changed
+            self.on.magma_orc8r_certifier_relation_changed,
+            self._on_magma_orc8r_certifier_relation_changed,
         )
         self.framework.observe(self.on.remove, self._on_remove)
         self.service_patcher = KubernetesServicePatch(
@@ -52,23 +60,32 @@ class MagmaOrc8rNginxCharm(CharmBase):
             additional_selectors={"app.kubernetes.io/name": "orc8r-nginx"},
         )
 
-    def _on_magma_orc8r_nginx_pebble_ready(self, event):
+    def _on_magma_orc8r_nginx_pebble_ready(self, event: PebbleReadyEvent):
+        if not self._relations_created:
+            event.defer()
+            return
         if not self._relations_ready:
+            event.defer()
+            return
+        if not self._get_domain_name:
+            self.unit.status = WaitingStatus(
+                "Waiting for magma-orc8r-certifier relation to be ready"
+            )
             event.defer()
             return
         self._create_additional_orc8r_nginx_services()
         self._configure_pebble_layer(event)
 
-    def _on_certifier_relation_changed(self, event):
+    def _on_magma_orc8r_certifier_relation_changed(self, event: RelationChangedEvent):
         """Mounts certificates required by the nms-magmalte."""
         if not self._orc8r_certs_mounted:
-            self.unit.status = MaintenanceStatus("Mounting NMS certificates...")
+            self.unit.status = MaintenanceStatus("Mounting NMS certificates")
             self._mount_certifier_certs()
 
     def _mount_certifier_certs(self) -> None:
         """Patch the StatefulSet to include certifier certs secret mount."""
         self.unit.status = MaintenanceStatus(
-            "Mounting additional volumes required by the magma-orc8r-nginx container..."
+            "Mounting additional volumes required by the magma-orc8r-nginx container"
         )
         client = Client()
         stateful_set = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
@@ -79,10 +96,8 @@ class MagmaOrc8rNginxCharm(CharmBase):
         client.patch(StatefulSet, name=self.app.name, obj=stateful_set, namespace=self._namespace)
         logger.info("Additional K8s resources for magma-orc8r-nginx container applied!")
 
-    def _configure_pebble_layer(self, event):
-        self.unit.status = MaintenanceStatus(
-            f"Configuring pebble layer for {self._service_name}..."
-        )
+    def _configure_pebble_layer(self, event: PebbleReadyEvent):
+        self.unit.status = MaintenanceStatus(f"Configuring pebble layer for {self._service_name}")
         pebble_layer = self._pebble_layer
         if self._container.can_connect():
             plan = self._container.get_plan()
@@ -93,7 +108,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
                 logger.info(f"Restarted container {self._service_name}")
                 self.unit.status = ActiveStatus()
         else:
-            self.unit.status = WaitingStatus(f"Waiting for {self._container} to be ready...")
+            self.unit.status = WaitingStatus(f"Waiting for {self._container} to be ready")
             event.defer()
             return
 
@@ -123,7 +138,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
                 logger.info(f"Creating {service.metadata.name} service...")
                 client.create(service)
 
-    def _on_remove(self, event):
+    def _on_remove(self, event: RemoveEvent):
         """Remove additional magma-orc8r-nginx services."""
         client = Client()
         for service in self._magma_orc8r_nginx_additional_services:
@@ -246,25 +261,38 @@ class MagmaOrc8rNginxCharm(CharmBase):
         ]
 
     @property
-    def _relations_ready(self) -> bool:
-        """Checks whether required relations are ready."""
-        required_relations = ["bootstrapper", "certifier", "obsidian"]
-        missing_relations = [
+    def _relations_created(self) -> bool:
+        if missing_relations := [
             relation
-            for relation in required_relations
+            for relation in self.REQUIRED_RELATIONS
             if not self.model.get_relation(relation)
-            or len(self.model.get_relation(relation).units) == 0  # noqa: W503
-        ]
-        if missing_relations:
-            msg = f"Waiting for relations: {', '.join(missing_relations)}"
+        ]:
+            msg = f"Waiting for relation(s) to be created: {', '.join(missing_relations)}"
             self.unit.status = BlockedStatus(msg)
-            return False
-        if not self._get_domain_name:
-            self.unit.status = WaitingStatus("Waiting for certifier relation to be ready...")
             return False
         return True
 
-    def _orc8r_nginx_service_created(self, service_name) -> bool:
+    @property
+    def _relations_ready(self) -> bool:
+        """Checks whether required relations are ready."""
+        not_ready_relations = [
+            relation for relation in self.REQUIRED_RELATIONS if not self._relation_active(relation)
+        ]
+        if not_ready_relations:
+            msg = f"Waiting for relation(s) to be ready: {', '.join(not_ready_relations)}"
+            self.unit.status = WaitingStatus(msg)
+            return False
+        return True
+
+    def _relation_active(self, relation_name: str) -> bool:
+        try:
+            rel = self.model.get_relation(relation_name)
+            units = rel.units  # type: ignore[union-attr]
+            return rel.data[next(iter(units))]["active"] == "True"  # type: ignore[union-attr]
+        except (AttributeError, KeyError, StopIteration):
+            return False
+
+    def _orc8r_nginx_service_created(self, service_name: str) -> bool:
         """Checks whether given K8s service exists or not."""
         client = Client()
         try:
@@ -286,11 +314,11 @@ class MagmaOrc8rNginxCharm(CharmBase):
     @property
     def _get_domain_name(self):
         """Gets domain name for the data bucket sent by certifier relation."""
-        certifier_relation = self.model.get_relation("certifier")
-        units = certifier_relation.units
         try:
-            return certifier_relation.data[next(iter(units))]["domain"]
-        except KeyError:
+            certifier_relation = self.model.get_relation("magma-orc8r-certifier")
+            units = certifier_relation.units  # type: ignore[union-attr]
+            return certifier_relation.data[next(iter(units))]["domain"]  # type: ignore[union-attr]
+        except (AttributeError, KeyError, StopIteration):
             return None
 
     @property

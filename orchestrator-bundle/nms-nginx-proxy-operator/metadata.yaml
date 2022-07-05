@@ -17,7 +17,9 @@ resources:
     upstream-source: nginx:latest
 
 requires:
-  certifier:
+  magma-orc8r-certifier:
     interface: magma-orc8r-certifier
-  magmalte:
-    interface: nms-magmalte
+    limit: 1
+  magma-nms-magmalte:
+    interface: magma-nms-magmalte
+    limit: 1

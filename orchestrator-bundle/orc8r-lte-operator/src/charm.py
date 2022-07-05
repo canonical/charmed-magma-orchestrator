@@ -4,7 +4,7 @@
 
 from charms.magma_orc8r_libs.v0.orc8r_base_db import Orc8rBase
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
-from ops.charm import CharmBase
+from ops.charm import CharmBase, InstallEvent
 from ops.main import main
 
 
@@ -14,9 +14,7 @@ class MagmaOrc8rLteCharm(CharmBase):
 
     # TODO: The various URL's should be provided through relationships
     PROMETHEUS_URL = "http://orc8r-prometheus:9090"
-    PROMETHEUS_CONFIGURER_URL = "http://orc8r-prometheus:9100"
     ALERTMANAGER_URL = "http://orc8r-alertmanager:9093"
-    ALERTMANAGER_CONFIGURER_URL = "http://orc8r-alertmanager:9101"
 
     def __init__(self, *args):
         """Creates a new instance of this object for each event."""
@@ -57,15 +55,16 @@ class MagmaOrc8rLteCharm(CharmBase):
         self._orc8r_base = Orc8rBase(self, startup_command=startup_command)
         self.framework.observe(self.on.install, self._on_install)
 
-    def _on_install(self, event):
+    def _on_install(self, event: InstallEvent):
+        if not self._orc8r_base.container.can_connect():
+            event.defer()
+            return
         self._write_config_file()
 
     def _write_config_file(self):
         metricsd_config = (
             f'prometheusQueryAddress: "{self.PROMETHEUS_URL}"\n'
             f'alertmanagerApiURL: "{self.ALERTMANAGER_URL}/api/v2"\n'
-            f'prometheusConfigServiceURL: "{self.PROMETHEUS_CONFIGURER_URL}/v1"\n'
-            f'alertmanagerConfigServiceURL: "{self.ALERTMANAGER_CONFIGURER_URL}/v1"\n'
             '"profile": "prometheus"\n'
         )
         analytics_config = (
@@ -76,10 +75,8 @@ class MagmaOrc8rLteCharm(CharmBase):
             '"metricExportURL": ""\n'
             '"metricsPrefix": ""\n'
         )
-        self._orc8r_base._container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
-        self._orc8r_base._container.push(
-            f"{self.BASE_CONFIG_PATH}/analytics.yml", analytics_config
-        )
+        self._orc8r_base.container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
+        self._orc8r_base.container.push(f"{self.BASE_CONFIG_PATH}/analytics.yml", analytics_config)
 
 
 if __name__ == "__main__":
