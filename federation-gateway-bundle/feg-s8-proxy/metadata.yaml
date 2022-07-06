@@ -1,0 +1,18 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: magma-feg-s8-proxy
+description: |
+  Federation Gateway s8-proxy service.
+summary: |
+  Federation Gateway s8-proxy service.
+
+containers:
+  magma-feg-s8-proxy:
+    resource: magma-feg-s8-proxy-image
+
+resources:
+  magma-feg-s8-proxy-image:
+    type: oci-image
+    description: OCI image for magma-feg-s8-proxy (docker.artifactory.magmacore.org/gateway_go:1.6.0)
+    upstream-source: docker.artifactory.magmacore.org/gateway_go:1.6.0

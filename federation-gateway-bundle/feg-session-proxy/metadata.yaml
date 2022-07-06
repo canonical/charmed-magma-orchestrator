@@ -1,0 +1,18 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: magma-feg-session-proxy
+description: |
+  Federation Gateway session-proxy service.
+summary: |
+  Federation Gateway session-proxy service.
+
+containers:
+  magma-feg-session-proxy:
+    resource: magma-feg-session-proxy-image
+
+resources:
+  magma-feg-session-proxy-image:
+    type: oci-image
+    description: OCI image for magma-feg-session-proxy (docker.artifactory.magmacore.org/gateway_go:1.6.0)
+    upstream-source: docker.artifactory.magmacore.org/gateway_go:1.6.0

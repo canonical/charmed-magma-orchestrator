@@ -1,0 +1,18 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: magma-feg-eap-sim
+description: |
+  Federation Gateway eap-sim service.
+summary: |
+  Federation Gateway eap-sim service.
+
+containers:
+  magma-feg-eap-sim:
+    resource: magma-feg-eap-sim-image
+
+resources:
+  magma-feg-eap-sim-image:
+    type: oci-image
+    description: OCI image for magma-feg-eap-sim (docker.artifactory.magmacore.org/gateway_go:1.6.0)
+    upstream-source: docker.artifactory.magmacore.org/gateway_go:1.6.0
