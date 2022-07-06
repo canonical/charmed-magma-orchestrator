@@ -1,0 +1,18 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: magma-feg-hello
+description: |
+  Federation Gateway hello service.
+summary: |
+  Federation Gateway hello service.
+
+containers:
+  magma-feg-hello:
+    resource: magma-feg-hello-image
+
+resources:
+  magma-feg-hello-image:
+    type: oci-image
+    description: OCI image for magma-feg-hello (docker.artifactory.magmacore.org/gateway_go:1.6.0)
+    upstream-source: docker.artifactory.magmacore.org/gateway_go:1.6.0

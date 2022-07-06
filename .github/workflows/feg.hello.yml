@@ -1,0 +1,50 @@
+name: feg-hello
+
+on:
+  push:
+    paths:
+      - "federation-gateway-bundle/feg-hello-operator/**"
+
+jobs:
+  feg-hello-lint-report:
+    name: Lint report (feg-hello)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-hello-operator && tox -e lint
+
+  feg-hello-static-analysis:
+    name: Static analysis (feg-hello)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-hello-operator && tox -e static
+
+  feg-hello-unit-tests-with-coverage:
+    name: Unit tests (feg-hello)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-hello-operator && tox -e unit
+
+  feg-hello-integration-test:
+    name: Integration tests (feg-hello)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+      - name: Run integration tests
+        run: cd federation-gateway-bundle/feg-hello-operator && tox -e integration
