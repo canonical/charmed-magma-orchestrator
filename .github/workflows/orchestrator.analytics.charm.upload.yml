@@ -33,3 +33,4 @@ jobs:
           upload-image: "false"
           channel: "${{ steps.channel.outputs.name }}"
           charm-path: ./orchestrator-bundle/orc8r-analytics-operator
+          tag-prefix: "magma-orc8r-analytics"
