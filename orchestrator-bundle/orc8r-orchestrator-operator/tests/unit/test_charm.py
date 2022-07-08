@@ -19,6 +19,17 @@ from charm import MagmaOrc8rOrchestratorCharm
 testing.SIMULATE_CAN_CONNECT = True
 
 
+class MockExec:
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def exec(self, *args, **kwargs):
+        pass
+
+    def wait_output(self, *args, **kwargs):
+        return "test stdout", "test err"
+
+
 class TestCharm(unittest.TestCase):
     @staticmethod
     def k8s_load_balancer_service(ip: str, name: str) -> Service:
@@ -77,11 +88,13 @@ class TestCharm(unittest.TestCase):
         updated_plan = self.harness.get_container_pebble_plan("magma-orc8r-orchestrator").to_dict()
         self.assertEqual(expected_plan, updated_plan)
 
+    @patch("ops.model.Container.exec", new_callable=Mock)
     @patch("ops.model.Container.push")
     @patch("charm.MagmaOrc8rOrchestratorCharm._relations_ready", PropertyMock(return_value=True))
     def test_given_pebble_ready_when_on_install_event_then_orchestrator_config_file_is_created(  # noqa: E501
-        self, patch_push
+        self, patch_push, patch_exec
     ):
+        patch_exec.return_value = MockExec()
         self.harness.container_pebble_ready("magma-orc8r-orchestrator")
         self.harness.charm.on.install.emit()
 
@@ -93,11 +106,13 @@ class TestCharm(unittest.TestCase):
             '"useGRPCExporter": true\n',
         )
 
+    @patch("ops.model.Container.exec", new_callable=Mock)
     @patch("ops.model.Container.push")
     @patch("charm.MagmaOrc8rOrchestratorCharm._relations_ready", PropertyMock(return_value=True))
     def test_given_new_charm_when_on_install_event_then_metricsd_config_file_is_created(
-        self, patch_push
+        self, patch_push, patch_exec
     ):
+        patch_exec.return_value = MockExec()
         self.harness.container_pebble_ready("magma-orc8r-orchestrator")
         self.harness.charm.on.install.emit()
 
@@ -108,11 +123,14 @@ class TestCharm(unittest.TestCase):
             '"profile": "prometheus"\n',
         )
 
+    @patch("ops.model.Container.exec", new_callable=Mock)
     @patch("ops.model.Container.push")
     @patch("charm.MagmaOrc8rOrchestratorCharm._relations_ready", PropertyMock(return_value=True))
+    @patch("charm.MagmaOrc8rOrchestratorCharm._namespace", PropertyMock(return_value="whatever"))
     def test_given_new_charm_when_on_install_event_then_analytics_config_file_is_created(
-        self, patch_push
+        self, patch_push, patch_exec
     ):
+        patch_exec.return_value = MockExec()
         self.harness.container_pebble_ready("magma-orc8r-orchestrator")
         self.harness.charm.on.install.emit()
 
@@ -125,6 +143,28 @@ class TestCharm(unittest.TestCase):
             '"metricExportURL": ""\n'
             '"metricsPrefix": ""\n',
         )
+
+    @patch("ops.model.Container.exec", new_callable=Mock)
+    @patch("ops.model.Container.push")
+    @patch("charm.MagmaOrc8rOrchestratorCharm._relations_ready", PropertyMock(return_value=True))
+    def test_given_pebble_ready_when_on_install_event_then_orchestrator_admin_user_is_created(  # noqa: E501
+        self, patch_push, patch_exec
+    ):
+        patch_exec.return_value = MockExec()
+        self.harness.container_pebble_ready("magma-orc8r-orchestrator")
+        self.harness.charm.on.install.emit()
+
+        args, _ = patch_exec.call_args
+        patch_exec.assert_called_once()
+        call_command = [
+            "/var/opt/magma/bin/accessc",
+            "add-existing",
+            "-admin",
+            "-cert",
+            "/var/opt/magma/certs/admin_operator.pem",
+            "admin_operator",
+        ]
+        self.assertIn(call_command, args)
 
     @patch("charm.MagmaOrc8rOrchestratorCharm._relations_ready", PropertyMock(return_value=True))
     def test_given_default_elasticsearch_config_when_on_config_changed_event_then_status_is_blocked(  # noqa: E501
