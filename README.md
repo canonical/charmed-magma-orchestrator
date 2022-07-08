@@ -1,26 +1,15 @@
-<h1> Charmed Magma </h1>
+# Charmed Magma 
 
-<h1>
-    <a href="https://www.magmacore.org/"><img src="https://raw.githubusercontent.com/magma/magma/master/docs/docusaurus/static/img/magma-logo-purple.svg" alt="Magma" width="550"></a>
-</h1>
-
+<a href="https://www.magmacore.org/"><img src="https://raw.githubusercontent.com/magma/magma/master/docs/docusaurus/static/img/magma-logo-purple.svg" alt="Magma" width="550"></a>
 
 Magma is an open-source software platform that gives network operators a mobile core network 
-solution. Magma has three major components:
-1. Access Gateway
-2. Orchestrator
-3. Federation Gateway
+solution. For more information about Magma, visit the [official website](https://docs.magmacore.org).
 
-This project contains a set of Juju charms with the purpose of driving the lifecycle 
-management, configuration, integration and daily actions for Magma.
+Charmed Magma is the easiest way to deploy, configure, manage, integrate and drive daily actions for Magma.
+It consists of a set of Juju charms and bundles built using the [Charmed Operator Framework](https://juju.is/docs/sdk).
 
-### Useful links
+> Charmed-Magma is in Beta and is not yet production ready or feature complete.
 
-- [Magma documentation](https://docs.magmacore.org/docs/basics/introduction)
-- [Orchestrator documentation](https://docs.magmacore.org/docs/orc8r/architecture_overview)
-- [Charmed operator framework](https://juju.is/docs/sdk)
+## Usage
 
-## Deployment
-To deploy a specific component, please follow the directives located in the component's directory 
-README.md file. For example, to deploy Orchestrator, go to the `orchestrator-bundle` directory and
-read the `Installation guide` section.
+- [Deploy Charmed Magma Orchestrator using Juju](https://charmhub.io/magma-orc8r)
