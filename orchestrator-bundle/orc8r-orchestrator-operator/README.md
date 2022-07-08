@@ -30,14 +30,6 @@ Currently supported relations are:
   magma-orc8r-certifier maintains and verifies signed client certificates and their associated
   identities.
 
-## Actions
-
-### Create orchestrator admin user
-
-```bash
-juju run-action orc8r-orchestrator/0 create-orchestrator-admin-user
-```
-
 ### Set log level
 You can set the log level of any service using the `set-log-verbosity` action. The default log
 level is 0 and the full log level is 10. Here is an example of setting the log level to 10 for the 

@@ -62,10 +62,6 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             self.on.magma_orc8r_certifier_relation_changed,
             self._on_magma_orc8r_certifier_relation_changed,
         )
-        self.framework.observe(
-            self.on.create_orchestrator_admin_user_action,
-            self._create_orchestrator_admin_user_action,
-        )
         self.framework.observe(self.on.set_log_verbosity_action, self._set_log_verbosity_action)
         self.framework.observe(
             self.on.get_load_balancer_services_action,
@@ -123,6 +119,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             event.defer()
             return
         self._write_config_files()
+        self._create_orchestrator_admin_user()
 
     def _write_config_files(self):
         self._write_orchestrator_config()
@@ -183,7 +180,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                 "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
             )
 
-    def _create_orchestrator_admin_user_action(self, event: ActionEvent):
+    def _create_orchestrator_admin_user(self):
         process = self._container.exec(
             [
                 "/var/opt/magma/bin/accessc",

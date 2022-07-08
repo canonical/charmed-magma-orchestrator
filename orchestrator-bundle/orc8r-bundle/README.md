@@ -46,14 +46,6 @@ juju scp --container="magma-orc8r-certifier" orc8r-certifier/0:/var/opt/magma/ce
 > The default password to open the admin_operator.pfx file is `password123`. To choose a different 
 > password, re-deploy orc8r-certifier with the `passphrase` juju config.
 
-### Create the orchestrator admin user
-
-Create the user:
-
-```bash
-juju run-action orc8r-orchestrator/0 create-orchestrator-admin-user
-```
-
 ### Setup DNS
 
 Retrieve the services that need to be exposed:
