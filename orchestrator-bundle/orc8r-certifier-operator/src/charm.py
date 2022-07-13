@@ -89,7 +89,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     _stored = StoredState()
 
     def __init__(self, *args):
-        """Initializes all event that need to be observed."""
+        """Initializes all events that need to be observed."""
         super().__init__(*args)
         self.certificates = TLSCertificatesRequires(self, "certificates")
         self.cert_admin_operator = CertAdminOperatorProvides(self, "cert-admin-operator")
