@@ -2,10 +2,10 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import Mock, PropertyMock, patch
+from unittest.mock import Mock, PropertyMock, call, patch
 
 from ops import testing
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus
 from ops.pebble import ExecError
 from pgconnstr import ConnectionString  # type: ignore[import]
 
@@ -46,7 +46,9 @@ class TestCharm(unittest.TestCase):
         "charm.KubernetesServicePatch", lambda charm, ports, service_name, additional_labels: None
     )
     def setUp(self):
+        self.namespace = "whatever"
         self.harness = testing.Harness(MagmaNmsMagmalteCharm)
+        self.harness.set_model_name(name=self.namespace)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
 
@@ -67,41 +69,30 @@ class TestCharm(unittest.TestCase):
         db_event.master.port = postgres_port
         return db_event
 
-    def test_given_no_relations_created_when_pebble_ready_event_emitted_then_charm_goes_to_blocked_state(  # noqa: E501
+    def test_given_db_relation_not_created_when_pebble_ready_then_unit_is_in_blocked_state(
         self,
     ):
-        event = Mock()
-
-        self.harness.charm.on.magma_nms_magmalte_pebble_ready.emit(event)
-
-        self.assertEqual(
-            self.harness.charm.unit.status,
-            BlockedStatus("Waiting for relation(s) to be created: magma-orc8r-certifier, db"),
+        self.harness.add_relation(
+            relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
         )
 
-    def test_given_certifier_relation_created_but_db_relation_missing_when_pebble_ready_event_emitted_then_charm_goes_to_blocked_state(  # noqa: E501
-        self,
-    ):
-        event = Mock()
-        relation_id = self.harness.add_relation("magma-orc8r-certifier", "orc8r-certifier")
-        self.harness.add_relation_unit(relation_id, "orc8r-certifier/0")
-
-        self.harness.charm.on.magma_nms_magmalte_pebble_ready.emit(event)
-
-        self.assertEqual(
-            self.harness.charm.unit.status,
-            BlockedStatus("Waiting for relation(s) to be created: db"),
-        )
-
-    @patch("charm.MagmaNmsMagmalteCharm._relations_created", PropertyMock(return_value=True))
-    def test_given_relations_created_when_pebble_ready_event_emitted_then_charm_goes_to_waiting_state(  # noqa: E501
-        self,
-    ):
         self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
 
         self.assertEqual(
             self.harness.charm.unit.status,
-            WaitingStatus("Waiting for relation(s) to be ready: magma-orc8r-certifier, db"),
+            BlockedStatus("Waiting for db relation to be created"),
+        )
+
+    def test_given_cert_admin_operator_relation_not_created_when_pebble_ready_then_unit_is_in_blocked_state(  # noqa: E501
+        self,
+    ):
+        self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+
+        self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
+
+        self.assertEqual(
+            self.harness.charm.unit.status,
+            BlockedStatus("Waiting for cert-admin-operator relation to be created"),
         )
 
     @patch("charm.MagmaNmsMagmalteCharm.DB_NAME", new_callable=PropertyMock)
@@ -127,18 +118,30 @@ class TestCharm(unittest.TestCase):
 
         self.assertEqual(db_event.database, self.TEST_DB_NAME)
 
-    @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
-    @patch("charm.MagmaNmsMagmalteCharm._create_master_nms_admin_user", Mock())
-    @patch("charm.MagmaNmsMagmalteCharm._namespace", new_callable=PropertyMock)
-    @patch("charm.MagmaNmsMagmalteCharm._nms_certs_mounted", PropertyMock(return_value=True))
-    @patch("charm.MagmaNmsMagmalteCharm._relations_ready", PropertyMock(return_value=True))
-    @patch("charm.MagmaNmsMagmalteCharm._relations_created", PropertyMock(return_value=True))
-    def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_nms_magmalte_service_content(
-        self, mocked_namespace, mocked_get_db_connection_string
+    @patch("ops.model.Container.exec", new=Mock())
+    @patch("ops.model.Container.exists")
+    @patch("psycopg2.connect", new=Mock())
+    @patch("charm.ConnectionString")
+    def test_given_relations_are_created_and_certs_are_stored_when_pebble_ready_then_pebble_plan_is_filled_with_magma_nms_magmalte_service_content(  # noqa: E501
+        self, patch_connection_string, patch_file_exists
     ):
-        namespace = "whatever"
-        mocked_namespace.return_value = namespace
-        mocked_get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
+        patch_file_exists.return_value = True
+        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        self.harness.add_relation(
+            relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
+        )
+        key_values = {
+            "master": "dbname=test_db_name "
+            "fallback_application_name=whatever "
+            "host=123.456.789.012 "
+            "password=aaaBBBcccDDDeee "
+            "port=1234 "
+            "user=test_db_user"
+        }
+        self.harness.update_relation_data(
+            relation_id=db_relation_id, key_values=key_values, app_or_unit="postgresql-k8s"
+        )
+        patch_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
 
         self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
         expected_plan = {
@@ -153,7 +156,7 @@ class TestCharm(unittest.TestCase):
                     "environment": {
                         "API_CERT_FILENAME": "/run/secrets/admin_operator.pem",
                         "API_PRIVATE_KEY_FILENAME": "/run/secrets/admin_operator.key.pem",
-                        "API_HOST": f"orc8r-nginx-proxy.{namespace}.svc.cluster.local",
+                        "API_HOST": f"orc8r-nginx-proxy.{self.namespace}.svc.cluster.local",
                         "PORT": "8081",
                         "HOST": "0.0.0.0",
                         "MYSQL_HOST": self.TEST_DB_CONNECTION_STRING.host,
@@ -173,16 +176,31 @@ class TestCharm(unittest.TestCase):
         updated_plan = self.harness.get_container_pebble_plan("magma-nms-magmalte").to_dict()
         self.assertEqual(expected_plan, updated_plan)
 
-    @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
-    @patch("charm.MagmaNmsMagmalteCharm._create_master_nms_admin_user", Mock())
-    @patch("charm.MagmaNmsMagmalteCharm._nms_certs_mounted", PropertyMock(return_value=True))
-    @patch("charm.MagmaNmsMagmalteCharm._relations_ready", PropertyMock(return_value=True))
-    @patch("charm.MagmaNmsMagmalteCharm._relations_created", PropertyMock(return_value=True))
-    def test_given_charm_when_pebble_ready_event_emitted_and_relations_are_established_then_charm_goes_to_active_state(  # noqa: E501
-        self, mocked_get_db_connection_string
+    @patch("ops.model.Container.exec", new=Mock())
+    @patch("ops.model.Container.exists")
+    @patch("psycopg2.connect", new=Mock())
+    @patch("charm.ConnectionString")
+    def test_given_relations_are_created_and_certs_are_stored_when_pebble_ready_then_charm_goes_to_active_state(  # noqa: E501
+        self, patch_connection_string, patch_exists
     ):
-        mocked_get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
-        self.harness.set_can_connect("magma-nms-magmalte", True)
+        patch_exists.return_value = True
+        patch_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
+        self.harness.add_relation(
+            relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
+        )
+        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        key_values = {
+            "master": "dbname=test_db_name "
+            "fallback_application_name=whatever "
+            "host=123.456.789.012 "
+            "password=aaaBBBcccDDDeee "
+            "port=1234 "
+            "user=test_db_user"
+        }
+        self.harness.update_relation_data(
+            relation_id=db_relation_id, key_values=key_values, app_or_unit="postgresql-k8s"
+        )
+
         self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
 
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
@@ -229,26 +247,46 @@ class TestCharm(unittest.TestCase):
         with self.assertRaises(ExecError):
             self.harness.charm._create_nms_admin_user_action(action_event)
 
-    def test_given_juju_action_when_relation_is_not_ready_then_get_admin_credentials_fails(
+    def test_given_relations_not_created_when_juju_action_then_get_admin_credentials_fails(
         self,
     ):
         action_event = Mock()
         self.harness.charm._on_get_master_admin_credentials(action_event)
         self.assertEqual(
             action_event.fail.call_args,
-            [("Relations aren't yet set up. Please try again in a few minutes",)],
+            [("Workload service is not yet running",)],
         )
 
-    @patch("charm.MagmaNmsMagmalteCharm._relations_ready", new_callable=PropertyMock)
+    @patch("ops.model.Container.get_service", new=Mock())
     @patch("ops.charm.ActionEvent")
-    def test_given_juju_action_when_relation_is_ready_then_get_admin_credentials_returns_values(
-        self, action_event, relations_ready
+    def test_given_workload_service_is_running_when_get_admin_credentials_action_then_username_and_password_are_returned(  # noqa: E501
+        self, action_event
     ):
-        relations_ready.return_value = True
-        self.harness.charm._stored.admin_username = "username"  # type: ignore[union-attr]
         self.harness.charm._stored.admin_password = "password"  # type: ignore[union-attr]
+
         self.harness.charm._on_get_master_admin_credentials(action_event)
+
         self.assertEqual(
             action_event.set_results.call_args,
-            [({"admin-username": "username", "admin-password": "password"},)],
+            [({"admin-username": "admin@juju.com", "admin-password": "password"},)],
+        )
+
+    @patch("ops.model.Container.push")
+    def test_given_pebble_ready_when_certificate_available_then(self, patch_push):
+        certificate = "whatever certificate"
+        private_key = "whatever private key"
+        event = Mock()
+        event.certificate = certificate
+        event.private_key = private_key
+
+        container = self.harness.model.unit.get_container("magma-nms-magmalte")
+        self.harness.set_can_connect(container=container, val=True)
+
+        self.harness.charm._on_certificate_available(event=event)
+
+        patch_push.assert_has_calls(
+            calls=[
+                call(path="/run/secrets/admin_operator.pem", source=certificate),
+                call(path="/run/secrets/admin_operator.key.pem", source=private_key),
+            ]
         )

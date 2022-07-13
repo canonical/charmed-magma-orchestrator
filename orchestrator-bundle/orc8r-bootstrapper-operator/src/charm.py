@@ -2,16 +2,24 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import logging
+"""magma-orc8r-bootstrapper.
 
+Bootstrapper manages the certificate bootstrapping process for newly registered gateways and
+gateways whose cert has expired
+"""
+
+import logging
+from typing import Union
+
+from charms.magma_orc8r_certifier.v0.cert_bootstrapper import (
+    CertBootstrapperRequires,
+    PrivateKeyAvailableEvent,
+)
+from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from charms.observability_libs.v1.kubernetes_service_patch import (
     KubernetesServicePatch,
     ServicePort,
 )
-from lightkube import Client
-from lightkube.core.exceptions import ApiError
-from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
-from lightkube.resources.apps_v1 import StatefulSet
 from ops.charm import (
     CharmBase,
     PebbleReadyEvent,
@@ -19,35 +27,36 @@ from ops.charm import (
     RelationJoinedEvent,
 )
 from ops.main import main
-from ops.model import (
-    ActiveStatus,
-    BlockedStatus,
-    MaintenanceStatus,
-    ModelError,
-    Relation,
-    WaitingStatus,
-)
+from ops.model import ActiveStatus, BlockedStatus, ModelError, Relation, WaitingStatus
 from ops.pebble import Layer
 
 logger = logging.getLogger(__name__)
 
 
 class MagmaOrc8rBootstrapperCharm(CharmBase):
+    """Main class that is instantiated everytime an event occurs."""
+
+    CERTIFICATE_DIRECTORY = "/var/opt/magma/certs"
+
     def __init__(self, *args):
+        """Initializes all event that need to be observed."""
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-bootstrapper"
         self._container = self.unit.get_container(self._container_name)
+        self.cert_bootstrapper = CertBootstrapperRequires(
+            charm=self, relationship_name="cert-bootstrapper"
+        )
         self.framework.observe(
             self.on.magma_orc8r_bootstrapper_pebble_ready,
             self._on_magma_orc8r_bootstrapper_pebble_ready,
         )
         self.framework.observe(
-            self.on.magma_orc8r_certifier_relation_changed,
-            self._on_magma_orc8r_certifier_relation_changed,
-        )
-        self.framework.observe(
             self.on.magma_orc8r_bootstrapper_relation_joined,
             self._on_magma_orc8r_bootstrapper_relation_joined,
+        )
+        self.framework.observe(
+            self.cert_bootstrapper.on.private_key_available,
+            self._on_private_key_available
         )
         self._service_patcher = KubernetesServicePatch(
             charm=self,
@@ -55,91 +64,13 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
             additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
         )
 
-    def _on_magma_orc8r_bootstrapper_pebble_ready(self, event: PebbleReadyEvent):
-        """Triggered when pebble is ready."""
-        if not self._certifier_relation_created:
-            self.unit.status = BlockedStatus(
-                "Waiting for magma-orc8r-certifier relation to be created"
-            )
-            event.defer()
-            return
-        if not self._certifier_relation_ready:
-            self.unit.status = WaitingStatus(
-                "Waiting for magma-orc8r-certifier relation to be ready"
-            )
-            event.defer()
-            return
-        if not self._orc8r_certs_mounted:
-            self.unit.status = WaitingStatus("Waiting for NMS certificates to be mounted")
-            event.defer()
-            return
-        self._configure_pebble(event)
-
-    def _on_magma_orc8r_certifier_relation_changed(self, event: RelationChangedEvent):
-        if not self._certifier_relation_ready:
-            self.unit.status = WaitingStatus(
-                "Waiting for magma-orc8r-certifier relation to be ready"
-            )
-            event.defer()
-            return
-        if not self._orc8r_certs_mounted:
-            self.unit.status = MaintenanceStatus("Mounting NMS certificates")
-            self._mount_orc8r_certs()
-
-    def _configure_pebble(self, event: PebbleReadyEvent):
-        """Adds layer to pebble config if the proposed config is different from the current one."""
-        if self._container.can_connect():
-            pebble_layer = self._pebble_layer
-            plan = self._container.get_plan()
-            if plan.services != pebble_layer.services:
-                self._container.add_layer(self._container_name, pebble_layer, combine=True)
-                self._container.restart(self._service_name)
-                logger.info(f"Restarted container {self._service_name}")
-                self._update_relations()
-                self.unit.status = ActiveStatus()
-        else:
-            self.unit.status = WaitingStatus("Waiting for container to be ready")
-            event.defer()
-
-    def _mount_orc8r_certs(self) -> None:
-        """Patch the StatefulSet to include Orchestrator certs secret mount."""
-        self.unit.status = MaintenanceStatus(
-            "Mounting additional volumes required by the magma-orc8r-bootstrapper container"
-        )
-        client = Client()
-        try:
-            stateful_set = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
-            stateful_set.spec.template.spec.volumes.extend(self._bootstrapper_volumes)  # type: ignore[attr-defined]  # noqa: E501
-            stateful_set.spec.template.spec.containers[1].volumeMounts.extend(  # type: ignore[attr-defined]  # noqa: E501
-                self._bootstrapper_volume_mounts
-            )
-            client.patch(
-                StatefulSet, name=self.app.name, obj=stateful_set, namespace=self._namespace
-            )
-        except ApiError as e:
-            logger.error(
-                "Failed to mount additional volumes required by the magma-orc8r-bootstrapper "
-                "container!"
-            )
-            raise e
-        logger.info("Additional K8s resources for magma-orc8r-bootstrapper container applied!")
-
-    @property
-    def _certifier_relation_created(self) -> bool:
-        return bool(self.model.get_relation("magma-orc8r-certifier"))
-
-    @property
-    def _certifier_relation_ready(self) -> bool:
-        """Checks whether certifier relation is ready."""
-        try:
-            rel = self.model.get_relation("magma-orc8r-certifier")
-            units = rel.units  # type: ignore[union-attr]
-            return rel.data[next(iter(units))]["active"] == "True"  # type: ignore[union-attr]
-        except (AttributeError, KeyError, StopIteration):
-            return False
-
     @property
     def _pebble_layer(self) -> Layer:
+        """Returns pebble layer for the charm.
+
+        Returns:
+            Layer: Pebble Layer
+        """
         return Layer(
             {
                 "summary": f"{self._service_name} pebble layer",
@@ -163,51 +94,21 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         )
 
     @property
-    def _orc8r_certs_mounted(self) -> bool:
-        """Check to see if the Orchestrator certs have already been mounted."""
-        client = Client()
-        statefulset = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
-        return all(
-            volume_mount in statefulset.spec.template.spec.containers[1].volumeMounts  # type: ignore[attr-defined]  # noqa: E501
-            for volume_mount in self._bootstrapper_volume_mounts
-        )
+    def _namespace(self) -> str:
+        """Returns the namespace.
 
-    @property
-    def _bootstrapper_volumes(self) -> list:
-        """Returns a list of volumes required by the magma-orc8r-bootstrapper container."""
-        return [
-            Volume(
-                name="certs",
-                secret=SecretVolumeSource(secretName="orc8r-certs"),
-            ),
-        ]
-
-    @property
-    def _bootstrapper_volume_mounts(self) -> list:
-        """Returns a list of volume mounts required by the magma-orc8r-bootstrapper container."""
-        return [
-            VolumeMount(
-                mountPath="/var/opt/magma/certs",
-                name="certs",
-                readOnly=True,
-            ),
-        ]
-
-    def _on_magma_orc8r_bootstrapper_relation_joined(self, event: RelationJoinedEvent):
-        self._update_relations()
-        if not self._service_is_running:
-            event.defer()
-            return
-
-    def _update_relation_active_status(self, relation: Relation, is_active: bool):
-        relation.data[self.unit].update(
-            {
-                "active": str(is_active),
-            }
-        )
+        Returns:
+            str: Kubernetes namespace.
+        """
+        return self.model.name
 
     @property
     def _service_is_running(self) -> bool:
+        """Retrieves the workload service and returns whether it is running.
+
+        Returns:
+            bool: Whether service is running
+        """
         if self._container.can_connect():
             try:
                 self._container.get_service(self._service_name)
@@ -216,7 +117,114 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
                 pass
         return False
 
-    def _update_relations(self):
+    @property
+    def _certs_are_stored(self) -> bool:
+        """Returns whether the bootstrapper private key is stored.
+
+        Returns:
+            bool: True/False
+        """
+        return self._container.exists(f"{self.CERTIFICATE_DIRECTORY}/bootstrapper.key")
+
+    @property
+    def _cert_bootstrapper_relation_created(self) -> bool:
+        """Returns whether cert-bootstrapper relation is created.
+
+        Returns:
+            bool: True/False
+        """
+        return self._relation_created("cert-bootstrapper")
+
+    def _relation_created(self, relation_name: str) -> bool:
+        """Returns whether given relation was created.
+
+        Args:
+            relation_name (str): Relation name
+
+        Returns:
+            bool: True/False
+        """
+        try:
+            if self.model.get_relation(relation_name):
+                return True
+            return False
+        except KeyError:
+            return False
+
+    def _on_magma_orc8r_bootstrapper_pebble_ready(
+        self, event: Union[PebbleReadyEvent, PrivateKeyAvailableEvent]
+    ) -> None:
+        """Triggered when pebble is ready.
+
+        Args:
+            event (PebbleReadyEvent, PrivateKeyAvailableEvent): Juju event
+
+        Returns:
+            None
+        """
+        if not self._cert_bootstrapper_relation_created:
+            self.unit.status = BlockedStatus(
+                "Waiting for cert-bootstrapper relation to be created"
+            )
+            event.defer()
+            return
+        if not self._certs_are_stored:
+            self.unit.status = WaitingStatus("Waiting for certs to be available")
+            event.defer()
+            return
+        self._configure_pebble(event)
+
+    def _configure_pebble(self, event: Union[PebbleReadyEvent, PrivateKeyAvailableEvent]) -> None:
+        """Adds layer to pebble config if the proposed config is different from the current one."""
+        if self._container.can_connect():
+            pebble_layer = self._pebble_layer
+            plan = self._container.get_plan()
+            if plan.services != pebble_layer.services:
+                self._container.add_layer(self._container_name, pebble_layer, combine=True)
+                self._container.restart(self._service_name)
+                logger.info(f"Restarted container {self._service_name}")
+                self._update_relations()
+                self.unit.status = ActiveStatus()
+        else:
+            self.unit.status = WaitingStatus("Waiting for container to be ready")
+            event.defer()
+
+    def _on_magma_orc8r_bootstrapper_relation_joined(self, event: RelationJoinedEvent) -> None:
+        """Triggered when requirers join the bootstrapper relation.
+
+        Args:
+            event (RelationJoinedEvent): Juju event
+
+        Returns:
+            None
+        """
+        self._update_relations()
+        if not self._service_is_running:
+            event.defer()
+            return
+
+    def _update_relation_active_status(self, relation: Relation, is_active: bool) -> None:
+        """Updates the relation data with the active status.
+
+        Args:
+            relation (Relation): Juju relation
+            is_active (bool): Whether workload service is active.
+
+        Returns:
+            None
+        """
+        relation.data[self.unit].update(
+            {
+                "active": str(is_active),
+            }
+        )
+
+    def _update_relations(self) -> None:
+        """Updates relations with the workload service status.
+
+        Returns:
+            None
+        """
         if not self.unit.is_leader():
             return
         relations = self.model.relations[self.meta.name]
@@ -225,9 +233,24 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
                 relation=relation, is_active=self._service_is_running
             )
 
-    @property
-    def _namespace(self) -> str:
-        return self.model.name
+    def _on_private_key_available(self, event: PrivateKeyAvailableEvent) -> None:
+        """Triggered when bootstrapper private key is available from relation data.
+
+        Args:
+            event (PrivateKeyAvailableEvent): Event for whenever private key is available.
+
+        Returns:
+            None
+        """
+        logger.info("Bootstrapper private key available")
+        if not self._container.can_connect():
+            logger.info("Can't connect to container - Deferring")
+            event.defer()
+            return
+        self._container.push(
+            path=f"{self.CERTIFICATE_DIRECTORY}/bootstrapper.key", source=event.private_key
+        )
+        self._on_magma_orc8r_bootstrapper_pebble_ready(event)
 
 
 if __name__ == "__main__":

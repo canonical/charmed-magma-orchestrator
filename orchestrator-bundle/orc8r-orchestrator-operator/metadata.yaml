@@ -16,6 +16,8 @@ containers:
     mounts:
       - storage: config
         location: /var/opt/magma/configs/orc8r
+      - storage: certs
+        location: /var/opt/magma/certs
 
 resources:
   magma-orc8r-orchestrator-image:
@@ -28,15 +30,19 @@ provides:
     interface: magma-orc8r-orchestrator
 
 requires:
-  magma-orc8r-certifier:
-    interface: magma-orc8r-certifier
-    limit: 1
   metrics-endpoint:
     interface: prometheus_scrape
+    limit: 1
+  cert-admin-operator:
+    interface: cert-admin-operator
     limit: 1
 
 storage:
   config:
+    type: filesystem
+    description: Configs storage
+    minimum-size: 1M
+  certs:
     type: filesystem
     description: Configs storage
     minimum-size: 1M

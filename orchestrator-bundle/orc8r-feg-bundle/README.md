@@ -40,14 +40,19 @@ The deployment is completed when all services are in the `Active-Idle` state.
 
 ### Import the admin operator HTTPS certificate
 
-Retrieve the self-signed certificate:
+Retrieve the certificates to authenticate against Magma Orchestrator:
 
 ```bash
-juju scp --container="magma-orc8r-certifier" orc8r-certifier/0:/var/opt/magma/certs/..data/admin_operator.pfx admin_operator.pfx
+juju scp --container="magma-orc8r-certifier" orc8r-certifier/0:/var/opt/magma/certs/admin_operator.pfx admin_operator.pfx
 ```
 
-> The default password to open the admin_operator.pfx file is `password123`. To choose a different 
-> password, re-deploy orc8r-certifier with the `passphrase` juju config.
+Retrieve the password to open the pfx package:
+
+```bash
+juju run-action orc8r-certifier/leader get-pfx-package-password --wait
+```
+
+The pfx package can now be loaded in your browser.
 
 ### Create the orchestrator admin user
 

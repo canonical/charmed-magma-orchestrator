@@ -9,6 +9,9 @@ summary: |
 containers:
   magma-nms-nginx-proxy:
     resource: magma-nms-nginx-proxy-image
+    mounts:
+      - storage: config
+        location: /etc/nginx/conf.d/
 
 resources:
   magma-nms-nginx-proxy-image:
@@ -16,9 +19,15 @@ resources:
     description: OCI image for nginx-proxy (nginx:latest)
     upstream-source: nginx:latest
 
+storage:
+  config:
+    type: filesystem
+    description: Config storage
+    minimum-size: 1M
+
 requires:
-  magma-orc8r-certifier:
-    interface: magma-orc8r-certifier
+  cert-controller:
+    interface: cert-controller
     limit: 1
   magma-nms-magmalte:
     interface: magma-nms-magmalte

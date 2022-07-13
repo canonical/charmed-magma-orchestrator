@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.serialization import pkcs12
 
-from self_signed_certs_creator import (
+from application_certificates import (
     generate_ca,
     generate_certificate,
     generate_csr,
@@ -110,7 +110,6 @@ def test_given_private_key_and_subject_when_generate_csr_then_csr_is_created():
     assert csr_object.is_signature_valid is True
     assert csr_object.subject == x509.Name(
         [
-            x509.NameAttribute(x509.NameOID.COUNTRY_NAME, "US"),
             x509.NameAttribute(x509.NameOID.COMMON_NAME, subject),
         ]
     )
@@ -143,7 +142,6 @@ def test_given_csr_and_ca_when_generate_certificate_then_certificate_is_generate
     )
     assert certificate_object.subject == x509.Name(
         [
-            x509.NameAttribute(x509.NameOID.COUNTRY_NAME, "US"),
             x509.NameAttribute(x509.NameOID.COMMON_NAME, csr_subject),
         ]
     )

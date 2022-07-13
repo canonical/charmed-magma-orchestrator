@@ -8,80 +8,51 @@ identities.
 
 ```bash
 juju deploy postgresql-k8s
+juju deploy vault-k8s
 juju deploy magma-orc8r-certifier --config domain=example.com orc8r-certifier
 juju relate orc8r-certifier postgresql-k8s:db
+juju relate orc8r-certifier vault-k8s
 ```
 
 **IMPORTANT**: For now, deploying this charm must be done with an alias as shown above.
 
 
+### Import the admin operator HTTPS certificate
+
+Retrieve the certificates to authenticate against Magma:
+
+```bash
+juju scp --container="magma-orc8r-certifier" orc8r-certifier/0:/var/opt/magma/certs/admin_operator.pfx admin_operator.pfx
+```
+
+Retrieve the password to open the pfx package:
+
+```bash
+juju run-action orc8r-certifier/leader get-pfx-package-password --wait
+```
+
+The pfx package can now be loaded in your browser.
+
 ## Configuration
-- **use-self-signed-ssl-certs** (default: True) - For development deployments only! For production set this to **False**
-- **admin-operator-key-pem** - Allows passing own trusted cert (see [magma](https://www.magmacore.org/) for details)
-- **admin-operator-pem** - Allows passing own trusted cert (see [magma](https://www.magmacore.org/) for details)
-- **controller-crt** - Allows passing own trusted cert (see [magma](https://www.magmacore.org/) for details)
-- **controller-key** - Allows passing own trusted cert (see [magma](https://www.magmacore.org/) for details)
-- **bootstrapper-key** - Allows passing own trusted cert (see [magma](https://www.magmacore.org/) for details)
-- **certifier-key** - Allows passing own trusted cert (see [magma](https://www.magmacore.org/) for details)
-- **certifier-pem** - Allows passing own trusted cert (see [magma](https://www.magmacore.org/) for details)
-- **rootCA-key** - Allows passing own trusted cert (see [magma](https://www.magmacore.org/) for details)
-- **rootCA-pem** - Allows passing own trusted cert (see [magma](https://www.magmacore.org/) for details)
-- **domain** - Domain for self-signed certs. Use only when **use-self-signed-ssl-certs** set to **True**
 
-> Note that once configs have been applied to orc8r-certifier, it is not possible to re-configure.
-> To change config, please re-deploy it with the correct config.
-
-### Usage
-
-
-#### With existing certificates
-Here we use a set of certificates based and placed them under the `/home/ubuntu/certs/` directory.
-
-```bash
-juju deploy ./magma-orc8r-certifier_ubuntu-20.04-amd64.charm orc8r-certifier \
- --config use-self-signed-ssl-certs=False \
- --config admin-operator-key-pem="$(cat /home/ubuntu/certs/admin_operator.key.pem)" \
- --config admin-operator-pem="$(cat /home/ubuntu/certs/admin_operator.pem)" \
- --config controller-crt="$(cat /home/ubuntu/certs/controller.crt)" \
- --config controller-key="$(cat /home/ubuntu/certs/controller.key)" \
- --config bootstrapper-key="$(cat /home/ubuntu/certs/bootstrapper.key)" \
- --config certifier-key="$(cat /home/ubuntu/certs/certifier.key)" \
- --config certifier-pem="$(cat /home/ubuntu/certs/certifier.pem)" \
- --config rootCA-key="$(cat /home/ubuntu/certs/rootCA.key)" \
- --config rootCA-pem="$(cat /home/ubuntu/certs/rootCA.pem)" \
- --resource magma-orc8r-certifier-image=docker.artifactory.magmacore.org/controller:1.6.0
-```
-
-#### With self-signed certificates
-
-```bash
-juju deploy ./magma-orc8r-certifier_ubuntu-20.04-amd64.charm orc8r-certifier \
-  --config domain=example.com \
-  --resource magma-orc8r-certifier-image=docker.artifactory.magmacore.org/controller:1.6.0
-```
-
-By default, the passphrase to open the `admin_operator.pfx` file is `password123`. This can be 
-changed by deploying the certifier charm using the Juju config `passphrase`.
-
-You can retrieve the `admin_operator.pfx` file using the following command:
-
-```bash
-juju scp --container="magma-orc8r-certifier" orc8r-certifier/0:/var/opt/magma/certs/..data/admin_operator.pfx admin_operator.pfx
-```
-
-The cert can now be loaded in your browser.
+The domain name is needed for TLS certificates generation:
+- **domain** - Domain for self-signed certificate generation. 
 
 ## Relations
 
 ### Provides
 
-The magma-orc8r-certifier charm provides SSL certificates for charms through the **certs** 
-interface of a **certifier** relation.
+magma-orc8r-certifier provides the following relations:
+- **cert-admin-operator**: TODO
+- **cert-controller**: TODO
+- **cert-certifier**: TODO
 
 ### Requires
-The magma-orc8r-certifier service relies on a relation to a Database. 
+magma-orc8r-certifier relies on two relations:
+- **db**: Validation was done using `postgresql-k8s`
+- **tls-certificates**: Relations supported are tls-certificates-operator for certificates provided by 
+user and vault-k8s (for self-signed certificates)
 
-The current setup has only been tested with relation to the `postgresql-k8s` charm.
 
 ## OCI Images
 

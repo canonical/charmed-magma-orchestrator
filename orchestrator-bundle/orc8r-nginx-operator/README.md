@@ -12,43 +12,16 @@ This charm is part of the [Charmed Magma bundle](https://github.com/canonical/ch
 
 ## Usage
 
-**magma-orc8r-nginx** can be deployed via Juju command line using below commands:
 
 ```bash
-juju deploy magma-orc8r-nginx orc8r-nginx
+juju deploy magma-orc8r-nginx orc8r-nginx --trust --config domain=<your domain>
+juju relate orc8r-nginx orc8r-bootstrapper
+juju relate orc8r-nginx orc8r-obsidian
+juju relate orc8r-nginx:cert-certifier orc8r-certifier:cert-certifier
+juju relate orc8r-nginx:cert-controller orc8r-certifier:cert-controller
 ```
 
 **IMPORTANT**: For now, deploying this charm must be done with an alias as shown above.
-
-To work correctly, **magma-orc8r-nginx** requires **magma-orc8r-certifier**, 
-**magma-orc8r-bootstrapper** and **magma-orc8r-obsidian** (for details, check the _Relations_ section 
-below).
-
-To deploy **magma-orc8r-certifier** from Juju command line:
-
-```bash
-juju deploy magma-orc8r-certifier --config domain=example.com orc8r-certifier
-juju relate orc8r-nginx:certifier orc8r-certifier:certifier
-```
-
-To deploy **magma-orc8r-bootstrapper** from Juju command line:
-
-```bash
-juju deploy magma-orc8r-bootstrapper orc8r-bootstrapper
-juju relate orc8r-nginx:bootstrapper orc8r-bootstrapper:bootstrapper
-```
-
-To deploy **magma-orc8r-obsidian** from Juju command line:
-
-```bash
-juju deploy magma-orc8r-obsidian orc8r-obsidian
-juju relate orc8r-nginx:obsidian orc8r-obsidian:obsidian
-```
-
-Before running any **juju deploy** commands, make sure charm has been built using:
-```bash
-charmcraft pack
-```
 
 ## Relations
 
