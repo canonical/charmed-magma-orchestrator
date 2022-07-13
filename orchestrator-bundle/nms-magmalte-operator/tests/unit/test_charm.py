@@ -262,7 +262,7 @@ class TestCharm(unittest.TestCase):
     def test_given_workload_service_is_running_when_get_admin_credentials_action_then_username_and_password_are_returned(  # noqa: E501
         self, action_event
     ):
-        self.harness.charm._stored.admin_password = "password"  # type: ignore[union-attr]
+        self.harness.charm._stored.admin_password = "password"
 
         self.harness.charm._on_get_master_admin_credentials(action_event)
 

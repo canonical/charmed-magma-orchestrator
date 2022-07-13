@@ -410,7 +410,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             logger.info(f"Return message: {stdout}, {error}")
         except ExecError as e:
             logger.error("Exited with code %d. Stderr:", e.exit_code)
-            for line in e.stderr.splitlines():  # type: ignore[union-attr]
+            for line in e.stderr.splitlines():
                 logger.error("    %s", line)
 
     def _set_log_verbosity_action(self, event: ActionEvent) -> None:
@@ -438,7 +438,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             logger.info(f"Return message: {stdout}, {error}")
         except ExecError as e:
             logger.error("Exited with code %d. Stderr:", e.exit_code)
-            for line in e.stderr.splitlines():  # type: ignore[union-attr]
+            for line in e.stderr.splitlines():
                 logger.error("    %s", line)
 
     def _on_magma_orc8r_orchestrator_pebble_ready(

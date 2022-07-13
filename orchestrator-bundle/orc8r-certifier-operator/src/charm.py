@@ -100,7 +100,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self.provided_relation_name = list(self.meta.provides.keys())[0]
         self._container = self.unit.get_container(self._container_name)
         self._db = pgsql.PostgreSQLClient(self, "db")
-        self._stored.set_default(admin_operator_password="")  # type: ignore[arg-type, union-attr]  # noqa: E501
+        self._stored.set_default(admin_operator_password="")
         self._service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[ServicePort(name="grpc", port=9180, targetPort=9086)],
@@ -228,8 +228,8 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                         "-logtostderr=true "
                         "-v=0",
                         "environment": {
-                            "DATABASE_SOURCE": f"dbname={self.DB_NAME} "
-                            f"user={self._get_db_connection_string.user} "  # type: ignore[union-attr]  # noqa: E501, W505
+                            "DATABASE_SOURCE": f"dbname={self.DB_NAME} "  # type: ignore[union-attr]  # noqa: E501
+                            f"user={self._get_db_connection_string.user} "
                             f"password={self._get_db_connection_string.password} "
                             f"host={self._get_db_connection_string.host} "
                             f"sslmode=disable",
@@ -531,7 +531,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._container.push(
             path=f"{self.BASE_CERTS_PATH}/bootstrapper.key", source=bootstrapper_key
         )
-        self._stored.admin_operator_password = password  # type: ignore[union-attr]
+        self._stored.admin_operator_password = password
 
     def _update_relation_active_status(self, relation: Relation, is_active: bool) -> None:
         """Updates the relation data content.
@@ -595,7 +595,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         """
         event.set_results(
             {
-                "password": self._stored.admin_operator_password,  # type: ignore[union-attr]
+                "password": self._stored.admin_operator_password,
             }
         )
 

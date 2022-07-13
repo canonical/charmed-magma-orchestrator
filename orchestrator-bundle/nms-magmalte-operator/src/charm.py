@@ -63,7 +63,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         super().__init__(*args)
         self._container_name = self._service_name = "magma-nms-magmalte"
         self._container = self.unit.get_container(self._container_name)
-        self._stored.set_default(admin_password="")  # type: ignore[arg-type, union-attr]  # noqa: E501
+        self._stored.set_default(admin_password="")
         self._db = pgsql.PostgreSQLClient(self, "db")
         self.admin_operator = CertAdminOperatorRequires(self, "cert-admin-operator")
         self._service_patcher = KubernetesServicePatch(
@@ -472,7 +472,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             process.wait_output()
         except ExecError as e:
             logger.error("Exited with code %d. Stderr:", e.exit_code)
-            for line in e.stderr.splitlines():  # type: ignore[union-attr]
+            for line in e.stderr.splitlines():
                 logger.error("    %s", line)
             raise e
         logger.info("Successfully created admin user")
@@ -483,9 +483,9 @@ class MagmaNmsMagmalteCharm(CharmBase):
         Returns:
             str: Password
         """
-        if not self._stored.admin_password:  # type: ignore[union-attr]
-            self._stored.admin_password = self._generate_password()  # type: ignore[union-attr]
-        return self._stored.admin_password  # type: ignore[return-value, union-attr]
+        if not self._stored.admin_password:
+            self._stored.admin_password = self._generate_password()
+        return self._stored.admin_password
 
     @staticmethod
     def _generate_password() -> str:

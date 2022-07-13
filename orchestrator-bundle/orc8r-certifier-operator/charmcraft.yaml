@@ -10,7 +10,6 @@ bases:
 parts:
   charm:
     build-packages:
-      - git
       - libffi-dev
       - libssl-dev
       - rustc
