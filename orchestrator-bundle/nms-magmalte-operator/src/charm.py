@@ -10,7 +10,10 @@ from typing import List
 
 import ops.lib
 import psycopg2  # type: ignore[import]
-from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
+from charms.observability_libs.v1.kubernetes_service_patch import (
+    KubernetesServicePatch,
+    ServicePort,
+)
 from lightkube import Client
 from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
 from lightkube.resources.apps_v1 import StatefulSet
@@ -73,7 +76,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         )
         self._service_patcher = KubernetesServicePatch(
             charm=self,
-            ports=[("magmalte", 8081)],
+            ports=[ServicePort(name="magmalte", port=8081)],
             service_name="magmalte",
             additional_labels={
                 "app.kubernetes.io/part-of": "magma",

@@ -5,7 +5,7 @@
 import logging
 from typing import List
 
-from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
+from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServicePatch
 from httpx import HTTPStatusError
 from lightkube import Client
 from lightkube.models.core_v1 import (
@@ -49,10 +49,10 @@ class MagmaOrc8rNginxCharm(CharmBase):
         self.service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[
-                ("health", 80),
-                ("clientcert", 8443),
-                ("open", 8444),
-                ("api", 443, 9443),
+                ServicePort(name="health", port=80),
+                ServicePort(name="clientcert", port=8443),
+                ServicePort(name="open", port=8444),
+                ServicePort(name="api", port=443, targetPort=9443),
             ],
             service_type="LoadBalancer",
             service_name="orc8r-nginx-proxy",
