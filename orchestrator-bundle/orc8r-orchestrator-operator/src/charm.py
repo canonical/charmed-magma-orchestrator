@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 class MagmaOrc8rOrchestratorCharm(CharmBase):
 
     BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
-    REQUIRED_RELATIONS = ["magma-orc8r-certifier", "metrics-endpoint"]
+    REQUIRED_RELATIONS = ["magma-orc8r-certifier", "metrics-endpoint", "magma-orc8r-accessd"]
 
     # TODO: The various URL's should be provided through relationships
     PROMETHEUS_URL = "http://orc8r-prometheus:9090"
@@ -119,7 +119,6 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             event.defer()
             return
         self._write_config_files()
-        self._create_orchestrator_admin_user()
 
     def _write_config_files(self):
         self._write_orchestrator_config()
@@ -234,6 +233,13 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             event.defer()
             return
         self._configure_orc8r(event)
+        if not self._container.can_connect():
+            self.unit.status = WaitingStatus(
+                "Waiting for magma-orc8r-orchestrator container to be ready"
+            )
+            event.defer()
+            return
+        self._create_orchestrator_admin_user()
 
     @property
     def _relations_created(self) -> bool:
@@ -326,19 +332,26 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
 
     def _configure_orc8r(self, event: PebbleReadyEvent):
         """Adds layer to pebble config if the proposed config is different from the current one."""
-        try:
-            plan = self._container.get_plan()
-            if plan.services != self._pebble_layer.services:
-                self._container.add_layer(self._container_name, self._pebble_layer, combine=True)
-                self._container.restart(self._service_name)
-                logger.info(f"Restarted container {self._service_name}")
-                self._update_relations()
-                self.unit.status = ActiveStatus()
-        except ConnectionError:
-            logger.error(
-                f"Could not restart {self._service_name} -- Pebble socket does "
-                f"not exist or is not responsive"
-            )
+        if self._container.can_connect():
+            try:
+                plan = self._container.get_plan()
+                if plan.services != self._pebble_layer.services:
+                    self._container.add_layer(
+                        self._container_name, self._pebble_layer, combine=True
+                    )
+                    self._container.restart(self._service_name)
+                    logger.info(f"Restarted container {self._service_name}")
+                    self._update_relations()
+                    self.unit.status = ActiveStatus()
+            except ConnectionError:
+                logger.error(
+                    f"Could not restart {self._service_name} -- Pebble socket does "
+                    f"not exist or is not responsive"
+                )
+        else:
+            self.unit.status = WaitingStatus("Waiting for container to be ready")
+            event.defer()
+            return
 
     @property
     def _environment_variables(self) -> dict:
