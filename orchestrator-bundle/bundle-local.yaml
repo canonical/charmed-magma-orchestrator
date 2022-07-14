@@ -240,6 +240,8 @@ relations:
   - orc8r-alertmanager:alerting
 - - orc8r-prometheus:metrics-endpoint
   - orc8r-prometheus-cache:metrics-endpoint
+- - orc8r-orchestrator:magma-orc8r-accessd
+  - orc8r-accessd:magma-orc8r-accessd
 - - orc8r-smsd:db
   - postgresql-k8s:db
 - - orc8r-state:db
