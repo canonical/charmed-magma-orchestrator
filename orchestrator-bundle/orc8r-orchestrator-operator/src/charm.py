@@ -332,26 +332,23 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
 
     def _configure_orc8r(self, event: PebbleReadyEvent):
         """Adds layer to pebble config if the proposed config is different from the current one."""
-        if self._container.can_connect():
-            try:
-                plan = self._container.get_plan()
-                if plan.services != self._pebble_layer.services:
-                    self._container.add_layer(
-                        self._container_name, self._pebble_layer, combine=True
-                    )
-                    self._container.restart(self._service_name)
-                    logger.info(f"Restarted container {self._service_name}")
-                    self._update_relations()
-                    self.unit.status = ActiveStatus()
-            except ConnectionError:
-                logger.error(
-                    f"Could not restart {self._service_name} -- Pebble socket does "
-                    f"not exist or is not responsive"
-                )
-        else:
+        if not self._container.can_connect():
             self.unit.status = WaitingStatus("Waiting for container to be ready")
             event.defer()
             return
+        try:
+            plan = self._container.get_plan()
+            if plan.services != self._pebble_layer.services:
+                self._container.add_layer(self._container_name, self._pebble_layer, combine=True)
+                self._container.restart(self._service_name)
+                logger.info(f"Restarted container {self._service_name}")
+                self._update_relations()
+                self.unit.status = ActiveStatus()
+        except ConnectionError:
+            logger.error(
+                f"Could not restart {self._service_name} -- Pebble socket does "
+                f"not exist or is not responsive"
+            )
 
     @property
     def _environment_variables(self) -> dict:
