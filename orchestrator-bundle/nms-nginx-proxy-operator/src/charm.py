@@ -202,19 +202,20 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         Returns:
             None
         """
-        if self._container.can_connect():
-            plan = self._container.get_plan()
-            if plan.services != self._pebble_layer.services:
-                self.unit.status = MaintenanceStatus(
-                    f"Configuring pebble layer for {self._service_name}"
-                )
-                self._container.add_layer(self._container_name, self._pebble_layer, combine=True)
-                self._container.restart(self._service_name)
-                logger.info(f"Restarted container {self._service_name}")
-                self.unit.status = ActiveStatus()
-        else:
+        if not self._container.can_connect():
             self.unit.status = WaitingStatus("Waiting for container to be ready")
             event.defer()
+            return
+            
+        plan = self._container.get_plan()
+        if plan.services != self._pebble_layer.services:
+            self.unit.status = MaintenanceStatus(
+                f"Configuring pebble layer for {self._service_name}"
+            )
+            self._container.add_layer(self._container_name, self._pebble_layer, combine=True)
+            self._container.restart(self._service_name)
+            logger.info(f"Restarted container {self._service_name}")
+            self.unit.status = ActiveStatus()
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Triggered when controller certificate is available.
