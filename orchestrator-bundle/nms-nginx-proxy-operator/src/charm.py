@@ -120,10 +120,7 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         """
         try:
             relation = self.model.get_relation(relation_name)
-            if relation:
-                return True
-            else:
-                return False
+            return bool(relation)
         except KeyError:
             return False
 
