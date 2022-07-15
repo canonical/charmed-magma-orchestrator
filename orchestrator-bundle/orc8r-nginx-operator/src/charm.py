@@ -127,15 +127,20 @@ class MagmaOrc8rNginxCharm(CharmBase):
                         ServicePort(
                             name="health",
                             port=80,
+                            targetPort=80,
+                            nodePort=31200,
                         ),
                         ServicePort(
                             name="open-legacy",
                             port=443,
                             targetPort=8444,
+                            nodePort=30747,
                         ),
                         ServicePort(
                             name="open",
                             port=8444,
+                            targetPort=8444,
+                            nodePort=30618,
                         ),
                     ],
                     type="LoadBalancer",
@@ -158,15 +163,20 @@ class MagmaOrc8rNginxCharm(CharmBase):
                         ServicePort(
                             name="health",
                             port=80,
+                            targetPort=80,
+                            nodePort=31200,
                         ),
                         ServicePort(
                             name="clientcert-legacy",
                             port=443,
                             targetPort=8443,
+                            nodePort=30747,
                         ),
                         ServicePort(
                             name="clientcert",
                             port=8443,
+                            targetPort=8443,
+                            nodePort=30618,
                         ),
                     ],
                     type="LoadBalancer",
