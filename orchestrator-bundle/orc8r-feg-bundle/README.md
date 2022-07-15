@@ -25,9 +25,31 @@ applications:
   orc8r-certifier:
     options:
       domain: <your domain name>
+  orc8r-nginx:
+    options:
+      domain: <your domain name>
+  tls-certificates-operator:
+    options:
+      certificate: <your base64 encoded certificate>
+      private-key: <your base64 encoded private key>
+      ca-certificate: <your base64 encoded ca certificate>
 ```
 
-Replace `<your domain name>` with your domain name.
+Alternatively, for non-secure deployments, you can use tls-certificates-operator's  `generate-self-signed-certificates` 
+Juju config.
+
+```yaml
+applications:
+  orc8r-certifier:
+    options:
+      domain: <your domain name>
+  orc8r-nginx:
+    options:
+      domain: <your domain name>
+  tls-certificates-operator:
+    options:
+      generate-self-signed-certificates: true
+```
 
 Deploy orchestrator:
 
@@ -36,7 +58,6 @@ juju deploy magma-orc8r-feg --overlay overlay.yaml --trust --channel=edge
 ```
 
 The deployment is completed when all services are in the `Active-Idle` state.
-
 
 ### Import the admin operator HTTPS certificate
 
