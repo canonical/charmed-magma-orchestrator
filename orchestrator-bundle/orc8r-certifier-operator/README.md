@@ -1,8 +1,12 @@
 # magma-orc8r-certifier
 
 ## Description
+
 magma-orc8r-certifier maintains and verifies signed client certificates and their associated
 identities.
+
+This charm is part of [Charmed Magma Orchestrator](https://charmhub.io/magma-orc8r/) and should
+be deployed as a bundle.
 
 ## Usage
 
@@ -14,18 +18,17 @@ juju relate orc8r-certifier postgresql-k8s:db
 juju relate orc8r-certifier vault-k8s
 ```
 
-**IMPORTANT**: For now, deploying this charm must be done with an alias as shown above.
+> **Warning**: Deploying this charm must be done with an alias as shown above.
 
-
-### Import the admin operator HTTPS certificate
-
-Retrieve the certificates to authenticate against Magma:
+To import the the admin operator HTTPS certificate, run this command:
 
 ```bash
 juju scp --container="magma-orc8r-certifier" orc8r-certifier/0:/var/opt/magma/certs/admin_operator.pfx admin_operator.pfx
 ```
 
-Retrieve the password to open the pfx package:
+## Actions
+
+### get-pfx-package-password
 
 ```bash
 juju run-action orc8r-certifier/leader get-pfx-package-password --wait
@@ -35,24 +38,22 @@ The pfx package can now be loaded in your browser.
 
 ## Configuration
 
-The domain name is needed for TLS certificates generation:
 - **domain** - Domain for self-signed certificate generation. 
 
 ## Relations
 
 ### Provides
 
-magma-orc8r-certifier provides the following relations:
-- **cert-admin-operator**: TODO
-- **cert-controller**: TODO
-- **cert-certifier**: TODO
+- **cert-admin-operator**: Relation that provides the admin-operator certificates.
+- **cert-bootstrapper**: Relation that provides the bootstrapper private key.
+- **cert-controller**: Relation that provides the controller certificates.
+- **cert-certifier**: Relation that provides the certifier certificates.
 
 ### Requires
-magma-orc8r-certifier relies on two relations:
+
 - **db**: Validation was done using `postgresql-k8s`
 - **tls-certificates**: Relations supported are tls-certificates-operator for certificates provided by 
 user and vault-k8s (for self-signed certificates)
-
 
 ## OCI Images
 

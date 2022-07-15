@@ -206,7 +206,7 @@ class MagmaNmsNginxProxyCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for container to be ready")
             event.defer()
             return
-            
+
         plan = self._container.get_plan()
         if plan.services != self._pebble_layer.services:
             self.unit.status = MaintenanceStatus(
