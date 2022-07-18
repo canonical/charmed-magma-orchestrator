@@ -3,7 +3,10 @@
 # See LICENSE file for licensing details.
 
 from charms.magma_orc8r_libs.v0.orc8r_base_db import Orc8rBase
-from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
+from charms.observability_libs.v1.kubernetes_service_patch import (
+    KubernetesServicePatch,
+    ServicePort,
+)
 from ops.charm import CharmBase
 from ops.main import main
 
@@ -14,7 +17,7 @@ class MagmaOrc8rStateCharm(CharmBase):
         super().__init__(*args)
         self._service_patcher = KubernetesServicePatch(
             charm=self,
-            ports=[("grpc", 9180, 9105)],
+            ports=[ServicePort(name="grpc", port=9180, targetPort=9105)],
             additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
         )
         startup_command = (

@@ -4,7 +4,7 @@
 import logging
 
 from charms.magma_orc8r_libs.v0.orc8r_base import Orc8rBase
-from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
+from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServicePatch
 from httpx import HTTPStatusError
 from lightkube import Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
@@ -24,7 +24,7 @@ class MagmaOrc8rFEGRelayCharm(CharmBase):
         super().__init__(*args)
         self._service_patcher = KubernetesServicePatch(
             charm=self,
-            ports=[("grpc", 9180), ("http", 8080)],
+            ports=[ServicePort(name="grpc", port=9180), ServicePort(name="http", port=8080)],
             additional_labels={
                 "app.kubernetes.io/part-of": "orc8r-app",
                 "orc8r.io/obsidian_handlers": "true",

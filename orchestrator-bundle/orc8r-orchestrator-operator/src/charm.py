@@ -6,7 +6,10 @@ import logging
 import re
 from typing import Dict, List
 
-from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
+from charms.observability_libs.v1.kubernetes_service_patch import (
+    KubernetesServicePatch,
+    ServicePort,
+)
 from lightkube import Client
 from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
 from lightkube.resources.apps_v1 import StatefulSet
@@ -75,7 +78,10 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         self.framework.observe(self.on.config_changed, self._on_elasticsearch_url_config_changed)
         self._service_patcher = KubernetesServicePatch(
             charm=self,
-            ports=[("grpc", 9180, 9112), ("http", 8080, 10112)],
+            ports=[
+                ServicePort(name="grpc", port=9180, targetPort=9112),
+                ServicePort(name="http", port=8080, targetPort=10112),
+            ],
             additional_labels={
                 "app.kubernetes.io/part-of": "orc8r-app",
                 "orc8r.io/analytics_collector": "true",

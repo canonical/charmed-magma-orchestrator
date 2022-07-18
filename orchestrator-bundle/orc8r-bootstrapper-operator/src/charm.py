@@ -4,7 +4,10 @@
 
 import logging
 
-from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
+from charms.observability_libs.v1.kubernetes_service_patch import (
+    KubernetesServicePatch,
+    ServicePort,
+)
 from lightkube import Client
 from lightkube.core.exceptions import ApiError
 from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
@@ -48,7 +51,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         )
         self._service_patcher = KubernetesServicePatch(
             charm=self,
-            ports=[("grpc", 9180, 9088)],
+            ports=[ServicePort(name="grpc", port=9180, targetPort=9088)],
             additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
         )
 

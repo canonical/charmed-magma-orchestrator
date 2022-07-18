@@ -8,7 +8,7 @@ on:
 jobs:
   orc8r-eventd-lint-report:
     name: Lint report (orc8r-eventd)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
@@ -18,7 +18,7 @@ jobs:
 
   orc8r-eventd-static-analysis:
     name: Static analysis (orc8r-eventd)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
@@ -28,7 +28,7 @@ jobs:
 
   orc8r-eventd-unit-tests-with-coverage:
     name: Unit tests (orc8r-eventd)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
@@ -38,7 +38,7 @@ jobs:
 
   orc8r-eventd-integration-test:
     name: Integration tests (orc8r-eventd)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout
         uses: actions/checkout@v2

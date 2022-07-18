@@ -7,7 +7,10 @@ import logging
 
 import ops.lib
 import psycopg2  # type: ignore[import]
-from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
+from charms.observability_libs.v1.kubernetes_service_patch import (
+    KubernetesServicePatch,
+    ServicePort,
+)
 from lightkube import Client
 from lightkube.core.exceptions import ApiError
 from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
@@ -86,7 +89,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._orc8r_certs_data = {}
         self._service_patcher = KubernetesServicePatch(
             charm=self,
-            ports=[("grpc", 9180, 9086)],
+            ports=[ServicePort(name="grpc", port=9180, targetPort=9086)],
             additional_labels={
                 "app.kubernetes.io/part-of": "orc8r-app",
                 "orc8r.io/analytics_collector": "true",
