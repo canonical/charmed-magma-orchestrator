@@ -9,7 +9,7 @@ on:
 
 jobs:
   orc8r-analytics-charmhub-upload:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     name: Charmhub upload orc8r-analytics-operator
     steps:
       - name: Checkout

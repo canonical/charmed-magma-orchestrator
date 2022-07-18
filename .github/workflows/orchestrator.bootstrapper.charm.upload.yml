@@ -9,7 +9,7 @@ on:
 
 jobs:
   orc8r-bootstrapper-charmhub-upload:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     name: Charmhub upload orc8r-bootstrapper-operator
     steps:
       - name: Checkout

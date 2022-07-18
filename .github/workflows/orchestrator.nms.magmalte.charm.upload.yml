@@ -9,7 +9,7 @@ on:
 
 jobs:
   orc8r-nms-magmalte-charmhub-upload:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     name: Charmhub upload nms-magmalte-operator
     steps:
       - uses: actions/checkout@v2

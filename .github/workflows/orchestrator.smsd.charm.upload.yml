@@ -9,7 +9,7 @@ on:
 
 jobs:
   orc8r-smsd-charmhub-upload:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     name: Charmhub upload orc8r-smsd-operator
     steps:
       - uses: actions/checkout@v2

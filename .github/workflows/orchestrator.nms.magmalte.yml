@@ -8,7 +8,7 @@ on:
 jobs:
   nms-magmalte-lint-report:
     name: Lint report (nms-magmalte)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
@@ -18,7 +18,7 @@ jobs:
 
   nms-magmalte-static-analysis:
     name: Static analysis (nms-magmalte)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
@@ -28,7 +28,7 @@ jobs:
 
   nms-magmalte-unit-tests-with-coverage:
     name: Unit tests (nms-magmalte)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
@@ -38,7 +38,7 @@ jobs:
 
   nms-magmalte-integration-test:
     name: Integration tests (nms-magmalte)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout
         uses: actions/checkout@v2
