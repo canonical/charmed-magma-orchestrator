@@ -12,15 +12,14 @@ This charm is an nginx web server that proxies communication between NMS UI and 
 import logging
 from typing import Union
 
-from charms.observability_libs.v1.kubernetes_service_patch import (
-    KubernetesServicePatch,
-    ServicePort,
-)
 from charms.magma_orc8r_certifier.v0.cert_controller import (
     CertControllerRequires,
     CertificateAvailableEvent,
 )
-from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
+from charms.observability_libs.v1.kubernetes_service_patch import (
+    KubernetesServicePatch,
+    ServicePort,
+)
 from ops.charm import CharmBase, InstallEvent, PebbleReadyEvent
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus

@@ -15,17 +15,11 @@ from charms.magma_orc8r_certifier.v0.cert_bootstrapper import (
     CertBootstrapperRequires,
     PrivateKeyAvailableEvent,
 )
-from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from charms.observability_libs.v1.kubernetes_service_patch import (
     KubernetesServicePatch,
     ServicePort,
 )
-from ops.charm import (
-    CharmBase,
-    PebbleReadyEvent,
-    RelationChangedEvent,
-    RelationJoinedEvent,
-)
+from ops.charm import CharmBase, PebbleReadyEvent, RelationJoinedEvent
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, ModelError, Relation, WaitingStatus
 from ops.pebble import Layer
@@ -55,8 +49,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
             self._on_magma_orc8r_bootstrapper_relation_joined,
         )
         self.framework.observe(
-            self.cert_bootstrapper.on.private_key_available,
-            self._on_private_key_available
+            self.cert_bootstrapper.on.private_key_available, self._on_private_key_available
         )
         self._service_patcher = KubernetesServicePatch(
             charm=self,

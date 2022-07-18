@@ -25,13 +25,7 @@ from charms.observability_libs.v1.kubernetes_service_patch import (
     KubernetesServicePatch,
     ServicePort,
 )
-from ops.charm import (
-    ActionEvent,
-    CharmBase,
-    PebbleReadyEvent,
-    RelationChangedEvent,
-    RelationJoinedEvent,
-)
+from ops.charm import ActionEvent, CharmBase, PebbleReadyEvent, RelationJoinedEvent
 from ops.framework import StoredState
 from ops.main import main
 from ops.model import (
@@ -172,14 +166,6 @@ class MagmaNmsMagmalteCharm(CharmBase):
                     }
                 },
             }
-        self._service_patcher = KubernetesServicePatch(
-            charm=self,
-            ports=[ServicePort(name="magmalte", port=8081)],
-            service_name="magmalte",
-            additional_labels={
-                "app.kubernetes.io/part-of": "magma",
-                "app.kubernetes.io/component": "magmalte",
-            },
         )
 
     @property

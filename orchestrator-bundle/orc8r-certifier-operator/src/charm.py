@@ -34,14 +34,13 @@ from charms.magma_orc8r_certifier.v0.cert_controller import CertControllerProvid
 from charms.magma_orc8r_certifier.v0.cert_controller import (
     CertificateRequestEvent as ControllerCertificateRequestEvent,
 )
-from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
-from charms.tls_certificates_interface.v0.tls_certificates import (
-    CertificateAvailableEvent,
-    TLSCertificatesRequires,
-)
 from charms.observability_libs.v1.kubernetes_service_patch import (
     KubernetesServicePatch,
     ServicePort,
+)
+from charms.tls_certificates_interface.v0.tls_certificates import (
+    CertificateAvailableEvent,
+    TLSCertificatesRequires,
 )
 from ops.charm import (
     ActionEvent,
