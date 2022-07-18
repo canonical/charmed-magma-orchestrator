@@ -48,7 +48,7 @@ class TestNmsMagmaLTE:
             "tls-certificates-operator",
             application_name="tls-certificates-operator",
             config={"generate-self-signed-certificates": True},
-            channel="edge"
+            channel="edge",
         )
 
     async def _deploy_orc8r_certifier(self, ops_test):

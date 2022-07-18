@@ -56,6 +56,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
     GRAFANA_URL = "orc8r-user-grafana:3000"
     BASE_CERTS_PATH = "/run/secrets"
     NMS_ADMIN_USERNAME = "admin@juju.com"
+    CERT_ADMIN_OPERATOR_RELATION = "cert-admin-operator"
     _stored = StoredState()
 
     def __init__(self, *args):
@@ -65,7 +66,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         self._container = self.unit.get_container(self._container_name)
         self._stored.set_default(admin_password="")
         self._db = pgsql.PostgreSQLClient(self, "db")
-        self.admin_operator = CertAdminOperatorRequires(self, "cert-admin-operator")
+        self.admin_operator = CertAdminOperatorRequires(self, self.CERT_ADMIN_OPERATOR_RELATION)
         self._service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[ServicePort(name="magmalte", port=8081)],
@@ -242,7 +243,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         Returns:
             bool: True/False
         """
-        return self._relation_created("cert-admin-operator")
+        return self._relation_created(self.CERT_ADMIN_OPERATOR_RELATION)
 
     def _relation_created(self, relation_name: str) -> bool:
         """Returns whether given relation was created.
@@ -299,7 +300,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             return
         if not self._cert_admin_operator_relation_created:
             self.unit.status = BlockedStatus(
-                "Waiting for cert-admin-operator relation to be created"
+                f"Waiting for {self.CERT_ADMIN_OPERATOR_RELATION} relation to be created"
             )
             event.defer()
             return
