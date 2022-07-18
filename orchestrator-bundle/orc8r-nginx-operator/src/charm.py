@@ -291,6 +291,10 @@ class MagmaOrc8rNginxCharm(CharmBase):
         Returns:
             None
         """
+        if not self._container.can_connect():
+            logger.info("Can't connect to container - Deferring")
+            event.defer()
+            return
         self._generate_nginx_config()
         self._create_additional_orc8r_nginx_services()
 

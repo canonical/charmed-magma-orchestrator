@@ -38,6 +38,8 @@ class TestCharm(unittest.TestCase):
         domain = "whatever domain"
         key_values = {"domain": domain}
         self.harness.update_config(key_values=key_values)
+        container = self.harness.model.unit.get_container("magma-orc8r-nginx")
+        self.harness.set_can_connect(container=container, val=True)
 
         self.harness.charm._on_install(event)
 
@@ -64,6 +66,8 @@ class TestCharm(unittest.TestCase):
             request=Request(url="whatever", method="get"),
         )
         event = Mock()
+        container = self.harness.model.unit.get_container("magma-orc8r-nginx")
+        self.harness.set_can_connect(container=container, val=True)
 
         self.harness.charm._on_install(event)
 
