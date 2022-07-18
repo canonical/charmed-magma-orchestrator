@@ -6,7 +6,10 @@ import logging
 from typing import List
 
 import httpx
-from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
+from charms.observability_libs.v1.kubernetes_service_patch import (
+    KubernetesServicePatch,
+    ServicePort,
+)
 from lightkube import Client, codecs
 from lightkube.core.exceptions import ApiError
 from lightkube.models.core_v1 import (
@@ -43,7 +46,7 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         self.framework.observe(self.on.remove, self._on_remove)
         self.service_patcher = KubernetesServicePatch(
             charm=self,
-            ports=[("https", 443)],
+            ports=[ServicePort(name="https", port=443)],
             service_type="LoadBalancer",
             service_name="nginx-proxy",
             additional_labels={"app.kubernetes.io/part-of": "magma"},
