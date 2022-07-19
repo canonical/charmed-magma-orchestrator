@@ -36,7 +36,7 @@ class TestNmsNginxProxy:
         await self._deploy_nms_magmalte(ops_test)
 
     @staticmethod
-    def _find_charm(charm_dir: str, charm_file_name: str) -> Union[str, None]:
+    def _find_charm(charm_dir: str, charm_file_name: str) -> Optional[str]:
         for root, _, files in os.walk(charm_dir):
             for file in files:
                 if file == charm_file_name:
