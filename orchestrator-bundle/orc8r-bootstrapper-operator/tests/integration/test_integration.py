@@ -5,7 +5,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Union
+from typing import Optional
 
 import pytest
 import yaml
