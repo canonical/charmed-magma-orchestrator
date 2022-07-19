@@ -198,7 +198,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                 f"user='{db_connection_string.user}' "
                 f"host='{db_connection_string.host}' "
                 f"password='{db_connection_string.password}'"
-            )
+            ).close()
             return True
         except psycopg2.OperationalError:
             return False
