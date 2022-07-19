@@ -5,9 +5,9 @@
 Magma’s NMS provides a single pane of glass for managing Magma based networks. NMS provides the
 ability to configure gateways and associated eNodeBs, provides visibility into status, events and
 metrics observed in these networks and finally ability to configure and receive alerts. This charm 
-deploys which is a microservice built using express framework. It contains set of application and 
-router level middlewares. It uses sequelize ORM to connect to the NMS DB for servicing any routes 
-involving DB interaction. Visit 
+deploys Magmalte which is a microservice built using express framework. It contains set of 
+application and router level middlewares. It uses sequelize ORM to connect to the NMS DB for 
+servicing any routes involving DB interaction. Visit 
 [Magma NMS Overview](https://docs.magmacore.org/docs/nms/nms_arch_overview) to learn more.
 
 This charm is part of [Charmed Magma Orchestrator](https://charmhub.io/magma-orc8r/) and should
