@@ -14,7 +14,7 @@ charms="
 feg-eap-sim
 feg-health
 feg-hello
-feg-radius
+feg-radiusd
 feg-s8-proxy
 feg-session-proxy
 "
