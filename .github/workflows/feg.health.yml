@@ -8,7 +8,7 @@ on:
 jobs:
   feg-health-lint-report:
     name: Lint report (feg-health)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
@@ -18,7 +18,7 @@ jobs:
 
   feg-health-static-analysis:
     name: Static analysis (feg-health)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
@@ -28,7 +28,7 @@ jobs:
 
   feg-health-unit-tests-with-coverage:
     name: Unit tests (feg-health)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
@@ -38,7 +38,7 @@ jobs:
 
   feg-health-integration-test:
     name: Integration tests (feg-health)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout
         uses: actions/checkout@v2

@@ -8,7 +8,7 @@ on:
 jobs:
   feg-session-proxy-lint-report:
     name: Lint report (feg-session-proxy)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
@@ -18,7 +18,7 @@ jobs:
 
   feg-session-proxy-static-analysis:
     name: Static analysis (feg-session-proxy)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
@@ -28,7 +28,7 @@ jobs:
 
   feg-session-proxy-unit-tests-with-coverage:
     name: Unit tests (feg-session-proxy)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
@@ -38,7 +38,7 @@ jobs:
 
   feg-session-proxy-integration-test:
     name: Integration tests (feg-session-proxy)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout
         uses: actions/checkout@v2

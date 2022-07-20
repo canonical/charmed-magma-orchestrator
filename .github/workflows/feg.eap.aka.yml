@@ -8,7 +8,7 @@ on:
 jobs:
   feg-eap-aka-lint-report:
     name: Lint report (feg-eap-aka)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
@@ -18,7 +18,7 @@ jobs:
 
   feg-eap-aka-static-analysis:
     name: Static analysis (feg-eap-aka)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
@@ -28,7 +28,7 @@ jobs:
 
   feg-eap-aka-unit-tests-with-coverage:
     name: Unit tests (feg-eap-aka)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
@@ -38,7 +38,7 @@ jobs:
 
   feg-eap-aka-integration-test:
     name: Integration tests (feg-eap-aka)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout
         uses: actions/checkout@v2

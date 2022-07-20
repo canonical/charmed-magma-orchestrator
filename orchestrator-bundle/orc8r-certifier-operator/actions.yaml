@@ -1,5 +1,0 @@
-# Copyright 2021 Canonical Ltd.
-# See LICENSE file for licensing details.
-
-get-pfx-package-password:
-  description: Returns the password to open the PFX package.

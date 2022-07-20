@@ -8,7 +8,7 @@ on:
 jobs:
   feg-hello-lint-report:
     name: Lint report (feg-hello)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
@@ -18,7 +18,7 @@ jobs:
 
   feg-hello-static-analysis:
     name: Static analysis (feg-hello)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
@@ -28,7 +28,7 @@ jobs:
 
   feg-hello-unit-tests-with-coverage:
     name: Unit tests (feg-hello)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
@@ -38,7 +38,7 @@ jobs:
 
   feg-hello-integration-test:
     name: Integration tests (feg-hello)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout
         uses: actions/checkout@v2
