@@ -5,7 +5,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Union
+from typing import Optional
 
 import pytest
 import yaml
@@ -31,13 +31,30 @@ class TestNmsNginxProxy:
     @pytest.mark.abort_on_fail
     async def setup(self, ops_test):
         await self._deploy_postgresql(ops_test)
+        await self._deploy_tls_certificates_operator(ops_test)
         await self._deploy_orc8r_certifier(ops_test)
         await self._deploy_nms_magmalte(ops_test)
 
     @staticmethod
+    def _find_charm(charm_dir: str, charm_file_name: str) -> Optional[str]:
+        for root, _, files in os.walk(charm_dir):
+            for file in files:
+                if file == charm_file_name:
+                    return os.path.join(root, file)
+        return None
+
+    @staticmethod
     async def _deploy_postgresql(ops_test):
         await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
-        await ops_test.model.wait_for_idle(apps=["postgresql-k8s"], status="active", timeout=1000)
+
+    @staticmethod
+    async def _deploy_tls_certificates_operator(ops_test):
+        await ops_test.model.deploy(
+            "tls-certificates-operator",
+            application_name="tls-certificates-operator",
+            config={"generate-self-signed-certificates": True},
+            channel="edge",
+        )
 
     async def _deploy_orc8r_certifier(self, ops_test):
         certifier_charm = self._find_charm(
@@ -57,14 +74,11 @@ class TestNmsNginxProxy:
             config={"domain": "example.com"},
             trust=True,
         )
-        await ops_test.model.wait_for_idle(
-            apps=[CERTIFIER_APPLICATION_NAME], status="blocked", timeout=1000
-        )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
         )
-        await ops_test.model.wait_for_idle(
-            apps=[CERTIFIER_APPLICATION_NAME], status="active", timeout=1000
+        await ops_test.model.add_relation(
+            relation1=CERTIFIER_APPLICATION_NAME, relation2="tls-certificates-operator"
         )
 
     async def _deploy_nms_magmalte(self, ops_test):
@@ -82,18 +96,12 @@ class TestNmsNginxProxy:
             application_name=NMS_MAGMALTE_APPLICATION_NAME,
             trust=True,
         )
-        await ops_test.model.wait_for_idle(
-            apps=[NMS_MAGMALTE_APPLICATION_NAME], status="blocked", timeout=1000
-        )
         await ops_test.model.add_relation(
             relation1=NMS_MAGMALTE_APPLICATION_NAME, relation2="postgresql-k8s:db"
         )
         await ops_test.model.add_relation(
             relation1=NMS_MAGMALTE_APPLICATION_NAME,
-            relation2="orc8r-certifier:magma-orc8r-certifier",
-        )
-        await ops_test.model.wait_for_idle(
-            apps=[NMS_MAGMALTE_APPLICATION_NAME], status="active", timeout=1000
+            relation2="orc8r-certifier:cert-admin-operator",
         )
 
     @pytest.fixture(scope="module")
@@ -113,17 +121,9 @@ class TestNmsNginxProxy:
 
     async def test_relate_and_wait_for_idle(self, ops_test, setup, build_and_deploy_charm):
         await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="orc8r-certifier:magma-orc8r-certifier"
+            relation1=APPLICATION_NAME, relation2="orc8r-certifier:cert-controller"
         )
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="nms-magmalte:magma-nms-magmalte"
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
-
-    @staticmethod
-    def _find_charm(charm_dir: str, charm_file_name: str) -> Union[str, None]:
-        for root, _, files in os.walk(charm_dir):
-            for file in files:
-                if file == charm_file_name:
-                    return os.path.join(root, file)
-        return None

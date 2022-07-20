@@ -12,6 +12,9 @@ summary: |
 containers:
   magma-orc8r-bootstrapper:
     resource: magma-orc8r-bootstrapper-image
+    mounts:
+      - storage: certs
+        location: /var/opt/magma/certs
 
 resources:
   magma-orc8r-bootstrapper-image:
@@ -19,11 +22,17 @@ resources:
     description: OCI image for magma-orc8r-bootstrapper (docker.artifactory.magmacore.org/controller:1.6.0)
     upstream-source: docker.artifactory.magmacore.org/controller:1.6.0
 
+storage:
+  certs:
+    type: filesystem
+    description: Certs storage
+    minimum-size: 1M
+
 provides:
   magma-orc8r-bootstrapper:
     interface: magma-orc8r-bootstrapper
 
 requires:
-  magma-orc8r-certifier:
-    interface: magma-orc8r-certifier
+  cert-bootstrapper:
+    interface: cert-bootstrapper
     limit: 1

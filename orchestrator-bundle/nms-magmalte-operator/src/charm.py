@@ -2,28 +2,30 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+"""magma-nms-magmalte.
+
+Magmalte is a microservice built using express framework. It contains set of application and
+router level middlewares. It uses sequelize ORM to connect to the NMS DB for servicing any
+routes involving DB interaction.
+"""
+
 import logging
 import secrets
 import string
 import time
-from typing import List
+from typing import Optional, Union
 
 import ops.lib
 import psycopg2  # type: ignore[import]
+from charms.magma_orc8r_certifier.v0.cert_admin_operator import (
+    CertAdminOperatorRequires,
+    CertificateAvailableEvent,
+)
 from charms.observability_libs.v1.kubernetes_service_patch import (
     KubernetesServicePatch,
     ServicePort,
 )
-from lightkube import Client
-from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
-from lightkube.resources.apps_v1 import StatefulSet
-from ops.charm import (
-    ActionEvent,
-    CharmBase,
-    PebbleReadyEvent,
-    RelationChangedEvent,
-    RelationJoinedEvent,
-)
+from ops.charm import ActionEvent, CharmBase, PebbleReadyEvent, RelationJoinedEvent
 from ops.framework import StoredState
 from ops.main import main
 from ops.model import (
@@ -42,27 +44,37 @@ pgsql = ops.lib.use("pgsql", 1, "postgresql-charmers@lists.launchpad.net")
 
 
 class MagmaNmsMagmalteCharm(CharmBase):
+    """Main class that is instantiated everytime an event occurs."""
 
     DB_NAME = "magma_dev"
     GRAFANA_URL = "orc8r-user-grafana:3000"
+    BASE_CERTS_PATH = "/run/secrets"
+    NMS_ADMIN_USERNAME = "admin@juju.com"
+    CERT_ADMIN_OPERATOR_RELATION = "cert-admin-operator"
     _stored = StoredState()
 
     def __init__(self, *args):
-        """Creates a new instance of this object for each event."""
+        """Initializes all event that need to be observed."""
         super().__init__(*args)
         self._container_name = self._service_name = "magma-nms-magmalte"
         self._container = self.unit.get_container(self._container_name)
-        self._stored.set_default(admin_username="", admin_password="")  # type: ignore[arg-type, union-attr]  # noqa: E501
+        self._stored.set_default(admin_password="")
         self._db = pgsql.PostgreSQLClient(self, "db")
+        self.admin_operator = CertAdminOperatorRequires(self, self.CERT_ADMIN_OPERATOR_RELATION)
+        self._service_patcher = KubernetesServicePatch(
+            charm=self,
+            ports=[ServicePort(name="magmalte", port=8081)],
+            service_name="magmalte",
+            additional_labels={
+                "app.kubernetes.io/part-of": "magma",
+                "app.kubernetes.io/component": "magmalte",
+            },
+        )
         self.framework.observe(
             self.on.magma_nms_magmalte_pebble_ready, self._on_magma_nms_magmalte_pebble_ready
         )
         self.framework.observe(
             self._db.on.database_relation_joined, self._on_database_relation_joined
-        )
-        self.framework.observe(
-            self.on.magma_orc8r_certifier_relation_changed,
-            self._on_magma_orc8r_certifier_relation_changed,
         )
         self.framework.observe(
             self.on.magma_nms_magmalte_relation_joined,
@@ -74,93 +86,28 @@ class MagmaNmsMagmalteCharm(CharmBase):
         self.framework.observe(
             self.on.create_nms_admin_user_action, self._create_nms_admin_user_action
         )
-        self._service_patcher = KubernetesServicePatch(
-            charm=self,
-            ports=[ServicePort(name="magmalte", port=8081)],
-            service_name="magmalte",
-            additional_labels={
-                "app.kubernetes.io/part-of": "magma",
-                "app.kubernetes.io/component": "magmalte",
-            },
-        )
-
-    def _on_magma_nms_magmalte_pebble_ready(self, event: PebbleReadyEvent):
-        if not self._relations_created:
-            event.defer()
-            return
-        if not self._relations_ready:
-            event.defer()
-            return
-        if not self._nms_certs_mounted:
-            self.unit.status = WaitingStatus("Waiting for NMS certificates to be mounted")
-            event.defer()
-            return
-        if not self._container.can_connect():
-            self.unit.status = WaitingStatus(
-                "Waiting for magma-nms-magmalte container to be ready"
-            )
-            event.defer()
-            return
-        self._configure_pebble(event)
-        self._create_master_nms_admin_user()
-
-    def _create_master_nms_admin_user(self):
-        username = self._get_admin_username()
-        password = self._get_admin_password()
-        start_time = time.time()
-        timeout = 60
-        while time.time() - start_time < timeout:
-            try:
-                self._create_nms_admin_user(username, password, "master")
-                return
-            except ExecError:
-                logger.info("Failed to create admin user - Will retry in 5 seconds")
-                time.sleep(5)
-        message = "Timed out trying to create admin user for NMS"
-        logger.info(message)
-        raise TimeoutError(message)
-
-    def _on_database_relation_joined(self, event: RelationJoinedEvent):
-        """
-        Event handler for database relation change.
-        - Sets the event.database field on the database joined event.
-        - Required because setting the database name is only possible
-          from inside the event handler per https://github.com/canonical/ops-lib-pgsql/issues/2
-        - Sets our database parameters based on what was provided
-          in the relation event.
-        """
-        if self.unit.is_leader():
-            event.database = self.DB_NAME  # type: ignore[attr-defined]
-        else:
-            event.defer()
-
-    def _on_magma_orc8r_certifier_relation_changed(self, event: RelationChangedEvent):
-        """Mounts certificates required by the magma-nms-magmalte."""
-        if not self._certifier_relation_ready:
-            self.unit.status = WaitingStatus(
-                "Waiting for magma-orc8r-certifier relation to be ready"
-            )
-            event.defer()
-            return
-        if not self._nms_certs_mounted:
-            self.unit.status = MaintenanceStatus("Mounting NMS certificates")
-            self._mount_certifier_certs()
-
-    def _on_magma_nms_magmalte_relation_joined(self, event: RelationJoinedEvent):
-        self._update_relations()
-        if not self._service_is_running:
-            event.defer()
-            return
-
-    def _update_relation_active_status(self, relation: Relation, is_active: bool):
-        relation.data[self.unit].update(
-            {
-                "active": str(is_active),
-            }
+        self.framework.observe(
+            self.admin_operator.on.certificate_available, self._on_certificate_available
         )
 
     @property
+    def _certs_are_stored(self) -> bool:
+        """Returns whether the bootstrapper admin operator certificates are stored.
+
+        Returns:
+            bool: True/False
+        """
+        return self._container.exists(
+            f"{self.BASE_CERTS_PATH}/admin_operator.pem"
+        ) and self._container.exists(f"{self.BASE_CERTS_PATH}/admin_operator.key.pem")
+
+    @property
     def _service_is_running(self) -> bool:
+        """Retrieves the workload service and returns whether it is running.
+
+        Returns:
+            bool: Whether service is running
+        """
         if self._container.can_connect():
             try:
                 self._container.get_service(self._service_name)
@@ -169,49 +116,15 @@ class MagmaNmsMagmalteCharm(CharmBase):
                 pass
         return False
 
-    def _configure_pebble(self, event: PebbleReadyEvent):
-        """Adds layer to pebble config if the proposed config is different from the current one."""
-        if self._container.can_connect():
-            plan = self._container.get_plan()
-            layer = self._pebble_layer
-            if plan.services != layer.services:
-                self.unit.status = MaintenanceStatus(
-                    f"Configuring pebble layer for {self._service_name}"
-                )
-                self._container.add_layer(self._container_name, layer, combine=True)
-                self._container.restart(self._service_name)
-                logger.info(f"Restarted container {self._service_name}")
-                self._update_relations()
-                self.unit.status = ActiveStatus()
-        else:
-            self.unit.status = WaitingStatus("Waiting for container to be ready")
-            event.defer()
-
-    def _update_relations(self):
-        if not self.unit.is_leader():
-            return
-        relations = self.model.relations[self.meta.name]
-        for relation in relations:
-            self._update_relation_active_status(
-                relation=relation, is_active=self._service_is_running
-            )
-
-    def _mount_certifier_certs(self) -> None:
-        """Patch the StatefulSet to include NMS certs secret mount."""
-        self.unit.status = MaintenanceStatus(
-            "Mounting additional volumes required by the magma-nms-magmalte container"
-        )
-        client = Client()
-        stateful_set = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
-        stateful_set.spec.template.spec.volumes.extend(self._magma_nms_magmalte_volumes)  # type: ignore[attr-defined]  # noqa: E501
-        stateful_set.spec.template.spec.containers[1].volumeMounts.extend(  # type: ignore[attr-defined]  # noqa: E501
-            self._magma_nms_magmalte_volume_mounts
-        )
-        client.patch(StatefulSet, name=self.app.name, obj=stateful_set, namespace=self._namespace)
-        logger.info("Additional K8s resources for magma-nms-magmalte container applied!")
-
     @property
     def _environment_variables(self) -> dict:
+        """Returns environment variables necessary for running the workload service.
+
+        Returns:
+            dict: Environment variables
+        """
+        if not self._get_db_connection_string:
+            raise ValueError("DB Connection string not yet available from relation data.")
         return {
             "API_CERT_FILENAME": "/run/secrets/admin_operator.pem",
             "API_PRIVATE_KEY_FILENAME": "/run/secrets/admin_operator.key.pem",
@@ -231,7 +144,13 @@ class MagmaNmsMagmalteCharm(CharmBase):
 
     @property
     def _pebble_layer(self) -> Layer:
-        """Returns pebble layer for the charm."""
+        """Returns pebble layer for the charm.
+
+        Returns:
+            Layer: Pebble Layer
+        """
+        if not self._get_db_connection_string:
+            raise ValueError("DB Connection string not yet available from relation data.")
         return Layer(
             {
                 "summary": f"{self._service_name} pebble layer",
@@ -249,6 +168,249 @@ class MagmaNmsMagmalteCharm(CharmBase):
             }
         )
 
+    @property
+    def _db_relation_established(self) -> bool:
+        """Validates that database relation is established.
+
+        Checks that there is a relation and that credentials have been passed.
+
+        Returns:
+            bool: Whether the database relation is established.
+        """
+        db_connection_string = self._get_db_connection_string
+        if not db_connection_string:
+            return False
+        try:
+            psycopg2.connect(
+                f"dbname='{self.DB_NAME}' "
+                f"user='{db_connection_string.user}' "
+                f"host='{db_connection_string.host}' "
+                f"password='{db_connection_string.password}'"
+            ).close()
+            return True
+        except psycopg2.OperationalError:
+            return False
+
+    @property
+    def _get_db_connection_string(self) -> Optional[ConnectionString]:
+        """Returns DB connection string provided by the DB relation.
+
+        Returns:
+            ConnectionString: pgconnstr ConnectionString object.
+        """
+        try:
+            db_relation = self.model.get_relation("db")
+            return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[union-attr, index]  # noqa: E501
+        except (AttributeError, KeyError):
+            return None
+
+    @property
+    def _namespace(self) -> str:
+        """Returns the namespace.
+
+        Returns:
+            str: Kubernetes namespace.
+        """
+        return self.model.name
+
+    @property
+    def _db_relation_created(self) -> bool:
+        """Returns whether db relation is created.
+
+        Returns:
+            bool: True/False
+        """
+        return self._relation_created("db")
+
+    @property
+    def _cert_admin_operator_relation_created(self) -> bool:
+        """Returns whether cert-admin-operator relation is created.
+
+        Returns:
+            bool: True/False
+        """
+        return self._relation_created(self.CERT_ADMIN_OPERATOR_RELATION)
+
+    def _relation_created(self, relation_name: str) -> bool:
+        """Returns whether given relation was created.
+
+        Args:
+            relation_name (str): Relation name
+
+        Returns:
+            bool: True/False
+        """
+        try:
+            if self.model.get_relation(relation_name):
+                return True
+            return False
+        except KeyError:
+            return False
+
+    def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
+        """Triggered when admin operator certificates are available from relation data.
+
+        Args:
+            event (CertificateAvailableEvent): Event for whenever certificates are available.
+
+        Returns:
+            None
+        """
+        logger.info("Admin Operator certificate available")
+        if not self._container.can_connect():
+            logger.info("Can't connect to container - Deferring")
+            event.defer()
+            return
+        self._container.push(
+            path=f"{self.BASE_CERTS_PATH}/admin_operator.pem", source=event.certificate
+        )
+        self._container.push(
+            path=f"{self.BASE_CERTS_PATH}/admin_operator.key.pem", source=event.private_key
+        )
+        self._on_magma_nms_magmalte_pebble_ready(event)
+
+    def _on_magma_nms_magmalte_pebble_ready(
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
+    ) -> None:
+        """Triggered when pebble is ready.
+
+        Args:
+            event (PebbleReadyEvent, CertificateAvailableEvent): Juju event
+
+        Returns:
+            None
+        """
+        if not self._db_relation_created:
+            self.unit.status = BlockedStatus("Waiting for db relation to be created")
+            event.defer()
+            return
+        if not self._cert_admin_operator_relation_created:
+            self.unit.status = BlockedStatus(
+                f"Waiting for {self.CERT_ADMIN_OPERATOR_RELATION} relation to be created"
+            )
+            event.defer()
+            return
+        if not self._db_relation_established:
+            self.unit.status = WaitingStatus("Waiting for db relation to be ready")
+            event.defer()
+            return
+        if not self._certs_are_stored:
+            self.unit.status = WaitingStatus("Waiting for certs to be available")
+            event.defer()
+            return
+        self._configure_pebble(event)
+        self._create_master_nms_admin_user()
+
+    def _create_master_nms_admin_user(self) -> None:
+        """Creates NMS admin user.
+
+        Returns:
+            None
+        """
+        password = self._get_admin_password()
+        start_time = time.time()
+        timeout = 60
+        while time.time() - start_time < timeout:
+            try:
+                self._create_nms_admin_user(self.NMS_ADMIN_USERNAME, password, "master")
+                return
+            except ExecError:
+                logger.info("Failed to create admin user - Will retry in 5 seconds")
+                time.sleep(5)
+        message = "Timed out trying to create admin user for NMS"
+        logger.info(message)
+        raise TimeoutError(message)
+
+    def _on_database_relation_joined(self, event: RelationJoinedEvent) -> None:
+        """Event handler for database relation change.
+
+        - Sets the event.database field on the database joined event.
+        - Required because setting the database name is only possible
+          from inside the event handler per https://github.com/canonical/ops-lib-pgsql/issues/2
+        - Sets our database parameters based on what was provided
+          in the relation event.
+
+        Args:
+            event (RelationJoinedEvent): Juju event
+
+        Returns:
+            None
+        """
+        if self.unit.is_leader():
+            event.database = self.DB_NAME  # type: ignore[attr-defined]
+        else:
+            event.defer()
+
+    def _on_magma_nms_magmalte_relation_joined(self, event: RelationJoinedEvent) -> None:
+        """Triggered when requirers join the nms_magmalte relation.
+
+        Args:
+            event (RelationJoinedEvent): Juju event
+
+        Returns:
+            None
+        """
+        self._update_relations()
+        if not self._service_is_running:
+            event.defer()
+            return
+
+    def _update_relation_active_status(self, relation: Relation, is_active: bool) -> None:
+        """Updates the relation data with the active status.
+
+        Args:
+            relation (Relation): Juju relation
+            is_active (bool): Whether workload service is active.
+
+        Returns:
+            None
+        """
+        relation.data[self.unit].update(
+            {
+                "active": str(is_active),
+            }
+        )
+
+    def _configure_pebble(self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]) -> None:
+        """Configures pebble layer.
+
+        Args:
+            event (PebbleReadyEvent): Juju event
+
+        Returns:
+            None
+        """
+        """Adds layer to pebble config if the proposed config is different from the current one."""
+        if self._container.can_connect():
+            plan = self._container.get_plan()
+            layer = self._pebble_layer
+            if plan.services != layer.services:
+                self.unit.status = MaintenanceStatus(
+                    f"Configuring pebble layer for {self._service_name}"
+                )
+                self._container.add_layer(self._container_name, layer, combine=True)
+                self._container.restart(self._service_name)
+                logger.info(f"Restarted service {self._service_name}")
+                self._update_relations()
+                self.unit.status = ActiveStatus()
+        else:
+            self.unit.status = WaitingStatus("Waiting for container to be ready")
+            event.defer()
+
+    def _update_relations(self) -> None:
+        """Updates nms_magmalte relation with the workload service status.
+
+        Returns:
+            None
+        """
+        if not self.unit.is_leader():
+            return
+        relations = self.model.relations[self.meta.name]
+        for relation in relations:
+            self._update_relation_active_status(
+                relation=relation, is_active=self._service_is_running
+            )
+
     def _create_nms_admin_user_action(self, event: ActionEvent):
         self._create_nms_admin_user(
             email=event.params["email"],
@@ -257,19 +419,29 @@ class MagmaNmsMagmalteCharm(CharmBase):
         )
 
     def _on_get_master_admin_credentials(self, event: ActionEvent) -> None:
-        if not self._relations_ready:
-            event.fail("Relations aren't yet set up. Please try again in a few minutes")
+        try:
+            self._container.get_service(self._service_name)
+            event.set_results(
+                {
+                    "admin-username": self.NMS_ADMIN_USERNAME,
+                    "admin-password": self._get_admin_password(),
+                }
+            )
+        except (ops.model.ModelError, ops.pebble.ConnectionError):
+            event.fail("Workload service is not yet running")
             return
 
-        event.set_results(
-            {
-                "admin-username": self._get_admin_username(),
-                "admin-password": self._get_admin_password(),
-            }
-        )
+    def _create_nms_admin_user(self, email: str, password: str, organization: str) -> None:
+        """Creates Admin user for the master organization in NMS.
 
-    def _create_nms_admin_user(self, email: str, password: str, organization: str):
-        """Creates Admin user for the master organization in NMS."""
+        Args:
+            email (str): New user email/login username
+            password (str): Password
+            organization (str): Magma organization
+
+        Returns:
+            None
+        """
         logger.info("Creating admin user for NMS")
         process = self._container.exec(
             [
@@ -287,142 +459,28 @@ class MagmaNmsMagmalteCharm(CharmBase):
             process.wait_output()
         except ExecError as e:
             logger.error("Exited with code %d. Stderr:", e.exit_code)
-            for line in e.stderr.splitlines():  # type: ignore[union-attr]
+            for line in e.stderr.splitlines():
                 logger.error("    %s", line)
             raise e
         logger.info("Successfully created admin user")
 
-    @property
-    def _magma_nms_magmalte_volumes(self) -> List[Volume]:
-        """Returns the additional volumes required by the magma-nms-magmalte container."""
-        return [
-            Volume(
-                name="orc8r-secrets-certs",
-                secret=SecretVolumeSource(secretName="nms-certs"),
-            ),
-        ]
-
-    @property
-    def _magma_nms_magmalte_volume_mounts(self) -> List[VolumeMount]:
-        """Returns the additional volume mounts for the magma-nms-magmalte container."""
-        return [
-            VolumeMount(
-                mountPath="/run/secrets/admin_operator.pem",
-                name="orc8r-secrets-certs",
-                subPath="admin_operator.pem",
-            ),
-            VolumeMount(
-                mountPath="/run/secrets/admin_operator.key.pem",
-                name="orc8r-secrets-certs",
-                subPath="admin_operator.key.pem",
-            ),
-        ]
-
-    @property
-    def _relations_created(self) -> bool:
-        """Checks whether required relations are ready."""
-        required_relations = ["magma-orc8r-certifier", "db"]
-        if missing_relations := [
-            relation for relation in required_relations if not self.model.get_relation(relation)
-        ]:
-            self.unit.status = BlockedStatus(
-                f"Waiting for relation(s) to be created: {', '.join(missing_relations)}"
-            )
-            return False
-        return True
-
-    @property
-    def _relations_ready(self) -> bool:
-        """Checks whether required relations are ready."""
-        not_ready_relations = []
-        if not self._certifier_relation_ready:
-            not_ready_relations.append("magma-orc8r-certifier")
-        if not self._db_relation_ready:
-            not_ready_relations.append("db")
-        if not_ready_relations:
-            self.unit.status = WaitingStatus(
-                f"Waiting for relation(s) to be ready: {', '.join(not_ready_relations)}"
-            )
-            return False
-        return True
-
-    @property
-    def _certifier_relation_ready(self) -> bool:
-        """Checks whether certifier relation is ready."""
-        try:
-            rel = self.model.get_relation("magma-orc8r-certifier")
-            units = rel.units  # type: ignore[union-attr]
-            return rel.data[next(iter(units))]["active"] == "True"  # type: ignore[union-attr]
-        except (AttributeError, KeyError, StopIteration):
-            return False
-
-    @property
-    def _db_relation_ready(self) -> bool:
-        """Validates that database relation is ready (that there is a relation, credentials have
-        been passed and the database can be connected to)."""
-        db_connection_string = self._get_db_connection_string
-        if not db_connection_string:
-            return False
-        try:
-            psycopg2.connect(
-                f"dbname='{self.DB_NAME}' "
-                f"user='{db_connection_string.user}' "
-                f"host='{db_connection_string.host}' "
-                f"password='{db_connection_string.password}'"
-            )
-            return True
-        except psycopg2.OperationalError:
-            return False
-
-    @property
-    def _nms_certs_mounted(self) -> bool:
-        """Check to see if the NMS certs have already been mounted."""
-        client = Client()
-        statefulset = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
-        return all(
-            volume_mount in statefulset.spec.template.spec.containers[1].volumeMounts  # type: ignore[attr-defined]  # noqa: E501
-            for volume_mount in self._magma_nms_magmalte_volume_mounts
-        )
-
-    @property
-    def _domain_name(self):
-        """Returns domain name provided by the orc8r-certifier relation."""
-        try:
-            certifier_relation = self.model.get_relation("magma-orc8r-certifier")
-            units = certifier_relation.units  # type: ignore[union-attr]
-            return certifier_relation.data[next(iter(units))]["domain"]  # type: ignore[union-attr]
-        except (AttributeError, KeyError, StopIteration):
-            return None
-
-    @property
-    def _get_db_connection_string(self):
-        """Returns DB connection string provided by the DB relation."""
-        try:
-            db_relation = self.model.get_relation("db")
-            return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[union-attr, index]  # noqa: E501
-        except (AttributeError, KeyError):
-            return None
-
-    @property
-    def _namespace(self) -> str:
-        """Returns the namespace."""
-        return self.model.name
-
     def _get_admin_password(self) -> str:
-        """Returns the password for the admin user."""
-        if not self._stored.admin_password:  # type: ignore[union-attr]
-            self._stored.admin_password = self._generate_password()  # type: ignore[union-attr]
-        return self._stored.admin_password  # type: ignore[return-value, union-attr]
+        """Returns the password for the admin user.
 
-    def _get_admin_username(self) -> str:
-        """Returns the admin user."""
-        if not self._stored.admin_username:  # type: ignore[union-attr]
-            self._stored.admin_username = f"admin@{self._domain_name}"  # type: ignore[union-attr]
-        return self._stored.admin_username  # type: ignore[return-value, union-attr]
+        Returns:
+            str: Password
+        """
+        if not self._stored.admin_password:
+            self._stored.admin_password = self._generate_password()
+        return self._stored.admin_password
 
     @staticmethod
     def _generate_password() -> str:
-        """Generates a random 12 character password."""
+        """Generates a random 12 character password.
+
+        Returns:
+            str: Password
+        """
         chars = string.ascii_letters + string.digits
         return "".join(secrets.choice(chars) for _ in range(12))
 
