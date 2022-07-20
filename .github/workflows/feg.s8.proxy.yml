@@ -1,0 +1,50 @@
+name: feg-s8-proxy
+
+on:
+  push:
+    paths:
+      - "federation-gateway-bundle/feg-s8-proxy-operator/**"
+
+jobs:
+  feg-s8-proxy-lint-report:
+    name: Lint report (feg-s8-proxy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-s8-proxy-operator && tox -e lint
+
+  feg-s8-proxy-static-analysis:
+    name: Static analysis (feg-s8-proxy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-s8-proxy-operator && tox -e static
+
+  feg-s8-proxy-unit-tests-with-coverage:
+    name: Unit tests (feg-s8-proxy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-s8-proxy-operator && tox -e unit
+
+  feg-s8-proxy-integration-test:
+    name: Integration tests (feg-s8-proxy)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+      - name: Run integration tests
+        run: cd federation-gateway-bundle/feg-s8-proxy-operator && tox -e integration

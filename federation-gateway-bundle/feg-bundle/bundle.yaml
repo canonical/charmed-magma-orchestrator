@@ -1,0 +1,42 @@
+bundle: kubernetes
+name: magma-feg
+description: |
+  The federated gateway provides remote procedure call (GRPC) based interfaces to standard 3GPP components, such as HSS (S6a, SWx), OCS (Gy), and PCRF (Gx). 
+  The exposed RPC interface provides versioning & backward compatibility, security (HTTP2 & TLS) as well as support for multiple programming languages. 
+  The Remote Procedures below provide simple, extensible, multi-language interfaces based on GRPC which allow developers to avoid dealing with the complexities of 3GPP protocols. 
+  Implementing these RPC interfaces allows networks running on Magma to integrate with traditional 3GPP core components.
+applications:
+  feg-session-proxy:
+    charm: magma-feg-session-proxy
+    channel: edge
+    scale: 1
+    trust: true
+  feg-s8-proxy:
+    charm: magma-feg-s8-proxy
+    channel: edge
+    scale: 1
+    trust true
+  feg-radiusd:
+    charm: magma-feg-radiusd
+    scale: 1
+    trust: true
+  feg-hello:
+    charm: magma-feg-hello
+    scale:1
+    trust: true
+  feg-health:
+    charm: magma-feg-health
+    scale: 1
+    trust: true
+  feg-eap-sim:
+    charm: magma-feg-eap-sim
+    scale: 1
+    trust: true
+  feg-eap-aka:
+    charm: magma-feg-eap-aka
+    scale: 1
+    trust: true
+  feg-aaa-server:
+    charm: magma-feg-aaa-server
+    scale: 1
+    trust: true

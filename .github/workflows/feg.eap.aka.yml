@@ -1,0 +1,50 @@
+name: feg-eap-aka
+
+on:
+  push:
+    paths:
+      - "federation-gateway-bundle/feg-eap-aka-operator/**"
+
+jobs:
+  feg-eap-aka-lint-report:
+    name: Lint report (feg-eap-aka)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-eap-aka-operator && tox -e lint
+
+  feg-eap-aka-static-analysis:
+    name: Static analysis (feg-eap-aka)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-eap-aka-operator && tox -e static
+
+  feg-eap-aka-unit-tests-with-coverage:
+    name: Unit tests (feg-eap-aka)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-eap-aka-operator && tox -e unit
+
+  feg-eap-aka-integration-test:
+    name: Integration tests (feg-eap-aka)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+      - name: Run integration tests
+        run: cd federation-gateway-bundle/feg-eap-aka-operator && tox -e integration
