@@ -1,0 +1,50 @@
+name: feg-s6a-proxy
+
+on:
+  push:
+    paths:
+      - "federation-gateway-bundle/feg-s6a-proxy-operator/**"
+
+jobs:
+  feg-s6a-proxy-lint-report:
+    name: Lint report (feg-s6a-proxy)
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-s6a-proxy-operator && tox -e lint
+
+  feg-s6a-proxy-static-analysis:
+    name: Static analysis (feg-s6a-proxy)
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-s6a-proxy-operator && tox -e static
+
+  feg-s6a-proxy-unit-tests-with-coverage:
+    name: Unit tests (feg-s6a-proxy)
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-s6a-proxy-operator && tox -e unit
+
+  feg-s6a-proxy-integration-test:
+    name: Integration tests (feg-s6a-proxy)
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+      - name: Run integration tests
+        run: cd federation-gateway-bundle/feg-s6a-proxy-operator && tox -e integration
