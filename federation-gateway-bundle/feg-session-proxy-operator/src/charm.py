@@ -19,7 +19,8 @@ class FegSessionProxyCharm(CharmBase):
         self.container_name = self.service_name = self.meta.name
         self.container = self.unit.get_container(self.container_name)
         self.framework.observe(
-            self.on.magma_feg_session_proxy_pebble_ready, self._on_magma_feg_session_proxy_pebble_ready
+            self.on.magma_feg_session_proxy_pebble_ready,
+            self._on_magma_feg_session_proxy_pebble_ready,
         )
 
     def _on_magma_feg_session_proxy_pebble_ready(self, event) -> None:
