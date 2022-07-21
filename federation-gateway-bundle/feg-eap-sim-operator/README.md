@@ -5,6 +5,7 @@
 Federation Gateway eap-sim service.
 
 ## Usage
+
 Deploy using Juju:
 
 ```bash

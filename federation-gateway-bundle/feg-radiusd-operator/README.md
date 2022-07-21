@@ -5,6 +5,7 @@
 Fetches metrics from the running radius server and exports them.
 
 ## Usage
+
 Deploy using Juju:
 
 ```bash

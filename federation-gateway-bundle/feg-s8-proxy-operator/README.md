@@ -5,6 +5,7 @@
 Federation Gateway s8-proxy service.
 
 ## Usage
+
 Deploy using Juju:
 
 ```bash

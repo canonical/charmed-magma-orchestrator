@@ -1,0 +1,50 @@
+name: feg-csfb
+
+on:
+  push:
+    paths:
+      - "federation-gateway-bundle/feg-csfb-operator/**"
+
+jobs:
+  feg-csfb-lint-report:
+    name: Lint report (feg-csfb)
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-csfb-operator && tox -e lint
+
+  feg-csfb-static-analysis:
+    name: Static analysis (feg-csfb)
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-csfb-operator && tox -e static
+
+  feg-csfb-unit-tests-with-coverage:
+    name: Unit tests (feg-csfb)
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-csfb-operator && tox -e unit
+
+  feg-csfb-integration-test:
+    name: Integration tests (feg-csfb)
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+      - name: Run integration tests
+        run: cd federation-gateway-bundle/feg-csfb-operator && tox -e integration

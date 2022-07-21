@@ -5,6 +5,7 @@
 Federation Gateway hello service.
 
 ## Usage
+
 Deploy using Juju:
 
 ```bash

@@ -17,6 +17,9 @@ feg-hello
 feg-radiusd
 feg-s8-proxy
 feg-session-proxy
+feg-csfb
+feg-aaa-server
+feg-eap-aka
 "
 
 for charm in ${charms}; do

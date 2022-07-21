@@ -4,10 +4,12 @@
 
 Federation Gateway aaa-server service.
 
+## Usage
+
 Deploy using Juju:
 
 ```bash
-juju deploy magma-feg-aaa-server feg-eap-aka --trust
+juju deploy magma-feg-aaa-server feg-aaa-server --trust
 ```
 
 ## OCI Images

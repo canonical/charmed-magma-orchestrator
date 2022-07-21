@@ -24,7 +24,7 @@ applications:
     trust: true
     resources:
       magma-feg-hello-image: docker.artifactory.magmacore.org/gateway_go:1.6.0
-  feg-radiusd-operator:
+  feg-radiusd:
     charm: ./feg-radiusd-operator/feg-radiusd.charm
     scale: 1
     trust: true
@@ -42,5 +42,11 @@ applications:
     trust: true
     resources:
       magma-feg-session-proxy-image: docker.artifactory.magmacore.org/gateway_go:1.6.0
+  feg-csfb:
+    charm: ./feg-csfb-operator/feg-csbf.charm
+    scale: 1
+    trust: true
+    resources:
+      magma-feg-csfb-image: docker.artifactory.magmacore.org/gateway_go:1.6.0
 # TODO: Relations?
 # relations:

@@ -3,9 +3,9 @@
 
 name: magma-feg-session-proxy
 description: |
-  Federation Gateway session-proxy service.
+  Federation Gateway session-proxy service translates calls from GRPC to gx/gy protocol between AGW and PCRF/OCS.
 summary: |
-  Federation Gateway session-proxy service.
+  Federation Gateway session-proxy service translates calls from GRPC to gx/gy protocol between AGW and PCRF/OCS.
 
 containers:
   magma-feg-session-proxy:
