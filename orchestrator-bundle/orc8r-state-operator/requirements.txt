@@ -1,4 +1,4 @@
-git+https://github.com/canonical/operator/#egg=ops
+ops
 ops-lib-pgsql
 psycopg2-binary  # Package only used for testing, charm uses charm-binary-python-packages from charmcraft.yaml
 lightkube
