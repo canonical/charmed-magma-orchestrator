@@ -33,14 +33,31 @@ class TestOrc8rMetricsd:
     @pytest.mark.abort_on_fail
     async def setup(self, ops_test):
         await self._deploy_postgresql(ops_test)
+        await self._deploy_tls_certificates_operator(ops_test)
         await self._deploy_orc8r_certifier(ops_test)
         await self._deploy_prometheus_cache(ops_test)
         await self._deploy_orc8r_orchestrator(ops_test)
 
     @staticmethod
+    def _find_charm(charm_dir: str, charm_file_name: str) -> Union[str, None]:
+        for root, _, files in os.walk(charm_dir):
+            for file in files:
+                if file == charm_file_name:
+                    return os.path.join(root, file)
+        return None
+
+    @staticmethod
     async def _deploy_postgresql(ops_test):
         await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
-        await ops_test.model.wait_for_idle(apps=["postgresql-k8s"], status="active", timeout=1000)
+
+    @staticmethod
+    async def _deploy_tls_certificates_operator(ops_test):
+        await ops_test.model.deploy(
+            "tls-certificates-operator",
+            application_name="tls-certificates-operator",
+            config={"generate-self-signed-certificates": True},
+            channel="edge",
+        )
 
     async def _deploy_orc8r_certifier(self, ops_test):
         certifier_charm = self._find_charm(
@@ -60,14 +77,11 @@ class TestOrc8rMetricsd:
             config={"domain": "example.com"},
             trust=True,
         )
-        await ops_test.model.wait_for_idle(
-            apps=[CERTIFIER_APPLICATION_NAME], status="blocked", timeout=1000
-        )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
         )
-        await ops_test.model.wait_for_idle(
-            apps=[CERTIFIER_APPLICATION_NAME], status="active", timeout=1000
+        await ops_test.model.add_relation(
+            relation1=CERTIFIER_APPLICATION_NAME, relation2="tls-certificates-operator"
         )
 
     @staticmethod
@@ -96,12 +110,9 @@ class TestOrc8rMetricsd:
             application_name=ORCHESTRATOR_APPLICATION_NAME,
             trust=True,
         )
-        await ops_test.model.wait_for_idle(
-            apps=[ORCHESTRATOR_APPLICATION_NAME], status="blocked", timeout=1000
-        )
         await ops_test.model.add_relation(
-            relation1=f"{ORCHESTRATOR_APPLICATION_NAME}:magma-orc8r-certifier",
-            relation2="orc8r-certifier:magma-orc8r-certifier",
+            relation1=f"{ORCHESTRATOR_APPLICATION_NAME}:cert-admin-operator",
+            relation2="orc8r-certifier:cert-admin-operator",
         )
         await ops_test.model.add_relation(
             relation1=f"{ORCHESTRATOR_APPLICATION_NAME}:metrics-endpoint",
@@ -129,11 +140,3 @@ class TestOrc8rMetricsd:
             relation2="orc8r-orchestrator:magma-orc8r-orchestrator",
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
-
-    @staticmethod
-    def _find_charm(charm_dir: str, charm_file_name: str) -> Union[str, None]:
-        for root, _, files in os.walk(charm_dir):
-            for file in files:
-                if file == charm_file_name:
-                    return os.path.join(root, file)
-        return None

@@ -79,6 +79,8 @@ class MagmaOrc8rNginxCharm(CharmBase):
 
     @property
     def _certs_are_stored(self) -> bool:
+        if not self._container.can_connect():
+            return False
         return (
             self._container.exists(f"{self.BASE_CERTS_PATH}/controller.crt")
             and self._container.exists(f"{self.BASE_CERTS_PATH}/controller.key")  # noqa: W503
