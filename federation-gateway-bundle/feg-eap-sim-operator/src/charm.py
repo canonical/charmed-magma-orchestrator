@@ -23,18 +23,18 @@ class FegEAPSIMCharm(CharmBase):
         )
 
     def _on_magma_feg_eap_sim_pebble_ready(self, event) -> None:
-        if self.container.can_connect():
-            self.unit.status = MaintenanceStatus("Configuring pod")
-            pebble_layer = self._pebble_layer
-            plan = self.container.get_plan()
-            if plan.services != pebble_layer.services:
-                self.container.add_layer(self.container_name, pebble_layer, combine=True)
-                self.container.replan()
-                logger.info(f"Restarted container {self.service_name}")
-                self.unit.status = ActiveStatus()
-        else:
+        if not self.container.can_connect():
             self.unit.status = WaitingStatus("Waiting for container to be ready...")
             event.defer()
+
+        self.unit.status = MaintenanceStatus("Configuring pod")
+        pebble_layer = self._pebble_layer
+        plan = self.container.get_plan()
+        if plan.services != pebble_layer.services:
+            self.container.add_layer(self.container_name, pebble_layer, combine=True)
+            self.container.replan()
+            logger.info(f"Restarted container {self.service_name}")
+            self.unit.status = ActiveStatus()
 
     @property
     def _pebble_layer(self) -> Layer:
