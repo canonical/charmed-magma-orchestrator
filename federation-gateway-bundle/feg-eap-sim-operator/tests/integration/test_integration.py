@@ -16,7 +16,7 @@ APPLICATION_NAME = "feg-eap-sim"
 CHARM_NAME = "magma-feg-eap-sim"
 
 
-class TestFegAaaServer:
+class TestFegEapSim:
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail
     async def build_and_deploy(self, ops_test):
