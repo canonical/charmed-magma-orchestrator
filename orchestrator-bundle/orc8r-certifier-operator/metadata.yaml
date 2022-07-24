@@ -8,13 +8,14 @@ description: |
 summary: |
   magma-orc8r-certifier maintains and verifies signed client certificates and their associated
   identities.
-
 containers:
   magma-orc8r-certifier:
     resource: magma-orc8r-certifier-image
     mounts:
       - storage: config
         location: /var/opt/magma/configs/orc8r
+      - storage: certs
+        location: /var/opt/magma/certs
 
 resources:
   magma-orc8r-certifier-image:
@@ -27,12 +28,24 @@ storage:
     type: filesystem
     description: Configs storage
     minimum-size: 1M
-
-provides:
-  magma-orc8r-certifier:
-    interface: magma-orc8r-certifier
+  certs:
+    type: filesystem
+    description: Certs storage
+    minimum-size: 1M
 
 requires:
   db:
     interface: pgsql
     limit: 1
+  certificates:
+    interface: tls-certificates
+
+provides:
+  cert-admin-operator:
+    interface: cert-admin-operator
+  cert-controller:
+    interface: cert-controller
+  cert-certifier:
+    interface: cert-certifier
+  cert-bootstrapper:
+    interface: cert-bootstrapper

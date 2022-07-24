@@ -8,7 +8,5 @@ bases:
       channel: "20.04"
 parts:
   charm:
-    build-packages:
-      - git
     charm-binary-python-packages:
       - psycopg2-binary

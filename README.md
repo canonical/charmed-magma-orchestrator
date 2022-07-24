@@ -8,7 +8,7 @@ solution. For more information about Magma, visit the [official website](https:/
 Charmed Magma is the easiest way to deploy, configure, manage, integrate and drive daily actions for Magma.
 It consists of a set of Juju charms and bundles built using the [Charmed Operator Framework](https://juju.is/docs/sdk).
 
-> Charmed-Magma is in Beta and is not yet production ready or feature complete.
+> **Warning**: Charmed-Magma is in Beta and is not yet production ready or feature complete.
 
 ## Usage
 

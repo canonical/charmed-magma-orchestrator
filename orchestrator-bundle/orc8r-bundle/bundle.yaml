@@ -171,19 +171,24 @@ applications:
     channel: stable
     scale: 1
     trust: true
+  tls-certificates-operator:
+    charm: tls-certificates-operator
+    channel: edge
+    scale: 1
+    trust: true
 relations:
-- - nms-magmalte:magma-orc8r-certifier
-  - orc8r-certifier:magma-orc8r-certifier
+- - nms-magmalte
+  - orc8r-certifier
 - - nms-magmalte:db
   - postgresql-k8s:db
-- - nms-nginx-proxy:magma-orc8r-certifier
-  - orc8r-certifier:magma-orc8r-certifier
+- - nms-nginx-proxy
+  - orc8r-certifier
 - - nms-nginx-proxy:magma-nms-magmalte
   - nms-magmalte:magma-nms-magmalte
 - - orc8r-accessd:db
   - postgresql-k8s:db
-- - orc8r-bootstrapper:magma-orc8r-certifier
-  - orc8r-certifier:magma-orc8r-certifier
+- - orc8r-bootstrapper
+  - orc8r-certifier
 - - orc8r-certifier:db
   - postgresql-k8s:db
 - - orc8r-configurator:db
@@ -200,12 +205,14 @@ relations:
   - orc8r-orchestrator:magma-orc8r-orchestrator
 - - orc8r-nginx:magma-orc8r-bootstrapper
   - orc8r-bootstrapper:magma-orc8r-bootstrapper
-- - orc8r-nginx:magma-orc8r-certifier
-  - orc8r-certifier:magma-orc8r-certifier
+- - orc8r-nginx:cert-certifier
+  - orc8r-certifier:cert-certifier
+- - orc8r-nginx:cert-controller
+  - orc8r-certifier:cert-controller
 - - orc8r-nginx:magma-orc8r-obsidian
   - orc8r-obsidian:magma-orc8r-obsidian
-- - orc8r-orchestrator:magma-orc8r-certifier
-  - orc8r-certifier:magma-orc8r-certifier
+- - orc8r-orchestrator
+  - orc8r-certifier
 - - orc8r-orchestrator:metrics-endpoint
   - orc8r-prometheus-cache:metrics-endpoint
 - - orc8r-policydb:db
@@ -228,3 +235,5 @@ relations:
   - postgresql-k8s:db
 - - orc8r-user-grafana:grafana-source
   - orc8r-prometheus:grafana-source
+- - orc8r-certifier
+  - tls-certificates-operator
