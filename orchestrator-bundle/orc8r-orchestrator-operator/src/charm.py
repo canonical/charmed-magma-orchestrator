@@ -266,8 +266,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         try:
             rel = self.model.get_relation(relation_name)
             units = rel.units  # type: ignore[union-attr]
-            # type: ignore[union-attr]
-            return rel.data[next(iter(units))]["active"] == "True"
+            return rel.data[next(iter(units))]["active"] == "True"  # type: ignore[union-attr]
         except (AttributeError, KeyError, StopIteration):
             return False
 

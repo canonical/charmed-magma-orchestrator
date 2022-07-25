@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import Mock, PropertyMock, call, patch
+from unittest.mock import Mock, call, patch
 
 from lightkube.models.core_v1 import (
     LoadBalancerIngress,
@@ -70,7 +70,8 @@ class TestCharm(unittest.TestCase):
         )
         self.harness.add_relation(relation_name="metrics-endpoint", remote_app="prometheus-k8s")
         accessd_relation = self.harness.add_relation(
-            relation_name="magma-orc8r-accessd", remote_app="orc8r-accessd")
+            relation_name="magma-orc8r-accessd", remote_app="orc8r-accessd"
+        )
 
         self.harness.add_relation_unit(
             relation_id=accessd_relation, remote_unit_name="magma-orc8r-accessd/0"
@@ -164,10 +165,10 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="orc8r-certifier"
         )
-        self.harness.add_relation(
-            relation_name="metrics-endpoint", remote_app="prometheus-k8s")
+        self.harness.add_relation(relation_name="metrics-endpoint", remote_app="prometheus-k8s")
         accessd_relation = self.harness.add_relation(
-            relation_name="magma-orc8r-accessd", remote_app="orc8r-accessd")
+            relation_name="magma-orc8r-accessd", remote_app="orc8r-accessd"
+        )
 
         self.harness.add_relation_unit(
             relation_id=accessd_relation, remote_unit_name="magma-orc8r-accessd/0"
@@ -180,7 +181,7 @@ class TestCharm(unittest.TestCase):
         )
         self.harness.container_pebble_ready("magma-orc8r-orchestrator")
 
-        args, _= patch_exec.call_args
+        args, _ = patch_exec.call_args
         patch_exec.assert_called_once()
         call_command = [
             "/var/opt/magma/bin/accessc",
@@ -211,10 +212,10 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="orc8r-certifier"
         )
-        self.harness.add_relation(
-            relation_name="metrics-endpoint", remote_app="prometheus-k8s")
+        self.harness.add_relation(relation_name="metrics-endpoint", remote_app="prometheus-k8s")
         accessd_relation = self.harness.add_relation(
-            relation_name="magma-orc8r-accessd", remote_app="orc8r-accessd")
+            relation_name="magma-orc8r-accessd", remote_app="orc8r-accessd"
+        )
 
         self.harness.add_relation_unit(
             relation_id=accessd_relation, remote_unit_name="magma-orc8r-accessd/0"
@@ -352,7 +353,9 @@ class TestCharm(unittest.TestCase):
     ):
         self.harness.add_relation(relation_name="metrics-endpoint", remote_app="prometheus-k8s")
 
-        accessd_relation = self.harness.add_relation(relation_name="magma-orc8r-accessd", remote_app="orc8r-accessd")
+        accessd_relation = self.harness.add_relation(
+            relation_name="magma-orc8r-accessd", remote_app="orc8r-accessd"
+        )
 
         self.harness.add_relation_unit(
             relation_id=accessd_relation, remote_unit_name="magma-orc8r-accessd/0"
