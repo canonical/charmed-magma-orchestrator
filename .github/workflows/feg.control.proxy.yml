@@ -1,0 +1,50 @@
+name: feg-control-proxy
+
+on:
+  push:
+    paths:
+      - "federation-gateway-bundle/feg-control-proxy-operator/**"
+
+jobs:
+  feg-control-proxy-lint-report:
+    name: Lint report (feg-control-proxy)
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-control-proxy-operator && tox -e lint
+
+  feg-control-proxy-static-analysis:
+    name: Static analysis (feg-control-proxy)
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-control-proxy-operator && tox -e static
+
+  feg-control-proxy-unit-tests-with-coverage:
+    name: Unit tests (feg-control-proxy)
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-control-proxy-operator && tox -e unit
+
+  feg-control-proxy-integration-test:
+    name: Integration tests (feg-control-proxy)
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+      - name: Run integration tests
+        run: cd federation-gateway-bundle/feg-control-proxy-operator && tox -e integration
