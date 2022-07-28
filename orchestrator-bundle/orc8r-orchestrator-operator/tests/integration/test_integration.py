@@ -5,7 +5,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Union
+from typing import Optional
 
 import pytest
 import yaml
@@ -27,13 +27,30 @@ class TestOrchestrator:
     @pytest.mark.abort_on_fail
     async def setup(self, ops_test):
         await self._deploy_postgresql(ops_test)
+        await self._deploy_tls_certificates_operator(ops_test)
         await self._deploy_prometheus_cache(ops_test)
         await self._deploy_orc8r_certifier(ops_test)
 
     @staticmethod
+    def _find_charm(charm_dir: str, charm_file_name: str) -> Optional[str]:
+        for root, _, files in os.walk(charm_dir):
+            for file in files:
+                if file == charm_file_name:
+                    return os.path.join(root, file)
+        return None
+
+    @staticmethod
     async def _deploy_postgresql(ops_test):
         await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
-        await ops_test.model.wait_for_idle(apps=["postgresql-k8s"], status="active", timeout=1000)
+
+    @staticmethod
+    async def _deploy_tls_certificates_operator(ops_test):
+        await ops_test.model.deploy(
+            "tls-certificates-operator",
+            application_name="tls-certificates-operator",
+            config={"generate-self-signed-certificates": True},
+            channel="edge",
+        )
 
     @staticmethod
     async def _deploy_prometheus_cache(ops_test):
@@ -62,14 +79,11 @@ class TestOrchestrator:
             config={"domain": "example.com"},
             trust=True,
         )
-        await ops_test.model.wait_for_idle(
-            apps=[CERTIFIER_APPLICATION_NAME], status="blocked", timeout=1000
-        )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
         )
-        await ops_test.model.wait_for_idle(
-            apps=[CERTIFIER_APPLICATION_NAME], status="active", timeout=1000
+        await ops_test.model.add_relation(
+            relation1=CERTIFIER_APPLICATION_NAME, relation2="tls-certificates-operator"
         )
 
     @pytest.fixture(scope="module")
@@ -89,17 +103,9 @@ class TestOrchestrator:
 
     async def test_relate_and_wait_for_idle(self, ops_test, setup, build_and_deploy):
         await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="orc8r-certifier:magma-orc8r-certifier"
+            relation1=APPLICATION_NAME, relation2="orc8r-certifier:cert-admin-operator"
         )
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="orc8r-prometheus-cache:metrics-endpoint"
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
-
-    @staticmethod
-    def _find_charm(charm_dir: str, charm_file_name: str) -> Union[str, None]:
-        for root, _, files in os.walk(charm_dir):
-            for file in files:
-                if file == charm_file_name:
-                    return os.path.join(root, file)
-        return None

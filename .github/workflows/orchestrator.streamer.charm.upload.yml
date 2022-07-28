@@ -9,7 +9,7 @@ on:
 
 jobs:
   orc8r-streamer-charmhub-upload:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     name: Charmhub upload orc8r-streamer-operator
     steps:
       - uses: actions/checkout@v2
@@ -32,3 +32,4 @@ jobs:
           upload-image: "false"
           channel: "${{ steps.channel.outputs.name }}"
           charm-path: ./orchestrator-bundle/orc8r-streamer-operator
+          tag-prefix: "magma-orc8r-streamer"

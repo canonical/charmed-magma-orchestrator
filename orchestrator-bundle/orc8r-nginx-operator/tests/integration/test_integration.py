@@ -5,7 +5,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Union
+from typing import Optional
 
 import pytest
 import yaml
@@ -30,6 +30,7 @@ BOOTSTRAPPER_CHARM_FILE_NAME = "magma-orc8r-bootstrapper_ubuntu-20.04-amd64.char
 OBSIDIAN_APPLICATION_NAME = "orc8r-obsidian"
 OBSIDIAN_CHARM_NAME = "magma-orc8r-obsidian"
 OBSIDIAN_CHARM_FILE_NAME = "magma-orc8r-obsidian_ubuntu-20.04-amd64.charm"
+DOMAIN = "example.com"
 
 
 class TestOrc8rNginx:
@@ -37,14 +38,22 @@ class TestOrc8rNginx:
     @pytest.mark.abort_on_fail
     async def setup(self, ops_test):
         await self._deploy_postgresql(ops_test)
+        await self._deploy_tls_certificates_operator(ops_test)
         await self._deploy_orc8r_certifier(ops_test)
         await self._deploy_bootstrapper(ops_test)
         await self._deploy_orc8r_obsidian(ops_test)
 
     @staticmethod
+    def _find_charm(charm_dir: str, charm_file_name: str) -> Optional[str]:
+        for root, _, files in os.walk(charm_dir):
+            for file in files:
+                if file == charm_file_name:
+                    return os.path.join(root, file)
+        return None
+
+    @staticmethod
     async def _deploy_postgresql(ops_test):
         await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
-        await ops_test.model.wait_for_idle(apps=["postgresql-k8s"], status="active", timeout=1000)
 
     async def _deploy_orc8r_certifier(self, ops_test):
         certifier_charm = self._find_charm(
@@ -61,17 +70,14 @@ class TestOrc8rNginx:
             certifier_charm,
             resources=resources,
             application_name=CERTIFIER_APPLICATION_NAME,
-            config={"domain": "example.com"},
+            config={"domain": DOMAIN},
             trust=True,
-        )
-        await ops_test.model.wait_for_idle(
-            apps=[CERTIFIER_APPLICATION_NAME], status="blocked", timeout=1000
         )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
         )
-        await ops_test.model.wait_for_idle(
-            apps=[CERTIFIER_APPLICATION_NAME], status="active", timeout=1000
+        await ops_test.model.add_relation(
+            relation1=CERTIFIER_APPLICATION_NAME, relation2="tls-certificates-operator"
         )
 
     async def _deploy_bootstrapper(self, ops_test):
@@ -91,15 +97,9 @@ class TestOrc8rNginx:
             application_name=BOOTSTRAPPER_APPLICATION_NAME,
             trust=True,
         )
-        await ops_test.model.wait_for_idle(
-            apps=[BOOTSTRAPPER_APPLICATION_NAME], status="blocked", timeout=1000
-        )
         await ops_test.model.add_relation(
             relation1=BOOTSTRAPPER_APPLICATION_NAME,
-            relation2="orc8r-certifier:magma-orc8r-certifier",
-        )
-        await ops_test.model.wait_for_idle(
-            apps=[BOOTSTRAPPER_APPLICATION_NAME], status="active", timeout=1000
+            relation2="orc8r-certifier:cert-bootstrapper",
         )
 
     async def _deploy_orc8r_obsidian(self, ops_test):
@@ -117,8 +117,14 @@ class TestOrc8rNginx:
             application_name=OBSIDIAN_APPLICATION_NAME,
             trust=True,
         )
-        await ops_test.model.wait_for_idle(
-            apps=[OBSIDIAN_APPLICATION_NAME], status="active", timeout=1000
+
+    @staticmethod
+    async def _deploy_tls_certificates_operator(ops_test):
+        await ops_test.model.deploy(
+            "tls-certificates-operator",
+            application_name="tls-certificates-operator",
+            config={"generate-self-signed-certificates": True},
+            channel="edge",
         )
 
     @pytest.fixture(scope="module")
@@ -129,7 +135,11 @@ class TestOrc8rNginx:
             f"{CHARM_NAME}-image": METADATA["resources"][f"{CHARM_NAME}-image"]["upstream-source"],
         }
         await ops_test.model.deploy(
-            charm, resources=resources, application_name=APPLICATION_NAME, trust=True
+            charm,
+            resources=resources,
+            application_name=APPLICATION_NAME,
+            trust=True,
+            config={"domain": DOMAIN},
         )
 
     @pytest.mark.abort_on_fail
@@ -138,8 +148,12 @@ class TestOrc8rNginx:
 
     async def test_relate_and_wait_for_idle(self, ops_test, build_and_deploy):
         await ops_test.model.add_relation(
-            relation1=f"{APPLICATION_NAME}:magma-orc8r-certifier",
-            relation2="orc8r-certifier:magma-orc8r-certifier",
+            relation1=f"{APPLICATION_NAME}:cert-controller",
+            relation2="orc8r-certifier:cert-controller",
+        )
+        await ops_test.model.add_relation(
+            relation1=f"{APPLICATION_NAME}:cert-certifier",
+            relation2="orc8r-certifier:cert-certifier",
         )
         await ops_test.model.add_relation(
             relation1=f"{APPLICATION_NAME}:magma-orc8r-bootstrapper",
@@ -150,11 +164,3 @@ class TestOrc8rNginx:
             relation2="orc8r-obsidian:magma-orc8r-obsidian",
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
-
-    @staticmethod
-    def _find_charm(charm_dir: str, charm_file_name: str) -> Union[str, None]:
-        for root, _, files in os.walk(charm_dir):
-            for file in files:
-                if file == charm_file_name:
-                    return os.path.join(root, file)
-        return None

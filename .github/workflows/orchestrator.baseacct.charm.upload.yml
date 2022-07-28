@@ -9,7 +9,7 @@ on:
 
 jobs:
   orc8r-base-acct-charmhub-upload:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     name: Charmhub upload orc8r-base-acct-operator
     steps:
       - name: Checkout
@@ -33,3 +33,5 @@ jobs:
           upload-image: "false"
           channel: "${{ steps.channel.outputs.name }}"
           charm-path: ./orchestrator-bundle/orc8r-base-acct-operator
+          tag-prefix: "magma-orc8r-base-acct"
+

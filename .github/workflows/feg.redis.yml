@@ -1,0 +1,50 @@
+name: feg-redis
+
+on:
+  push:
+    paths:
+      - "federation-gateway-bundle/feg-redis-operator/**"
+
+jobs:
+  feg-redis-lint-report:
+    name: Lint report (feg-redis)
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-redis-operator && tox -e lint
+
+  feg-redis-static-analysis:
+    name: Static analysis (feg-redis)
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-redis-operator && tox -e static
+
+  feg-redis-unit-tests-with-coverage:
+    name: Unit tests (feg-redis)
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-redis-operator && tox -e unit
+
+  feg-redis-integration-test:
+    name: Integration tests (feg-redis)
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+      - name: Run integration tests
+        run: cd federation-gateway-bundle/feg-redis-operator && tox -e integration

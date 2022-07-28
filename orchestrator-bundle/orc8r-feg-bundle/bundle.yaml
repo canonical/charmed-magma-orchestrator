@@ -193,6 +193,11 @@ applications:
     channel: stable
     scale: 1
     trust: true
+  tls-certificates-operator:
+    charm: tls-certificates-operator
+    channel: edge
+    scale: 1
+    trust: true
 relations:
 - - nms-magmalte:magma-orc8r-certifier
   - orc8r-certifier:magma-orc8r-certifier
@@ -250,3 +255,5 @@ relations:
   - postgresql-k8s:db
 - - orc8r-user-grafana:grafana-source
   - orc8r-prometheus:grafana-source
+- - orc8r-certifier
+  - tls-certificates-operator

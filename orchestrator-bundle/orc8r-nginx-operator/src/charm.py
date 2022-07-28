@@ -2,147 +2,90 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import logging
-from typing import List
+"""magma-orc8r-nginx.
 
-from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
+Proxies traffic between nms and obsidian.
+"""
+
+import logging
+from typing import List, Union
+
+from charms.magma_orc8r_certifier.v0.cert_certifier import CertCertifierRequires
+from charms.magma_orc8r_certifier.v0.cert_certifier import (
+    CertificateAvailableEvent as CertifierCertificateAvailableEvent,
+)
+from charms.magma_orc8r_certifier.v0.cert_controller import CertControllerRequires
+from charms.magma_orc8r_certifier.v0.cert_controller import (
+    CertificateAvailableEvent as ControllerCertificateAvailableEvent,
+)
+from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServicePatch
 from httpx import HTTPStatusError
 from lightkube import Client
-from lightkube.models.core_v1 import (
-    SecretVolumeSource,
-    ServicePort,
-    ServiceSpec,
-    Volume,
-    VolumeMount,
-)
+from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
-from lightkube.resources.apps_v1 import StatefulSet
 from lightkube.resources.core_v1 import Service
-from ops.charm import CharmBase, PebbleReadyEvent, RelationChangedEvent, RemoveEvent
+from ops.charm import (
+    CharmBase,
+    ConfigChangedEvent,
+    InstallEvent,
+    PebbleReadyEvent,
+    RemoveEvent,
+)
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
-from ops.pebble import Layer
+from ops.pebble import ExecError, Layer
 
 logger = logging.getLogger(__name__)
 
 
 class MagmaOrc8rNginxCharm(CharmBase):
+    """Main class that is instantiated everytime an event occurs."""
 
-    REQUIRED_RELATIONS = [
-        "magma-orc8r-bootstrapper",
-        "magma-orc8r-certifier",
-        "magma-orc8r-obsidian",
-    ]
+    BASE_CERTS_PATH = "/var/opt/magma/certs"
 
     def __init__(self, *args):
+        """Initializes all event that need to be observed."""
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-nginx"
         self._container = self.unit.get_container(self._container_name)
-        self.framework.observe(
-            self.on.magma_orc8r_nginx_pebble_ready, self._on_magma_orc8r_nginx_pebble_ready
-        )
-        self.framework.observe(
-            self.on.magma_orc8r_certifier_relation_changed,
-            self._on_magma_orc8r_certifier_relation_changed,
-        )
-        self.framework.observe(self.on.remove, self._on_remove)
+        self._cert_certifier = CertCertifierRequires(self, "cert-certifier")
+        self._cert_controller = CertControllerRequires(self, "cert-controller")
         self.service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[
-                ("health", 80),
-                ("clientcert", 8443),
-                ("open", 8444),
-                ("api", 443, 9443),
+                ServicePort(name="health", port=80),
+                ServicePort(name="clientcert", port=8443),
+                ServicePort(name="open", port=8444),
+                ServicePort(name="api", port=443, targetPort=9443),
             ],
             service_type="LoadBalancer",
             service_name="orc8r-nginx-proxy",
             additional_labels={"app.kubernetes.io/part-of": "orc8r"},
             additional_selectors={"app.kubernetes.io/name": "orc8r-nginx"},
         )
-
-    def _on_magma_orc8r_nginx_pebble_ready(self, event: PebbleReadyEvent):
-        if not self._relations_created:
-            event.defer()
-            return
-        if not self._relations_ready:
-            event.defer()
-            return
-        if not self._get_domain_name:
-            self.unit.status = WaitingStatus(
-                "Waiting for magma-orc8r-certifier relation to be ready"
-            )
-            event.defer()
-            return
-        self._create_additional_orc8r_nginx_services()
-        self._configure_pebble_layer(event)
-
-    def _on_magma_orc8r_certifier_relation_changed(self, event: RelationChangedEvent):
-        """Mounts certificates required by the nms-magmalte."""
-        if not self._orc8r_certs_mounted:
-            self.unit.status = MaintenanceStatus("Mounting NMS certificates")
-            self._mount_certifier_certs()
-
-    def _mount_certifier_certs(self) -> None:
-        """Patch the StatefulSet to include certifier certs secret mount."""
-        self.unit.status = MaintenanceStatus(
-            "Mounting additional volumes required by the magma-orc8r-nginx container"
+        self.framework.observe(
+            self.on.magma_orc8r_nginx_pebble_ready, self._on_magma_orc8r_nginx_pebble_ready
         )
-        client = Client()
-        stateful_set = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
-        stateful_set.spec.template.spec.volumes.extend(self._magma_orc8r_nginx_volumes)  # type: ignore[attr-defined]  # noqa: E501
-        stateful_set.spec.template.spec.containers[1].volumeMounts.extend(  # type: ignore[attr-defined]  # noqa: E501
-            self._magma_orc8r_nginx_volume_mounts
+        self.framework.observe(self.on.install, self._on_install)
+        self.framework.observe(self.on.remove, self._on_remove)
+        self.framework.observe(
+            self._cert_certifier.on.certificate_available, self._on_certifier_certificate_available
         )
-        client.patch(StatefulSet, name=self.app.name, obj=stateful_set, namespace=self._namespace)
-        logger.info("Additional K8s resources for magma-orc8r-nginx container applied!")
-
-    def _configure_pebble_layer(self, event: PebbleReadyEvent):
-        self.unit.status = MaintenanceStatus(f"Configuring pebble layer for {self._service_name}")
-        pebble_layer = self._pebble_layer
-        if self._container.can_connect():
-            plan = self._container.get_plan()
-            if plan.services != pebble_layer.services:
-                self._generate_nginx_config()
-                self._container.add_layer(self._container_name, pebble_layer, combine=True)
-                self._container.restart(self._service_name)
-                logger.info(f"Restarted container {self._service_name}")
-                self.unit.status = ActiveStatus()
-        else:
-            self.unit.status = WaitingStatus(f"Waiting for {self._container} to be ready")
-            event.defer()
-            return
-
-    def _generate_nginx_config(self):
-        """Generates nginx config to /etc/nginx/nginx.conf."""
-        logger.info("Generating nginx config file...")
-        process = self._container.exec(
-            command=["/usr/local/bin/generate_nginx_configs.py"],
-            environment={
-                "PROXY_BACKENDS": f"{self._namespace}.svc.cluster.local",
-                "CONTROLLER_HOSTNAME": f"controller.{self._get_domain_name}",
-                "RESOLVER": "kube-dns.kube-system.svc.cluster.local valid=10s",
-                "SERVICE_REGISTRY_MODE": "k8s",
-            },
+        self.framework.observe(
+            self._cert_controller.on.certificate_available,
+            self._on_controller_certificate_available,
         )
-        stdout, _ = process.wait_output()
-        logger.info(stdout)
+        self.framework.observe(self.on.config_changed, self._on_magma_orc8r_nginx_pebble_ready)
 
-    def _create_additional_orc8r_nginx_services(self):
-        """Creates additional K8s services which are expected to be delivered by the
-        magma-orc8r-nginx.
-        """
-        client = Client()
-        logger.info("Creating additional magma-orc8r-nginx services...")
-        for service in self._magma_orc8r_nginx_additional_services:
-            if not self._orc8r_nginx_service_created(service.metadata.name):
-                logger.info(f"Creating {service.metadata.name} service...")
-                client.create(service)
-
-    def _on_remove(self, event: RemoveEvent):
-        """Remove additional magma-orc8r-nginx services."""
-        client = Client()
-        for service in self._magma_orc8r_nginx_additional_services:
-            client.delete(Service, name=service.metadata.name, namespace=self._namespace)
+    @property
+    def _certs_are_stored(self) -> bool:
+        if not self._container.can_connect():
+            return False
+        return (
+            self._container.exists(f"{self.BASE_CERTS_PATH}/controller.crt")
+            and self._container.exists(f"{self.BASE_CERTS_PATH}/controller.key")  # noqa: W503
+            and self._container.exists(f"{self.BASE_CERTS_PATH}/certifier.pem")  # noqa: W503
+        )
 
     @property
     def _pebble_layer(self) -> Layer:
@@ -162,26 +105,6 @@ class MagmaOrc8rNginxCharm(CharmBase):
                 },
             }
         )
-
-    @property
-    def _magma_orc8r_nginx_volumes(self) -> List[Volume]:
-        """Returns the additional volumes required by the magma-orc8r-nginx."""
-        return [
-            Volume(
-                name="certs",
-                secret=SecretVolumeSource(secretName="orc8r-certs"),
-            ),
-        ]
-
-    @property
-    def _magma_orc8r_nginx_volume_mounts(self) -> List[VolumeMount]:
-        """Returns the additional volume mounts for the magma-orc8r-nginx container."""
-        return [
-            VolumeMount(
-                mountPath="/var/opt/magma/certs",
-                name="certs",
-            ),
-        ]
 
     @property
     def _magma_orc8r_nginx_additional_services(self) -> List[Service]:
@@ -207,19 +130,16 @@ class MagmaOrc8rNginxCharm(CharmBase):
                             name="health",
                             port=80,
                             targetPort=80,
-                            nodePort=31200,
                         ),
                         ServicePort(
                             name="open-legacy",
                             port=443,
                             targetPort=8444,
-                            nodePort=30747,
                         ),
                         ServicePort(
                             name="open",
                             port=8444,
                             targetPort=8444,
-                            nodePort=30618,
                         ),
                     ],
                     type="LoadBalancer",
@@ -261,30 +181,281 @@ class MagmaOrc8rNginxCharm(CharmBase):
         ]
 
     @property
-    def _relations_created(self) -> bool:
-        if missing_relations := [
-            relation
-            for relation in self.REQUIRED_RELATIONS
-            if not self.model.get_relation(relation)
-        ]:
-            msg = f"Waiting for relation(s) to be created: {', '.join(missing_relations)}"
-            self.unit.status = BlockedStatus(msg)
+    def _namespace(self) -> str:
+        return self.model.name
+
+    @property
+    def _magma_orc8r_bootstrapper_relation_created(self) -> bool:
+        """Returns whether magma-orc8r-bootstrapper relation is created.
+
+        Returns:
+            bool: True/False
+        """
+        return self._relation_created("magma-orc8r-bootstrapper")
+
+    @property
+    def _magma_orc8r_obsidian_relation_created(self) -> bool:
+        """Returns whether magma-orc8r-obsidian relation is created.
+
+        Returns:
+            bool: True/False
+        """
+        return self._relation_created("magma-orc8r-obsidian")
+
+    @property
+    def _cert_certifier_relation_created(self) -> bool:
+        """Returns whether cert-certifier relation is created.
+
+        Returns:
+            bool: True/False
+        """
+        return self._relation_created("cert-certifier")
+
+    @property
+    def _cert_controller_relation_created(self) -> bool:
+        """Returns whether cert-controller relation is created.
+
+        Returns:
+            bool: True/False
+        """
+        return self._relation_created("cert-controller")
+
+    @property
+    def _domain_config_is_valid(self) -> bool:
+        """Returns whether the `domain` config is valid.
+
+        Returns:
+            bool: True/False
+        """
+        domain = self.model.config.get("domain")
+        if not domain:
             return False
         return True
 
     @property
-    def _relations_ready(self) -> bool:
-        """Checks whether required relations are ready."""
-        not_ready_relations = [
-            relation for relation in self.REQUIRED_RELATIONS if not self._relation_active(relation)
-        ]
-        if not_ready_relations:
-            msg = f"Waiting for relation(s) to be ready: {', '.join(not_ready_relations)}"
-            self.unit.status = WaitingStatus(msg)
+    def _magma_orc8r_bootstrapper_relation_ready(self) -> bool:
+        """Returns whether the magma-orc8r-bootstrapper workload service is running.
+
+        Returns:
+            bool: True/False
+        """
+        return self._magma_relation_ready(relation_name="magma-orc8r-bootstrapper")
+
+    @property
+    def _magma_orc8r_obsidian_relation_ready(self) -> bool:
+        """Returns whether the magma-orc8r-obsidian workload service is running.
+
+        Returns:
+            bool: True/False
+        """
+        return self._magma_relation_ready(relation_name="magma-orc8r-obsidian")
+
+    def _magma_relation_ready(self, relation_name: str) -> bool:
+        """Returns whether a given Magma relation is ready.
+
+        Looks at the relation data and checks if the "active" key is set to "True".
+
+        Args:
+            relation_name (str): Juju relation name
+
+        Returns:
+            bool: True/False
+        """
+        try:
+            relation = self.model.get_relation(relation_name)
+            units = relation.units  # type: ignore[union-attr]
+            return relation.data[next(iter(units))]["active"] == "True"  # type: ignore[union-attr]
+        except (AttributeError, KeyError, StopIteration):
             return False
-        return True
+
+    def _relation_created(self, relation_name: str) -> bool:
+        """Returns whether given relation was created.
+
+        Args:
+            relation_name (str): Relation name
+
+        Returns:
+            bool: True/False
+        """
+        try:
+            if self.model.get_relation(relation_name):
+                return True
+            return False
+        except KeyError:
+            return False
+
+    def _on_install(self, event: InstallEvent) -> None:
+        """Triggerred once when charm is installed.
+
+        Args:
+            event: Juju event
+
+        Returns:
+            None
+        """
+        if not self._container.can_connect():
+            logger.info("Can't connect to container - Deferring")
+            event.defer()
+            return
+        self._generate_nginx_config()
+        self._create_additional_orc8r_nginx_services()
+
+    def _on_magma_orc8r_nginx_pebble_ready(
+        self,
+        event: Union[
+            PebbleReadyEvent,
+            CertifierCertificateAvailableEvent,
+            ControllerCertificateAvailableEvent,
+            ConfigChangedEvent,
+        ],
+    ) -> None:
+        """Triggerred when pebble ready.
+
+        Args:
+            event: Juju event
+
+        Returns:
+            None
+        """
+        if not self._domain_config_is_valid:
+            self.unit.status = BlockedStatus("Domain config is not valid")
+            return
+        if not self._magma_orc8r_bootstrapper_relation_created:
+            self.unit.status = BlockedStatus(
+                "Waiting for 'magma-orc8r-bootstrapper' relation to be created"
+            )
+            event.defer()
+            return
+        if not self._magma_orc8r_obsidian_relation_created:
+            self.unit.status = BlockedStatus(
+                "Waiting for 'magma-orc8r-obsidian' relation to be created"
+            )
+            event.defer()
+            return
+        if not self._cert_certifier_relation_created:
+            self.unit.status = BlockedStatus("Waiting for 'cert-certifier' relation to be created")
+            event.defer()
+            return
+        if not self._cert_controller_relation_created:
+            self.unit.status = BlockedStatus(
+                "Waiting for 'cert-controller' relation to be created"
+            )
+            event.defer()
+            return
+        if not self._certs_are_stored:
+            self.unit.status = WaitingStatus("Waiting for certificates to be available.")
+            event.defer()
+            return
+        if not self._magma_orc8r_bootstrapper_relation_ready:
+            self.unit.status = WaitingStatus(
+                "Waiting for 'magma-orc8r-bootstrapper' relation to be ready"
+            )
+            event.defer()
+            return
+        if not self._magma_orc8r_obsidian_relation_ready:
+            self.unit.status = WaitingStatus(
+                "Waiting for 'magma-orc8r-obsidian' relation to be ready"
+            )
+            event.defer()
+            return
+        self._configure_pebble_layer(event)
+
+    def _configure_pebble_layer(
+        self,
+        event: Union[
+            PebbleReadyEvent,
+            CertifierCertificateAvailableEvent,
+            ControllerCertificateAvailableEvent,
+            ConfigChangedEvent,
+        ],
+    ) -> None:
+        """Adds service to workload and restarts it.
+
+        Args:
+            event: Juju event
+
+        Returns:
+            None
+        """
+        if self._container.can_connect():
+            plan = self._container.get_plan()
+            layer = self._pebble_layer
+            if plan.services != layer.services:
+                self.unit.status = MaintenanceStatus(
+                    f"Configuring pebble layer for {self._service_name}"
+                )
+                self._container.add_layer(self._container_name, layer, combine=True)
+                self._container.restart(self._service_name)
+                logger.info(f"Restarted service {self._service_name}")
+                self.unit.status = ActiveStatus()
+        else:
+            self.unit.status = WaitingStatus(f"Waiting for {self._container} to be ready")
+            event.defer()
+            return
+
+    def _generate_nginx_config(self) -> None:
+        """Generates nginx config to /etc/nginx/nginx.conf.
+
+        Returns:
+            None
+        """
+        logger.info("Generating nginx config file...")
+        domain_name = self.model.config.get("domain")
+        process = self._container.exec(
+            command=["/usr/local/bin/generate_nginx_configs.py"],
+            environment={
+                "PROXY_BACKENDS": f"{self._namespace}.svc.cluster.local",
+                "CONTROLLER_HOSTNAME": f"controller.{domain_name}",
+                "RESOLVER": "kube-dns.kube-system.svc.cluster.local valid=10s",
+                "SERVICE_REGISTRY_MODE": "k8s",
+            },
+        )
+        try:
+            process.wait_output()
+        except ExecError as e:
+            logger.error("Exited with code %d. Stderr:", e.exit_code)
+            for line in e.stderr.splitlines():
+                logger.error("    %s", line)
+            raise e
+        logger.info("Successfully generated nginx config file")
+
+    def _create_additional_orc8r_nginx_services(self) -> None:
+        """Creates additional K8s services.
+
+        Those services are expected to be delivered by the magma-orc8r-nginx service.
+
+        Returns:
+            None
+        """
+        client = Client()
+        logger.info("Creating additional magma-orc8r-nginx services")
+        for service in self._magma_orc8r_nginx_additional_services:
+            if not self._orc8r_nginx_service_created(service.metadata.name):
+                logger.info(f"Creating {service.metadata.name} service")
+                client.create(service)
+
+    def _on_remove(self, event: RemoveEvent) -> None:
+        """Remove additional magma-orc8r-nginx services.
+
+        Args:
+            event (RemoveEvent): Juju event
+
+        Returns:
+            None
+        """
+        client = Client()
+        for service in self._magma_orc8r_nginx_additional_services:
+            client.delete(Service, name=service.metadata.name, namespace=self._namespace)
 
     def _relation_active(self, relation_name: str) -> bool:
+        """Returns whether a given relation is active or not.
+
+        Args:
+            relation_name (str): Juju relation name
+
+        Returns:
+            bool: True/False
+        """
         try:
             rel = self.model.get_relation(relation_name)
             units = rel.units  # type: ignore[union-attr]
@@ -293,7 +464,14 @@ class MagmaOrc8rNginxCharm(CharmBase):
             return False
 
     def _orc8r_nginx_service_created(self, service_name: str) -> bool:
-        """Checks whether given K8s service exists or not."""
+        """Checks whether given K8s service exists or not.
+
+        Args:
+            service_name (str): Kubernetes service name
+
+        Returns:
+            bool: True/False
+        """
         client = Client()
         try:
             client.get(Service, name=service_name, namespace=self._namespace)
@@ -301,29 +479,50 @@ class MagmaOrc8rNginxCharm(CharmBase):
         except HTTPStatusError:
             return False
 
-    @property
-    def _orc8r_certs_mounted(self) -> bool:
-        """Check to see if the NMS certs have already been mounted."""
-        client = Client()
-        statefulset = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
-        return all(
-            volume_mount in statefulset.spec.template.spec.containers[1].volumeMounts  # type: ignore[attr-defined]  # noqa: E501
-            for volume_mount in self._magma_orc8r_nginx_volume_mounts
+    def _on_controller_certificate_available(
+        self, event: ControllerCertificateAvailableEvent
+    ) -> None:
+        """Triggered when controller certificate is available.
+
+        Args:
+            event (ControllerCertificateAvailableEvent): Juju event
+
+        Returns:
+            None
+        """
+        logger.info("Controller certificate available")
+        if not self._container.can_connect():
+            logger.info("Can't connect to container - Deferring")
+            event.defer()
+            return
+        self._container.push(
+            path=f"{self.BASE_CERTS_PATH}/controller.crt", source=event.certificate
         )
+        self._container.push(
+            path=f"{self.BASE_CERTS_PATH}/controller.key", source=event.private_key
+        )
+        self._on_magma_orc8r_nginx_pebble_ready(event)
 
-    @property
-    def _get_domain_name(self):
-        """Gets domain name for the data bucket sent by certifier relation."""
-        try:
-            certifier_relation = self.model.get_relation("magma-orc8r-certifier")
-            units = certifier_relation.units  # type: ignore[union-attr]
-            return certifier_relation.data[next(iter(units))]["domain"]  # type: ignore[union-attr]
-        except (AttributeError, KeyError, StopIteration):
-            return None
+    def _on_certifier_certificate_available(
+        self, event: CertifierCertificateAvailableEvent
+    ) -> None:
+        """Triggered when certifier certificate is available.
 
-    @property
-    def _namespace(self) -> str:
-        return self.model.name
+        Args:
+            event (CertifierCertificateAvailableEvent): Juju event
+
+        Returns:
+            None
+        """
+        logger.info("Certifier certificate available")
+        if not self._container.can_connect():
+            logger.info("Can't connect to container - Deferring")
+            event.defer()
+            return
+        self._container.push(
+            path=f"{self.BASE_CERTS_PATH}/certifier.pem", source=event.certificate
+        )
+        self._on_magma_orc8r_nginx_pebble_ready(event)
 
 
 if __name__ == "__main__":

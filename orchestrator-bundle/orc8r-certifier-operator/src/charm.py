@@ -2,27 +2,54 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+"""magma-orc8r-certifier.
+
+magma-orc8r-certifier maintains and verifies signed client certificates and their associated
+identities.
+"""
+
 import base64
 import logging
+import secrets
+import string
+from typing import Optional, Union
 
 import ops.lib
 import psycopg2  # type: ignore[import]
-from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
-from lightkube import Client
-from lightkube.core.exceptions import ApiError
-from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
-from lightkube.models.meta_v1 import ObjectMeta
-from lightkube.resources.apps_v1 import StatefulSet
-from lightkube.resources.core_v1 import Secret
-from lightkube.resources.core_v1 import Secret as SecretRes
+from charms.magma_orc8r_certifier.v0.cert_admin_operator import (
+    CertAdminOperatorProvides,
+)
+from charms.magma_orc8r_certifier.v0.cert_admin_operator import (
+    CertificateRequestEvent as AdminOperatorCertificateRequestEvent,
+)
+from charms.magma_orc8r_certifier.v0.cert_bootstrapper import CertBootstrapperProvides
+from charms.magma_orc8r_certifier.v0.cert_bootstrapper import (
+    CertificateRequestEvent as BootstrapperCertificateRequestEvent,
+)
+from charms.magma_orc8r_certifier.v0.cert_certifier import CertCertifierProvides
+from charms.magma_orc8r_certifier.v0.cert_certifier import (
+    CertificateRequestEvent as CertifierCertificateRequestEvent,
+)
+from charms.magma_orc8r_certifier.v0.cert_controller import CertControllerProvides
+from charms.magma_orc8r_certifier.v0.cert_controller import (
+    CertificateRequestEvent as ControllerCertificateRequestEvent,
+)
+from charms.observability_libs.v1.kubernetes_service_patch import (
+    KubernetesServicePatch,
+    ServicePort,
+)
+from charms.tls_certificates_interface.v0.tls_certificates import (
+    CertificateAvailableEvent,
+    TLSCertificatesRequires,
+)
 from ops.charm import (
+    ActionEvent,
     CharmBase,
-    ConfigChangedEvent,
     InstallEvent,
     PebbleReadyEvent,
     RelationJoinedEvent,
-    RemoveEvent,
 )
+from ops.framework import StoredState
 from ops.main import main
 from ops.model import (
     ActiveStatus,
@@ -32,10 +59,10 @@ from ops.model import (
     Relation,
     WaitingStatus,
 )
-from ops.pebble import Layer, PathError
+from ops.pebble import Layer
 from pgconnstr import ConnectionString  # type: ignore[import]
 
-from self_signed_certs_creator import (
+from application_certificates import (
     generate_ca,
     generate_certificate,
     generate_csr,
@@ -48,6 +75,7 @@ pgsql = ops.lib.use("pgsql", 1, "postgresql-charmers@lists.launchpad.net")
 
 
 class MagmaOrc8rCertifierCharm(CharmBase):
+    """Main class that is instantiated everytime an event occurs."""
 
     DB_NAME = "magma_dev"
     BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
@@ -57,335 +85,110 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     PROMETHEUS_URL = "http://orc8r-prometheus:9090"
     ALERTMANAGER_URL = "http://orc8r-alertmanager:9093"
 
+    _stored = StoredState()
+
     def __init__(self, *args):
-        """An instance of this object everytime an event occurs."""
+        """Initializes all events that need to be observed."""
         super().__init__(*args)
+        self.certificates = TLSCertificatesRequires(self, "certificates")
+        self.cert_admin_operator = CertAdminOperatorProvides(self, "cert-admin-operator")
+        self.cert_certifier = CertCertifierProvides(self, "cert-certifier")
+        self.cert_controller = CertControllerProvides(self, "cert-controller")
+        self.cert_bootstrapper = CertBootstrapperProvides(self, "cert-bootstrapper")
         self._container_name = self._service_name = "magma-orc8r-certifier"
         self.provided_relation_name = list(self.meta.provides.keys())[0]
-        provided_relation_name_with_underscores = self.provided_relation_name.replace("-", "_")
         self._container = self.unit.get_container(self._container_name)
         self._db = pgsql.PostgreSQLClient(self, "db")
-        relation_joined_event = getattr(
-            self.on, f"{provided_relation_name_with_underscores}_relation_joined"
-        )
-        self.framework.observe(self.on.install, self._on_install)
-        self.framework.observe(
-            self.on.magma_orc8r_certifier_pebble_ready, self._on_magma_orc8r_certifier_pebble_ready
-        )
-        self.framework.observe(self.on.config_changed, self._on_config_changed)
-        self.framework.observe(
-            relation_joined_event, self._on_magma_orc8r_certifier_relation_joined
-        )
-        self.framework.observe(
-            self._db.on.database_relation_joined, self._on_database_relation_joined
-        )
-        self.framework.observe(self.on.remove, self._on_remove)
-        self._nms_certs_secret_name = "nms-certs"
-        self._orc8r_certs_secret_name = "orc8r-certs"
-        self._nms_certs_data = {}
-        self._orc8r_certs_data = {}
+        self._stored.set_default(admin_operator_password="")
         self._service_patcher = KubernetesServicePatch(
             charm=self,
-            ports=[("grpc", 9180, 9086)],
+            ports=[ServicePort(name="grpc", port=9180, targetPort=9086)],
             additional_labels={
                 "app.kubernetes.io/part-of": "orc8r-app",
                 "orc8r.io/analytics_collector": "true",
             },
         )
+        self.framework.observe(
+            self.certificates.on.certificate_available, self._on_certificate_available
+        )
+        self.framework.observe(
+            self.on.certificates_relation_joined, self._on_certificates_relation_joined
+        )
+        self.framework.observe(self.on.install, self._on_install)
+        self.framework.observe(
+            self.on.magma_orc8r_certifier_pebble_ready, self._on_magma_orc8r_certifier_pebble_ready
+        )
+        self.framework.observe(
+            self._db.on.database_relation_joined, self._on_database_relation_joined
+        )
+        self.framework.observe(
+            self.on.get_pfx_package_password_action, self._on_get_pfx_package_password
+        )
+        self.framework.observe(
+            self.cert_admin_operator.on.certificate_request,
+            self._on_admin_operator_certificate_request,
+        )
+        self.framework.observe(
+            self.cert_certifier.on.certificate_request,
+            self._on_certifier_certificate_request,
+        )
+        self.framework.observe(
+            self.cert_controller.on.certificate_request,
+            self._on_controller_certificate_request,
+        )
+        self.framework.observe(
+            self.cert_bootstrapper.on.private_key_request,
+            self._on_bootstrapper_private_key_request,
+        )
 
-    def _on_install(self, event: InstallEvent):
-        """Runs each time the charm is installed."""
-        if not self._container.can_connect():
-            self.unit.status = WaitingStatus("Waiting for container to be ready")
-            event.defer()
-            return
-        self._write_metricsd_config_file()
+    @property
+    def _root_certs_are_stored(self) -> bool:
+        """Returns whether root certificate are stored.
 
-    def _on_magma_orc8r_certifier_pebble_ready(self, event: PebbleReadyEvent):
-        """Triggered when pebble is ready."""
-        if not self._db_relation_created:
-            self.unit.status = BlockedStatus("Waiting for database relation to be created")
-            event.defer()
-            return
-        if not self._db_relation_ready:
-            self.unit.status = WaitingStatus("Waiting for db relation to be ready")
-            event.defer()
-            return
-        if not self._certs_are_mounted:
-            self.unit.status = WaitingStatus("Waiting for certs to be mounted")
-            event.defer()
-            return
-        self._configure_magma_orc8r_certifier(event)
+        Returns:
+            bool: Whether root certificate are stored.
+        """
+        return (
+            self._container.exists(f"{self.BASE_CERTS_PATH}/controller.crt")
+            and self._container.exists(f"{self.BASE_CERTS_PATH}/controller.key")  # noqa: W503
+            and self._container.exists(f"{self.BASE_CERTS_PATH}/rootCA.pem")  # noqa: W503
+        )
 
-    def _on_config_changed(self, event: ConfigChangedEvent):
-        if not self._domain_config_is_valid:
-            self.unit.status = BlockedStatus("Config 'domain' is not valid")
-            logger.warning("Config 'domain' not valid")
-            event.defer()
-            return
-        if not self._secrets_are_created:
-            self._create_magma_orc8r_secrets()
-        if not self._container.can_connect():
-            self.unit.status = WaitingStatus("Waiting for container to be ready")
-            event.defer()
-            return
-        if not self._certs_are_mounted:
-            self._mount_certifier_certs()
-        self._update_relations()
+    @property
+    def _application_certs_are_stored(self) -> bool:
+        """Returns whether application certificate are stored.
 
-    def _on_magma_orc8r_certifier_relation_joined(self, event: RelationJoinedEvent):
-        self._update_relations()
-        if not self._service_is_running:
-            logger.warning(
-                f"Service {self._service_name} not running! Please wait for the service to start."
+        Returns:
+            bool: Whether application certificate are stored.
+        """
+        return (
+            self._container.exists(f"{self.BASE_CERTS_PATH}/admin_operator.pem")
+            and self._container.exists(  # noqa: W503
+                f"{self.BASE_CERTS_PATH}/admin_operator.key.pem"
             )
-            event.defer()
-            return
-
-    def _on_database_relation_joined(self, event: RelationJoinedEvent):
-        """
-        Event handler for database relation change.
-        - Sets the event.database field on the database joined event.
-        - Required because setting the database name is only possible
-          from inside the event handler per https://github.com/canonical/ops-lib-pgsql/issues/2
-        - Sets our database parameters based on what was provided
-          in the relation event.
-        """
-        if self.unit.is_leader():
-            event.database = self.DB_NAME  # type: ignore[attr-defined]
-
-    def _on_remove(self, event: RemoveEvent):
-        self.unit.status = MaintenanceStatus("Removing Magma Orc8r secrets")
-        self._delete_k8s_secret(secret_name=self._nms_certs_secret_name)
-        self._delete_k8s_secret(secret_name=self._orc8r_certs_secret_name)
-
-    def _write_metricsd_config_file(self):
-        metricsd_config = (
-            f'prometheusQueryAddress: "{self.PROMETHEUS_URL}"\n'
-            f'alertmanagerApiURL: "{self.ALERTMANAGER_URL}/api/v2"\n'
-            '"profile": "prometheus"\n'
-        )
-        self._container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
-
-    def _configure_magma_orc8r_certifier(self, event: PebbleReadyEvent):
-        """Adds layer to pebble config if the proposed config is different from the current one."""
-        if self._container.can_connect():
-            self.unit.status = MaintenanceStatus("Configuring pod")
-            plan = self._container.get_plan()
-            layer = self._pebble_layer
-            if plan.services != layer.services:
-                self._container.add_layer(self._container_name, layer, combine=True)
-                self._container.restart(self._service_name)
-                logger.info(f"Restarted container {self._service_name}")
-                self._update_relations()
-                self.unit.status = ActiveStatus()
-        else:
-            self.unit.status = WaitingStatus("Waiting for container to be ready")
-            event.defer()
-
-    def _update_relations(self):
-        if not self.unit.is_leader():
-            return
-        relations = self.model.relations[self.provided_relation_name]
-        for relation in relations:
-            self._update_domain_name_in_relation_data(relation)
-            self._update_relation_active_status(
-                relation=relation, is_active=self._service_is_running
-            )
-
-    def _update_domain_name_in_relation_data(self, relation):
-        """Updates the domain field inside the relation data bucket."""
-        domain = self.model.config["domain"]
-        relation.data[self.unit].update({"domain": domain})
-
-    def _create_magma_orc8r_secrets(self):
-        self.unit.status = MaintenanceStatus("Creating Magma Orc8r secrets")
-        self._get_certificates()
-        self._create_secrets()
-
-    def _get_certificates(self):
-        if self.model.config["use-self-signed-ssl-certs"]:
-            self._generate_self_signed_ssl_certs()
-        else:
-            self._load_certificates_from_configs()
-
-    def _generate_self_signed_ssl_certs(self):
-        logger.info("Creating self-signed certificates...")
-        self._generate_admin_operator_cert()
-        self._generate_controller_cert()
-        self._generate_bootstrapper_cert()
-
-    def _generate_admin_operator_cert(self):
-        """
-        Generates admin operator certificates.
-        List of certificates:
-            1. Generates Certifier certificate to sign AdminOperator certificate
-            2. Generate AdminOperator private key to create CSR
-            3. Generate AdminOperator CSR (Certificate Signing Request)
-            4. Generate AdminOperator certificate
-        """
-
-        certifier_key = generate_private_key()
-        certifier_pem = generate_ca(
-            private_key=certifier_key,
-            subject=f"certifier.{self.model.config['domain']}",
-        )
-        admin_operator_key_pem = generate_private_key()
-        admin_operator_csr = generate_csr(
-            private_key=admin_operator_key_pem,
-            subject="admin_operator",
-        )
-        admin_operator_pem = generate_certificate(
-            csr=admin_operator_csr,
-            ca=certifier_pem,
-            ca_key=certifier_key,
-        )
-        admin_operator_pfx = generate_pfx_package(
-            private_key=admin_operator_key_pem,
-            certificate=admin_operator_pem,
-            password=self.model.config["passphrase"],
-        )
-
-        self._nms_certs_data["admin_operator.key.pem"] = self._encode_in_base64(
-            admin_operator_key_pem
-        )
-        self._nms_certs_data["admin_operator.pem"] = self._encode_in_base64(admin_operator_pem)
-        self._orc8r_certs_data["admin_operator.pem"] = self._encode_in_base64(admin_operator_pem)
-        self._orc8r_certs_data["certifier.key"] = self._encode_in_base64(certifier_key)
-        self._orc8r_certs_data["certifier.pem"] = self._encode_in_base64(certifier_pem)
-        self._orc8r_certs_data["admin_operator.pfx"] = self._encode_in_base64(admin_operator_pfx)
-
-    def _generate_controller_cert(self):
-        """
-        Generates controller certificates. List of certificates:
-            1. Generate rootCA certificate to sign AdminOperator certificate
-            2. Generate Controller private key to create CSR
-            3. Generate Controller CSR (Certificate Signing Request)
-            4. Generate Controller certificate
-        """
-
-        rootca_key = generate_private_key()
-        rootca_pem = generate_ca(
-            private_key=rootca_key,
-            subject=f"rootca.{self.model.config['domain']}",
-        )
-        controller_key = generate_private_key()
-        controller_csr = generate_csr(
-            private_key=controller_key, subject=f"*.{self.model.config['domain']}"
-        )
-        controller_crt = generate_certificate(
-            csr=controller_csr,
-            ca=rootca_pem,
-            ca_key=rootca_key,
-        )
-
-        self._nms_certs_data["controller.crt"] = self._encode_in_base64(controller_crt)
-        self._nms_certs_data["controller.key"] = self._encode_in_base64(controller_key)
-        self._orc8r_certs_data["controller.crt"] = self._encode_in_base64(controller_crt)
-        self._orc8r_certs_data["controller.key"] = self._encode_in_base64(controller_key)
-        self._orc8r_certs_data["rootCA.key"] = self._encode_in_base64(rootca_key)
-        self._orc8r_certs_data["rootCA.pem"] = self._encode_in_base64(rootca_pem)
-
-    def _generate_bootstrapper_cert(self):
-        """
-        Generates bootstrapper certificate.
-        """
-        bootstrapper_key = generate_private_key()
-        self._orc8r_certs_data["bootstrapper.key"] = self._encode_in_base64(bootstrapper_key)
-
-    def _load_certificates_from_configs(self):
-        self._nms_certs_data = {
-            "admin_operator.key.pem": self._encode_in_base64(
-                self.model.config["admin-operator-key-pem"].encode()
-            ),
-            "admin_operator.pem": self._encode_in_base64(
-                self.model.config["admin-operator-pem"].encode()
-            ),
-            "controller.crt": self._encode_in_base64(self.model.config["controller-crt"].encode()),
-            "controller.key": self._encode_in_base64(self.model.config["controller-key"].encode()),
-        }
-        self._orc8r_certs_data = {
-            "admin_operator.pem": self._encode_in_base64(
-                self.model.config["admin-operator-pem"].encode()
-            ),
-            "controller.crt": self._encode_in_base64(self.model.config["controller-crt"].encode()),
-            "controller.key": self._encode_in_base64(self.model.config["controller-key"].encode()),
-            "bootstrapper.key": self._encode_in_base64(
-                self.model.config["bootstrapper-key"].encode()
-            ),
-            "certifier.key": self._encode_in_base64(self.model.config["certifier-key"].encode()),
-            "certifier.pem": self._encode_in_base64(self.model.config["certifier-pem"].encode()),
-            "rootCA.key": self._encode_in_base64(self.model.config["rootCA-key"].encode()),
-            "rootCA.pem": self._encode_in_base64(self.model.config["rootCA-pem"].encode()),
-        }
-
-    def _create_secrets(self):
-        logger.info("Creating k8s secrets")
-        self._create_k8s_secret(
-            secret_name=self._nms_certs_secret_name, secret_data=self._nms_certs_data
-        )
-        self._create_k8s_secret(
-            secret_name=self._orc8r_certs_secret_name, secret_data=self._orc8r_certs_data
-        )
-
-    def _create_k8s_secret(self, secret_name: str, secret_data: dict):
-        logger.info(f"Creating k8s secret for '{secret_name}'")
-        secret = Secret(
-            apiVersion="v1",
-            data=secret_data,
-            metadata=ObjectMeta(
-                labels={"app.kubernetes.io/name": self.app.name},
-                name=secret_name,
-                namespace=self._namespace,
-            ),
-            kind="Secret",
-            type="Opaque",
-        )
-        try:
-            client = Client()
-            client.create(secret)
-        except ApiError as e:
-            logger.info("Failed to create Secret: %s.", str(secret.to_dict()))
-            raise e
-        return True
-
-    def _mount_certifier_certs(self):
-        """Patch the StatefulSet to include certs secret mount."""
-        self.unit.status = MaintenanceStatus("Mounting additional volumes")
-        logger.info("Mounting volumes for certificates")
-        client = Client()
-        stateful_set = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
-        stateful_set.spec.template.spec.volumes.extend(self._magma_orc8r_certifier_volumes)  # type: ignore[attr-defined]  # noqa: E501
-        stateful_set.spec.template.spec.containers[1].volumeMounts.extend(  # type: ignore[attr-defined]  # noqa: E501
-            self._magma_orc8r_certifier_volume_mounts
-        )
-        client.patch(StatefulSet, name=self.app.name, obj=stateful_set, namespace=self._namespace)
-        logger.info("Additional volumes for certificates are mounted")
-
-    def _delete_k8s_secret(self, secret_name: str) -> None:
-        """Delete Kubernetes secrets created by the create_secrets method."""
-        client = Client()
-        client.delete(SecretRes, name=secret_name, namespace=self._namespace)
-        logger.info("Deleted Kubernetes secrets!")
-
-    def _update_relation_active_status(self, relation: Relation, is_active: bool):
-        relation.data[self.unit].update(
-            {
-                "active": str(is_active),
-            }
+            and self._container.exists(f"{self.BASE_CERTS_PATH}/admin_operator.pfx")  # noqa: W503
+            and self._container.exists(f"{self.BASE_CERTS_PATH}/certifier.pem")  # noqa: W503
+            and self._container.exists(f"{self.BASE_CERTS_PATH}/certifier.key")  # noqa: W503
         )
 
     @property
     def _db_relation_created(self) -> bool:
-        """Checks whether required relations are ready."""
-        if not self.model.get_relation("db"):
-            return False
-        return True
+        """Checks whether db relation is created.
+
+        Returns:
+            bool: Whether required relation
+        """
+        return self._relation_created("db")
 
     @property
-    def _db_relation_ready(self) -> bool:
-        """Validates that database relation is established (that there is a relation and that
-        credentials have been passed)."""
+    def _db_relation_established(self) -> bool:
+        """Validates that database relation is established.
+
+        Checks that there is a relation and that credentials have been passed.
+
+        Returns:
+            bool: Whether the database relation is established.
+        """
         db_connection_string = self._get_db_connection_string
         if not db_connection_string:
             return False
@@ -395,13 +198,18 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                 f"user='{db_connection_string.user}' "
                 f"host='{db_connection_string.host}' "
                 f"password='{db_connection_string.password}'"
-            )
+            ).close()
             return True
         except psycopg2.OperationalError:
             return False
 
     @property
     def _pebble_layer(self) -> Layer:
+        """Returns Pebble layer object containing the workload startup service.
+
+        Returns:
+            Layer: Pebble layer
+        """
         return Layer(
             {
                 "summary": f"{self._service_name} pebble layer",
@@ -419,7 +227,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                         "-logtostderr=true "
                         "-v=0",
                         "environment": {
-                            "DATABASE_SOURCE": f"dbname={self.DB_NAME} "
+                            "DATABASE_SOURCE": f"dbname={self.DB_NAME} "  # type: ignore[union-attr]  # noqa: E501
                             f"user={self._get_db_connection_string.user} "
                             f"password={self._get_db_connection_string.password} "
                             f"host={self._get_db_connection_string.host} "
@@ -436,8 +244,21 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         )
 
     @property
-    def _get_db_connection_string(self):
-        """Returns DB connection string provided by the DB relation."""
+    def _certificates_relation_created(self) -> bool:
+        """Returns whether the certificates relation is created.
+
+        Returns:
+            bool: Whether the certificates relation is created.
+        """
+        return self._relation_created("certificates")
+
+    @property
+    def _get_db_connection_string(self) -> Optional[ConnectionString]:
+        """Returns DB connection string provided by the DB relation.
+
+        Returns:
+            ConnectionString: Database connection object.
+        """
         try:
             db_relation = self.model.get_relation("db")
             return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[union-attr, index]  # noqa: E501
@@ -446,61 +267,25 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     @property
     def _domain_config_is_valid(self) -> bool:
+        """Returns whether the "domain" config is valid.
+
+        For now simply checks if the config is set as a non-null value.
+
+        Returns:
+            bool: Whether the domain is a valid one.
+        """
         domain = self.model.config.get("domain")
         if not domain:
             return False
         return True
 
     @property
-    def _secrets_are_created(self) -> bool:
-        client = Client()
-        try:
-            client.get(res=Secret, name="orc8r-certs")
-            client.get(res=Secret, name="nms-certs")
-            logger.info("Secrets are already created")
-            return True
-        except ApiError:
-            logger.info("Kubernetes secrets are not already created")
-            return False
-
-    @property
-    def _certs_are_mounted(self) -> bool:
-        try:
-            self._container.pull(f"{self.BASE_CERTS_PATH}/certifier.pem")
-            logger.info("Certificates are already mounted to workload")
-            return True
-        except PathError:
-            logger.info("Certificates are not already mounted to workload")
-            return False
-
-    @property
-    def _magma_orc8r_certifier_volumes(self) -> list:
-        """Returns a list of volumes required by the magma-orc8r-certifier container."""
-        return [
-            Volume(
-                name="certs",
-                secret=SecretVolumeSource(secretName=self._orc8r_certs_secret_name),
-            ),
-        ]
-
-    @property
-    def _magma_orc8r_certifier_volume_mounts(self) -> list:
-        """Returns a list of volume mounts required by the magma-orc8r-certifier container."""
-        return [
-            VolumeMount(
-                mountPath=self.BASE_CERTS_PATH,
-                name="certs",
-                readOnly=True,
-            ),
-        ]
-
-    @staticmethod
-    def _encode_in_base64(byte_string: bytes):
-        """Encodes given byte string in Base64"""
-        return base64.b64encode(byte_string).decode("utf-8")
-
-    @property
     def _service_is_running(self) -> bool:
+        """Returns whether workload service is running.
+
+        Returns:
+            bool: Whether workload service is running.
+        """
         if self._container.can_connect():
             try:
                 self._container.get_service(self._service_name)
@@ -511,7 +296,419 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     @property
     def _namespace(self) -> str:
+        """Kubernetes namespace.
+
+        Returns:
+            str: Namespace
+        """
         return self.model.name
+
+    def _on_install(self, event: InstallEvent) -> None:
+        """Juju event triggered only once when charm is installed.
+
+        Args:
+            event: Juju event
+
+        Returns:
+            None
+        """
+        if not self._container.can_connect():
+            self.unit.status = WaitingStatus("Waiting for container to be ready")
+            event.defer()
+            return
+        if not self._domain_config_is_valid:
+            self.unit.status = BlockedStatus("Config 'domain' is not valid")
+            event.defer()
+            return
+        self._write_metricsd_config_file()
+        self._generate_application_certificates()
+
+    def _on_magma_orc8r_certifier_pebble_ready(
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
+    ) -> None:
+        """Juju event triggered when pebble is ready.
+
+        Args:
+            event: Juju event
+
+        Returns:
+            None
+        """
+        if not self._domain_config_is_valid:
+            self.unit.status = BlockedStatus("Config 'domain' is not valid")
+            logger.warning("Config 'domain' not valid")
+            event.defer()
+            return
+        if not self._db_relation_created:
+            self.unit.status = BlockedStatus("Waiting for database relation to be created")
+            event.defer()
+            return
+        if not self._certificates_relation_created:
+            self.unit.status = BlockedStatus("Waiting for tls-certificates relation to be created")
+            event.defer()
+            return
+        if not self._db_relation_established:
+            self.unit.status = WaitingStatus("Waiting for db relation to be ready")
+            event.defer()
+            return
+        if not self._root_certs_are_stored:
+            self.unit.status = WaitingStatus("Waiting for certs to be available")
+            event.defer()
+            return
+        if not self._application_certs_are_stored:
+            self.unit.status = WaitingStatus("Waiting for certs to be available")
+            event.defer()
+            return
+        self._configure_magma_orc8r_certifier(event)
+
+    def _on_certificates_relation_joined(self, event: RelationJoinedEvent) -> None:
+        """Juju event triggered when pebble is ready.
+
+        Args:
+            event: Juju event
+
+        Returns:
+            None
+        """
+        domain_name = self.model.config.get("domain")
+        if not self._domain_config_is_valid:
+            logger.info("Domain config is not valid")
+            event.defer()
+            return
+        self.certificates.request_certificate(
+            cert_type="server",
+            common_name=f"*.{domain_name}",
+        )
+
+    def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
+        """Runs whenever the certificates available event is triggered.
+
+        Pushes the certificates retrieved from the relation data to the workload container.
+
+        Args:
+            event (CertificateAvailableEvent): Custom Juju event for certificate available.
+
+        Returns:
+            None
+        """
+        logger.info("Certificate is available")
+        if not self._container.can_connect():
+            logger.info("Cant connect to container - Won't push certificates to workload")
+            event.defer()
+            return
+        certificate_data = event.certificate_data
+        if not self._root_certs_are_stored:
+            logger.info("Pushing controller certificate to workload")
+            self._container.push(
+                path=f"{self.BASE_CERTS_PATH}/rootCA.pem", source=certificate_data["ca"]
+            )
+            self._container.push(
+                path=f"{self.BASE_CERTS_PATH}/controller.crt", source=certificate_data["cert"]
+            )
+            self._container.push(
+                path=f"{self.BASE_CERTS_PATH}/controller.key", source=certificate_data["key"]
+            )
+        self._on_magma_orc8r_certifier_pebble_ready(event)
+
+    def _on_database_relation_joined(self, event: RelationJoinedEvent) -> None:
+        """Event handler for database relation change.
+
+        - Sets the event.database field on the database joined event.
+        - Required because setting the database name is only possible
+          from inside the event handler per https://github.com/canonical/ops-lib-pgsql/issues/2
+        - Sets our database parameters based on what was provided
+          in the relation event.
+
+        Args:
+            event (RelationJoinedEvent): Juju relation joined event
+
+        Returns:
+            None
+        """
+        if self.unit.is_leader():
+            event.database = self.DB_NAME  # type: ignore[attr-defined]
+
+    def _write_metricsd_config_file(self) -> None:
+        """Writes the config file for metricsd in the workload container.
+
+        Returns:
+            None
+        """
+        metricsd_config = (
+            f'prometheusQueryAddress: "{self.PROMETHEUS_URL}"\n'
+            f'alertmanagerApiURL: "{self.ALERTMANAGER_URL}/api/v2"\n'
+            '"profile": "prometheus"\n'
+        )
+        self._container.push(path=f"{self.BASE_CONFIG_PATH}/metricsd.yml", source=metricsd_config)
+
+    def _configure_magma_orc8r_certifier(
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
+    ) -> None:
+        """Adds layer to pebble config if the proposed config is different from the current one.
+
+        Args:
+            event (PebbleReadyEvent): Juju Pebble ready event
+
+        Returns:
+            None
+        """
+        if self._container.can_connect():
+            plan = self._container.get_plan()
+            layer = self._pebble_layer
+            if plan.services != layer.services:
+                self.unit.status = MaintenanceStatus("Configuring pod")
+                self._container.add_layer(self._container_name, layer, combine=True)
+                self._container.restart(self._service_name)
+                logger.info(f"Restarted container {self._service_name}")
+                self._update_relations()
+                self.unit.status = ActiveStatus()
+        else:
+            self.unit.status = WaitingStatus("Waiting for container to be ready")
+            event.defer()
+
+    def _update_relations(self) -> None:
+        """Updates all the "provided" relation with the workload service status.
+
+        Returns:
+            None
+        """
+        if not self.unit.is_leader():
+            return
+        relations = self.model.relations[self.provided_relation_name]
+        for relation in relations:
+            self._update_relation_active_status(
+                relation=relation, is_active=self._service_is_running
+            )
+
+    def _generate_application_certificates(self) -> None:
+        """Generates application certificates and pushes them to the workload container.
+
+        The following certificates/keys are created:
+            - certifier.pem
+            - certifier.key
+            - admin_operator.pem
+            - admin_operator.key.pem
+            - admin_operator.pfx
+
+        Returns:
+            None
+        """
+        logger.info("Generating Application Certificates")
+        certifier_key = generate_private_key()
+        certifier_pem = generate_ca(
+            private_key=certifier_key,
+            subject=f"certifier.{self.model.config['domain']}",
+        )
+        admin_operator_key_pem = generate_private_key()
+        admin_operator_csr = generate_csr(
+            private_key=admin_operator_key_pem,
+            subject="admin_operator",
+        )
+        admin_operator_pem = generate_certificate(
+            csr=admin_operator_csr,
+            ca=certifier_pem,
+            ca_key=certifier_key,
+        )
+        password = self._generate_password()
+        admin_operator_pfx = generate_pfx_package(
+            private_key=admin_operator_key_pem,
+            certificate=admin_operator_pem,
+            password=password,
+        )
+        bootstrapper_key = generate_private_key()
+        self._container.push(path=f"{self.BASE_CERTS_PATH}/certifier.pem", source=certifier_pem)
+        self._container.push(path=f"{self.BASE_CERTS_PATH}/certifier.key", source=certifier_key)
+        self._container.push(
+            path=f"{self.BASE_CERTS_PATH}/admin_operator.pem", source=admin_operator_pem
+        )
+        self._container.push(
+            path=f"{self.BASE_CERTS_PATH}/admin_operator.key.pem", source=admin_operator_key_pem
+        )
+        self._container.push(
+            path=f"{self.BASE_CERTS_PATH}/admin_operator.pfx", source=admin_operator_pfx
+        )
+        self._container.push(
+            path=f"{self.BASE_CERTS_PATH}/bootstrapper.key", source=bootstrapper_key
+        )
+        self._stored.admin_operator_password = password
+
+    def _update_relation_active_status(self, relation: Relation, is_active: bool) -> None:
+        """Updates the relation data content.
+
+        Args:
+            relation (Relation): Juju relation object
+            is_active (bool): Whether the service is active or not
+
+        Returns:
+            None
+        """
+        relation.data[self.unit].update(
+            {
+                "active": str(is_active),
+            }
+        )
+
+    def _relation_created(self, relation_name: str) -> bool:
+        """Returns whether a given Juju relation was crated.
+
+        Args:
+            relation_name (str): Relation name
+
+        Returns:
+            str: Whether the relation was created.
+        """
+        if not self.model.get_relation(relation_name):
+            return False
+        return True
+
+    @staticmethod
+    def _encode_in_base64(byte_string: bytes) -> str:
+        """Encodes given byte string in Base64.
+
+        Args:
+            byte_string (bytes): Byte data
+
+        Returns:
+            str: String of the bytes data.
+        """
+        return base64.b64encode(byte_string).decode("utf-8")
+
+    @staticmethod
+    def _generate_password() -> str:
+        """Generates a random 12 character password.
+
+        Returns:
+            str: Password
+        """
+        chars = string.ascii_letters + string.digits
+        return "".join(secrets.choice(chars) for _ in range(12))
+
+    def _on_get_pfx_package_password(self, event: ActionEvent) -> None:
+        """Sets the action result as the admin operator PFX package password.
+
+        Args:
+            event (ActionEvent): Juju event
+
+        Returns:
+            None
+        """
+        event.set_results(
+            {
+                "password": self._stored.admin_operator_password,
+            }
+        )
+
+    def _on_admin_operator_certificate_request(
+        self, event: AdminOperatorCertificateRequestEvent
+    ) -> None:
+        """Triggered when a certificate request is made on the admin_operator relation.
+
+        Args:
+            event (AdminOperatorCertificateRequestEvent): Juju event.
+
+        Returns:
+            None
+        """
+        if not self._container.can_connect():
+            logger.info("Container not yet available")
+            event.defer()
+            return
+        try:
+            certificate = self._container.pull(path=f"{self.BASE_CERTS_PATH}/admin_operator.pem")
+            private_key = self._container.pull(
+                path=f"{self.BASE_CERTS_PATH}/admin_operator.key.pem"
+            )
+        except ops.pebble.PathError:
+            logger.info("Certificate 'admin-operator' not yet available")
+            event.defer()
+            return
+        certificate_string = certificate.read()
+        private_key_string = private_key.read()
+        self.cert_admin_operator.set_certificate(
+            relation_id=event.relation_id,
+            certificate=certificate_string,  # type: ignore[arg-type]
+            private_key=private_key_string,  # type: ignore[arg-type]
+        )
+
+    def _on_certifier_certificate_request(self, event: CertifierCertificateRequestEvent) -> None:
+        """Triggered when a certificate request is made on the cert-certifier relation.
+
+        Args:
+            event (CertifierCertificateRequestEvent): Juju event
+
+        Returns:
+            None
+        """
+        if not self._container.can_connect():
+            logger.info("Container not yet available")
+            event.defer()
+            return
+        try:
+            certificate = self._container.pull(path=f"{self.BASE_CERTS_PATH}/certifier.pem")
+        except ops.pebble.PathError:
+            logger.info("Certificate 'certifier' not yet available")
+            event.defer()
+            return
+        certificate_string = certificate.read()
+        self.cert_certifier.set_certificate(
+            relation_id=event.relation_id,
+            certificate=certificate_string,  # type: ignore[arg-type]
+        )
+
+    def _on_controller_certificate_request(self, event: ControllerCertificateRequestEvent) -> None:
+        """Triggered when a certificate request is made on the cert-controller relation.
+
+        Args:
+            event (ControllerCertificateRequestEvent): Juju event
+
+        Returns:
+            None
+        """
+        if not self._container.can_connect():
+            logger.info("Container not yet available")
+            event.defer()
+            return
+        try:
+            certificate = self._container.pull(path=f"{self.BASE_CERTS_PATH}/controller.crt")
+            private_key = self._container.pull(path=f"{self.BASE_CERTS_PATH}/controller.key")
+        except ops.pebble.PathError:
+            logger.info("Certificate 'controller' not yet available")
+            event.defer()
+            return
+        certificate_string = certificate.read()
+        private_key_string = private_key.read()
+        self.cert_controller.set_certificate(
+            relation_id=event.relation_id,
+            certificate=certificate_string,  # type: ignore[arg-type]
+            private_key=private_key_string,  # type: ignore[arg-type]
+        )
+
+    def _on_bootstrapper_private_key_request(
+        self, event: BootstrapperCertificateRequestEvent
+    ) -> None:
+        """Triggered when a private key request is made on the cert-bootstrapper relation.
+
+        Args:
+            event (BootstrapperCertificateRequestEvent): Juju event
+
+        Returns:
+            None
+        """
+        if not self._container.can_connect():
+            logger.info("Container not yet available")
+            event.defer()
+            return
+        try:
+            private_key = self._container.pull(path=f"{self.BASE_CERTS_PATH}/bootstrapper.key")
+        except (ops.pebble.PathError, FileNotFoundError):
+            logger.info("Certificate 'controller' not yet available")
+            event.defer()
+            return
+        private_key_string = private_key.read()
+        self.cert_bootstrapper.set_private_key(
+            relation_id=event.relation_id,
+            private_key=private_key_string,  # type: ignore[arg-type]
+        )
 
 
 if __name__ == "__main__":
