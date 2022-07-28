@@ -1,0 +1,50 @@
+name: feg-magmad
+
+on:
+  push:
+    paths:
+      - "federation-gateway-bundle/feg-magmad-operator/**"
+
+jobs:
+  feg-magmad-lint-report:
+    name: Lint report (feg-magmad)
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-magmad-operator && tox -e lint
+
+  feg-magmad-static-analysis:
+    name: Static analysis (feg-magmad)
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-magmad-operator && tox -e static
+
+  feg-magmad-unit-tests-with-coverage:
+    name: Unit tests (feg-magmad)
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-magmad-operator && tox -e unit
+
+  feg-magmad-integration-test:
+    name: Integration tests (feg-magmad)
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+      - name: Run integration tests
+        run: cd federation-gateway-bundle/feg-magmad-operator && tox -e integration

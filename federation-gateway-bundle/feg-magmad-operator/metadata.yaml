@@ -1,0 +1,18 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: magma-feg-magmad
+description: |
+  Federation Gateway magmad service.
+summary: |
+  Federation Gateway magmad service.
+
+containers:
+  magma-feg-magmad:
+    resource: magma-feg-magmad-image
+
+resources:
+  magma-feg-magmad-image:
+    type: oci-image
+    description: OCI image for magma-feg-magmad (docker.artifactory.magmacore.org/gateway_python:latest)
+    upstream-source: docker.artifactory.magmacore.org/gateway_python:latest

@@ -1,52 +1,78 @@
 bundle: kubernetes
 name: magma-federation-gateway
 description: |
-  Magma implements a low-friction, single point of integration between an 
-  MNO's mobile core and access gateways through federation networks. 
-  NMS enables management of the federated networks and their gateways.
-
+  The federated gateway provides remote procedure call (GRPC) based interfaces
+  to standard 3GPP components, such as HSS (S6a, SWx), OCS (Gy), and PCRF (Gx).
+  The exposed RPC interface provides versioning & backward compatibility,
+  security (HTTP2 & TLS) as well as support for multiple programming languages.
+  The Remote Procedures below provide simple, extensible, multi-language
+  interfaces based on GRPC which allow developers to avoid dealing with the
+  complexities of 3GPP protocols. Implementing these RPC interfaces allows
+  networks running on Magma to integrate with traditional 3GPP core components.
 applications:
-  feg-eap-sim:
-    charm: ./feg-eap-sim-operator/feg-eap-sim.charm
+  feg-aaa-server:
+    charm: ./feg-aaa-server-operator/feg-aaa-server.charm
     scale: 1
     trust: true
     resources:
-      magma-feg-eap-sim-image: docker.artifactory.magmacore.org/gateway_go:1.6.0
-  feg-health:
-    charm: ./feg-health-operator/feg-health.charm
+      magma-feg-aaa-server-image: 'docker.artifactory.magmacore.org/gateway_go:1.6.0'
+  feg-control-proxy:
+    charm: ./feg-control-proxy-operator/feg-control-proxy.charm
     scale: 1
     trust: true
     resources:
-      magma-feg-health-image: docker.artifactory.magmacore.org/gateway_go:1.6.0
-  feg-hello:
-    charm: ./feg-hello-operator/feg-hello.charm
-    scale: 1
-    trust: true
-    resources:
-      magma-feg-hello-image: docker.artifactory.magmacore.org/gateway_go:1.6.0
-  feg-radiusd:
-    charm: ./feg-radiusd-operator/feg-radiusd.charm
-    scale: 1
-    trust: true
-    resources:
-      magma-feg-radiusd-image: docker.artifactory.magmacore.org/gateway_go:1.6.0
-  feg-s8-proxy:
-    charm: ./feg-s8-proxy-operator/feg-s8-proxy.charm
-    scale: 1
-    trust: true
-    resources:
-      magma-feg-s8-proxy-image: docker.artifactory.magmacore.org/gateway_go:1.6.0
-  feg-session-proxy:
-    charm: ./feg-session-proxy-operator/feg-session-proxy.charm
-    scale: 1
-    trust: true
-    resources:
-      magma-feg-session-proxy-image: docker.artifactory.magmacore.org/gateway_go:1.6.0
+      magma-feg-control-proxy-image: 'docker.artifactory.magmacore.org/gateway_python:latest'
   feg-csfb:
     charm: ./feg-csfb-operator/feg-csbf.charm
     scale: 1
     trust: true
     resources:
-      magma-feg-csfb-image: docker.artifactory.magmacore.org/gateway_go:1.6.0
-# TODO: Relations?
-# relations:
+      magma-feg-csfb-image: 'docker.artifactory.magmacore.org/gateway_go:1.6.0'
+  feg-eap-aka:
+    charm: ./feg-eap-aka-operator/feg-eap-aka.charm
+    scale: 1
+    trust: true
+    resources:
+      magma-feg-eap-aka-image: 'docker.artifactory.magmacore.org/gateway_go:1.6.0'
+  feg-eap-sim:
+    charm: ./feg-eap-sim-operator/feg-eap-sim.charm
+    scale: 1
+    trust: true
+    resources:
+      magma-feg-eap-sim-image: 'docker.artifactory.magmacore.org/gateway_go:1.6.0'
+  feg-health:
+    charm: ./feg-health-operator/feg-health.charm
+    scale: 1
+    trust: true
+    resources:
+      magma-feg-health-image: 'docker.artifactory.magmacore.org/gateway_go:1.6.0'
+  feg-hello:
+    charm: ./feg-hello-operator/feg-hello.charm
+    scale: 1
+    trust: true
+    resources:
+      magma-feg-hello-image: 'docker.artifactory.magmacore.org/gateway_go:1.6.0'
+  feg-magmad:
+    charm: ./feg-magmad-operator/feg-magmad.charm
+    scale: 1
+    trust: true
+    resources:
+      magma-feg-magmad-image: 'docker.artifactory.magmacore.org/gateway_python:latest'
+  feg-radiusd:
+    charm: ./feg-radiusd-operator/feg-radiusd.charm
+    scale: 1
+    trust: true
+    resources:
+      magma-feg-radiusd-image: 'docker.artifactory.magmacore.org/gateway_go:1.6.0'
+  feg-s8-proxy:
+    charm: ./feg-s8-proxy-operator/feg-s8-proxy.charm
+    scale: 1
+    trust: true
+    resources:
+      magma-feg-s8-proxy-image: 'docker.artifactory.magmacore.org/gateway_go:1.6.0'
+  feg-session-proxy:
+    charm: ./feg-session-proxy-operator/feg-session-proxy.charm
+    scale: 1
+    trust: true
+    resources:
+      magma-feg-session-proxy-image: 'docker.artifactory.magmacore.org/gateway_go:1.6.0'

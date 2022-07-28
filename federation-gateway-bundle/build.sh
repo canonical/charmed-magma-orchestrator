@@ -11,15 +11,20 @@ function build() {
 }
 
 charms="
+feg-aaa-server
+feg-control-proxy
+feg-csfb
+feg-eap-aka
 feg-eap-sim
 feg-health
 feg-hello
+feg-magmad
 feg-radiusd
+feg-redis
+feg-s6a-proxy
 feg-s8-proxy
 feg-session-proxy
-feg-csfb
-feg-aaa-server
-feg-eap-aka
+feg-swx-proxy
 "
 
 for charm in ${charms}; do
