@@ -1,0 +1,50 @@
+name: feg-eventd
+
+on:
+  push:
+    paths:
+      - "federation-gateway-bundle/feg-eventd-operator/**"
+
+jobs:
+  feg-eventd-lint-report:
+    name: Lint report (feg-eventd)
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-eventd-operator && tox -e lint
+
+  feg-eventd-static-analysis:
+    name: Static analysis (feg-eventd)
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-eventd-operator && tox -e static
+
+  feg-eventd-unit-tests-with-coverage:
+    name: Unit tests (feg-eventd)
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-eventd-operator && tox -e unit
+
+  feg-eventd-integration-test:
+    name: Integration tests (feg-eventd)
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+      - name: Run integration tests
+        run: cd federation-gateway-bundle/feg-eventd-operator && tox -e integration

@@ -1,0 +1,18 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: magma-feg-eventd
+description: |
+  Federation Gateway eventd service.
+summary: |
+  Federation Gateway eventd service.
+
+containers:
+  magma-feg-eventd:
+    resource: magma-feg-eventd-image
+
+resources:
+  magma-feg-eventd-image:
+    type: oci-image
+    description: OCI image for magma-feg-eventd (docker.artifactory.magmacore.org/gateway_python:latest)
+    upstream-source: docker.artifactory.magmacore.org/gateway_python:latest

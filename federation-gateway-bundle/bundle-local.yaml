@@ -46,6 +46,12 @@ applications:
     trust: true
     resources:
       magma-feg-health-image: 'docker.artifactory.magmacore.org/gateway_go:1.6.0'
+  feg-eventd:
+    charm: ./feg-eventd-operator/feg-eventd.charm
+    scale: 1
+    trust: true
+    resources:
+      magma-feg-eventd-image: 'docker.artifactory.magmacore.org/gateway_python:latest'
   feg-hello:
     charm: ./feg-hello-operator/feg-hello.charm
     scale: 1
