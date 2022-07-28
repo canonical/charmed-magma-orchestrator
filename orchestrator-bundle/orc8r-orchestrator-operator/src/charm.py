@@ -212,8 +212,17 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         ) and self._container.exists(f"{self.BASE_CERTS_PATH}/admin_operator.key.pem")
 
     @property
-    def _accessd_operator_relation_created_and_active(self) -> bool:
-        """Returns whether accessd-operator relation is created and ready.
+    def _accessd_operator_relation_created(self) -> bool:
+        """Returns whether accessd-operator relation is created.
+
+        Returns:
+            bool: True/False
+        """
+        return self._relation_created("magma-orc8r-accessd")
+
+    @property
+    def _accessd_operator_relation_active(self) -> bool:
+        """Returns whether accessd-operator relation is ready.
 
         Returns:
             bool: True/False
@@ -473,9 +482,9 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             self.unit.status = BlockedStatus("Waiting for metrics-endpoint relation to be created")
             event.defer()
             return
-        if not self._accessd_operator_relation_created_and_active:
+        if not self._accessd_operator_relation_created:
             self.unit.status = BlockedStatus(
-                "Waiting for magma-orc8r-accessd relation to be ready"
+                "Waiting for magma-orc8r-accessd relation to be created"
             )
             event.defer()
             return
@@ -487,6 +496,12 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             return
         if not self._certs_are_stored:
             self.unit.status = WaitingStatus("Waiting for certs to be available")
+            event.defer()
+            return
+        if not self._accessd_operator_relation_active:
+            self.unit.status = WaitingStatus(
+                "Waiting for magma-orc8r-accessd relation to be active"
+            )
             event.defer()
             return
         self._configure_orc8r(event)
