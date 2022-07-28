@@ -2,22 +2,25 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import logging
-from typing import List
+"""magma-nms-nginx-proxy.
 
-import httpx
-from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
-from lightkube import Client, codecs
-from lightkube.core.exceptions import ApiError
-from lightkube.models.core_v1 import (
-    ConfigMapVolumeSource,
-    SecretVolumeSource,
-    Volume,
-    VolumeMount,
+This charm is an nginx web server that proxies communication between NMS UI and MagmaLTE.
+
+"""
+
+
+import logging
+from typing import Union
+
+from charms.magma_orc8r_certifier.v0.cert_controller import (
+    CertControllerRequires,
+    CertificateAvailableEvent,
 )
-from lightkube.resources.apps_v1 import StatefulSet
-from lightkube.resources.core_v1 import ConfigMap
-from ops.charm import CharmBase, PebbleReadyEvent, RelationChangedEvent, RemoveEvent
+from charms.observability_libs.v1.kubernetes_service_patch import (
+    KubernetesServicePatch,
+    ServicePort,
+)
+from ops.charm import CharmBase, InstallEvent, PebbleReadyEvent
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import Layer
@@ -26,146 +29,72 @@ logger = logging.getLogger(__name__)
 
 
 class MagmaNmsNginxProxyCharm(CharmBase):
+    """Main class that is instantiated everytime an event occurs."""
 
-    REQUIRED_RELATIONS = ["magma-orc8r-certifier", "magma-nms-magmalte"]
+    BASE_NGINX_PATH = "/etc/nginx/conf.d"
+    NGINX_CONFIG_FILE_NAME = "nginx_proxy_ssl.conf"
 
     def __init__(self, *args):
+        """Initializes all event that need to be observed."""
         super().__init__(*args)
         self._container_name = self._service_name = "magma-nms-nginx-proxy"
         self._container = self.unit.get_container(self._container_name)
-        self._context = {"namespace": self._namespace, "app_name": self.app.name}
-        self.framework.observe(
-            self.on.magma_nms_nginx_proxy_pebble_ready, self._on_magma_nms_nginx_proxy_pebble_ready
-        )
-        self.framework.observe(
-            self.on.magma_orc8r_certifier_relation_changed, self._configure_nginx
-        )
-        self.framework.observe(self.on.remove, self._on_remove)
+        self.cert_controller = CertControllerRequires(self, "cert-controller")
         self.service_patcher = KubernetesServicePatch(
             charm=self,
-            ports=[("https", 443)],
+            ports=[ServicePort(name="https", port=443)],
             service_type="LoadBalancer",
             service_name="nginx-proxy",
             additional_labels={"app.kubernetes.io/part-of": "magma"},
         )
-
-    def _on_magma_nms_nginx_proxy_pebble_ready(self, event: PebbleReadyEvent):
-        """Configures magma-nms-nginx-proxy pebble layer."""
-        if not self._relations_created:
-            event.defer()
-            return
-        if not self._relations_ready:
-            event.defer()
-            return
-        if not self._nms_certs_mounted:
-            self.unit.status = WaitingStatus("Waiting for NMS certificates to be mounted")
-            event.defer()
-            return
-        if not self._nginx_proxy_etc_configmap_created:
-            self.unit.status = WaitingStatus(
-                "Waiting for required Kubernetes resources to be created"
-            )
-            event.defer()
-            return
-        self._configure_pebble(event)
-
-    def _configure_pebble(self, event: PebbleReadyEvent):
-        if self._container.can_connect():
-            self.unit.status = MaintenanceStatus(
-                f"Configuring pebble layer for {self._service_name}..."
-            )
-            plan = self._container.get_plan()
-            if plan.services != self._pebble_layer.services:
-                self._container.add_layer(self._container_name, self._pebble_layer, combine=True)
-                self._container.restart(self._service_name)
-                logger.info(f"Restarted container {self._service_name}")
-                self.unit.status = ActiveStatus()
-        else:
-            self.unit.status = WaitingStatus("Waiting for container to be ready")
-            event.defer()
-
-    def _configure_nginx(self, event: RelationChangedEvent):
-        if not self._relation_active("magma-orc8r-certifier"):
-            self.unit.status = WaitingStatus(
-                "Waiting for magma-orc8r-certifier relation to be ready"
-            )
-            event.defer()
-            return
-        if not self._nms_certs_mounted:
-            self.unit.status = MaintenanceStatus("Mounting NMS certificates")
-            self._mount_certifier_certs()
-        if not self._nginx_proxy_etc_configmap_created:
-            self.unit.status = MaintenanceStatus("Creating required Kubernetes resources")
-            self._create_magma_nms_nginx_proxy_configmap()
-
-    def _create_magma_nms_nginx_proxy_configmap(self) -> bool:
-        """Creates ConfigMap required by the magma-nms-nginx-proxy."""
-        client = Client()
-        with open("src/templates/config_map.yaml.j2") as configmap_manifest:
-            config_map = codecs.load_all_yaml(configmap_manifest, context=self._context)[0]
-            try:
-                client.create(config_map)
-            except ApiError as e:
-                logger.debug("Failed to create ConfigMap: %s.", str(config_map.to_dict()))
-                raise e
-        return True
-
-    def _mount_certifier_certs(self) -> None:
-        """Patch the StatefulSet to include NMS certs secret mount."""
-        self.unit.status = MaintenanceStatus(
-            "Mounting additional volumes required by the magma-nms-nginx-proxy container..."
+        self.framework.observe(self.on.install, self._on_install)
+        self.framework.observe(
+            self.on.magma_nms_nginx_proxy_pebble_ready, self._on_magma_nms_nginx_proxy_pebble_ready
         )
-        client = Client()
-        try:
-            stateful_set = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
-            stateful_set.spec.template.spec.volumes.extend(self._magma_nms_nginx_proxy_volumes)  # type: ignore[attr-defined]  # noqa: E501
-            stateful_set.spec.template.spec.containers[1].volumeMounts.extend(  # type: ignore[attr-defined]  # noqa: E501
-                self._magma_nms_nginx_proxy_volume_mounts
-            )
-            client.patch(
-                StatefulSet, name=self.app.name, obj=stateful_set, namespace=self._namespace
-            )
-        except ApiError as e:
-            logger.debug(
-                "Failed to mount additional volumes required by the magma-nms-nginx-proxy "
-                "container!"
-            )
-            raise e
-        logger.info("Additional K8s resources for magma-nms-nginx-proxy container applied!")
+        self.framework.observe(
+            self.cert_controller.on.certificate_available, self._on_certificate_available
+        )
 
     @property
-    def _relations_created(self) -> bool:
-        if missing_relations := [
-            relation
-            for relation in self.REQUIRED_RELATIONS
-            if not self.model.get_relation(relation)
-        ]:
-            msg = f"Waiting for relation(s) to be created: {', '.join(missing_relations)}"
-            self.unit.status = BlockedStatus(msg)
-            return False
-        return True
+    def _nginx_config_file_is_stored(self) -> bool:
+        """Returns whether nginx config file is stored in workload container.
+
+        Returns:
+            bool: True/False
+        """
+        return self._container.exists(f"{self.BASE_NGINX_PATH}/{self.NGINX_CONFIG_FILE_NAME}")
 
     @property
-    def _relations_ready(self) -> bool:
-        """Checks whether required relations are ready."""
-        if not_ready_relations := [
-            relation for relation in self.REQUIRED_RELATIONS if not self._relation_active(relation)
-        ]:
-            msg = f"Waiting for relation(s) to be ready: {', '.join(not_ready_relations)}"
-            self.unit.status = WaitingStatus(msg)
-            return False
-        return True
+    def _cert_controller_relation_created(self) -> bool:
+        """Returns whether `cert-controller` relation is created.
 
-    def _relation_active(self, relation: str) -> bool:
-        try:
-            rel = self.model.get_relation(relation)
-            units = rel.units  # type: ignore[union-attr]
-            return rel.data[next(iter(units))]["active"] == "True"  # type: ignore[union-attr]
-        except (AttributeError, KeyError, StopIteration):
-            return False
+        Returns:
+            bool :True/False
+        """
+        return self._relation_created("cert-controller")
+
+    @property
+    def _magmalte_relation_created(self) -> bool:
+        """Returns whether `magmalte` relation is created.
+
+        Returns:
+            bool: True/False
+        """
+        return self._relation_created("magma-nms-magmalte")
+
+    @property
+    def _certs_are_stored(self) -> bool:
+        return self._container.exists(
+            f"{self.BASE_NGINX_PATH}/nms_nginx.pem"
+        ) and self._container.exists(f"{self.BASE_NGINX_PATH}/nms_nginx.key.pem")
 
     @property
     def _pebble_layer(self) -> Layer:
+        """Returns pebble layer with workload service.
+
+        Returns:
+            Layer: Pebble Layer
+        """
         return Layer(
             {
                 "summary": f"{self._service_name} pebble layer",
@@ -179,70 +108,135 @@ class MagmaNmsNginxProxyCharm(CharmBase):
             }
         )
 
-    @property
-    def _magma_nms_nginx_proxy_volumes(self) -> List[Volume]:
-        """Returns a list of volumes required by the magma-nms-nginx-proxy container"""
-        return [
-            Volume(
-                name="orc8r-secrets-certs",
-                secret=SecretVolumeSource(secretName="nms-certs"),
-            ),
-            Volume(
-                name="nginx-proxy-etc",
-                configMap=ConfigMapVolumeSource(name="nginx-proxy-etc"),
-            ),
-        ]
+    def _relation_created(self, relation_name: str) -> bool:
+        """Returns whether given relation was created.
 
-    @property
-    def _magma_nms_nginx_proxy_volume_mounts(self) -> List[VolumeMount]:
-        """Returns a list of volume mounts required by the magma-nms-nginx-proxy container"""
-        return [
-            VolumeMount(
-                mountPath="/etc/nginx/conf.d/nginx_proxy_ssl.conf",
-                name="nginx-proxy-etc",
-                subPath="nginx_proxy_ssl.conf",
-            ),
-            VolumeMount(
-                mountPath="/etc/nginx/conf.d/nms_nginx.pem",
-                name="orc8r-secrets-certs",
-                readOnly=True,
-                subPath="controller.crt",
-            ),
-            VolumeMount(
-                mountPath="/etc/nginx/conf.d/nms_nginx.key.pem",
-                name="orc8r-secrets-certs",
-                readOnly=True,
-                subPath="controller.key",
-            ),
-        ]
+        Args:
+            relation_name (str): Relation name
 
-    @property
-    def _nms_certs_mounted(self) -> bool:
-        """Check to see if the NMS certs have already been mounted."""
-        client = Client()
-        statefulset = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
-        return all(
-            volume_mount in statefulset.spec.template.spec.containers[1].volumeMounts  # type: ignore[attr-defined]  # noqa: E501
-            for volume_mount in self._magma_nms_nginx_proxy_volume_mounts
-        )
-
-    @property
-    def _nginx_proxy_etc_configmap_created(self) -> bool:
-        """Check to see if the nginx-proxy-etc have already been created."""
-        client = Client()
+        Returns:
+            bool: True/False
+        """
         try:
-            client.get(ConfigMap, name="nginx-proxy-etc", namespace=self._namespace)
-            return True
-        except httpx.HTTPError:
+            relation = self.model.get_relation(relation_name)
+            return bool(relation)
+        except KeyError:
             return False
 
-    def _on_remove(self, event: RemoveEvent):
-        client = Client()
-        client.delete(ConfigMap, name="nginx-proxy-etc", namespace=self._namespace)
+    def _on_install(self, event: InstallEvent) -> None:
+        """Triggered once when the charm is installed.
 
-    @property
-    def _namespace(self) -> str:
-        return self.model.name
+        Args:
+            event: Juju event.
+
+        Returns:
+            None
+        """
+        if not self._container.can_connect():
+            event.defer()
+            return
+        self._write_nginx_config_file()
+
+    def _write_nginx_config_file(self) -> None:
+        """Writes nginx config file to workload container.
+
+        Returns:
+            None
+        """
+        # TODO: Replace the proxy_pass line content with data coming from the magmalte relation
+        config_file = (
+            "server {\n"
+            "listen 443;\n"
+            "ssl on;\n"
+            f"ssl_certificate {self.BASE_NGINX_PATH}/nms_nginx.pem;\n"
+            f"ssl_certificate_key {self.BASE_NGINX_PATH}/nms_nginx.key.pem;\n"
+            "location / {\n"
+            "proxy_pass http://magmalte:8081;\n"
+            "proxy_set_header Host $http_host;\n"
+            "proxy_set_header X-Forwarded-Proto $scheme;\n"
+            "}\n"
+            "}"
+        )
+        self._container.push(
+            path=f"{self.BASE_NGINX_PATH}/{self.NGINX_CONFIG_FILE_NAME}", source=config_file
+        )
+
+    def _on_magma_nms_nginx_proxy_pebble_ready(
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
+    ) -> None:
+        """Configures magma-nms-nginx-proxy pebble layer.
+
+        Args:
+            event: Juju event
+
+        Returns:
+            None
+        """
+        if not self._magmalte_relation_created:
+            self.unit.status = BlockedStatus("Waiting for magmalte relation to be created")
+            event.defer()
+            return
+        if not self._cert_controller_relation_created:
+            self.unit.status = BlockedStatus("Waiting for cert-controller relation to be created")
+            event.defer()
+            return
+        if not self._certs_are_stored:
+            self.unit.status = WaitingStatus("Waiting for certs to be available")
+            event.defer()
+            return
+        if not self._nginx_config_file_is_stored:
+            self.unit.status = WaitingStatus("Waiting for NGINX Config file to be stored")
+            event.defer()
+            return
+        self._configure_pebble(event)
+
+    def _configure_pebble(self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]) -> None:
+        """Configures Pebble layer.
+
+        Creates nginx service and starts it.
+
+        Args:
+            event: Juju event.
+
+        Returns:
+            None
+        """
+        if not self._container.can_connect():
+            self.unit.status = WaitingStatus("Waiting for container to be ready")
+            event.defer()
+            return
+
+        plan = self._container.get_plan()
+        if plan.services != self._pebble_layer.services:
+            self.unit.status = MaintenanceStatus(
+                f"Configuring pebble layer for {self._service_name}"
+            )
+            self._container.add_layer(self._container_name, self._pebble_layer, combine=True)
+            self._container.restart(self._service_name)
+            logger.info(f"Restarted container {self._service_name}")
+            self.unit.status = ActiveStatus()
+
+    def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
+        """Triggered when controller certificate is available.
+
+        Args:
+            event (CertificateAvailableEvent): Juju event
+
+        Returns:
+            None
+        """
+        logger.info("Controller certificate available")
+        if not self._container.can_connect():
+            logger.info("Can't connect to container - Deferring")
+            event.defer()
+            return
+        self._container.push(
+            path=f"{self.BASE_NGINX_PATH}/nms_nginx.pem", source=event.certificate
+        )
+        self._container.push(
+            path=f"{self.BASE_NGINX_PATH}/nms_nginx.key.pem", source=event.private_key
+        )
+        self._on_magma_nms_nginx_proxy_pebble_ready(event)
 
 
 if __name__ == "__main__":

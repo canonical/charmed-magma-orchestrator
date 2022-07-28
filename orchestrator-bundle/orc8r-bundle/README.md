@@ -5,11 +5,10 @@
 Orchestrator is a Magma service that provides a simple and consistent way to
 configure and monitor the wireless network securely. The metrics acquired through the platform
 allows you to see the analytics and traffic flows of the wireless users through the Magma web UI.
+For more information about Magma, see the official documentation [here](https://magmacore.org/).
 
 This charm bundle makes it easy to deploy the Orchestrator component in any Kubernetes environment,
 and it has been tested with all major public cloud platforms.
-
-For more information about Magma, see the official documentation [here](https://magmacore.org/).
 
 ## Usage
 
@@ -22,9 +21,15 @@ applications:
   orc8r-certifier:
     options:
       domain: <your domain name>
+  orc8r-nginx:
+    options:
+      domain: <your domain name>
+  tls-certificates-operator:
+    options:
+      certificate: <your base64 encoded certificate>
+      private-key: <your base64 encoded private key>
+      ca-certificate: <your base64 encoded ca certificate>
 ```
-
-Replace `<your domain name>` with your domain name.
 
 Deploy orchestrator:
 
@@ -37,21 +42,22 @@ The deployment is completed when all services are in the `Active-Idle` state.
 
 ### Import the admin operator HTTPS certificate
 
-Retrieve the self-signed certificate:
+Retrieve the PFX package and password that contains the certificates to authenticate against 
+Magma Orchestrator:
 
 ```bash
-juju scp --container="magma-orc8r-certifier" orc8r-certifier/0:/var/opt/magma/certs/..data/admin_operator.pfx admin_operator.pfx
+juju scp --container="magma-orc8r-certifier" orc8r-certifier/0:/var/opt/magma/certs/admin_operator.pfx admin_operator.pfx
+juju run-action orc8r-certifier/leader get-pfx-package-password --wait
 ```
 
-> The default password to open the admin_operator.pfx file is `password123`. To choose a different 
-> password, re-deploy orc8r-certifier with the `passphrase` juju config.
+The pfx package was copied to your current working directory and can now be loaded in your browser.
 
 ### Create the orchestrator admin user
 
 Create the user:
 
 ```bash
-juju run-action orc8r-orchestrator/0 create-orchestrator-admin-user
+juju run-action orc8r-orchestrator/leader create-orchestrator-admin-user --wait
 ```
 
 ### Setup DNS
@@ -59,32 +65,24 @@ juju run-action orc8r-orchestrator/0 create-orchestrator-admin-user
 Retrieve the services that need to be exposed:
 
 ```bash
-kubectl get services -n <your model> | grep LoadBalancer
+juju run-action orc8r-orchestrator/leader get-load-balancer-services --wait
 ```
 
-Note the addresses associated to the following services:
+In your domain registrar, create A records for the following Kubernetes services:
 
-- `nginx-proxy`
-- `orc8r-bootstrap-nginx`
-- `orc8r-clientcert-nginx`
-- `orc8r-nginx-proxy`
-
-Create these A records in your managed domain:
-
-| Hostname                                | Address                                |
-|-----------------------------------------|----------------------------------------|
-| `bootstrapper-controller.<your domain>` | `<orc8r-bootstrap-nginx External IP>`  |
-| `api.<your domain>`                     | `<orc8r-nginx-proxy External IP>`      |
-| `controller.<your domain>`              | `<orc8r-clientcert-nginx External IP>` |
-| `*.nms.<your domain>`                   | `<nginx-proxy External IP>`            |
-
+| Address                                | Hostname                                | 
+|----------------------------------------|-----------------------------------------|
+| `<orc8r-bootstrap-nginx External IP>`  | `bootstrapper-controller.<your domain>` | 
+| `<orc8r-nginx-proxy External IP>`      | `api.<your domain>`                     | 
+| `<orc8r-clientcert-nginx External IP>` | `controller.<your domain>`              | 
+| `<nginx-proxy External IP>`            | `*.nms.<your domain>`                   | 
 
 ## Verify the deployment
 
 Get the master organization's username and password:
 
 ```bash
-juju run-action nms-magmalte/0 get-master-admin-credentials --wait
+juju run-action nms-magmalte/leader get-master-admin-credentials --wait
 ```
 
 Confirm successful deployment by visiting `https://master.nms.<your domain>` and logging in

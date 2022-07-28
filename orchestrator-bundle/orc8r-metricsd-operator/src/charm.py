@@ -5,7 +5,10 @@
 import logging
 
 from charms.magma_orc8r_libs.v0.orc8r_base import Orc8rBase
-from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
+from charms.observability_libs.v1.kubernetes_service_patch import (
+    KubernetesServicePatch,
+    ServicePort,
+)
 from ops.charm import CharmBase, InstallEvent
 from ops.main import main
 
@@ -29,7 +32,10 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
         super().__init__(*args)
         self._service_patcher = KubernetesServicePatch(
             charm=self,
-            ports=[("grpc", 9180, 9084), ("http", 8080, 10084)],
+            ports=[
+                ServicePort(name="grpc", port=9180, targetPort=9084),
+                ServicePort(name="http", port=8080, targetPort=10084),
+            ],
             additional_labels={
                 "app.kubernetes.io/part-of": "orc8r-app",
                 "orc8r.io/obsidian_handlers": "true",

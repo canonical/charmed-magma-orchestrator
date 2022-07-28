@@ -1,0 +1,18 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: whatever-charm
+description: whatever-charm
+summary: whatever-charm
+containers:
+  whatever-container:
+    resource: whatever-image
+
+resources:
+  whatever-image:
+    type: oci-image
+    description: whatever image
+
+provides:
+  cert-admin-operator:
+    interface: cert-admin-operator

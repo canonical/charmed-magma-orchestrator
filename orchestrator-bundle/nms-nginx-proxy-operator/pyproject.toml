@@ -16,7 +16,9 @@ max-line-length = 99
 max-doc-length = 99
 max-complexity = 10
 exclude = [".git", "__pycache__", ".tox", "build", "dist", "*.egg_info", "venv"]
-select = ["E", "W", "F", "C", "N"]
+select = ["E", "W", "F", "C", "N", "R", "D", "H"]
+per-file-ignores = ["tests/*:D100,D101,D102,D103,D107"]
+docstring-convention = "google"
 copyright-check = "True"
 copyright-author = "Canonical Ltd."
 copyright-regexp = "Copyright\\s\\d{4}([-,]\\d{4})*\\s+%(author)s"
@@ -38,7 +40,7 @@ allow_redefinition = true
 
 # Ignore libraries that do not have type hint nor stubs
 [[tool.mypy.overrides]]
-module = ["ops.*", "kubernetes.*"]
+module = ["ops.*", "kubernetes.*", "flatten_json.*", "git.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

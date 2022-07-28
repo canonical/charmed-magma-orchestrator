@@ -2,14 +2,26 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+"""magma-orc8r-orchestrator.
+
+magma-orc8r-orchestrator provides data for configure of core gateway service configuration, metrics
+and CRUD API.
+"""
+
+
 import logging
 import re
-from typing import Dict, List
+from typing import Dict, Union
 
-from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
+from charms.magma_orc8r_certifier.v0.cert_admin_operator import (
+    CertAdminOperatorRequires,
+    CertificateAvailableEvent,
+)
+from charms.observability_libs.v1.kubernetes_service_patch import (
+    KubernetesServicePatch,
+    ServicePort,
+)
 from lightkube import Client
-from lightkube.models.core_v1 import SecretVolumeSource, Volume, VolumeMount
-from lightkube.resources.apps_v1 import StatefulSet
 from lightkube.resources.core_v1 import Service
 from ops.charm import (
     ActionEvent,
@@ -17,7 +29,6 @@ from ops.charm import (
     ConfigChangedEvent,
     InstallEvent,
     PebbleReadyEvent,
-    RelationChangedEvent,
     RelationEvent,
 )
 from ops.main import main
@@ -35,9 +46,10 @@ logger = logging.getLogger(__name__)
 
 
 class MagmaOrc8rOrchestratorCharm(CharmBase):
+    """Main class that is instantiated everytime an event occurs."""
 
     BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
-    REQUIRED_RELATIONS = ["magma-orc8r-certifier", "metrics-endpoint"]
+    BASE_CERTS_PATH = "/var/opt/magma/certs"
 
     # TODO: The various URL's should be provided through relationships
     PROMETHEUS_URL = "http://orc8r-prometheus:9090"
@@ -46,36 +58,17 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
     ALERTMANAGER_URL = "http://orc8r-alertmanager:9093"
 
     def __init__(self, *args):
-        """An instance of this object everytime an event occurs."""
+        """Initializes all event that need to be observed."""
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-orchestrator"
         self._container = self.unit.get_container(self._container_name)
-        self.framework.observe(
-            self.on.magma_orc8r_orchestrator_pebble_ready,
-            self._on_magma_orc8r_orchestrator_pebble_ready,
-        )
-        self.framework.observe(
-            self.on.magma_orc8r_orchestrator_relation_joined,
-            self._on_magma_orc8r_orchestrator_relation_joined,
-        )
-        self.framework.observe(
-            self.on.magma_orc8r_certifier_relation_changed,
-            self._on_magma_orc8r_certifier_relation_changed,
-        )
-        self.framework.observe(
-            self.on.create_orchestrator_admin_user_action,
-            self._create_orchestrator_admin_user_action,
-        )
-        self.framework.observe(self.on.set_log_verbosity_action, self._set_log_verbosity_action)
-        self.framework.observe(
-            self.on.get_load_balancer_services_action,
-            self._on_get_load_balancer_services_action,
-        )
-        self.framework.observe(self.on.install, self._on_install)
-        self.framework.observe(self.on.config_changed, self._on_elasticsearch_url_config_changed)
+        self.cert_admin_operator = CertAdminOperatorRequires(self, "cert-admin-operator")
         self._service_patcher = KubernetesServicePatch(
             charm=self,
-            ports=[("grpc", 9180, 9112), ("http", 8080, 10112)],
+            ports=[
+                ServicePort(name="grpc", port=9180, targetPort=9112),
+                ServicePort(name="http", port=8080, targetPort=10112),
+            ],
             additional_labels={
                 "app.kubernetes.io/part-of": "orc8r-app",
                 "orc8r.io/analytics_collector": "true",
@@ -96,13 +89,184 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                 "/magma/v1/networks/:network_id,",
             },
         )
+        self.framework.observe(
+            self.on.magma_orc8r_orchestrator_pebble_ready,
+            self._on_magma_orc8r_orchestrator_pebble_ready,
+        )
+        self.framework.observe(
+            self.on.magma_orc8r_orchestrator_relation_joined,
+            self._on_magma_orc8r_orchestrator_relation_joined,
+        )
+        self.framework.observe(
+            self.on.create_orchestrator_admin_user_action,
+            self._create_orchestrator_admin_user_action,
+        )
+        self.framework.observe(self.on.set_log_verbosity_action, self._set_log_verbosity_action)
+        self.framework.observe(
+            self.on.get_load_balancer_services_action,
+            self._on_get_load_balancer_services_action,
+        )
+        self.framework.observe(self.on.install, self._on_install)
+        self.framework.observe(self.on.config_changed, self._on_elasticsearch_url_config_changed)
+        self.framework.observe(
+            self.cert_admin_operator.on.certificate_available, self._on_certificate_available
+        )
 
-    def _on_get_load_balancer_services_action(self, event: ActionEvent):
+    @property
+    def _environment_variables(self) -> dict:
+        """Returns environment variables necessary to run main service and other cli commands.
+
+        Returns:
+            dict: Environment variables.
+        """
+        return {
+            "SERVICE_HOSTNAME": self._container_name,
+            "SERVICE_REGISTRY_MODE": "k8s",
+            "SERVICE_REGISTRY_NAMESPACE": self._namespace,
+        }
+
+    @property
+    def _pebble_layer(self) -> Layer:
+        """Returns pebble layer for workload service.
+
+        Returns:
+            Layer: Pebble layer
+        """
+        return Layer(
+            {
+                "summary": f"{self._service_name} pebble layer",
+                "services": {
+                    self._service_name: {
+                        "override": "replace",
+                        "startup": "enabled",
+                        "command": "/usr/bin/envdir "
+                        "/var/opt/magma/envdir "
+                        "/var/opt/magma/bin/orchestrator "
+                        "-run_echo_server=true "
+                        "-logtostderr=true "
+                        "-v=0",
+                        "environment": self._environment_variables,
+                    }
+                },
+            }
+        )
+
+    @property
+    def _elasticsearch_config_is_valid(self) -> bool:
+        """Returns whether elasticsearch config is valid.
+
+        Returns:
+            bool: True/False
+        """
+        elasticsearch_url = self.model.config.get("elasticsearch-url")
+        if not elasticsearch_url:
+            return False
+        if re.match("^[a-zA-Z0-9._-]+:[0-9]+$", elasticsearch_url):
+            return True
+        else:
+            return False
+
+    @property
+    def _service_is_running(self) -> bool:
+        """Returns whether workload service is running.
+
+        Returns:
+            bool: True/False
+        """
+        if self._container.can_connect():
+            try:
+                self._container.get_service(self._service_name)
+                return True
+            except ModelError:
+                pass
+        return False
+
+    def _update_relations(self) -> None:
+        """Updates the magma-orc8r-orchestrator relations with the status of the workload service.
+
+        Returns:
+            None
+        """
+        if not self.unit.is_leader():
+            return
+        relations = self.model.relations[self.meta.name]
+        for relation in relations:
+            self._update_relation_active_status(
+                relation=relation, is_active=self._service_is_running
+            )
+
+    @property
+    def _namespace(self) -> str:
+        """Returns Kubernetes namespace.
+
+        Returns:
+            str: Kubernetes namespace
+        """
+        return self.model.name
+
+    @property
+    def _certs_are_stored(self) -> bool:
+        """Returns whether the bootstrapper admin operator certificates are stored.
+
+        Returns:
+            bool: True/False
+        """
+        return self._container.exists(
+            f"{self.BASE_CERTS_PATH}/admin_operator.pem"
+        ) and self._container.exists(f"{self.BASE_CERTS_PATH}/admin_operator.key.pem")
+
+    @property
+    def _cert_admin_operator_relation_created(self) -> bool:
+        """Returns whether cert-admin-operator relation is created.
+
+        Returns:
+            bool: True/False
+        """
+        return self._relation_created("cert-admin-operator")
+
+    @property
+    def _metrics_relation_created(self) -> bool:
+        """Returns whether metrics-endpoint relation is created.
+
+        Returns:
+            bool: True/False
+        """
+        return self._relation_created("metrics-endpoint")
+
+    def _relation_created(self, relation_name: str) -> bool:
+        """Returns whether given relation was created.
+
+        Args:
+            relation_name (str): Relation name
+
+        Returns:
+            bool: True/False
+        """
+        try:
+            if self.model.get_relation(relation_name):
+                return True
+            return False
+        except KeyError:
+            return False
+
+    def _on_get_load_balancer_services_action(self, event: ActionEvent) -> None:
+        """Triggered when the get-load-balancer action is executed.
+
+        Args:
+            event (ActionEvent): Juju event
+
+        Returns:
+            None
+        """
         load_balancer_services = self._get_load_balancer_services()
         event.set_results(load_balancer_services)
 
     def _get_load_balancer_services(self) -> Dict[str, str]:
-        """Returns all Load balancer service addresses."""
+        """Returns all Load balancer service addresses.
+
+        Returns:
+            dict: All load balancer service addresses.
+        """
         service_dict = dict()
         client = Client()
         service_list = client.list(res=Service, namespace=self._namespace)
@@ -118,18 +282,28 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                     service_dict[service_name] = ip
         return service_dict
 
-    def _on_install(self, event: InstallEvent):
+    def _on_install(self, event: InstallEvent) -> None:
         if not self._container.can_connect():
             event.defer()
             return
         self._write_config_files()
 
-    def _write_config_files(self):
+    def _write_config_files(self) -> None:
+        """Pushes config files for orchestrator, metricsd and analytics to workload.
+
+        Returns:
+            None
+        """
         self._write_orchestrator_config()
         self._write_metricsd_config()
         self._write_analytics_config()
 
-    def _write_orchestrator_config(self):
+    def _write_orchestrator_config(self) -> None:
+        """Pushes orchestrator.yml config file to workload.
+
+        Returns:
+            None
+        """
         orchestrator_config = (
             f'"prometheusGRPCPushAddress": "{self.PROMETHEUS_CACHE_GRPC_URL}"\n'
             '"prometheusPushAddresses":\n'
@@ -138,7 +312,12 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         )
         self._container.push(f"{self.BASE_CONFIG_PATH}/orchestrator.yml", orchestrator_config)
 
-    def _write_metricsd_config(self):
+    def _write_metricsd_config(self) -> None:
+        """Pushes metricsd.yml to workload.
+
+        Returns:
+            None
+        """
         metricsd_config = (
             f'prometheusQueryAddress: "{self.PROMETHEUS_URL}"\n'
             f'alertmanagerApiURL: "{self.ALERTMANAGER_URL}/api/v2"\n'
@@ -146,7 +325,12 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         )
         self._container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
 
-    def _write_analytics_config(self):
+    def _write_analytics_config(self) -> None:
+        """Pushes analytics.yml to workload.
+
+        Returns:
+            None
+        """
         analytics_config = (
             '"appID": ""\n'
             '"appSecret": ""\n'
@@ -157,7 +341,12 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         )
         self._container.push(f"{self.BASE_CONFIG_PATH}/analytics.yml", analytics_config)
 
-    def _write_elastic_config(self):
+    def _write_elastic_config(self) -> None:
+        """Pushes elasticsearch config to workload.
+
+        Returns:
+            None
+        """
         logging.info("Writing elasticsearch config to elastic.yml")
         elasticsearch_url, elasticsearch_port = self._get_elasticsearch_config()
         elastic_config = (
@@ -165,7 +354,18 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         )
         self._container.push(f"{self.BASE_CONFIG_PATH}/elastic.yml", elastic_config)
 
-    def _on_elasticsearch_url_config_changed(self, event: ConfigChangedEvent):
+    def _on_elasticsearch_url_config_changed(self, event: ConfigChangedEvent) -> None:
+        """Triggered when there is a Juju configuration changed.
+
+        Will try to push the new elasticsearch config to the workload and restart the workload
+        service.
+
+        Args:
+            event (ConfigChangedEvent): Juju event
+
+        Returns:
+            None
+        """
         # TODO: Elasticsearch url should be passed through a relationship (not a config)
         if not self._container.can_connect():
             event.defer()
@@ -183,7 +383,15 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                 "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
             )
 
-    def _create_orchestrator_admin_user_action(self, event: ActionEvent):
+    def _create_orchestrator_admin_user_action(self, event: ActionEvent) -> None:
+        """Triggered when the create-orchestrator-admin-user action is executed.
+
+        Args:
+            event (ActionEvent): Juju event
+
+        Returns:
+            None
+        """
         process = self._container.exec(
             [
                 "/var/opt/magma/bin/accessc",
@@ -202,10 +410,18 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             logger.info(f"Return message: {stdout}, {error}")
         except ExecError as e:
             logger.error("Exited with code %d. Stderr:", e.exit_code)
-            for line in e.stderr.splitlines():  # type: ignore[union-attr]
+            for line in e.stderr.splitlines():
                 logger.error("    %s", line)
 
-    def _set_log_verbosity_action(self, event: ActionEvent):
+    def _set_log_verbosity_action(self, event: ActionEvent) -> None:
+        """Triggered when the set-log-verbosity action is executed.
+
+        Args:
+            event (ActionEvent): Juju event
+
+        Returns:
+            None
+        """
         process = self._container.exec(
             [
                 "/var/opt/magma/bin/service303_cli",
@@ -222,116 +438,51 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             logger.info(f"Return message: {stdout}, {error}")
         except ExecError as e:
             logger.error("Exited with code %d. Stderr:", e.exit_code)
-            for line in e.stderr.splitlines():  # type: ignore[union-attr]
+            for line in e.stderr.splitlines():
                 logger.error("    %s", line)
 
-    def _on_magma_orc8r_orchestrator_pebble_ready(self, event: PebbleReadyEvent):
-        if not self._relations_created:
+    def _on_magma_orc8r_orchestrator_pebble_ready(
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
+    ) -> None:
+        """Triggered when pebble is ready.
+
+        Args:
+            event (PebbleReadyEvent): Juju event
+
+        Returns:
+            None
+        """
+        if not self._metrics_relation_created:
+            self.unit.status = BlockedStatus("Waiting for metrics-endpoint relation to be created")
             event.defer()
             return
-        if not self._relations_ready:
+        if not self._cert_admin_operator_relation_created:
+            self.unit.status = BlockedStatus(
+                "Waiting for cert-admin-operator relation to be created"
+            )
             event.defer()
             return
-        if not self._nms_certs_mounted:
-            self.unit.status = WaitingStatus("Waiting for NMS certificates to be mounted")
+        if not self._certs_are_stored:
+            self.unit.status = WaitingStatus("Waiting for certs to be available")
             event.defer()
             return
         self._configure_orc8r(event)
 
-    @property
-    def _relations_created(self) -> bool:
-        if missing_relations := [
-            relation
-            for relation in self.REQUIRED_RELATIONS
-            if not self.model.get_relation(relation)
-        ]:
-            msg = f"Waiting for relation(s) to be created: {', '.join(missing_relations)}"
-            self.unit.status = BlockedStatus(msg)
-            return False
-        return True
+    def _configure_orc8r(self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]) -> None:
+        """Adds layer to pebble config if the proposed config is different from the current one.
 
-    @property
-    def _relations_ready(self) -> bool:
-        """Checks whether required relations are ready."""
-        not_ready_relations = [
-            relation for relation in self.REQUIRED_RELATIONS if not self._relation_active(relation)
-        ]
-        if not_ready_relations:
-            msg = f"Waiting for relation(s) to be ready: {', '.join(not_ready_relations)}"
-            self.unit.status = WaitingStatus(msg)
-            return False
-        return True
+        Args:
+            event (PebbleReadyEvent, CertificateAvailableEvent): Juju event
 
-    def _relation_active(self, relation_name: str) -> bool:
-        try:
-            rel = self.model.get_relation(relation_name)
-            units = rel.units  # type: ignore[union-attr]
-            return rel.data[next(iter(units))]["active"] == "True"  # type: ignore[union-attr]
-        except (AttributeError, KeyError, StopIteration):
-            return False
-
-    def _on_magma_orc8r_certifier_relation_changed(self, event: RelationChangedEvent):
-        """Mounts certificates required by orc8r-orchestrator."""
-        if not self._relation_active("magma-orc8r-certifier"):
-            self.unit.status = WaitingStatus(
-                "Waiting for magma-orc8r-certifier relation to be ready"
-            )
-            event.defer()
-            return
-        if not self._nms_certs_mounted:
-            self.unit.status = MaintenanceStatus("Mounting NMS certificates")
-            self._mount_certifier_certs()
-
-    @property
-    def _nms_certs_mounted(self) -> bool:
-        """Check to see if the NMS certs have already been mounted."""
-        client = Client()
-        statefulset = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
-        return all(
-            volume_mount in statefulset.spec.template.spec.containers[1].volumeMounts  # type: ignore[attr-defined]  # noqa: E501
-            for volume_mount in self._magma_orc8r_orchestrator_volume_mounts
-        )
-
-    def _mount_certifier_certs(self) -> None:
-        """Patch the StatefulSet to include NMS certs secret mount."""
-        self.unit.status = MaintenanceStatus(
-            "Mounting additional volumes required by the magma-orc8r-orchestrator container"
-        )
-        client = Client()
-        stateful_set = client.get(StatefulSet, name=self.app.name, namespace=self._namespace)
-        stateful_set.spec.template.spec.volumes.extend(self._magma_orc8r_orchestrator_volumes)  # type: ignore[attr-defined]  # noqa: E501
-        stateful_set.spec.template.spec.containers[1].volumeMounts.extend(  # type: ignore[attr-defined]  # noqa: E501
-            self._magma_orc8r_orchestrator_volume_mounts
-        )
-        client.patch(StatefulSet, name=self.app.name, obj=stateful_set, namespace=self._namespace)
-        logger.info("Additional K8s resources for magma-orc8r-orchestrator container applied!")
-
-    @property
-    def _magma_orc8r_orchestrator_volume_mounts(self) -> List[VolumeMount]:
-        """Returns the additional volume mounts for the magma-orc8r-orchestrator container."""
-        return [
-            VolumeMount(
-                mountPath="/var/opt/magma/certs/",
-                name="certs",
-                readOnly=True,
-            )
-        ]
-
-    @property
-    def _magma_orc8r_orchestrator_volumes(self) -> List[Volume]:
-        """Returns the additional volumes required by the magma-orc8r-orchestrator container."""
-        return [
-            Volume(
-                name="certs",
-                secret=SecretVolumeSource(secretName="orc8r-certs"),
-            ),
-        ]
-
-    def _configure_orc8r(self, event: PebbleReadyEvent):
-        """Adds layer to pebble config if the proposed config is different from the current one."""
+        Returns:
+            None
+        """
         try:
             plan = self._container.get_plan()
             if plan.services != self._pebble_layer.services:
+                self.unit.status = MaintenanceStatus(
+                    f"Configuring pebble layer for {self._service_name}"
+                )
                 self._container.add_layer(self._container_name, self._pebble_layer, combine=True)
                 self._container.restart(self._service_name)
                 logger.info(f"Restarted container {self._service_name}")
@@ -343,84 +494,70 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                 f"not exist or is not responsive"
             )
 
-    @property
-    def _environment_variables(self) -> dict:
-        return {
-            "SERVICE_HOSTNAME": self._container_name,
-            "SERVICE_REGISTRY_MODE": "k8s",
-            "SERVICE_REGISTRY_NAMESPACE": self._namespace,
-        }
-
-    @property
-    def _pebble_layer(self) -> Layer:
-        return Layer(
-            {
-                "summary": f"{self._service_name} pebble layer",
-                "services": {
-                    self._service_name: {
-                        "override": "replace",
-                        "startup": "enabled",
-                        "command": "/usr/bin/envdir "
-                        "/var/opt/magma/envdir "
-                        "/var/opt/magma/bin/orchestrator "
-                        "-run_echo_server=true "
-                        "-logtostderr=true -v=0",
-                        "environment": self._environment_variables,
-                    }
-                },
-            }
-        )
-
     def _get_elasticsearch_config(self) -> tuple:
-        elasticsearch_url = self.model.config.get("elasticsearch-url")
-        elasticsearch_url_split = elasticsearch_url.split(":")  # type: ignore[union-attr]
-        return elasticsearch_url_split[0], elasticsearch_url_split[1]
+        """Returns elasticsearch url and port based on juju config.
 
-    @property
-    def _elasticsearch_config_is_valid(self) -> bool:
+        Returns:
+            tuple: Elasticsearch url and port.
+        """
         elasticsearch_url = self.model.config.get("elasticsearch-url")
-        if not elasticsearch_url:
-            return False
-        if re.match("^[a-zA-Z0-9._-]+:[0-9]+$", elasticsearch_url):
-            return True
+        if elasticsearch_url:
+            elasticsearch_url_split = elasticsearch_url.split(":")
+            return elasticsearch_url_split[0], elasticsearch_url_split[1]
         else:
-            return False
+            raise ValueError("The elasticsearch-url config is empty.")
 
-    def _on_magma_orc8r_orchestrator_relation_joined(self, event: RelationEvent):
+    def _on_magma_orc8r_orchestrator_relation_joined(self, event: RelationEvent) -> None:
+        """Triggered when charms join the orc8r-orchestrator relation.
+
+        Args:
+            event (RelationEvent): Juju event
+
+        Returns:
+            None
+        """
         self._update_relations()
         if not self._service_is_running:
             event.defer()
             return
 
-    def _update_relation_active_status(self, relation: Relation, is_active: bool):
+    def _update_relation_active_status(self, relation: Relation, is_active: bool) -> None:
+        """Updates orc8r-orchestrator relation data content with workload service status.
+
+        Args:
+            relation: Juju relation
+            is_active: True/False
+
+        Returns:
+            None
+        """
         relation.data[self.unit].update(
             {
                 "active": str(is_active),
             }
         )
 
-    @property
-    def _service_is_running(self) -> bool:
-        if self._container.can_connect():
-            try:
-                self._container.get_service(self._service_name)
-                return True
-            except ModelError:
-                pass
-        return False
+    def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
+        """Triggered when admin operator certificates are available from relation data.
 
-    def _update_relations(self):
-        if not self.unit.is_leader():
+        Args:
+            event (CertificateAvailableEvent): Event for whenever certificates are available.
+
+        Returns:
+            None
+        """
+        logger.info("Admin Operator certificate available")
+        if not self._container.can_connect():
+            logger.info("Can't connect to container - Deferring")
+            event.defer()
             return
-        relations = self.model.relations[self.meta.name]
-        for relation in relations:
-            self._update_relation_active_status(
-                relation=relation, is_active=self._service_is_running
-            )
-
-    @property
-    def _namespace(self) -> str:
-        return self.model.name
+        self._container.push(
+            path=f"{self.BASE_CERTS_PATH}/admin_operator.pem", source=event.certificate
+        )
+        self._container.push(
+            path=f"{self.BASE_CERTS_PATH}/admin_operator.key.pem", source=event.private_key
+        )
+        self._on_magma_orc8r_orchestrator_pebble_ready(event)
 
 
 if __name__ == "__main__":

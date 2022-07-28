@@ -5,14 +5,8 @@
 The charms and bundles in this repository are specifically developed for the 
 [magma](https://www.magmacore.org/) usecase.
 
-## Roadmap
-
-1. Charm Magma Orchestrator (microk8s)
-2. Charm Magma Access Gateway with MAAS (Bare metal)
-3. Charm Magma Federation Gateway (microk8s)
-4. Validate public cloud deployments (AWS, GCP and Azure)
-
 ## Code contributions
+
 If you want to propose a new feature, a bug fix or a documentation improvement:
 - Create a new branch from main.
 - Commit and push your changes to this branch.
@@ -24,6 +18,7 @@ Note that each component has its own `CONTRIBURING.md` file that will detail how
 deploy and publish this specific component. Please refer to that file.
 
 ## Continuous Integration
+
 On each code push and pull request made in Github, a series of validations are triggered through 
 Github actions:
 - Linting validation
