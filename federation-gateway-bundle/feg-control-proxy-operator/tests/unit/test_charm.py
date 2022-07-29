@@ -36,11 +36,9 @@ class TestCharm(unittest.TestCase):
                     "override": "replace",
                     "summary": "magma-feg-control-proxy",
                     "command": "/bin/bash -c "
-                    "'/usr/local/bin/generate_nghttpx_config.py "
-                    "&&\n /usr/bin/env nghttpx --conf "
-                    "/var/opt/magma/tmp/nghttpx.conf "
-                    "/var/opt/magma/certs/controller.key "
-                    "/var/opt/magma/certs/controller.crt’",
+                    '"/usr/local/bin/generate_nghttpx_config.py '
+                    "&&\n /usr/bin/env nghttpx --conf /var/opt/magma/tmp/nghttpx.conf "
+                    '/var/opt/magma/certs/controller.key /var/opt/magma/certs/controller.crt"',
                     "startup": "enabled",
                 }
             },

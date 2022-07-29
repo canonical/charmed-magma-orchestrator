@@ -48,11 +48,9 @@ class FegControlProxyCharm(CharmBase):
                         "override": "replace",
                         "summary": self.service_name,
                         "command": "/bin/bash -c "
-                        "'/usr/local/bin/generate_nghttpx_config.py "
-                        "&&\n /usr/bin/env nghttpx --conf "
-                        "/var/opt/magma/tmp/nghttpx.conf "
-                        "/var/opt/magma/certs/controller.key "
-                        "/var/opt/magma/certs/controller.crt’",
+                        '"/usr/local/bin/generate_nghttpx_config.py '
+                        "&&\n /usr/bin/env nghttpx --conf /var/opt/magma/tmp/nghttpx.conf "
+                        '/var/opt/magma/certs/controller.key /var/opt/magma/certs/controller.crt"',
                         "startup": "enabled",
                     }
                 },
