@@ -46,11 +46,10 @@ class FegRedisCharm(CharmBase):
                     self.service_name: {
                         "override": "replace",
                         "summary": self.service_name,
-                        "command": "/bin/bash -c "
-                        "'/usr/local/bin/generate_service_config.py "
-                        "--service=redis --template=redis &&\n "
-                        "/usr/bin/redis-server /var/opt/magma/tmp/redis.conf "
-                        "--daemonize no &&\n /usr/bin/redis-cli shutdown’",
+                        "command": '/bin/bash -c "/usr/local/bin/generate_service_config.py '
+                        "--service=redis --template=redis "
+                        "&& /usr/bin/redis-server /var/opt/magma/tmp/redis.conf --daemonize no "
+                        '&& /usr/bin/redis-cli shutdown"',
                         "startup": "enabled",
                     }
                 },
