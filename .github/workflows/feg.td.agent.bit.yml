@@ -1,0 +1,50 @@
+name: feg-td-agent-bit
+
+on:
+  push:
+    paths:
+      - "federation-gateway-bundle/feg-td-agent-bit-operator/**"
+
+jobs:
+  feg-td-agent-bit-lint-report:
+    name: Lint report (feg-td-agent-bit)
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-td-agent-bit-operator && tox -e lint
+
+  feg-td-agent-bit-static-analysis:
+    name: Static analysis (feg-td-agent-bit)
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-td-agent-bit-operator && tox -e static
+
+  feg-td-agent-bit-unit-tests-with-coverage:
+    name: Unit tests (feg-td-agent-bit)
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd federation-gateway-bundle/feg-td-agent-bit-operator && tox -e unit
+
+  feg-td-agent-bit-integration-test:
+    name: Integration tests (feg-td-agent-bit)
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+      - name: Run integration tests
+        run: cd federation-gateway-bundle/feg-td-agent-bit-operator && tox -e integration

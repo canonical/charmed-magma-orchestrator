@@ -82,3 +82,9 @@ applications:
     trust: true
     resources:
       magma-feg-session-proxy-image: 'docker.artifactory.magmacore.org/gateway_go:1.6.0'
+  feg-td-agent-bit:
+    charm: ./feg-td-agent-bit-operator/feg-td-agent-bit.charm
+    scale: 1
+    trust: true
+    resources:
+      magma-feg-td-agent-bit-image: 'docker.artifactory.magmacore.org/gateway_python:latest'

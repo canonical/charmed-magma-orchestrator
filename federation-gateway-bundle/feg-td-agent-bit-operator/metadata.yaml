@@ -1,0 +1,18 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: magma-feg-td-agent-bit
+description: |
+  Federation Gateway td-agent-bit service.
+summary: |
+  Federation Gateway td-agent-bit service.
+
+containers:
+  magma-feg-td-agent-bit:
+    resource: magma-feg-td-agent-bit-image
+
+resources:
+  magma-feg-td-agent-bit-image:
+    type: oci-image
+    description: OCI image for magma-feg-td-agent-bit (docker.artifactory.magmacore.org/gateway_python:latest)
+    upstream-source: docker.artifactory.magmacore.org/gateway_python:latest
