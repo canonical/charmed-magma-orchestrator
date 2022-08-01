@@ -60,3 +60,15 @@ class TestOrc8rCertifier:
             relation1=APPLICATION_NAME, relation2="tls-certificates-operator"
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
+
+    async def test_build_and_deploy_and_scale(self, ops_test, setup, build_and_deploy):
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
+        await ops_test.model.applications[APPLICATION_NAME].scale(2)
+
+        await ops_test.model.wait_for_idle(
+            apps=[APPLICATION_NAME], status="active", timeout=1000, wait_for_units=2
+        )
+
+        await ops_test.model.applications[APPLICATION_NAME].scale(1)
+
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)

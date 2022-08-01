@@ -1,12 +1,13 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import base64
 import io
 import unittest
 from unittest.mock import Mock, call, patch
 
 from ops import testing
-from ops.model import BlockedStatus
+from ops.model import BlockedStatus, WaitingStatus
 from pgconnstr import ConnectionString  # type: ignore[import]
 
 from charm import MagmaOrc8rCertifierCharm
@@ -28,6 +29,7 @@ class TestCharm(unittest.TestCase):
     )
 
     @patch("charm.KubernetesServicePatch", lambda charm, ports, additional_labels: None)
+    @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._mirror_appdata", new=Mock())
     def setUp(self):
         self.model_name = "whatever"
         self.harness = testing.Harness(MagmaOrc8rCertifierCharm)
@@ -35,6 +37,9 @@ class TestCharm(unittest.TestCase):
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
         self.maxDiff = None
+        self.peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
+        self.harness.add_relation_unit(self.peer_relation_id, self.harness.charm.unit.name)
+        self.harness.set_leader(True)
 
     @staticmethod
     def _fake_db_event(
@@ -167,12 +172,12 @@ class TestCharm(unittest.TestCase):
         patch_generate_certificate,
         patch_generate_pfx_package,
     ):
-        private_key_1 = "whatever private key 1"
-        private_key_2 = "whatever private key 2"
-        private_key_3 = "whatever private key 3"
-        certificate = "whatever certificate"
-        ca_certificate = "whatever ca certificate"
-        pfx_package = "whatever pfx package content"
+        private_key_1 = b"whatever private key 1"
+        private_key_2 = b"whatever private key 2"
+        private_key_3 = b"whatever private key 3"
+        certificate = b"whatever certificate"
+        ca_certificate = b"whatever ca certificate"
+        pfx_package = b"whatever pfx package content"
 
         patch_generate_private_key.side_effect = [private_key_1, private_key_2, private_key_3]
         patch_generate_ca.return_value = ca_certificate
@@ -182,6 +187,86 @@ class TestCharm(unittest.TestCase):
         key_values = {"domain": "whatever.com"}
         self.harness.update_config(key_values=key_values)
         self.harness.container_pebble_ready("magma-orc8r-certifier")
+
+        self.harness.charm.on.install.emit()
+
+        patch_push.assert_any_call(
+            path="/var/opt/magma/certs/certifier.pem",
+            source=ca_certificate,
+        )
+        patch_push.assert_any_call(
+            path="/var/opt/magma/certs/certifier.key",
+            source=private_key_1,
+        )
+        patch_push.assert_any_call(
+            path="/var/opt/magma/certs/admin_operator.pem",
+            source=certificate,
+        )
+        patch_push.assert_any_call(
+            path="/var/opt/magma/certs/admin_operator.key.pem",
+            source=private_key_2,
+        )
+        patch_push.assert_any_call(
+            path="/var/opt/magma/certs/admin_operator.pfx",
+            source=pfx_package,
+        )
+        patch_push.assert_any_call(
+            path="/var/opt/magma/certs/bootstrapper.key",
+            source=private_key_3,
+        )
+
+    @patch("ops.model.Container.exists")
+    @patch("ops.model.Container.push")
+    def test_given_pebble_ready_when_install_and_unit_is_not_leader_then_status_is_waiting(
+        self,
+        patch_push,
+        patch_exists,
+    ):
+        patch_exists.return_value = False
+        key_values = {"domain": "whatever.com"}
+        self.harness.update_config(key_values=key_values)
+        self.harness.container_pebble_ready("magma-orc8r-certifier")
+        self.harness.set_leader(False)
+
+        self.harness.charm.on.install.emit()
+
+        assert self.harness.charm.unit.status == WaitingStatus(
+            "Waiting for leader to generate certificates"
+        )
+        patch_push.assert_not_called()
+
+    @patch("ops.model.Container.exists")
+    @patch("ops.model.Container.push")
+    def test_given_pebble_ready_when_install_and_unit_is_not_leader_and_certs_are_generated_then_admin_application_certificates_are_pushed(  # noqa: E501
+        self,
+        patch_push,
+        patch_exists,
+    ):
+        private_key_1 = b"whatever private key 1"
+        private_key_2 = b"whatever private key 2"
+        private_key_3 = b"whatever private key 3"
+        certificate = b"whatever certificate"
+        ca_certificate = b"whatever ca certificate"
+        pfx_package = b"whatever pfx package content"
+
+        patch_exists.return_value = False
+        key_values = {"domain": "whatever.com"}
+        self.harness.update_config(key_values=key_values)
+        self.harness.container_pebble_ready("magma-orc8r-certifier")
+        self.harness.set_leader(False)
+        self.harness.update_relation_data(
+            relation_id=self.peer_relation_id,
+            app_or_unit=self.harness.charm.app.name,
+            key_values={
+                "certifier_pem": ca_certificate.decode(),
+                "certifier_key": private_key_1.decode(),
+                "admin_operator_pem": certificate.decode(),
+                "admin_operator_key_pem": private_key_2.decode(),
+                "admin_operator_pfx": base64.b64encode(pfx_package).decode(),
+                "bootstrapper_key": private_key_3.decode(),
+                "admin_operator_password": "password",
+            },
+        )
 
         self.harness.charm.on.install.emit()
 

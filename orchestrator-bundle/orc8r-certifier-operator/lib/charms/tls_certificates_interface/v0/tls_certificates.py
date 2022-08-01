@@ -97,7 +97,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 23
+LIBPATCH = 24
 
 REQUIRER_JSON_SCHEMA = {
     "$schema": "http://json-schema.org/draft-04/schema#",
@@ -323,10 +323,10 @@ class TLSCertificatesProvides(Object):
         """
         relation_data = _load_relation_data(event.relation.data[event.unit])
         if not relation_data:
-            logger.info("No relation data - Deferring")
+            logger.info("No relation data")
             return
         if not self._relation_data_is_valid(relation_data):
-            logger.warning("Relation data did not pass JSON Schema validation - Deferring")
+            logger.warning("Relation data did not pass JSON Schema validation")
             return
         for server_cert_request in relation_data.get("cert_requests", {}):
             self.on.certificate_request.emit(
@@ -458,13 +458,14 @@ class TLSCertificatesRequires(Object):
         Returns:
             None
         """
-        if self.model.unit.is_leader():
-            relation_data = _load_relation_data(event.relation.data[event.unit])
-            if not self._relation_data_is_valid(relation_data):
-                logger.warning("Relation data did not pass JSON Schema validation - Deferring")
-                event.defer()
-                return
+        relation_data = _load_relation_data(event.relation.data[event.unit])
+        if not relation_data:
+            logger.info("No relation data")
+            return
+        if not self._relation_data_is_valid(relation_data):
+            logger.warning("Relation data did not pass JSON Schema validation")
+            return
 
-            certificates = self._parse_certificates_from_relation_data(relation_data)
-            for certificate in certificates:
-                self.on.certificate_available.emit(certificate_data=certificate)
+        certificates = self._parse_certificates_from_relation_data(relation_data)
+        for certificate in certificates:
+            self.on.certificate_available.emit(certificate_data=certificate)

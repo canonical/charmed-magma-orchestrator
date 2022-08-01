@@ -33,6 +33,10 @@ storage:
     description: Certs storage
     minimum-size: 1M
 
+peers:
+  replicas:
+    interface: orc8r-certifier-replica
+
 requires:
   db:
     interface: pgsql
