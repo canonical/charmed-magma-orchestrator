@@ -35,12 +35,6 @@ tested with the `prometheus-k8s` charm.
 
 ## Actions
 
-### create-orchestrator-admin-user
-
-```bash
-juju run-action orc8r-orchestrator/0 create-orchestrator-admin-user
-```
-
 ### set-log-verbosity
 Here is an example of setting the log level to 10 for the `obsidian` service:
 

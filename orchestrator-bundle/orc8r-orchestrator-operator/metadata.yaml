@@ -33,6 +33,8 @@ requires:
   metrics-endpoint:
     interface: prometheus_scrape
     limit: 1
+  magma-orc8r-accessd:
+    interface: magma-orc8r-accessd
   cert-admin-operator:
     interface: cert-admin-operator
     limit: 1

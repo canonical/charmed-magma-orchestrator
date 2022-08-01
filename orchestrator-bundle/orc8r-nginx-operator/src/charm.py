@@ -447,22 +447,6 @@ class MagmaOrc8rNginxCharm(CharmBase):
         for service in self._magma_orc8r_nginx_additional_services:
             client.delete(Service, name=service.metadata.name, namespace=self._namespace)
 
-    def _relation_active(self, relation_name: str) -> bool:
-        """Returns whether a given relation is active or not.
-
-        Args:
-            relation_name (str): Juju relation name
-
-        Returns:
-            bool: True/False
-        """
-        try:
-            rel = self.model.get_relation(relation_name)
-            units = rel.units  # type: ignore[union-attr]
-            return rel.data[next(iter(units))]["active"] == "True"  # type: ignore[union-attr]
-        except (AttributeError, KeyError, StopIteration):
-            return False
-
     def _orc8r_nginx_service_created(self, service_name: str) -> bool:
         """Checks whether given K8s service exists or not.
 

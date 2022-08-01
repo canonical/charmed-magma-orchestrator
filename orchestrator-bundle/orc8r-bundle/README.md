@@ -52,14 +52,6 @@ juju run-action orc8r-certifier/leader get-pfx-package-password --wait
 
 The pfx package was copied to your current working directory and can now be loaded in your browser.
 
-### Create the orchestrator admin user
-
-Create the user:
-
-```bash
-juju run-action orc8r-orchestrator/leader create-orchestrator-admin-user --wait
-```
-
 ### Setup DNS
 
 Retrieve the services that need to be exposed:

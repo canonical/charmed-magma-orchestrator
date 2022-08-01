@@ -97,10 +97,6 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             self.on.magma_orc8r_orchestrator_relation_joined,
             self._on_magma_orc8r_orchestrator_relation_joined,
         )
-        self.framework.observe(
-            self.on.create_orchestrator_admin_user_action,
-            self._create_orchestrator_admin_user_action,
-        )
         self.framework.observe(self.on.set_log_verbosity_action, self._set_log_verbosity_action)
         self.framework.observe(
             self.on.get_load_balancer_services_action,
@@ -216,6 +212,24 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         ) and self._container.exists(f"{self.BASE_CERTS_PATH}/admin_operator.key.pem")
 
     @property
+    def _accessd_operator_relation_created(self) -> bool:
+        """Returns whether accessd-operator relation is created.
+
+        Returns:
+            bool: True/False
+        """
+        return self._relation_created("magma-orc8r-accessd")
+
+    @property
+    def _accessd_operator_relation_active(self) -> bool:
+        """Returns whether accessd-operator relation is ready.
+
+        Returns:
+            bool: True/False
+        """
+        return self._relation_active("magma-orc8r-accessd")
+
+    @property
     def _cert_admin_operator_relation_created(self) -> bool:
         """Returns whether cert-admin-operator relation is created.
 
@@ -247,6 +261,22 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                 return True
             return False
         except KeyError:
+            return False
+
+    def _relation_active(self, relation_name: str) -> bool:
+        """Returns whether a given relation is active or not.
+
+        Args:
+            relation_name (str): Juju relation name
+
+        Returns:
+            bool: True/False
+        """
+        try:
+            rel = self.model.get_relation(relation_name)
+            units = rel.units  # type: ignore[union-attr]
+            return rel.data[next(iter(units))]["active"] == "True"  # type: ignore[union-attr]
+        except (AttributeError, KeyError, StopIteration):
             return False
 
     def _on_get_load_balancer_services_action(self, event: ActionEvent) -> None:
@@ -383,15 +413,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                 "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
             )
 
-    def _create_orchestrator_admin_user_action(self, event: ActionEvent) -> None:
-        """Triggered when the create-orchestrator-admin-user action is executed.
-
-        Args:
-            event (ActionEvent): Juju event
-
-        Returns:
-            None
-        """
+    def _create_orchestrator_admin_user(self):
         process = self._container.exec(
             [
                 "/var/opt/magma/bin/accessc",
@@ -452,8 +474,18 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         Returns:
             None
         """
+        if not self._container.can_connect():
+            logger.info("Can't connect to container - Deferring")
+            event.defer()
+            return
         if not self._metrics_relation_created:
             self.unit.status = BlockedStatus("Waiting for metrics-endpoint relation to be created")
+            event.defer()
+            return
+        if not self._accessd_operator_relation_created:
+            self.unit.status = BlockedStatus(
+                "Waiting for magma-orc8r-accessd relation to be created"
+            )
             event.defer()
             return
         if not self._cert_admin_operator_relation_created:
@@ -466,7 +498,14 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for certs to be available")
             event.defer()
             return
+        if not self._accessd_operator_relation_active:
+            self.unit.status = WaitingStatus(
+                "Waiting for magma-orc8r-accessd relation to be active"
+            )
+            event.defer()
+            return
         self._configure_orc8r(event)
+        self._create_orchestrator_admin_user()
 
     def _configure_orc8r(self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]) -> None:
         """Adds layer to pebble config if the proposed config is different from the current one.

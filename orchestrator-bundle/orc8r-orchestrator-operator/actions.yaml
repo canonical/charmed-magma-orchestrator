@@ -1,9 +1,6 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-create-orchestrator-admin-user:
-  description: Create an admin user in Orchestrator.
-
 set-log-verbosity:
   description: Set log verbosity
   params:
