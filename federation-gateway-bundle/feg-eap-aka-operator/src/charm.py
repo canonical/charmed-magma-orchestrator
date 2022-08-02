@@ -38,8 +38,12 @@ class FegEapAkaCharm(CharmBase):
     def _pebble_layer(self) -> Layer:
         return Layer(
             {
+                "summary": f"{self.meta.name} layer",
+                "description": f"pebble config layer for {self.meta.name}",
                 "services": {
+                    self.meta.name: {
                         "override": "replace",
+                        "summary": self.meta.name,
                         "command": "envdir "
                         "/var/opt/magma/envdir "
                         "/var/opt/magma/bin/eap_aka "

@@ -32,14 +32,19 @@ class FegRadiusdCharm(CharmBase):
             self.unit.status = MaintenanceStatus("Configuring pod")
             self.container.add_layer(self.meta.name, pebble_layer, combine=True)
             self.container.replan()
+            logger.info(f"Restarted container {self.meta.name}")
             self.unit.status = ActiveStatus()
 
     @property
     def _pebble_layer(self) -> Layer:
         return Layer(
             {
+                "summary": f"{self.meta.name} layer",
+                "description": f"pebble config layer for {self.meta.name}",
                 "services": {
+                    self.meta.name: {
                         "override": "replace",
+                        "summary": self.meta.name,
                         "command": "envdir "
                         "/var/opt/magma/envdir "
                         "/var/opt/magma/bin/radiusd "
