@@ -16,8 +16,7 @@ logger = logging.getLogger(__name__)
 class FegHelloCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
-        self.container_name = self.service_name = self.meta.name
-        self.container = self.unit.get_container(self.container_name)
+        self.container = self.unit.get_container(self.meta.name)
         self.framework.observe(
             self.on.magma_feg_hello_pebble_ready, self._on_magma_feg_hello_pebble_ready
         )
@@ -27,25 +26,25 @@ class FegHelloCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for container to be ready...")
             event.defer()
 
-        self.unit.status = MaintenanceStatus("Configuring pod")
         pebble_layer = self._pebble_layer
         plan = self.container.get_plan()
         if plan.services != pebble_layer.services:
-            self.container.add_layer(self.container_name, pebble_layer, combine=True)
+            self.unit.status = MaintenanceStatus("Configuring pod")
+            self.container.add_layer(self.meta.name, pebble_layer, combine=True)
             self.container.replan()
-            logger.info(f"Restarted container {self.service_name}")
+            logger.info(f"Restarted container {self.meta.name}")
             self.unit.status = ActiveStatus()
 
     @property
     def _pebble_layer(self) -> Layer:
         return Layer(
             {
-                "summary": f"{self.service_name} layer",
-                "description": f"pebble config layer for {self.service_name}",
+                "summary": f"{self.meta.name} layer",
+                "description": f"pebble config layer for {self.meta.name}",
                 "services": {
-                    self.service_name: {
+                    self.meta.name: {
                         "override": "replace",
-                        "summary": self.service_name,
+                        "summary": self.meta.name,
                         "command": "envdir "
                         "/var/opt/magma/envdir "
                         "/var/opt/magma/bin/feg_hello "

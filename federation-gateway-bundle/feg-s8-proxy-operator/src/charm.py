@@ -16,8 +16,7 @@ logger = logging.getLogger(__name__)
 class FegS8ProxyCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
-        self.container_name = self.service_name = self.meta.name
-        self.container = self.unit.get_container(self.container_name)
+        self.container = self.unit.get_container(self.meta.name)
         self.framework.observe(
             self.on.magma_feg_s8_proxy_pebble_ready, self._on_magma_feg_s8_proxy_pebble_ready
         )
@@ -27,11 +26,11 @@ class FegS8ProxyCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for container to be ready...")
             event.defer()
 
-        self.unit.status = MaintenanceStatus("Configuring pod")
         pebble_layer = self._pebble_layer
         plan = self.container.get_plan()
         if plan.services != pebble_layer.services:
-            self.container.add_layer(self.container_name, pebble_layer, combine=True)
+            self.unit.status = MaintenanceStatus("Configuring pod")
+            self.container.add_layer(self.meta.name, pebble_layer, combine=True)
             self.container.replan()
             logger.info(f"Restarted container {self.service_name}")
             self.unit.status = ActiveStatus()
