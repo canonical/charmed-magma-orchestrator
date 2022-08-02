@@ -2,11 +2,7 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""magma-orc8r-certifier.
-
-magma-orc8r-certifier maintains and verifies signed client certificates and their associated
-identities.
-"""
+"""Maintains and verifies signed client certificates and their associated identities."""
 
 import base64
 import logging

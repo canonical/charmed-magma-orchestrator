@@ -2,11 +2,7 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""magma-orc8r-orchestrator.
-
-magma-orc8r-orchestrator provides data for configure of core gateway service configuration, metrics
-and CRUD API.
-"""
+"""Provides data for configuration of core gateway service configuration, metrics and CRUD API."""
 
 
 import logging
@@ -46,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 
 class MagmaOrc8rOrchestratorCharm(CharmBase):
-    """Main class that is instantiated everytime an event occurs."""
+    """An instance of this object everytime an event occurs."""
 
     BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
     BASE_CERTS_PATH = "/var/opt/magma/certs"

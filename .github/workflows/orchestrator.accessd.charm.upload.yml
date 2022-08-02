@@ -20,6 +20,7 @@ jobs:
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
           github-token: "${{ secrets.GITHUB_TOKEN }}"
+          charm-path: ./orchestrator-bundle/orc8r-accessd-operator
 
       - name: Select charmhub channel
         uses: canonical/charming-actions/channel@2.0.0-rc

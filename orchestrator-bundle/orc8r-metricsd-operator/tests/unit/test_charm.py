@@ -22,7 +22,8 @@ class MockModel:
 
 
 class TestCharm(unittest.TestCase):
-    """
+    """Placeholder tests.
+
     Unit tests for charms that leverage the `orc8r_base` and `orc8r_base_db` libraries are
     done at the library level. This file only contains tests for additional functionality not
     present in the base libraries.

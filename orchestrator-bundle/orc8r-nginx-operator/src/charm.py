@@ -2,10 +2,7 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""magma-orc8r-nginx.
-
-Proxies traffic between nms and obsidian.
-"""
+"""Proxies traffic between nms and obsidian."""
 
 import logging
 from typing import List, Union
@@ -39,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 
 class MagmaOrc8rNginxCharm(CharmBase):
-    """Main class that is instantiated everytime an event occurs."""
+    """An instance of this object everytime an event occurs."""
 
     BASE_CERTS_PATH = "/var/opt/magma/certs"
 
