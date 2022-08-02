@@ -11,12 +11,10 @@ from ops.charm import CharmBase
 
 
 class MagmaOrc8rDummyCharm(CharmBase):
-    """Charm the service."""
+    """An instance of this object everytime an event occurs."""
 
     def __init__(self, *args):
-        """
-        An instance of this object everytime an event occurs
-        """
+        """Uses the Orc8rBase library to manage events."""
         super().__init__(*args)
         self._service_patcher = KubernetesServicePatch(
             charm=self,
@@ -34,12 +32,10 @@ class MagmaOrc8rDummyCharm(CharmBase):
 
 
 class MagmaOrc8rDummyCharmWithRequiredRelation(CharmBase):
-    """Charm the service."""
+    """An instance of this object everytime an event occurs."""
 
     def __init__(self, *args):
-        """
-        An instance of this object everytime an event occurs
-        """
+        """Uses the Orc8rBase library to manage events."""
         super().__init__(*args)
         self._service_patcher = KubernetesServicePatch(
             charm=self,

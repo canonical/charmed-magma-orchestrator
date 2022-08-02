@@ -2,7 +2,7 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""magma-orc8r-accessd stores, manages and verifies operator identity objects."""
+"""Stores, manages and verifies operator identity objects."""
 
 from charms.magma_orc8r_libs.v0.orc8r_base_db import Orc8rBase
 from charms.observability_libs.v1.kubernetes_service_patch import (

@@ -2,11 +2,7 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""magma-orc8r-bootstrapper.
-
-Bootstrapper manages the certificate bootstrapping process for newly registered gateways and
-gateways whose cert has expired
-"""
+"""Manages the certificate bootstrapping process for registered gateways."""
 
 import logging
 from typing import Union

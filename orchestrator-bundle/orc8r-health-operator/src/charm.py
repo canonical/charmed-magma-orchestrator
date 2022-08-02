@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
+
+"""Manages active/standby clusters of federated gateways."""
+
 import logging
 
 from charms.magma_orc8r_libs.v0.orc8r_base_db import Orc8rBase
@@ -15,8 +18,10 @@ logger = logging.getLogger(__name__)
 
 
 class MagmaOrc8rHealthCharm(CharmBase):
+    """An instance of this object everytime an event occurs."""
+
     def __init__(self, *args):
-        """An instance of this object everytime an event occurs."""
+        """Uses the Orc8rBase library to manage events."""
         super().__init__(*args)
         self._service_patcher = KubernetesServicePatch(
             charm=self,
