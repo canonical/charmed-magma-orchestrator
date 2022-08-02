@@ -585,7 +585,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         Returns:
             bool: Whether certificates have been generated.
         """
-        app_data = self.model.get_relation("replicas").data[self.app]  # type: ignore[union-attr]
+        replicas = self.model.get_relation("replicas")
+        if not replicas:
+            return False
+        app_data = replicas.data[self.app]
         return (
             app_data.get("certifier_pem")
             and app_data.get("certifier_key")  # noqa: W503
