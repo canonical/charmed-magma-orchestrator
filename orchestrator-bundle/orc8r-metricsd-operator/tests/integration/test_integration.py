@@ -17,10 +17,10 @@ CERTIFIER_METADATA = yaml.safe_load(Path("../orc8r-certifier-operator/metadata.y
 ORCHESTRATOR_METADATA = yaml.safe_load(
     Path("../orc8r-orchestrator-operator/metadata.yaml").read_text()
 )
-ACCESSD_METADATA = yaml.safe_load(
-    Path("../orc8r-accessd-operator/metadata.yaml").read_text())
+ACCESSD_METADATA = yaml.safe_load(Path("../orc8r-accessd-operator/metadata.yaml").read_text())
 SERVICE_REGISTRY_METADATA = yaml.safe_load(
-    Path("../orc8r-service-registry-operator/metadata.yaml").read_text())
+    Path("../orc8r-service-registry-operator/metadata.yaml").read_text()
+)
 
 APPLICATION_NAME = "orc8r-metricsd"
 CHARM_NAME = "magma-orc8r-metricsd"
@@ -76,7 +76,9 @@ class TestOrc8rMetricsd:
             "../orc8r-service-registry-operator", SERVICE_REGISTRY_CHARM_FILE_NAME
         )
         if not service_registry_charm:
-            service_registry_charm = await ops_test.build_charm("../orc8r-service-registry-operator")
+            service_registry_charm = await ops_test.build_charm(
+                "../orc8r-service-registry-operator"
+            )
         resources = {
             f"{SERVICE_REGISTRY_CHARM_NAME}-image": SERVICE_REGISTRY_METADATA["resources"][
                 f"{SERVICE_REGISTRY_CHARM_NAME}-image"
@@ -85,7 +87,8 @@ class TestOrc8rMetricsd:
         await ops_test.model.deploy(
             service_registry_charm,
             resources=resources,
-            application_name=SERVICE_REGISTRY_CHARM_NAME,
+            application_name=SERVICE_REGISTRY_APPLICATION_NAME,
+            trust=True,
         )
 
     async def _deploy_orc8r_certifier(self, ops_test):
@@ -123,8 +126,7 @@ class TestOrc8rMetricsd:
         )
 
     async def _deploy_orc8r_accessd(self, ops_test):
-        accessd_charm = self._find_charm(
-            "../orc8r-accessd-operator", ACCESSD_CHARM_FILE_NAME)
+        accessd_charm = self._find_charm("../orc8r-accessd-operator", ACCESSD_CHARM_FILE_NAME)
         if not accessd_charm:
             accessd_charm = await ops_test.build_charm("../orc8r-accessd-operator/")
             resources = {
