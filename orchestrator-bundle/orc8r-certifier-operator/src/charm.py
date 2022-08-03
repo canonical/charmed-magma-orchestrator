@@ -500,6 +500,8 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             - admin_operator.pem
             - admin_operator.key.pem
             - admin_operator.pfx
+            - admin_operator_password
+            - bootstrapper.key
 
         Returns:
             None
