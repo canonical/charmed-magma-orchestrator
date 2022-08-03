@@ -138,9 +138,6 @@ class TestOrc8rMetricsd:
             application_name=ACCESSD_APPLICATION_NAME,
             trust=True,
         )
-        await ops_test.model.wait_for_idle(
-            apps=[ACCESSD_APPLICATION_NAME], status="blocked", timeout=1000
-        )
         await ops_test.model.add_relation(
             relation1=ACCESSD_APPLICATION_NAME, relation2="postgresql-k8s:db"
         )
