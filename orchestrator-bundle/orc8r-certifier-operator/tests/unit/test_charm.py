@@ -35,11 +35,11 @@ class TestCharm(unittest.TestCase):
         self.harness = testing.Harness(MagmaOrc8rCertifierCharm)
         self.harness.set_model_name(name=self.model_name)
         self.addCleanup(self.harness.cleanup)
+        self.harness.set_leader(True)
         self.harness.begin()
         self.maxDiff = None
         self.peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
         self.harness.add_relation_unit(self.peer_relation_id, self.harness.charm.unit.name)
-        self.harness.set_leader(True)
 
     @staticmethod
     def _fake_db_event(
@@ -188,7 +188,7 @@ class TestCharm(unittest.TestCase):
         self.harness.update_config(key_values=key_values)
         self.harness.container_pebble_ready("magma-orc8r-certifier")
 
-        self.harness.charm.on.install.emit()
+        self.harness.charm._on_replicas_relation_created(Mock())
 
         patch_push.assert_any_call(
             path="/var/opt/magma/certs/certifier.pem",
@@ -217,7 +217,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.exists")
     @patch("ops.model.Container.push")
-    def test_given_pebble_ready_and_unit_is_not_leader_when_install_then_status_is_waiting(
+    def test_given_pebble_ready_and_unit_is_not_leader_when_replicas_relation_created_then_status_is_waiting(  # noqa: E501
         self,
         patch_push,
         patch_exists,
@@ -228,7 +228,7 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready("magma-orc8r-certifier")
         self.harness.set_leader(False)
 
-        self.harness.charm.on.install.emit()
+        self.harness.charm._on_replicas_relation_created(Mock())
 
         assert self.harness.charm.unit.status == WaitingStatus(
             "Waiting for leader to generate certificates"
@@ -267,8 +267,7 @@ class TestCharm(unittest.TestCase):
                 "admin_operator_password": "password",
             },
         )
-
-        self.harness.charm.on.install.emit()
+        self.harness.charm._on_replicas_relation_created(Mock())
 
         patch_push.assert_any_call(
             path="/var/opt/magma/certs/certifier.pem",

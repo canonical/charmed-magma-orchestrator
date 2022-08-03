@@ -43,6 +43,7 @@ from ops.charm import (
     CharmBase,
     InstallEvent,
     PebbleReadyEvent,
+    RelationCreatedEvent,
     RelationJoinedEvent,
 )
 from ops.main import main
@@ -132,6 +133,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self.cert_bootstrapper.on.private_key_request,
             self._on_bootstrapper_private_key_request,
         )
+        self.framework.observe(
+            self.on.replicas_relation_created, self._on_replicas_relation_created
+        )
 
     @property
     def _root_certs_are_stored(self) -> bool:
@@ -194,15 +198,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             return True
         except psycopg2.OperationalError:
             return False
-
-    @property
-    def _replicas_relation_created(self) -> bool:
-        """Checks whether replicas relation is created.
-
-        Returns:
-            bool: Whether required relation
-        """
-        return self._relation_created("replicas")
 
     @property
     def _pebble_layer(self) -> Layer:
@@ -321,8 +316,11 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self.unit.status = BlockedStatus("Config 'domain' is not valid")
             event.defer()
             return
-        if not self._replicas_relation_created:
-            self.unit.status = WaitingStatus("Waiting for peer relation to be created")
+        self._write_metricsd_config_file()
+
+    def _on_replicas_relation_created(self, event: RelationCreatedEvent) -> None:
+        if not self._container.can_connect():
+            self.unit.status = WaitingStatus("Waiting for container to be ready")
             event.defer()
             return
         if not self._certificates_are_generated():
@@ -331,7 +329,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                 event.defer()
                 return
             self._generate_application_certificates()
-        self._write_metricsd_config_file()
         self._push_application_certificates()
 
     def _on_magma_orc8r_certifier_pebble_ready(
