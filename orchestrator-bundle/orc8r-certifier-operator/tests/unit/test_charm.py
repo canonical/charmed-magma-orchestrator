@@ -217,7 +217,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.exists")
     @patch("ops.model.Container.push")
-    def test_given_pebble_ready_when_install_and_unit_is_not_leader_then_status_is_waiting(
+    def test_given_pebble_ready_and_unit_is_not_leader_when_install_then_status_is_waiting(
         self,
         patch_push,
         patch_exists,
@@ -237,7 +237,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.exists")
     @patch("ops.model.Container.push")
-    def test_given_pebble_ready_when_install_and_unit_is_not_leader_and_certs_are_generated_then_admin_application_certificates_are_pushed(  # noqa: E501
+    def test_given_pebble_ready_and_unit_is_not_leader_when_install_and_certs_are_generated_then_admin_application_certificates_are_pushed(  # noqa: E501
         self,
         patch_push,
         patch_exists,
