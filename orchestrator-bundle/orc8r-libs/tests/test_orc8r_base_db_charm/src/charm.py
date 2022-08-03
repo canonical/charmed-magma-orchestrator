@@ -11,8 +11,10 @@ from ops.main import main
 
 
 class MagmaOrc8rDummyCharm(CharmBase):
+    """An instance of this object everytime an event occurs."""
+
     def __init__(self, *args):
-        """Creates a new instance of this object for each event."""
+        """Uses the Orc8rBase library to manage events."""
         super().__init__(*args)
         self._service_patcher = KubernetesServicePatch(
             charm=self,

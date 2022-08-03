@@ -2,6 +2,8 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+"""Stores, manages and verifies operator identity objects."""
+
 from charms.magma_orc8r_libs.v0.orc8r_base_db import Orc8rBase
 from charms.observability_libs.v1.kubernetes_service_patch import (
     KubernetesServicePatch,
@@ -12,8 +14,10 @@ from ops.main import main
 
 
 class MagmaOrc8rAccessdCharm(CharmBase):
+    """Creates a new instance of this object for each event."""
+
     def __init__(self, *args):
-        """Creates a new instance of this object for each event."""
+        """Uses the Orc8rBase library to manage events."""
         super().__init__(*args)
         self._service_patcher = KubernetesServicePatch(
             charm=self,

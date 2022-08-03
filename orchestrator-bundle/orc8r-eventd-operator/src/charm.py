@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
+
+"""Acts like an intermediary for different magma services."""
+
 import logging
 import re
 
@@ -18,12 +21,12 @@ logger = logging.getLogger(__name__)
 
 
 class MagmaOrc8rEventdCharm(CharmBase):
+    """An instance of this object everytime an event occurs."""
+
     BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
 
     def __init__(self, *args):
-        """
-        An instance of this object everytime an event occurs.
-        """
+        """Uses the Orc8rBase library to manage events."""
         super().__init__(*args)
         self._service_patcher = KubernetesServicePatch(
             charm=self,
