@@ -44,11 +44,11 @@ class TestOrc8rMetricsd:
     async def setup(self, ops_test):
         await self._deploy_postgresql(ops_test)
         await self._deploy_tls_certificates_operator(ops_test)
+        await self._deploy_orc8r_service_registry(ops_test)
         await self._deploy_orc8r_certifier(ops_test)
         await self._deploy_prometheus_cache(ops_test)
         await self._deploy_orc8r_accessd(ops_test)
         await self._deploy_orc8r_orchestrator(ops_test)
-        await self._deploy_orc8r_service_registry(ops_test)
 
     @staticmethod
     def _find_charm(charm_dir: str, charm_file_name: str) -> Union[str, None]:
@@ -89,6 +89,9 @@ class TestOrc8rMetricsd:
             resources=resources,
             application_name=SERVICE_REGISTRY_APPLICATION_NAME,
             trust=True,
+        )
+        await ops_test.model.wait_for_idle(
+            apps=[SERVICE_REGISTRY_APPLICATION_NAME], status="active", timeout=1000
         )
 
     async def _deploy_orc8r_certifier(self, ops_test):
