@@ -300,6 +300,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             return
         self._configure_pebble(event)
         self._create_master_nms_admin_user()
+        self.unit.status = ActiveStatus()
 
     def _create_master_nms_admin_user(self) -> None:
         """Creates NMS admin user.
@@ -392,7 +393,6 @@ class MagmaNmsMagmalteCharm(CharmBase):
                 self._container.restart(self._service_name)
                 logger.info(f"Restarted service {self._service_name}")
                 self._update_relations()
-                self.unit.status = ActiveStatus()
         else:
             self.unit.status = WaitingStatus("Waiting for container to be ready")
             event.defer()

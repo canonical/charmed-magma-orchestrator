@@ -38,6 +38,9 @@ requires:
   cert-admin-operator:
     interface: cert-admin-operator
     limit: 1
+  magma-orc8r-service-registry:
+    interface: magma-orc8r-service-registry
+    limit: 1
 
 storage:
   config:
