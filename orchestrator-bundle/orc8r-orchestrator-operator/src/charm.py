@@ -502,6 +502,8 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             return
         self._configure_orc8r(event)
         self._create_orchestrator_admin_user()
+        self.unit.status = ActiveStatus()
+
 
     def _configure_orc8r(self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]) -> None:
         """Adds layer to pebble config if the proposed config is different from the current one.
@@ -522,7 +524,6 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                 self._container.restart(self._service_name)
                 logger.info(f"Restarted container {self._service_name}")
                 self._update_relations()
-                self.unit.status = ActiveStatus()
         except ConnectionError:
             logger.error(
                 f"Could not restart {self._service_name} -- Pebble socket does "
