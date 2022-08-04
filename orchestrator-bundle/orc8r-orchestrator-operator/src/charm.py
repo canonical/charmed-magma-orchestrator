@@ -504,7 +504,6 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         self._create_orchestrator_admin_user()
         self.unit.status = ActiveStatus()
 
-
     def _configure_orc8r(self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]) -> None:
         """Adds layer to pebble config if the proposed config is different from the current one.
 
