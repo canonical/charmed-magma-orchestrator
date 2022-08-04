@@ -43,9 +43,9 @@ from ops.charm import (
     CharmBase,
     InstallEvent,
     PebbleReadyEvent,
+    RelationCreatedEvent,
     RelationJoinedEvent,
 )
-from ops.framework import StoredState
 from ops.main import main
 from ops.model import (
     ActiveStatus,
@@ -81,8 +81,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     PROMETHEUS_URL = "http://orc8r-prometheus:9090"
     ALERTMANAGER_URL = "http://orc8r-alertmanager:9093"
 
-    _stored = StoredState()
-
     def __init__(self, *args):
         """Initializes all events that need to be observed."""
         super().__init__(*args)
@@ -95,7 +93,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self.provided_relation_name = list(self.meta.provides.keys())[0]
         self._container = self.unit.get_container(self._container_name)
         self._db = pgsql.PostgreSQLClient(self, "db")
-        self._stored.set_default(admin_operator_password="")
         self._service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[ServicePort(name="grpc", port=9180, targetPort=9086)],
@@ -135,6 +132,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self.framework.observe(
             self.cert_bootstrapper.on.private_key_request,
             self._on_bootstrapper_private_key_request,
+        )
+        self.framework.observe(
+            self.on.replicas_relation_created, self._on_replicas_relation_created
         )
 
     @property
@@ -317,7 +317,19 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             event.defer()
             return
         self._write_metricsd_config_file()
-        self._generate_application_certificates()
+
+    def _on_replicas_relation_created(self, event: RelationCreatedEvent) -> None:
+        if not self._container.can_connect():
+            self.unit.status = WaitingStatus("Waiting for container to be ready")
+            event.defer()
+            return
+        if not self._certificates_are_generated():
+            if not self.unit.is_leader():
+                self.unit.status = WaitingStatus("Waiting for leader to generate certificates")
+                event.defer()
+                return
+            self._generate_application_certificates()
+        self._push_application_certificates()
 
     def _on_magma_orc8r_certifier_pebble_ready(
         self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
@@ -348,11 +360,11 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             event.defer()
             return
         if not self._root_certs_are_stored:
-            self.unit.status = WaitingStatus("Waiting for certs to be available")
+            self.unit.status = WaitingStatus("Waiting for root certs to be available")
             event.defer()
             return
         if not self._application_certs_are_stored:
-            self.unit.status = WaitingStatus("Waiting for certs to be available")
+            self.unit.status = WaitingStatus("Waiting for application certs to be available")
             event.defer()
             return
         self._configure_magma_orc8r_certifier(event)
@@ -477,7 +489,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             )
 
     def _generate_application_certificates(self) -> None:
-        """Generates application certificates and pushes them to the workload container.
+        """Generates application certificates.
 
         The following certificates/keys are created:
             - certifier.pem
@@ -485,11 +497,14 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             - admin_operator.pem
             - admin_operator.key.pem
             - admin_operator.pfx
+            - admin_operator_password
+            - bootstrapper.key
 
         Returns:
             None
         """
         logger.info("Generating Application Certificates")
+        app_data = self.model.get_relation("replicas").data[self.app]  # type: ignore[union-attr]
         certifier_key = generate_private_key()
         certifier_pem = generate_ca(
             private_key=certifier_key,
@@ -512,21 +527,76 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             password=password,
         )
         bootstrapper_key = generate_private_key()
-        self._container.push(path=f"{self.BASE_CERTS_PATH}/certifier.pem", source=certifier_pem)
-        self._container.push(path=f"{self.BASE_CERTS_PATH}/certifier.key", source=certifier_key)
+        app_data.update(
+            {
+                "certifier_pem": certifier_pem.decode(),
+                "certifier_key": certifier_key.decode(),
+                "admin_operator_pem": admin_operator_pem.decode(),
+                "admin_operator_key_pem": admin_operator_key_pem.decode(),
+                "admin_operator_pfx": base64.b64encode(admin_operator_pfx).decode(),
+                "bootstrapper_key": bootstrapper_key.decode(),
+                "admin_operator_password": password,
+            }
+        )
+
+    def _push_application_certificates(self) -> None:
+        """Pushes application certificates to the workload container.
+
+        The following certificates/keys are pushed:
+            - certifier.pem
+            - certifier.key
+            - admin_operator.pem
+            - admin_operator.key.pem
+            - admin_operator.pfx
+
+        Returns:
+            None
+        """
+        app_data = self.model.get_relation("replicas").data[self.app]  # type: ignore[union-attr]
         self._container.push(
-            path=f"{self.BASE_CERTS_PATH}/admin_operator.pem", source=admin_operator_pem
+            path=f"{self.BASE_CERTS_PATH}/certifier.pem",
+            source=app_data.get("certifier_pem").encode(),
         )
         self._container.push(
-            path=f"{self.BASE_CERTS_PATH}/admin_operator.key.pem", source=admin_operator_key_pem
+            path=f"{self.BASE_CERTS_PATH}/certifier.key",
+            source=app_data.get("certifier_key").encode(),
         )
         self._container.push(
-            path=f"{self.BASE_CERTS_PATH}/admin_operator.pfx", source=admin_operator_pfx
+            path=f"{self.BASE_CERTS_PATH}/admin_operator.pem",
+            source=app_data.get("admin_operator_pem").encode(),
         )
         self._container.push(
-            path=f"{self.BASE_CERTS_PATH}/bootstrapper.key", source=bootstrapper_key
+            path=f"{self.BASE_CERTS_PATH}/admin_operator.key.pem",
+            source=app_data.get("admin_operator_key_pem").encode(),
         )
-        self._stored.admin_operator_password = password
+        self._container.push(
+            path=f"{self.BASE_CERTS_PATH}/admin_operator.pfx",
+            source=base64.b64decode(app_data.get("admin_operator_pfx").encode()),
+        )
+        self._container.push(
+            path=f"{self.BASE_CERTS_PATH}/bootstrapper.key",
+            source=app_data.get("bootstrapper_key").encode(),
+        )
+
+    def _certificates_are_generated(self) -> bool:
+        """Returns whether certificates have been generated.
+
+        Returns:
+            bool: Whether certificates have been generated.
+        """
+        replicas = self.model.get_relation("replicas")
+        if not replicas:
+            return False
+        app_data = replicas.data[self.app]
+        return (
+            app_data.get("certifier_pem")
+            and app_data.get("certifier_key")  # noqa: W503
+            and app_data.get("admin_operator_pem")  # noqa: W503
+            and app_data.get("admin_operator_key_pem")  # noqa: W503
+            and app_data.get("admin_operator_pfx")  # noqa: W503
+            and app_data.get("bootstrapper_key")  # noqa: W503
+            and app_data.get("admin_operator_password")  # noqa: W503
+        )
 
     def _update_relation_active_status(self, relation: Relation, is_active: bool) -> None:
         """Updates the relation data content.
@@ -588,9 +658,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         Returns:
             None
         """
+        app_data = self.model.get_relation("replicas").data[self.app]  # type: ignore[union-attr]
         event.set_results(
             {
-                "password": self._stored.admin_operator_password,
+                "password": app_data.get("admin_operator_password"),
             }
         )
 
@@ -697,7 +768,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         try:
             private_key = self._container.pull(path=f"{self.BASE_CERTS_PATH}/bootstrapper.key")
         except (ops.pebble.PathError, FileNotFoundError):
-            logger.info("Certificate 'controller' not yet available")
+            logger.info("Certificate 'bootstrapper' not yet available")
             event.defer()
             return
         private_key_string = private_key.read()
