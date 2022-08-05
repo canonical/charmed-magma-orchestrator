@@ -529,7 +529,8 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             event.defer()
             return
         self._configure_orc8r(event)
-        self._create_orchestrator_admin_user()
+        if self.unit.is_leader():
+            self._create_orchestrator_admin_user()
         self.unit.status = ActiveStatus()
 
     def _configure_orc8r(self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]) -> None:

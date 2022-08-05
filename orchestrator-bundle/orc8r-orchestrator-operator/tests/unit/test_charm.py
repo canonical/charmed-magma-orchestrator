@@ -173,11 +173,12 @@ class TestCharm(unittest.TestCase):
     @patch("ops.model.Container.exists")
     @patch("ops.model.Container.exec", new_callable=Mock)
     @patch("ops.model.Container.push")
-    def test_given_relations_ready_and_container_can_connect_when_on_pebble_ready_event_then_orchestrator_admin_user_is_created(  # noqa: E501
+    def test_given_relations_ready_and_container_can_connect_and_unit_is_leader_when_on_pebble_ready_event_then_orchestrator_admin_user_is_created(  # noqa: E501
         self, patch_push, patch_exec, patch_exists
     ):
         patch_exists.return_value = True
         patch_exec.return_value = MockExec()
+        self.harness.set_leader(True)
 
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="orc8r-certifier"
@@ -225,6 +226,37 @@ class TestCharm(unittest.TestCase):
             "admin_operator",
         ]
         self.assertIn(call_command, args)
+
+    @patch("ops.model.Container.exists")
+    @patch("ops.model.Container.exec", new_callable=Mock)
+    @patch("ops.model.Container.push")
+    def test_given_relations_ready_and_container_can_connect_and_unit_is_not_leader_when_on_pebble_ready_event_then_orchestrator_admin_user_is_created(  # noqa: E501
+        self, patch_push, patch_exec, patch_exists
+    ):
+        patch_exists.return_value = True
+        patch_exec.return_value = MockExec()
+        self.harness.set_leader(False)
+
+        self.harness.add_relation(
+            relation_name="cert-admin-operator", remote_app="orc8r-certifier"
+        )
+        self.harness.add_relation(relation_name="metrics-endpoint", remote_app="prometheus-k8s")
+        accessd_relation = self.harness.add_relation(
+            relation_name="magma-orc8r-accessd", remote_app="orc8r-accessd"
+        )
+
+        self.harness.add_relation_unit(
+            relation_id=accessd_relation, remote_unit_name="magma-orc8r-accessd/0"
+        )
+
+        self.harness.update_relation_data(
+            relation_id=accessd_relation,
+            app_or_unit="magma-orc8r-accessd/0",
+            key_values={"active": "True"},
+        )
+        self.harness.container_pebble_ready("magma-orc8r-orchestrator")
+
+        patch_exec.assert_not_called()
 
     @patch("ops.model.Container.exec", new_callable=Mock)
     @patch("ops.model.Container.push")
