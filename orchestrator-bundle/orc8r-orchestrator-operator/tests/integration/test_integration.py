@@ -171,4 +171,7 @@ class TestOrchestrator:
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="orc8r-accessd:magma-orc8r-accessd"
         )
+        await ops_test.model.add_relation(
+            relation1=APPLICATION_NAME, relation2="orc8r-service-registry:magma-orc8r-service-registry"
+        )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
