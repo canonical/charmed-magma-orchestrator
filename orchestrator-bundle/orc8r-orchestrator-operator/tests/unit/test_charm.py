@@ -230,7 +230,7 @@ class TestCharm(unittest.TestCase):
     @patch("ops.model.Container.exists")
     @patch("ops.model.Container.exec", new_callable=Mock)
     @patch("ops.model.Container.push")
-    def test_given_relations_ready_and_container_can_connect_and_unit_is_not_leader_when_on_pebble_ready_event_then_orchestrator_admin_user_is_created(  # noqa: E501
+    def test_given_relations_ready_and_container_can_connect_and_unit_is_not_leader_when_on_pebble_ready_event_then_orchestrator_admin_user_is_not_created(  # noqa: E501
         self, patch_push, patch_exec, patch_exists
     ):
         patch_exists.return_value = True
