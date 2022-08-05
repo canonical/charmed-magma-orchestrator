@@ -30,6 +30,10 @@ storage:
     description: Certs storage
     minimum-size: 1M
 
+peers:
+  replicas:
+    interface: nms-magmalte-replica
+
 provides:
   magma-nms-magmalte:
     interface: magma-nms-magmalte
