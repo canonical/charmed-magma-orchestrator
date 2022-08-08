@@ -69,6 +69,7 @@ class TestCharm(unittest.TestCase):
             relation_name="cert-admin-operator", remote_app="orc8r-certifier"
         )
         self.harness.add_relation(relation_name="metrics-endpoint", remote_app="prometheus-k8s")
+
         accessd_relation = self.harness.add_relation(
             relation_name="magma-orc8r-accessd", remote_app="orc8r-accessd"
         )
@@ -82,6 +83,22 @@ class TestCharm(unittest.TestCase):
             app_or_unit="magma-orc8r-accessd/0",
             key_values={"active": "True"},
         )
+
+        service_registry_relation = self.harness.add_relation(
+            relation_name="magma-orc8r-service-registry", remote_app="orc8r-service-registry"
+        )
+
+        self.harness.add_relation_unit(
+            relation_id=service_registry_relation,
+            remote_unit_name="magma-orc8r-service-registry/0",
+        )
+
+        self.harness.update_relation_data(
+            relation_id=service_registry_relation,
+            app_or_unit="magma-orc8r-service-registry/0",
+            key_values={"active": "True"},
+        )
+
         patch_exists.return_value = True
         expected_plan = {
             "services": {
@@ -179,6 +196,22 @@ class TestCharm(unittest.TestCase):
             app_or_unit="magma-orc8r-accessd/0",
             key_values={"active": "True"},
         )
+
+        service_registry_relation = self.harness.add_relation(
+            relation_name="magma-orc8r-service-registry", remote_app="orc8r-service-registry"
+        )
+
+        self.harness.add_relation_unit(
+            relation_id=service_registry_relation,
+            remote_unit_name="magma-orc8r-service-registry/0",
+        )
+
+        self.harness.update_relation_data(
+            relation_id=service_registry_relation,
+            app_or_unit="magma-orc8r-service-registry/0",
+            key_values={"active": "True"},
+        )
+
         self.harness.container_pebble_ready("magma-orc8r-orchestrator")
 
         args, _ = patch_exec.call_args

@@ -179,6 +179,10 @@ class TestOrc8rMetricsd:
             relation1=f"{ORCHESTRATOR_APPLICATION_NAME}:magma-orc8r-accessd",
             relation2="orc8r-accessd:magma-orc8r-accessd",
         )
+        await ops_test.model.add_relation(
+            relation1=f"{ORCHESTRATOR_APPLICATION_NAME}:magma-orc8r-service-registry",
+            relation2="orc8r-service-registry:magma-orc8r-service-registry",
+        )
 
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail

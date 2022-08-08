@@ -243,6 +243,24 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         """
         return self._relation_created("metrics-endpoint")
 
+    @property
+    def _service_registry_relation_created(self) -> bool:
+        """Returns whether magma-orc8r-service-registry relation is created.
+
+        Returns:
+            bool: True/False
+        """
+        return self._relation_created("magma-orc8r-service-registry")
+
+    @property
+    def _service_registry_relation_active(self) -> bool:
+        """Returns whether magma-orc8r-service-registry relation is ready.
+
+        Returns:
+            bool: True/False
+        """
+        return self._relation_active("magma-orc8r-service-registry")
+
     def _relation_created(self, relation_name: str) -> bool:
         """Returns whether given relation was created.
 
@@ -490,6 +508,10 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             )
             event.defer()
             return
+        if not self._service_registry_relation_created:
+            self.unit.status = BlockedStatus("Waiting for service-registry relation to be created")
+            event.defer()
+            return
         if not self._certs_are_stored:
             self.unit.status = WaitingStatus("Waiting for certs to be available")
             event.defer()
@@ -500,8 +522,15 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             )
             event.defer()
             return
+        if not self._service_registry_relation_active:
+            self.unit.status = WaitingStatus(
+                "waiting for magma-orc8r-service-registry to be active"
+            )
+            event.defer()
+            return
         self._configure_orc8r(event)
         self._create_orchestrator_admin_user()
+        self.unit.status = ActiveStatus()
 
     def _configure_orc8r(self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]) -> None:
         """Adds layer to pebble config if the proposed config is different from the current one.
@@ -522,7 +551,6 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                 self._container.restart(self._service_name)
                 logger.info(f"Restarted container {self._service_name}")
                 self._update_relations()
-                self.unit.status = ActiveStatus()
         except ConnectionError:
             logger.error(
                 f"Could not restart {self._service_name} -- Pebble socket does "
