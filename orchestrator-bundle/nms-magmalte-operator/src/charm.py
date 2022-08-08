@@ -26,7 +26,6 @@ from charms.observability_libs.v1.kubernetes_service_patch import (
     ServicePort,
 )
 from ops.charm import ActionEvent, CharmBase, PebbleReadyEvent, RelationJoinedEvent
-from ops.framework import StoredState
 from ops.main import main
 from ops.model import (
     ActiveStatus,
@@ -51,14 +50,12 @@ class MagmaNmsMagmalteCharm(CharmBase):
     BASE_CERTS_PATH = "/run/secrets"
     NMS_ADMIN_USERNAME = "admin@juju.com"
     CERT_ADMIN_OPERATOR_RELATION = "cert-admin-operator"
-    _stored = StoredState()
 
     def __init__(self, *args):
         """Initializes all event that need to be observed."""
         super().__init__(*args)
         self._container_name = self._service_name = "magma-nms-magmalte"
         self._container = self.unit.get_container(self._container_name)
-        self._stored.set_default(admin_password="")
         self._db = pgsql.PostgreSQLClient(self, "db")
         self.admin_operator = CertAdminOperatorRequires(self, self.CERT_ADMIN_OPERATOR_RELATION)
         self._service_patcher = KubernetesServicePatch(
@@ -299,7 +296,8 @@ class MagmaNmsMagmalteCharm(CharmBase):
             event.defer()
             return
         self._configure_pebble(event)
-        self._create_master_nms_admin_user()
+        if self.unit.is_leader():
+            self._create_master_nms_admin_user()
         self.unit.status = ActiveStatus()
 
     def _create_master_nms_admin_user(self) -> None:
@@ -309,6 +307,8 @@ class MagmaNmsMagmalteCharm(CharmBase):
             None
         """
         password = self._get_admin_password()
+        if not password:
+            password = self._create_admin_password()
         start_time = time.time()
         timeout = 60
         while time.time() - start_time < timeout:
@@ -412,6 +412,9 @@ class MagmaNmsMagmalteCharm(CharmBase):
             )
 
     def _create_nms_admin_user_action(self, event: ActionEvent):
+        if not self.unit.is_leader():
+            event.fail("This action needs to be run on the leader")
+            return
         self._create_nms_admin_user(
             email=event.params["email"],
             password=event.params["password"],
@@ -421,6 +424,13 @@ class MagmaNmsMagmalteCharm(CharmBase):
     def _on_get_master_admin_credentials(self, event: ActionEvent) -> None:
         try:
             self._container.get_service(self._service_name)
+            if not self.model.get_relation("replicas"):
+                event.fail("Peer relation not created yet")
+                return
+            password = self._get_admin_password()
+            if not password:
+                event.fail("Admin credentials have not been created yet")
+                return
             event.set_results(
                 {
                     "admin-username": self.NMS_ADMIN_USERNAME,
@@ -429,6 +439,9 @@ class MagmaNmsMagmalteCharm(CharmBase):
             )
         except (ops.model.ModelError, ops.pebble.ConnectionError):
             event.fail("Workload service is not yet running")
+            return
+        except Exception as e:
+            event.fail(str(e))
             return
 
     def _create_nms_admin_user(self, email: str, password: str, organization: str) -> None:
@@ -470,9 +483,20 @@ class MagmaNmsMagmalteCharm(CharmBase):
         Returns:
             str: Password
         """
-        if not self._stored.admin_password:
-            self._stored.admin_password = self._generate_password()
-        return self._stored.admin_password
+        app_data = self.model.get_relation("replicas").data[self.app]  # type: ignore[union-attr]
+        if not app_data.get("admin_password"):
+            return ""
+        return app_data.get("admin_password")
+
+    def _create_admin_password(self) -> str:
+        """Creates and returns the password for the admin user.
+
+        Returns:
+            str: Password
+        """
+        app_data = self.model.get_relation("replicas").data[self.app]  # type: ignore[union-attr]
+        app_data.update({"admin_password": self._generate_password()})
+        return app_data.get("admin_password")
 
     @staticmethod
     def _generate_password() -> str:

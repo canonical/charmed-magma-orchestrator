@@ -45,12 +45,16 @@ class TestCharm(unittest.TestCase):
     @patch(
         "charm.KubernetesServicePatch", lambda charm, ports, service_name, additional_labels: None
     )
+    @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._mirror_appdata", new=Mock())
     def setUp(self):
         self.namespace = "whatever"
         self.harness = testing.Harness(MagmaNmsMagmalteCharm)
         self.harness.set_model_name(name=self.namespace)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
+        self.harness.set_leader(True)
+        self.peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
+        self.harness.add_relation_unit(self.peer_relation_id, self.harness.charm.unit.name)
 
     @staticmethod
     def _fake_db_event(
@@ -207,7 +211,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.exec")
     @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
-    def test_given_username_email_and_password_are_provided_when_create_nms_admin_user_juju_action_then_pebble_command_is_executed(  # noqa: E501
+    def test_given_username_email_and_password_are_provided_and_unit_is_leader_when_create_nms_admin_user_juju_action_then_pebble_command_is_executed(  # noqa: E501
         self, _, mock_exec
     ):
         action_event = Mock(
@@ -228,6 +232,24 @@ class TestCharm(unittest.TestCase):
             "password123",
         ]
         self.assertIn(call_command, args)
+
+    def test_given_username_email_and_password_are_provided_and_unit_is_not_leader_when_create_nms_admin_user_juju_action_then_action_returns_error(  # noqa: E501
+        self,
+    ):
+        action_event = Mock(
+            params={
+                "email": "test@test.test",
+                "organization": "test-org",
+                "password": "password123",
+            }
+        )
+        self.harness.set_leader(False)
+        self.harness.charm._create_nms_admin_user_action(action_event)
+
+        self.assertEqual(
+            action_event.fail.call_args,
+            [("This action needs to be run on the leader",)],
+        )
 
     def test_given_one_of_username_email_and_password_is_missing_when_create_nms_admin_user_juju_action_then_action_fails(  # noqa: E501
         self,
@@ -259,11 +281,60 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.get_service", new=Mock())
     @patch("ops.charm.ActionEvent")
-    def test_given_workload_service_is_running_when_get_admin_credentials_action_then_username_and_password_are_returned(  # noqa: E501
+    def test_given_relations_not_created_and_unit_is_not_leader_when_juju_action_then_get_admin_credentials_fails(  # noqa: E501
         self, action_event
     ):
-        self.harness.charm._stored.admin_password = "password"
+        self.harness.charm._on_get_master_admin_credentials(action_event)
+        self.harness.set_leader(False)
+        self.assertEqual(
+            action_event.fail.call_args,
+            [("Admin credentials have not been created yet",)],
+        )
 
+    @patch("ops.model.Container.get_service", new=Mock())
+    @patch("ops.charm.ActionEvent")
+    def test_given_workload_service_is_running_and_peer_relation_not_created_when_get_admin_credentials_action_then_get_admin_credentials_fail(  # noqa: E501
+        self, action_event
+    ):
+
+        self.harness.remove_relation(self.peer_relation_id)
+        self.harness.charm._on_get_master_admin_credentials(action_event)
+
+        self.assertEqual(
+            action_event.fail.call_args,
+            [("Peer relation not created yet",)],
+        )
+
+    @patch("ops.model.Container.get_service", new=Mock())
+    @patch("ops.charm.ActionEvent")
+    def test_given_workload_service_is_running_and_unit_is_leader_when_get_admin_credentials_action_then_username_and_password_are_returned(  # noqa: E501
+        self, action_event
+    ):
+        self.harness.update_relation_data(
+            relation_id=self.peer_relation_id,
+            app_or_unit=self.harness.charm.app.name,
+            key_values={"admin_password": "password"},
+        )
+
+        self.harness.charm._on_get_master_admin_credentials(action_event)
+
+        self.assertEqual(
+            action_event.set_results.call_args,
+            [({"admin-username": "admin@juju.com", "admin-password": "password"},)],
+        )
+
+    @patch("ops.model.Container.get_service", new=Mock())
+    @patch("ops.charm.ActionEvent")
+    def test_given_workload_service_is_running_and_unit_is_not_leader_when_get_admin_credentials_action_then_username_and_password_are_returned(  # noqa: E501
+        self, action_event
+    ):
+        self.harness.update_relation_data(
+            relation_id=self.peer_relation_id,
+            app_or_unit=self.harness.charm.app.name,
+            key_values={"admin_password": "password"},
+        )
+
+        self.harness.set_leader(False)
         self.harness.charm._on_get_master_admin_credentials(action_event)
 
         self.assertEqual(
