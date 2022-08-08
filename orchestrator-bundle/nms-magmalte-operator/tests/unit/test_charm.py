@@ -211,7 +211,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.exec")
     @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
-    def test_given_username_email_and_password_are_provided_when_create_nms_admin_user_juju_action_then_pebble_command_is_executed(  # noqa: E501
+    def test_given_username_email_and_password_are_provided_and_unit_is_leader_when_create_nms_admin_user_juju_action_then_pebble_command_is_executed(  # noqa: E501
         self, _, mock_exec
     ):
         action_event = Mock(
@@ -232,6 +232,24 @@ class TestCharm(unittest.TestCase):
             "password123",
         ]
         self.assertIn(call_command, args)
+
+    def test_given_username_email_and_password_are_provided_and_unit_is_not_leader_when_create_nms_admin_user_juju_action_then_action_returns_error(  # noqa: E501
+        self,
+    ):
+        action_event = Mock(
+            params={
+                "email": "test@test.test",
+                "organization": "test-org",
+                "password": "password123",
+            }
+        )
+        self.harness.set_leader(False)
+        self.harness.charm._create_nms_admin_user_action(action_event)
+
+        self.assertEqual(
+            action_event.fail.call_args,
+            [("This action needs to be run on the leader",)],
+        )
 
     def test_given_one_of_username_email_and_password_is_missing_when_create_nms_admin_user_juju_action_then_action_fails(  # noqa: E501
         self,
