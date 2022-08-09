@@ -25,17 +25,9 @@ SERVICE_REGISTRY_METADATA = yaml.safe_load(
 APPLICATION_NAME = "orc8r-metricsd"
 CHARM_NAME = "magma-orc8r-metricsd"
 CERTIFIER_APPLICATION_NAME = "orc8r-certifier"
-CERTIFIER_CHARM_NAME = "magma-orc8r-certifier"
-CERTIFIER_CHARM_FILE_NAME = "magma-orc8r-certifier_ubuntu-20.04-amd64.charm"
 ORCHESTRATOR_APPLICATION_NAME = "orc8r-orchestrator"
-ORCHESTRATOR_CHARM_NAME = "magma-orc8r-orchestrator"
-ORCHESTRATOR_CHARM_FILE_NAME = "magma-orc8r-orchestrator_ubuntu-20.04-amd64.charm"
 ACCESSD_APPLICATION_NAME = "orc8r-accessd"
-ACCESSD_CHARM_NAME = "magma-orc8r-accessd"
-ACCESSD_CHARM_FILE_NAME = "magma-orc8r-accessd_ubuntu-20.04-amd64.charm"
 SERVICE_REGISTRY_APPLICATION_NAME = "orc8r-service-registry"
-SERVICE_REGISTRY_CHARM_NAME = "magma-orc8r-service-registry"
-SERVICE_REGISTRY_CHARM_FILE_NAME = "magma-orc8r-service-registry_ubuntu-20.04-amd64.charm"
 
 
 class TestOrc8rMetricsd:
@@ -98,52 +90,30 @@ class TestOrc8rMetricsd:
             channel="edge",
         )
 
-    async def _deploy_orc8r_service_registry(self, ops_test):
-        service_registry_charm = self._find_charm(
-            "../orc8r-service-registry-operator", SERVICE_REGISTRY_CHARM_FILE_NAME
-        )
-        if not service_registry_charm:
-            service_registry_charm = await ops_test.build_charm(
-                "../orc8r-service-registry-operator"
-            )
-        resources = {
-            f"{SERVICE_REGISTRY_CHARM_NAME}-image": SERVICE_REGISTRY_METADATA["resources"][
-                f"{SERVICE_REGISTRY_CHARM_NAME}-image"
-            ]["upstream-source"],
-        }
+    @staticmethod
+    async def _deploy_orc8r_service_registry(ops_test):
         await ops_test.model.deploy(
-            service_registry_charm,
-            resources=resources,
+            "magma-orc8r-service-registry",
             application_name=SERVICE_REGISTRY_APPLICATION_NAME,
-            trust=True,
-        )
-        await ops_test.model.wait_for_idle(
-            apps=[SERVICE_REGISTRY_APPLICATION_NAME], status="active", timeout=1000
+            channel="edge",
         )
 
-    async def _deploy_orc8r_certifier(self, ops_test):
-        certifier_charm = self._find_charm(
-            "../orc8r-certifier-operator", CERTIFIER_CHARM_FILE_NAME
-        )
-        if not certifier_charm:
-            certifier_charm = await ops_test.build_charm("../orc8r-certifier-operator/")
-        resources = {
-            f"{CERTIFIER_CHARM_NAME}-image": CERTIFIER_METADATA["resources"][
-                f"{CERTIFIER_CHARM_NAME}-image"
-            ]["upstream-source"],
-        }
+    @staticmethod
+    async def _deploy_orc8r_certifier(ops_test):
         await ops_test.model.deploy(
-            certifier_charm,
-            resources=resources,
+            "magma-orc8r-certifier",
             application_name=CERTIFIER_APPLICATION_NAME,
             config={"domain": "example.com"},
-            trust=True,
+            channel="edge",
         )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
         )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="tls-certificates-operator"
+        )
+        await ops_test.model.wait_for_idle(
+            apps=[CERTIFIER_APPLICATION_NAME], status="active", timeout=1000
         )
 
     @staticmethod
@@ -155,19 +125,12 @@ class TestOrc8rMetricsd:
             trust=True,
         )
 
-    async def _deploy_orc8r_accessd(self, ops_test):
-        accessd_charm = self._find_charm("../orc8r-accessd-operator", ACCESSD_CHARM_FILE_NAME)
-        if not accessd_charm:
-            accessd_charm = await ops_test.build_charm("../orc8r-accessd-operator/")
-        resources = {
-            f"{ACCESSD_CHARM_NAME}-image": ACCESSD_METADATA["resources"][
-                f"{ACCESSD_CHARM_NAME}-image"
-            ]["upstream-source"],
-        }
+    @staticmethod
+    async def _deploy_orc8r_accessd(ops_test):
         await ops_test.model.deploy(
-            accessd_charm,
-            resources=resources,
+            "magma-orc8r-accessd",
             application_name=ACCESSD_APPLICATION_NAME,
+            channel="edge",
             trust=True,
         )
         await ops_test.model.add_relation(
@@ -177,21 +140,12 @@ class TestOrc8rMetricsd:
             apps=[ACCESSD_APPLICATION_NAME], status="active", timeout=1000
         )
 
-    async def _deploy_orc8r_orchestrator(self, ops_test):
-        orchestrator_charm = self._find_charm(
-            "../orc8r-orchestrator-operator", ORCHESTRATOR_CHARM_FILE_NAME
-        )
-        if not orchestrator_charm:
-            orchestrator_charm = await ops_test.build_charm("../orc8r-orchestrator-operator/")
-        resources = {
-            f"{ORCHESTRATOR_CHARM_NAME}-image": ORCHESTRATOR_METADATA["resources"][
-                f"{ORCHESTRATOR_CHARM_NAME}-image"
-            ]["upstream-source"],
-        }
+    @staticmethod
+    async def _deploy_orc8r_orchestrator(ops_test):
         await ops_test.model.deploy(
-            orchestrator_charm,
-            resources=resources,
+            "magma-orc8r-orchestrator",
             application_name=ORCHESTRATOR_APPLICATION_NAME,
+            channel="edge",
             trust=True,
         )
         await ops_test.model.add_relation(
@@ -209,6 +163,9 @@ class TestOrc8rMetricsd:
         await ops_test.model.add_relation(
             relation1=f"{ORCHESTRATOR_APPLICATION_NAME}:magma-orc8r-service-registry",
             relation2="orc8r-service-registry:magma-orc8r-service-registry",
+        )
+        await ops_test.model.wait_for_idle(
+            apps=[ORCHESTRATOR_APPLICATION_NAME], status="active", timeout=1000
         )
 
     @pytest.fixture(scope="module")
