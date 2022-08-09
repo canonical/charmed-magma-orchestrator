@@ -23,9 +23,6 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
     BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
 
     # TODO: The various URL's should be provided through relationships.
-    PROMETHEUS_URL = "http://orc8r-prometheus:9090"
-    PROMETHEUS_CONFIGURER_URL = "http://orc8r-prometheus:9100"
-    ALERTMANAGER_URL = "http://orc8r-alertmanager:9093"
     ALERTMANAGER_CONFIGURER_URL = "http://orc8r-alertmanager:9101"
 
     def __init__(self, *args):
@@ -61,7 +58,12 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
         self._orc8r_base = Orc8rBase(
             self,
             startup_command=startup_command,
-            required_relations=["magma-orc8r-orchestrator"],
+            required_relations=[
+                "magma-orc8r-orchestrator",
+                "alertmanager-k8s",
+                "prometheus-k8s",
+                "prometheus-configurer-k8s",
+            ],
         )
         self.framework.observe(self.on.install, self._on_install)
 
@@ -73,13 +75,30 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
 
     def _write_config_file(self):
         metricsd_config = (
-            f'prometheusQueryAddress: "{self.PROMETHEUS_URL}"\n'
-            f'alertmanagerApiURL: "{self.ALERTMANAGER_URL}/api/v2"\n'
-            f'prometheusConfigServiceURL: "{self.PROMETHEUS_CONFIGURER_URL}/v1"\n'
+            f'prometheusQueryAddress: "{self._prometheus_url}"\n'
+            f'alertmanagerApiURL: "{self._alertmanager_url}/api/v2"\n'
+            f'prometheusConfigServiceURL: "{self._prometheus_configurer_url}/v1"\n'
             f'alertmanagerConfigServiceURL: "{self.ALERTMANAGER_CONFIGURER_URL}/v1"\n'
             '"profile": "prometheus"\n'
         )
         self._orc8r_base.container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
+
+    @property
+    def _prometheus_url(self) -> str:
+        prometheus_service_name = self.model.get_relation("prometheus-k8s").app.name  # type: ignore[union-attr]  # noqa: E501
+        return f"http://{prometheus_service_name}:9090"
+
+    @property
+    def _prometheus_configurer_url(self) -> str:
+        prometheus_configurer_service_name = self.model.get_relation(
+            "prometheus-configurer-k8s"
+        ).app.name  # type: ignore[union-attr]
+        return f"http://{prometheus_configurer_service_name}:9100"
+
+    @property
+    def _alertmanager_url(self) -> str:
+        alertmanager_service_name = self.model.get_relation("alertmanager-k8s").app.name  # type: ignore[union-attr]  # noqa: E501
+        return f"http://{alertmanager_service_name}:9093"
 
     @property
     def _namespace(self) -> str:

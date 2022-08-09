@@ -123,6 +123,11 @@ applications:
     trust: true
     options:
       metrics_count_limit: 500000
+  orc8r-prometheus-configurer:
+    charm: prometheus-configurer-k8s
+    channel: edge
+    scale: 1
+    trust: true
   orc8r-service-registry:
     charm: magma-orc8r-service-registry
     channel: edge
@@ -189,6 +194,8 @@ relations:
   - postgresql-k8s:db
 - - orc8r-bootstrapper
   - orc8r-certifier
+- - orc8r-certifier
+  - tls-certificates-operator
 - - orc8r-certifier:db
   - postgresql-k8s:db
 - - orc8r-configurator:db
@@ -201,8 +208,14 @@ relations:
   - postgresql-k8s:db
 - - orc8r-lte:db
   - postgresql-k8s:db
+- - orc8r-metricsd:alertmanager-k8s
+  - orc8r-alertmanager:alerting
 - - orc8r-metricsd:magma-orc8r-orchestrator
   - orc8r-orchestrator:magma-orc8r-orchestrator
+- - orc8r-metricsd:prometheus-k8s
+  - orc8r-prometheus:self-metrics-endpoint
+- - orc8r-metricsd:prometheus-configurer-k8s
+  - orc8r-prometheus-configurer:prometheus-configurer
 - - orc8r-nginx:magma-orc8r-bootstrapper
   - orc8r-bootstrapper:magma-orc8r-bootstrapper
 - - orc8r-nginx:cert-certifier
@@ -213,6 +226,10 @@ relations:
   - orc8r-obsidian:magma-orc8r-obsidian
 - - orc8r-orchestrator
   - orc8r-certifier
+- - orc8r-orchestrator:magma-orc8r-accessd
+  - orc8r-accessd:magma-orc8r-accessd
+- - orc8r-orchestrator:magma-orc8r-service-registry
+  - orc8r-service-registry:magma-orc8r-service-registry
 - - orc8r-orchestrator:metrics-endpoint
   - orc8r-prometheus-cache:metrics-endpoint
 - - orc8r-policydb:db
@@ -221,10 +238,8 @@ relations:
   - orc8r-alertmanager:alerting
 - - orc8r-prometheus:metrics-endpoint
   - orc8r-prometheus-cache:metrics-endpoint
-- - orc8r-orchestrator:magma-orc8r-accessd
-  - orc8r-accessd:magma-orc8r-accessd
-- - orc8r-orchestrator:magma-orc8r-service-registry
-  - orc8r-service-registry:magma-orc8r-service-registry
+- - orc8r-prometheus-configurer:prometheus
+  - orc8r-prometheus:receive-remote-write
 - - orc8r-smsd:db
   - postgresql-k8s:db
 - - orc8r-state:db
@@ -237,5 +252,3 @@ relations:
   - postgresql-k8s:db
 - - orc8r-user-grafana:grafana-source
   - orc8r-prometheus:grafana-source
-- - orc8r-certifier
-  - tls-certificates-operator
