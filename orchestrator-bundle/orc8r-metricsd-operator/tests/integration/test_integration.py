@@ -13,14 +13,6 @@ from pytest_operator.plugin import OpsTest  # type: ignore[import]  # noqa: F401
 
 logger = logging.getLogger(__name__)
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
-CERTIFIER_METADATA = yaml.safe_load(Path("../orc8r-certifier-operator/metadata.yaml").read_text())
-ORCHESTRATOR_METADATA = yaml.safe_load(
-    Path("../orc8r-orchestrator-operator/metadata.yaml").read_text()
-)
-ACCESSD_METADATA = yaml.safe_load(Path("../orc8r-accessd-operator/metadata.yaml").read_text())
-SERVICE_REGISTRY_METADATA = yaml.safe_load(
-    Path("../orc8r-service-registry-operator/metadata.yaml").read_text()
-)
 
 APPLICATION_NAME = "orc8r-metricsd"
 CHARM_NAME = "magma-orc8r-metricsd"
@@ -34,6 +26,7 @@ class TestOrc8rMetricsd:
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail
     async def setup(self, ops_test):
+        await ops_test.model.set_config({"update-status-hook-interval": "2s"})
         await self._deploy_postgresql(ops_test)
         await self._deploy_alertmanager(ops_test)
         await self._deploy_prometheus(ops_test)
@@ -79,6 +72,10 @@ class TestOrc8rMetricsd:
             "prometheus-configurer-k8s",
             application_name="orc8r-prometheus-configurer",
             channel="edge",
+        )
+        await ops_test.model.add_relation(
+            relation1="orc8r-prometheus-configurer",
+            relation2="orc8r-prometheus:receive-remote-write",
         )
 
     @staticmethod
@@ -194,7 +191,7 @@ class TestOrc8rMetricsd:
         )
         await ops_test.model.add_relation(
             relation1=f"{APPLICATION_NAME}:prometheus-k8s",
-            relation2="orc8r-prometheus:prometheus_scrape",
+            relation2="orc8r-prometheus:self-metrics-endpoint",
         )
         await ops_test.model.add_relation(
             relation1=f"{APPLICATION_NAME}:prometheus-configurer-k8s",

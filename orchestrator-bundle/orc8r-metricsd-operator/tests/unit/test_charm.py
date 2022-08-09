@@ -44,8 +44,7 @@ class TestCharm(unittest.TestCase):
     def test_given_no_relations_created_when_pebble_ready_then_charm_goes_to_blocked_status(self):
         self.harness.charm.on.magma_orc8r_metricsd_pebble_ready.emit(self.container)
         assert self.harness.charm.unit.status == BlockedStatus(
-            "Waiting for relation(s) to be created: magma-orc8r-orchestrator, alertmanager-k8s, "
-            "prometheus-k8s, prometheus-configurer-k8s"
+            "Waiting for relation(s) to be created: magma-orc8r-orchestrator"
         )
 
     def test_given_all_relations_created_when_pebble_ready_then_charm_goes_to_waiting_status(self):
@@ -55,29 +54,18 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation_unit(
             relation_id=orchestrator_relation_id, remote_unit_name="orchestrator/0"
         )
-        alertmanager_relation_id = self.harness.add_relation(
-            relation_name="alertmanager-k8s", remote_app="alertmanager"
-        )
-        self.harness.add_relation_unit(
-            relation_id=alertmanager_relation_id, remote_unit_name="alertmanager/0"
-        )
-        prometheus_relation_id = self.harness.add_relation(
-            relation_name="prometheus-k8s", remote_app="prometheus"
-        )
-        self.harness.add_relation_unit(
-            relation_id=prometheus_relation_id, remote_unit_name="prometheus/0"
-        )
-        prometheus_configurer_relation_id = self.harness.add_relation(
-            relation_name="prometheus-configurer-k8s", remote_app="prometheus_configurer"
-        )
-        self.harness.add_relation_unit(
-            relation_id=prometheus_configurer_relation_id,
-            remote_unit_name="prometheus_configurer/0",
-        )
         self.harness.charm.on.magma_orc8r_metricsd_pebble_ready.emit(self.container)
         assert self.harness.charm.unit.status == WaitingStatus(
-            "Waiting for relation(s) to be ready: magma-orc8r-orchestrator, alertmanager-k8s, "
-            "prometheus-k8s, prometheus-configurer-k8s"
+            "Waiting for relation(s) to be ready: magma-orc8r-orchestrator"
+        )
+
+    def test_given_no_relations_created_created_when_install_then_charm_goes_to_blocked_status(
+        self
+    ):
+        self.harness.charm.on.install.emit()
+        assert self.harness.charm.unit.status == BlockedStatus(
+            "Waiting for relation(s) to be created: alertmanager-k8s, prometheus-k8s, "
+            "prometheus-configurer-k8s"
         )
 
     @patch("ops.model.Container.push")

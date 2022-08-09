@@ -239,7 +239,7 @@ relations:
 - - orc8r-metricsd:magma-orc8r-orchestrator
   - orc8r-orchestrator:magma-orc8r-orchestrator
 - - orc8r-metricsd:magma-orc8r-prometheus
-  - orc8r-prometheus:prometheus_scrape
+  - orc8r-prometheus:self-metrics-endpoint
 - - orc8r-metricsd:magma-orc8r-prometheus-configurer
   - orc8r-prometheus-configurer:prometheus-configurer
 - - orc8r-nginx:magma-orc8r-bootstrapper

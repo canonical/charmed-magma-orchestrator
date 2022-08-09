@@ -13,6 +13,7 @@ from charms.observability_libs.v1.kubernetes_service_patch import (
 )
 from ops.charm import CharmBase, InstallEvent
 from ops.main import main
+from ops.model import BlockedStatus
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,7 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
     """An instance of this object everytime an event occurs."""
 
     BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
+    EXTERNAL_RELATIONS = ["alertmanager-k8s", "prometheus-k8s", "prometheus-configurer-k8s"]
 
     # TODO: The various URL's should be provided through relationships.
     ALERTMANAGER_CONFIGURER_URL = "http://orc8r-alertmanager:9101"
@@ -58,16 +60,14 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
         self._orc8r_base = Orc8rBase(
             self,
             startup_command=startup_command,
-            required_relations=[
-                "magma-orc8r-orchestrator",
-                "alertmanager-k8s",
-                "prometheus-k8s",
-                "prometheus-configurer-k8s",
-            ],
+            required_relations=["magma-orc8r-orchestrator"],
         )
         self.framework.observe(self.on.install, self._on_install)
 
     def _on_install(self, event: InstallEvent):
+        if not self._relations_created:
+            event.defer()
+            return
         if not self._orc8r_base.container.can_connect():
             event.defer()
             return
@@ -103,6 +103,19 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
     @property
     def _namespace(self) -> str:
         return self.model.name
+
+    @property
+    def _relations_created(self) -> bool:
+        """Checks whether required relations are created."""
+        if missing_relations := [
+            relation
+            for relation in self.EXTERNAL_RELATIONS
+            if not self.model.get_relation(relation)
+        ]:
+            msg = f"Waiting for relation(s) to be created: {', '.join(missing_relations)}"
+            self.unit.status = BlockedStatus(msg)
+            return False
+        return True
 
 
 if __name__ == "__main__":
