@@ -93,8 +93,12 @@ class FegControlProxyCharm(CharmBase):
             process_mkdir = self._container.exec(command=["mkdir", "-p", self.BASE_CERTS_PATH])
             process_mkdir.wait_output()
 
-            self._container.push(path=f"{self.BASE_CERTS_PATH}/controller.crt", source=controller_crt)
-            self._container.push(path=f"{self.BASE_CERTS_PATH}/controller.key", source=controller_key)
+            self._container.push(
+                path=f"{self.BASE_CERTS_PATH}/controller.crt", source=controller_crt
+            )
+            self._container.push(
+                path=f"{self.BASE_CERTS_PATH}/controller.key", source=controller_key
+            )
         except ExecError as e:
             logger.error("Exited with code %d. Stderr:", e.exit_code)
             for line in e.stderr.splitlines():  # type: ignore[union-attr]
