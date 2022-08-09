@@ -60,7 +60,7 @@ class TestCharm(unittest.TestCase):
         )
 
     def test_given_no_relations_created_created_when_install_then_charm_goes_to_blocked_status(
-        self
+        self,
     ):
         self.harness.charm.on.install.emit()
         assert self.harness.charm.unit.status == BlockedStatus(
