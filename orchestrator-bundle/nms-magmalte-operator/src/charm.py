@@ -306,14 +306,20 @@ class MagmaNmsMagmalteCharm(CharmBase):
         Returns:
             None
         """
-        password = self._get_admin_password()
-        if not password:
-            password = self._create_admin_password()
+        if not self._admin_password:
+            self._create_admin_password()
         start_time = time.time()
         timeout = 60
         while time.time() - start_time < timeout:
             try:
-                self._create_nms_admin_user(self.NMS_ADMIN_USERNAME, password, "master")
+                if self._admin_password:
+                    self._create_nms_admin_user(
+                        self.NMS_ADMIN_USERNAME, self._admin_password, "master"
+                    )
+                else:
+                    logger.error(
+                        "Admin password not present after creating it. This should never happen."
+                    )
                 return
             except ExecError:
                 logger.info("Failed to create admin user - Will retry in 5 seconds")
@@ -427,14 +433,13 @@ class MagmaNmsMagmalteCharm(CharmBase):
             if not self.model.get_relation("replicas"):
                 event.fail("Peer relation not created yet")
                 return
-            password = self._get_admin_password()
-            if not password:
+            if not self._admin_password:
                 event.fail("Admin credentials have not been created yet")
                 return
             event.set_results(
                 {
                     "admin-username": self.NMS_ADMIN_USERNAME,
-                    "admin-password": self._get_admin_password(),
+                    "admin-password": self._admin_password,
                 }
             )
         except (ops.model.ModelError, ops.pebble.ConnectionError):
@@ -477,7 +482,8 @@ class MagmaNmsMagmalteCharm(CharmBase):
             raise e
         logger.info("Successfully created admin user")
 
-    def _get_admin_password(self) -> str:
+    @property
+    def _admin_password(self) -> Optional[str]:
         """Returns the password for the admin user.
 
         Returns:
@@ -485,18 +491,17 @@ class MagmaNmsMagmalteCharm(CharmBase):
         """
         app_data = self.model.get_relation("replicas").data[self.app]  # type: ignore[union-attr]
         if not app_data.get("admin_password"):
-            return ""
+            return None
         return app_data.get("admin_password")
 
-    def _create_admin_password(self) -> str:
-        """Creates and returns the password for the admin user.
+    def _create_admin_password(self) -> None:
+        """Creates the password for the admin user.
 
         Returns:
             str: Password
         """
         app_data = self.model.get_relation("replicas").data[self.app]  # type: ignore[union-attr]
         app_data.update({"admin_password": self._generate_password()})
-        return app_data.get("admin_password")
 
     @staticmethod
     def _generate_password() -> str:
