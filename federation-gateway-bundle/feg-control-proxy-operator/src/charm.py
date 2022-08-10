@@ -29,6 +29,12 @@ class FegControlProxyCharm(CharmBase):
         )
         self.framework.observe(self.on.install, self._on_install)
 
+    @staticmethod
+    def _get_certificate_from_file(filename: str) -> str:
+        with open(filename, "r") as file:
+            certificate = file.read()
+        return certificate
+
     @property
     def _controller_certs_are_stored(self) -> bool:
         """Returns whether controller certificate are stored.
@@ -62,7 +68,7 @@ class FegControlProxyCharm(CharmBase):
             return
 
         self._generate_nghttpx_config()
-        self._push_controller_certs()
+        self._push_certs()
 
     def _generate_nghttpx_config(self) -> None:
         """Generates nghttpx config file.
@@ -70,9 +76,20 @@ class FegControlProxyCharm(CharmBase):
             None
         """
         logger.info("Generating nghttpx config file...")
-        process = self._container.exec(command=["/usr/local/bin/generate_nghttpx_config.py"])
         try:
-            process.wait_output()
+            process_generate = self._container.exec(
+                command=["/usr/local/bin/generate_nghttpx_config.py"]
+            )
+            process_generate.wait_output()
+            process_delete_line = self._container.exec(
+                command=[
+                    "sed",
+                    "-i",
+                    "/errorlog-syslog=/d",
+                    "/var/opt/magma/tmp/nghttpx.conf",
+                ]
+            )
+            process_delete_line.wait_output()
         except ExecError as e:
             logger.error("Exited with code %d. Stderr:", e.exit_code)
             for line in e.stderr.splitlines():  # type: ignore[union-attr]
@@ -80,14 +97,16 @@ class FegControlProxyCharm(CharmBase):
             raise e
         logger.info("Successfully generated nghttpx config file")
 
-    def _push_controller_certs(self) -> None:
+    def _push_certs(self) -> None:
         """Pushes controller certs to container.
         Returns:
             None
         """
         logger.info("Pushing controller certs to container...")
-        controller_crt = "dummy certificate\n"
-        controller_key = "dummy private key\n"
+        controller_crt = self._get_certificate_from_file(filename="src/test_controller.crt")
+        controller_key = self._get_certificate_from_file(filename="src/test_controller.key")
+        root_ca_key = self._get_certificate_from_file(filename="src/test_rootCA.key")
+        root_ca_pem = self._get_certificate_from_file(filename="src/test_rootCA.pem")
 
         try:
             process_mkdir = self._container.exec(command=["mkdir", "-p", self.BASE_CERTS_PATH])
@@ -99,6 +118,8 @@ class FegControlProxyCharm(CharmBase):
             self._container.push(
                 path=f"{self.BASE_CERTS_PATH}/controller.key", source=controller_key
             )
+            self._container.push(path=f"{self.BASE_CERTS_PATH}/rootCA.key", source=root_ca_key)
+            self._container.push(path=f"{self.BASE_CERTS_PATH}/rootCA.pem", source=root_ca_pem)
         except ExecError as e:
             logger.error("Exited with code %d. Stderr:", e.exit_code)
             for line in e.stderr.splitlines():  # type: ignore[union-attr]
@@ -116,6 +137,7 @@ class FegControlProxyCharm(CharmBase):
         if not self._container.can_connect():
             self.unit.status = WaitingStatus("Waiting for container to be ready...")
             event.defer()
+            return
         if not self._nghttpx_config_is_stored:
             self.unit.status = WaitingStatus("Waiting for nghttpx config to be available")
             event.defer()
