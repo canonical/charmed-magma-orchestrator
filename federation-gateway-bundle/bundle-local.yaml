@@ -23,7 +23,7 @@ applications:
     resources:
       magma-feg-control-proxy-image: 'docker.artifactory.magmacore.org/gateway_python:latest'
   feg-csfb:
-    charm: ./feg-csfb-operator/feg-csbf.charm
+    charm: ./feg-csfb-operator/feg-csfb.charm
     scale: 1
     trust: true
     resources:
