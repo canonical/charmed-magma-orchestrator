@@ -72,6 +72,7 @@ class TestOrc8rMetricsd:
             "alertmanager-k8s",
             application_name="orc8r-alertmanager",
             channel="edge",
+            trust=True,
         )
 
     @staticmethod
@@ -80,6 +81,7 @@ class TestOrc8rMetricsd:
             "prometheus-k8s",
             application_name="orc8r-prometheus",
             channel="edge",
+            trust=True,
         )
 
     @staticmethod
@@ -88,6 +90,7 @@ class TestOrc8rMetricsd:
             "prometheus-configurer-k8s",
             application_name="orc8r-prometheus-configurer",
             channel="edge",
+            trust=True,
         )
         await ops_test.model.add_relation(
             relation1="orc8r-prometheus-configurer",
@@ -101,6 +104,7 @@ class TestOrc8rMetricsd:
             application_name="tls-certificates-operator",
             config={"generate-self-signed-certificates": True},
             channel="edge",
+            trust=True,
         )
 
     async def _deploy_orc8r_service_registry(self, ops_test):

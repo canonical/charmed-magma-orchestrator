@@ -18,6 +18,7 @@ max-complexity = 10
 exclude = [".git", "__pycache__", ".tox", "build", "dist", "*.egg_info", "venv"]
 select = ["E", "W", "F", "C", "N", "R", "D", "H"]
 per-file-ignores = ["tests/*:D100,D101,D102,D103,D107"]
+ignore = ["D205", "D415"]
 docstring-convention = "google"
 copyright-check = "True"
 copyright-author = "Canonical Ltd."
