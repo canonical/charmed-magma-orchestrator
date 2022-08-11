@@ -65,9 +65,7 @@ class TestOrc8rMetricsd:
     @staticmethod
     async def _deploy_postgresql(ops_test):
         await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
-        await ops_test.model.wait_for_idle(
-            apps=["postgresql-k8s"], status="active", timeout=1000
-        )
+        await ops_test.model.wait_for_idle(apps=["postgresql-k8s"], status="active", timeout=1000)
 
     @staticmethod
     async def _deploy_alertmanager(ops_test):
