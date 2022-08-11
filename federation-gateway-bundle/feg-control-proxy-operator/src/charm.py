@@ -2,6 +2,12 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+"""feg-control-proxy.
+
+TODO: Add comprehensive description.
+Federation Gateway control proxy service.
+"""
+
 
 import logging
 
@@ -38,6 +44,7 @@ class FegControlProxyCharm(CharmBase):
     @property
     def _controller_certs_are_stored(self) -> bool:
         """Returns whether controller certificate are stored.
+
         Returns:
             bool: Whether controller certificate are stored.
         """
@@ -50,6 +57,7 @@ class FegControlProxyCharm(CharmBase):
     @property
     def _nghttpx_config_is_stored(self) -> bool:
         """Returns whether nghttpx config is stored.
+
         Returns:
             bool: Whether nghttpx config is stored.
         """
@@ -57,6 +65,7 @@ class FegControlProxyCharm(CharmBase):
 
     def _on_install(self, event: InstallEvent) -> None:
         """Juju event triggered only once when charm is installed.
+
         Args:
             event: Juju event
         Returns:
@@ -72,6 +81,7 @@ class FegControlProxyCharm(CharmBase):
 
     def _generate_nghttpx_config(self) -> None:
         """Generates nghttpx config file.
+
         Returns:
             None
         """
@@ -81,24 +91,30 @@ class FegControlProxyCharm(CharmBase):
                 command=["/usr/local/bin/generate_nghttpx_config.py"]
             )
             process_generate.wait_output()
+            # Deleting this line removes logs redirection to syslog, which is not installed
+            # in the container. The service won't start without this change,
+            # and logs will be hidden.
+            # NOTE: This is also done in the official magma codebase. Loot at
+            # magma/lte/gateway/docker/docker-compose.yaml for more information.
             process_delete_line = self._container.exec(
                 command=[
                     "sed",
                     "-i",
                     "/errorlog-syslog=/d",
-                    "/var/opt/magma/tmp/nghttpx.conf",
+                    f"{self.BASE_NGHTTPX_CONFIG_PATH}/nghttpx.conf",
                 ]
             )
             process_delete_line.wait_output()
         except ExecError as e:
             logger.error("Exited with code %d. Stderr:", e.exit_code)
-            for line in e.stderr.splitlines():  # type: ignore[union-attr]
+            for line in e.stderr.splitlines():
                 logger.error("    %s", line)
             raise e
         logger.info("Successfully generated nghttpx config file")
 
     def _push_certs(self) -> None:
         """Pushes controller certs to container.
+
         Returns:
             None
         """
@@ -122,15 +138,16 @@ class FegControlProxyCharm(CharmBase):
             self._container.push(path=f"{self.BASE_CERTS_PATH}/rootCA.pem", source=root_ca_pem)
         except ExecError as e:
             logger.error("Exited with code %d. Stderr:", e.exit_code)
-            for line in e.stderr.splitlines():  # type: ignore[union-attr]
+            for line in e.stderr.splitlines():
                 logger.error("    %s", line)
             raise e
         logger.info("Successfully pushed controller certs to container")
 
     def _on_magma_feg_control_proxy_pebble_ready(self, event: PebbleReadyEvent) -> None:
         """Juju event triggered when pebble is ready.
+
         Args:
-            event: Juju event
+            event (PebbleReadyEvent): Juju event
         Returns:
             None
         """
@@ -159,6 +176,7 @@ class FegControlProxyCharm(CharmBase):
     @property
     def _pebble_layer(self) -> Layer:
         """Returns Pebble layer object containing the workload startup service.
+
         Returns:
             Layer: Pebble layer
         """
@@ -170,9 +188,9 @@ class FegControlProxyCharm(CharmBase):
                     self.meta.name: {
                         "override": "replace",
                         "summary": self.meta.name,
-                        "command": "nghttpx --conf /var/opt/magma/tmp/nghttpx.conf "
-                        "/var/opt/magma/certs/controller.key "
-                        "/var/opt/magma/certs/controller.crt",
+                        "command": f"nghttpx --conf {self.BASE_NGHTTPX_CONFIG_PATH}/nghttpx.conf "
+                        f"{self.BASE_CERTS_PATH}/controller.key "
+                        f"{self.BASE_CERTS_PATH}/controller.crt",
                         "startup": "enabled",
                     }
                 },

@@ -2,6 +2,12 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+"""feg-csfb.
+
+Federation Gateway csfb service translates calls from
+GRPC interface to csfb protocol between AGW and VLR.
+"""
+
 
 import logging
 
@@ -14,7 +20,10 @@ logger = logging.getLogger(__name__)
 
 
 class FegCsfbCharm(CharmBase):
+    """Main class that is instantiated everytime an event occurs."""
+
     def __init__(self, *args):
+        """Initializes all events that need to be observed."""
         super().__init__(*args)
         self.container = self.unit.get_container(self.meta.name)
         self.framework.observe(

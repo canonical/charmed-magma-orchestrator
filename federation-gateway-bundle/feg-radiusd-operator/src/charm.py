@@ -2,10 +2,15 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+"""feg-radiusd.
+
+Fetches metrics from the running radius server and exports them.
+"""
+
 
 import logging
 
-from ops.charm import CharmBase
+from ops.charm import CharmBase, PebbleReadyEvent
 from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import Layer
@@ -14,14 +19,24 @@ logger = logging.getLogger(__name__)
 
 
 class FegRadiusdCharm(CharmBase):
+    """Main class that is instantiated everytime an event occurs."""
+
     def __init__(self, *args):
+        """Initializes all events that need to be observed."""
         super().__init__(*args)
         self.container = self.unit.get_container(self.meta.name)
         self.framework.observe(
             self.on.magma_feg_radiusd_pebble_ready, self._on_magma_feg_radiusd_pebble_ready
         )
 
-    def _on_magma_feg_radiusd_pebble_ready(self, event) -> None:
+    def _on_magma_feg_radiusd_pebble_ready(self, event: PebbleReadyEvent) -> None:
+        """Juju event triggered when pebble is ready.
+
+        Args:
+            event (PebbleReadyEvent): Juju event
+        Returns:
+            None
+        """
         if not self.container.can_connect():
             self.unit.status = WaitingStatus("Waiting for container to be ready...")
             event.defer()
@@ -37,6 +52,11 @@ class FegRadiusdCharm(CharmBase):
 
     @property
     def _pebble_layer(self) -> Layer:
+        """Returns Pebble layer object containing the workload startup service.
+
+        Returns:
+            Layer: Pebble layer
+        """
         return Layer(
             {
                 "summary": f"{self.meta.name} layer",

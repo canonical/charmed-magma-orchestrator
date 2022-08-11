@@ -2,10 +2,16 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+"""feg-health.
+
+Provides health updates to the orc8r to be used for achieving highly available
+federated gateway clusters.
+"""
+
 
 import logging
 
-from ops.charm import CharmBase
+from ops.charm import CharmBase, PebbleReadyEvent
 from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import Layer
@@ -14,7 +20,10 @@ logger = logging.getLogger(__name__)
 
 
 class FegHealthCharm(CharmBase):
+    """Main class that is instantiated everytime an event occurs."""
+
     def __init__(self, *args):
+        """Initializes all events that need to be observed."""
         super().__init__(*args)
         self.container_name = self.service_name = self.meta.name
         self.container = self.unit.get_container(self.container_name)
@@ -22,7 +31,14 @@ class FegHealthCharm(CharmBase):
             self.on.magma_feg_health_pebble_ready, self._on_magma_feg_health_pebble_ready
         )
 
-    def _on_magma_feg_health_pebble_ready(self, event) -> None:
+    def _on_magma_feg_health_pebble_ready(self, event: PebbleReadyEvent) -> None:
+        """Juju event triggered when pebble is ready.
+
+        Args:
+            event (PebbleReadyEvent): Juju event
+        Returns:
+            None
+        """
         if not self.container.can_connect():
             self.unit.status = WaitingStatus("Waiting for container to be ready...")
             event.defer()
@@ -38,6 +54,11 @@ class FegHealthCharm(CharmBase):
 
     @property
     def _pebble_layer(self) -> Layer:
+        """Returns Pebble layer object containing the workload startup service.
+
+        Returns:
+            Layer: Pebble layer
+        """
         return Layer(
             {
                 "summary": f"{self.service_name} layer",

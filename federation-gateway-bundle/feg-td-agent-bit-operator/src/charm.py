@@ -2,10 +2,16 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+"""feg-td-agent-bit.
+
+TODO: Add comprehensive description.
+Federation Gateway td-agent-bit service.
+"""
+
 
 import logging
 
-from ops.charm import CharmBase
+from ops.charm import CharmBase, PebbleReadyEvent
 from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import Layer
@@ -14,7 +20,10 @@ logger = logging.getLogger(__name__)
 
 
 class FegTdAgentBitCharm(CharmBase):
+    """Main class that is instantiated everytime an event occurs."""
+
     def __init__(self, *args):
+        """Initializes all events that need to be observed."""
         super().__init__(*args)
         self.container = self.unit.get_container(self.meta.name)
         self.framework.observe(
@@ -22,7 +31,14 @@ class FegTdAgentBitCharm(CharmBase):
             self._on_magma_feg_td_agent_bit_pebble_ready,
         )
 
-    def _on_magma_feg_td_agent_bit_pebble_ready(self, event) -> None:
+    def _on_magma_feg_td_agent_bit_pebble_ready(self, event: PebbleReadyEvent) -> None:
+        """Juju event triggered when pebble is ready.
+
+        Args:
+            event (PebbleReadyEvent): Juju event
+        Returns:
+            None
+        """
         if not self.container.can_connect():
             self.unit.status = WaitingStatus("Waiting for container to be ready...")
             event.defer()
@@ -38,6 +54,11 @@ class FegTdAgentBitCharm(CharmBase):
 
     @property
     def _pebble_layer(self) -> Layer:
+        """Returns Pebble layer object containing the workload startup service.
+
+        Returns:
+            Layer: Pebble layer
+        """
         return Layer(
             {
                 "summary": f"{self.meta.name} layer",

@@ -1,13 +1,72 @@
 bundle: kubernetes
 name: magma-feg
 description: |
-  The federated gateway provides remote procedure call (GRPC) based interfaces to standard 3GPP components, such as HSS (S6a, SWx), OCS (Gy), and PCRF (Gx). 
-  The exposed RPC interface provides versioning & backward compatibility, security (HTTP2 & TLS) as well as support for multiple programming languages. 
-  The Remote Procedures below provide simple, extensible, multi-language interfaces based on GRPC which allow developers to avoid dealing with the complexities of 3GPP protocols. 
-  Implementing these RPC interfaces allows networks running on Magma to integrate with traditional 3GPP core components.
+  The federated gateway provides remote procedure call (GRPC) based interfaces
+  to standard 3GPP components, such as HSS (S6a, SWx), OCS (Gy), and PCRF (Gx).
+  The exposed RPC interface provides versioning & backward compatibility,
+  security (HTTP2 & TLS) as well as support for multiple programming languages.
+  The Remote Procedures below provide simple, extensible, multi-language
+  interfaces based on GRPC which allow developers to avoid dealing with the
+  complexities of 3GPP protocols. Implementing these RPC interfaces allows
+  networks running on Magma to integrate with traditional 3GPP core components.
 applications:
-  feg-session-proxy:
-    charm: magma-feg-session-proxy
+  feg-aaa-server:
+    charm: magma-feg-aaa-server
+    channel: edge
+    scale: 1
+    trust: true
+  feg-control-proxy:
+    charm: magma-feg-control-proxy
+    channel: edge
+    scale: 1
+    trust: true
+  feg-csfb:
+    charm: magma-feg-csfb
+    channel: edge
+    scale: 1
+    trust: true
+  feg-eap-aka:
+    charm: magma-feg-eap-aka
+    channel: edge
+    scale: 1
+    trust: true
+  feg-eap-sim:
+    charm: magma-feg-eap-sim
+    channel: edge
+    scale: 1
+    trust: true
+  feg-health:
+    charm: magma-feg-health
+    channel: edge
+    scale: 1
+    trust: true
+  feg-eventd:
+    charm: magma-feg-eventd
+    channel: edge
+    scale: 1
+    trust: true
+  feg-hello:
+    charm: magma-feg-hello
+    channel: edge
+    scale: 1
+    trust: true
+  feg-magmad:
+    charm: magma-feg-magmad
+    channel: edge
+    scale: 1
+    trust: true
+  feg-radiusd:
+    charm: magma-feg-radiusd
+    channel: edge
+    scale: 1
+    trust: true
+  feg-redis:
+    charm: magma-feg-redis
+    channel: edge
+    scale: 1
+    trust: true
+  feg-s6a-proxy:
+    charm: magma-feg-s6a-proxy
     channel: edge
     scale: 1
     trust: true
@@ -15,28 +74,19 @@ applications:
     charm: magma-feg-s8-proxy
     channel: edge
     scale: 1
-    trust true
-  feg-radiusd:
-    charm: magma-feg-radiusd
+    trust: true
+  feg-session-proxy:
+    charm: magma-feg-session-proxy
+    channel: edge
     scale: 1
     trust: true
-  feg-hello:
-    charm: magma-feg-hello
-    scale:1
-    trust: true
-  feg-health:
-    charm: magma-feg-health
+  feg-swx-proxy:
+    charm: magma-feg-swx-proxy
+    channel: edge
     scale: 1
     trust: true
-  feg-eap-sim:
-    charm: magma-feg-eap-sim
-    scale: 1
-    trust: true
-  feg-eap-aka:
-    charm: magma-feg-eap-aka
-    scale: 1
-    trust: true
-  feg-aaa-server:
-    charm: magma-feg-aaa-server
+  feg-td-agent-bit:
+    charm: magma-feg-td-agent-bit
+    channel: edge
     scale: 1
     trust: true
