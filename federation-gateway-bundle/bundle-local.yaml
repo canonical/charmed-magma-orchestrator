@@ -13,96 +13,96 @@ applications:
   feg-aaa-server:
     charm: ./feg-aaa-server-operator/feg-aaa-server.charm
     scale: 1
-    trust: true
+    trust: false
     resources:
       magma-feg-aaa-server-image: 'docker.artifactory.magmacore.org/gateway_go:1.6.0'
   feg-control-proxy:
     charm: ./feg-control-proxy-operator/feg-control-proxy.charm
     scale: 1
-    trust: true
+    trust: false
     resources:
       magma-feg-control-proxy-image: 'docker.artifactory.magmacore.org/gateway_python:latest'
   feg-csfb:
     charm: ./feg-csfb-operator/feg-csfb.charm
     scale: 1
-    trust: true
+    trust: false
     resources:
       magma-feg-csfb-image: 'docker.artifactory.magmacore.org/gateway_go:1.6.0'
   feg-eap-aka:
     charm: ./feg-eap-aka-operator/feg-eap-aka.charm
     scale: 1
-    trust: true
+    trust: false
     resources:
       magma-feg-eap-aka-image: 'docker.artifactory.magmacore.org/gateway_go:1.6.0'
   feg-eap-sim:
     charm: ./feg-eap-sim-operator/feg-eap-sim.charm
     scale: 1
-    trust: true
+    trust: false
     resources:
       magma-feg-eap-sim-image: 'docker.artifactory.magmacore.org/gateway_go:1.6.0'
   feg-health:
     charm: ./feg-health-operator/feg-health.charm
     scale: 1
-    trust: true
+    trust: false
     resources:
       magma-feg-health-image: 'docker.artifactory.magmacore.org/gateway_go:1.6.0'
   feg-eventd:
     charm: ./feg-eventd-operator/feg-eventd.charm
     scale: 1
-    trust: true
+    trust: false
     resources:
       magma-feg-eventd-image: 'docker.artifactory.magmacore.org/gateway_python:latest'
   feg-hello:
     charm: ./feg-hello-operator/feg-hello.charm
     scale: 1
-    trust: true
+    trust: false
     resources:
       magma-feg-hello-image: 'docker.artifactory.magmacore.org/gateway_go:1.6.0'
   feg-magmad:
     charm: ./feg-magmad-operator/feg-magmad.charm
     scale: 1
-    trust: true
+    trust: false
     resources:
       magma-feg-magmad-image: 'docker.artifactory.magmacore.org/gateway_python:latest'
   feg-radiusd:
     charm: ./feg-radiusd-operator/feg-radiusd.charm
     scale: 1
-    trust: true
+    trust: false
     resources:
       magma-feg-radiusd-image: 'docker.artifactory.magmacore.org/gateway_go:1.6.0'
   feg-redis:
     charm: ./feg-redis-operator/feg-redis.charm
     scale: 1
-    trust: true
+    trust: false
     resources:
       magma-feg-redis-image: 'docker.artifactory.magmacore.org/gateway_python:latest'
   feg-s6a-proxy:
     charm: ./feg-s6a-proxy-operator/feg-s6a-proxy.charm
     scale: 1
-    trust: true
+    trust: false
     resources:
       magma-feg-s6a-proxy-image: 'docker.artifactory.magmacore.org/gateway_go:1.6.0'
   feg-s8-proxy:
     charm: ./feg-s8-proxy-operator/feg-s8-proxy.charm
     scale: 1
-    trust: true
+    trust: false
     resources:
       magma-feg-s8-proxy-image: 'docker.artifactory.magmacore.org/gateway_go:1.6.0'
   feg-session-proxy:
     charm: ./feg-session-proxy-operator/feg-session-proxy.charm
     scale: 1
-    trust: true
+    trust: false
     resources:
       magma-feg-session-proxy-image: 'docker.artifactory.magmacore.org/gateway_go:1.6.0'
   feg-swx-proxy:
     charm: ./feg-swx-proxy-operator/feg-swx-proxy.charm
     scale: 1
-    trust: true
+    trust: false
     resources:
       magma-feg-swx-proxy-image: 'docker.artifactory.magmacore.org/gateway_go:1.6.0'
   feg-td-agent-bit:
     charm: ./feg-td-agent-bit-operator/feg-td-agent-bit.charm
     scale: 1
-    trust: true
+    trust: false
     resources:
       magma-feg-td-agent-bit-image: 'docker.artifactory.magmacore.org/gateway_python:latest'

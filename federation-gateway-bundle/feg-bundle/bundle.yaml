@@ -14,79 +14,79 @@ applications:
     charm: magma-feg-aaa-server
     channel: edge
     scale: 1
-    trust: true
+    trust: false
   feg-control-proxy:
     charm: magma-feg-control-proxy
     channel: edge
     scale: 1
-    trust: true
+    trust: false
   feg-csfb:
     charm: magma-feg-csfb
     channel: edge
     scale: 1
-    trust: true
+    trust: false
   feg-eap-aka:
     charm: magma-feg-eap-aka
     channel: edge
     scale: 1
-    trust: true
+    trust: false
   feg-eap-sim:
     charm: magma-feg-eap-sim
     channel: edge
     scale: 1
-    trust: true
+    trust: false
   feg-health:
     charm: magma-feg-health
     channel: edge
     scale: 1
-    trust: true
+    trust: false
   feg-eventd:
     charm: magma-feg-eventd
     channel: edge
     scale: 1
-    trust: true
+    trust: false
   feg-hello:
     charm: magma-feg-hello
     channel: edge
     scale: 1
-    trust: true
+    trust: false
   feg-magmad:
     charm: magma-feg-magmad
     channel: edge
     scale: 1
-    trust: true
+    trust: false
   feg-radiusd:
     charm: magma-feg-radiusd
     channel: edge
     scale: 1
-    trust: true
+    trust: false
   feg-redis:
     charm: magma-feg-redis
     channel: edge
     scale: 1
-    trust: true
+    trust: false
   feg-s6a-proxy:
     charm: magma-feg-s6a-proxy
     channel: edge
     scale: 1
-    trust: true
+    trust: false
   feg-s8-proxy:
     charm: magma-feg-s8-proxy
     channel: edge
     scale: 1
-    trust: true
+    trust: false
   feg-session-proxy:
     charm: magma-feg-session-proxy
     channel: edge
     scale: 1
-    trust: true
+    trust: false
   feg-swx-proxy:
     charm: magma-feg-swx-proxy
     channel: edge
     scale: 1
-    trust: true
+    trust: false
   feg-td-agent-bit:
     charm: magma-feg-td-agent-bit
     channel: edge
     scale: 1
-    trust: true
+    trust: false
