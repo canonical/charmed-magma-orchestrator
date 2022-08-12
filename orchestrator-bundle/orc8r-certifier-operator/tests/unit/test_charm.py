@@ -1,11 +1,16 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import base64
 import io
 import unittest
 from unittest.mock import Mock, call, patch
 
+from certificates import (
+    generate_ca,
+    generate_certificate,
+    generate_csr,
+    generate_private_key,
+)
 from ops import testing
 from ops.model import BlockedStatus, WaitingStatus
 from pgconnstr import ConnectionString  # type: ignore[import]
@@ -28,18 +33,24 @@ class TestCharm(unittest.TestCase):
         "user=test_db_user"
     )
 
+    @staticmethod
+    def get_certificate_from_file(filename: str) -> str:
+        with open(filename, "r") as file:
+            certificate = file.read()
+        return certificate
+
+    @property
+    def certificate(self) -> str:
+        return self.get_certificate_from_file(filename="tests/unit/example.pem")
+
     @patch("charm.KubernetesServicePatch", lambda charm, ports, additional_labels: None)
-    @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._mirror_appdata", new=Mock())
     def setUp(self):
         self.model_name = "whatever"
         self.harness = testing.Harness(MagmaOrc8rCertifierCharm)
         self.harness.set_model_name(name=self.model_name)
         self.addCleanup(self.harness.cleanup)
-        self.harness.set_leader(True)
         self.harness.begin()
         self.maxDiff = None
-        self.peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
-        self.harness.add_relation_unit(self.peer_relation_id, self.harness.charm.unit.name)
 
     @staticmethod
     def _fake_db_event(
@@ -58,11 +69,11 @@ class TestCharm(unittest.TestCase):
         db_event.master.port = postgres_port
         return db_event
 
-    @patch("ops.model.Unit.is_leader")
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     def test_given_pod_is_leader_when_database_relation_joined_event_then_database_is_set_correctly(  # noqa: E501
-        self, is_leader
+        self,
     ):
-        is_leader.return_value = True
+        self.harness.set_leader(is_leader=True)
         postgres_db_name = self.TEST_DB_NAME
         postgres_host = "bread"
         postgres_password = "water"
@@ -156,217 +167,418 @@ class TestCharm(unittest.TestCase):
             '"profile": "prometheus"\n',
         )
 
-    @patch("charm.generate_csr", new=Mock())
+    def test_given_pebble_not_ready_when_install_then_status_is_waiting(
+        self,
+    ):
+        self.harness.charm.on.install.emit()
+
+        assert self.harness.charm.unit.status == WaitingStatus("Waiting for container to be ready")
+
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
+    def test_given_config_not_valid_when_on_config_changed_then_status_is_blocked(
+        self,
+    ):
+        self.harness.set_leader(is_leader=True)
+        self.harness.container_pebble_ready("magma-orc8r-certifier")
+
+        self.harness.update_config(key_values={})
+
+        assert self.harness.charm.unit.status == BlockedStatus("Config 'domain' is not valid")
+
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
+    def test_given_root_private_key_not_stored_when_on_config_changed_then_status_is_waiting(
+        self,
+    ):
+        self.harness.set_leader(is_leader=True)
+        self.harness.container_pebble_ready("magma-orc8r-certifier")
+
+        self.harness.update_config(key_values={"domain": "whatever.com"})
+
+        assert self.harness.charm.unit.status == WaitingStatus(
+            "Waiting for root private key to be generated"
+        )
+
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
+    @patch("ops.model.Container.push", new=Mock())
+    def test_given_application_private_key_not_stored_when_on_config_changed_then_status_is_waiting(  # noqa: E501
+        self,
+    ):
+        self.harness.set_leader(is_leader=True)
+        self.harness.container_pebble_ready("magma-orc8r-certifier")
+        peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
+        self.harness.add_relation_unit(peer_relation_id, self.harness.charm.app.name)
+        self.harness.update_relation_data(
+            relation_id=peer_relation_id,
+            app_or_unit=self.harness.charm.app.name,
+            key_values={
+                "root_private_key": "whatever root private key",
+            },
+        )
+
+        self.harness.update_config(key_values={"domain": "whatever.com"})
+
+        assert self.harness.charm.unit.status == WaitingStatus(
+            "Waiting for application private key to be generated"
+        )
+
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
+    def test_given_cant_connect_to_container_when_on_config_changed_then_status_is_waiting(
+        self,
+    ):
+        self.harness.set_leader(is_leader=True)
+
+        self.harness.update_config(key_values={"domain": "whatever.com"})
+
+        assert self.harness.charm.unit.status == WaitingStatus("Waiting for container to be ready")
+
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
+    @patch("charm.generate_csr")
     @patch("charm.generate_pfx_package")
     @patch("charm.generate_certificate")
     @patch("charm.generate_ca")
-    @patch("charm.generate_private_key")
-    @patch("ops.model.Container.exists")
     @patch("ops.model.Container.push")
-    def test_given_pebble_ready_when_install_then_admin_application_certificates_are_created(
+    def test_given_private_keys_are_stored_when_on_config_changed_then_application_certificates_are_pushed_to_workload(  # noqa: E501
         self,
         patch_push,
-        patch_exists,
-        patch_generate_private_key,
         patch_generate_ca,
         patch_generate_certificate,
         patch_generate_pfx_package,
+        patch_generate_csr,
     ):
-        private_key_1 = b"whatever private key 1"
-        private_key_2 = b"whatever private key 2"
-        private_key_3 = b"whatever private key 3"
+        patch_generate_csr.return_value = b"whatever csr"
         certificate = b"whatever certificate"
         ca_certificate = b"whatever ca certificate"
         pfx_package = b"whatever pfx package content"
-
-        patch_generate_private_key.side_effect = [private_key_1, private_key_2, private_key_3]
+        self.harness.set_leader(is_leader=True)
         patch_generate_ca.return_value = ca_certificate
         patch_generate_certificate.return_value = certificate
         patch_generate_pfx_package.return_value = pfx_package
-        patch_exists.return_value = False
-        key_values = {"domain": "whatever.com"}
-        self.harness.update_config(key_values=key_values)
-        self.harness.container_pebble_ready("magma-orc8r-certifier")
-
-        self.harness.charm._on_replicas_relation_created(Mock())
-
-        patch_push.assert_any_call(
-            path="/var/opt/magma/certs/certifier.pem",
-            source=ca_certificate,
-        )
-        patch_push.assert_any_call(
-            path="/var/opt/magma/certs/certifier.key",
-            source=private_key_1,
-        )
-        patch_push.assert_any_call(
-            path="/var/opt/magma/certs/admin_operator.pem",
-            source=certificate,
-        )
-        patch_push.assert_any_call(
-            path="/var/opt/magma/certs/admin_operator.key.pem",
-            source=private_key_2,
-        )
-        patch_push.assert_any_call(
-            path="/var/opt/magma/certs/admin_operator.pfx",
-            source=pfx_package,
-        )
-        patch_push.assert_any_call(
-            path="/var/opt/magma/certs/bootstrapper.key",
-            source=private_key_3,
-        )
-
-    @patch("ops.model.Container.exists")
-    @patch("ops.model.Container.push")
-    def test_given_pebble_ready_and_unit_is_not_leader_when_replicas_relation_created_then_status_is_waiting(  # noqa: E501
-        self,
-        patch_push,
-        patch_exists,
-    ):
-        patch_exists.return_value = False
-        key_values = {"domain": "whatever.com"}
-        self.harness.update_config(key_values=key_values)
-        self.harness.container_pebble_ready("magma-orc8r-certifier")
-        self.harness.set_leader(False)
-
-        self.harness.charm._on_replicas_relation_created(Mock())
-
-        assert self.harness.charm.unit.status == WaitingStatus(
-            "Waiting for leader to generate certificates"
-        )
-        patch_push.assert_not_called()
-
-    @patch("ops.model.Container.exists")
-    @patch("ops.model.Container.push")
-    def test_given_pebble_ready_and_unit_is_not_leader_when_install_and_certs_are_generated_then_admin_application_certificates_are_pushed(  # noqa: E501
-        self,
-        patch_push,
-        patch_exists,
-    ):
-        private_key_1 = b"whatever private key 1"
-        private_key_2 = b"whatever private key 2"
-        private_key_3 = b"whatever private key 3"
-        certificate = b"whatever certificate"
-        ca_certificate = b"whatever ca certificate"
-        pfx_package = b"whatever pfx package content"
-
-        patch_exists.return_value = False
-        key_values = {"domain": "whatever.com"}
-        self.harness.update_config(key_values=key_values)
-        self.harness.container_pebble_ready("magma-orc8r-certifier")
-        self.harness.set_leader(False)
+        peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
+        self.harness.add_relation_unit(peer_relation_id, self.harness.charm.unit.name)
         self.harness.update_relation_data(
-            relation_id=self.peer_relation_id,
+            relation_id=peer_relation_id,
             app_or_unit=self.harness.charm.app.name,
             key_values={
-                "certifier_pem": ca_certificate.decode(),
-                "certifier_key": private_key_1.decode(),
-                "admin_operator_pem": certificate.decode(),
-                "admin_operator_key_pem": private_key_2.decode(),
-                "admin_operator_pfx": base64.b64encode(pfx_package).decode(),
-                "bootstrapper_key": private_key_3.decode(),
-                "admin_operator_password": "password",
+                "root_private_key": "whatever root private key",
+                "application_private_key": "whatever app private key",
+                "admin_operator_private_key": "whatever admin operator private key",
+                "bootstrapper_private_key": "whatever bootstrapper private key",
             },
         )
-        self.harness.charm._on_replicas_relation_created(Mock())
+        self.harness.container_pebble_ready("magma-orc8r-certifier")
+
+        self.harness.update_config(key_values={"domain": "whatever.com"})
 
         patch_push.assert_any_call(
             path="/var/opt/magma/certs/certifier.pem",
-            source=ca_certificate,
-        )
-        patch_push.assert_any_call(
-            path="/var/opt/magma/certs/certifier.key",
-            source=private_key_1,
+            source=ca_certificate.decode(),
         )
         patch_push.assert_any_call(
             path="/var/opt/magma/certs/admin_operator.pem",
-            source=certificate,
-        )
-        patch_push.assert_any_call(
-            path="/var/opt/magma/certs/admin_operator.key.pem",
-            source=private_key_2,
+            source=certificate.decode(),
         )
         patch_push.assert_any_call(
             path="/var/opt/magma/certs/admin_operator.pfx",
             source=pfx_package,
         )
-        patch_push.assert_any_call(
-            path="/var/opt/magma/certs/bootstrapper.key",
-            source=private_key_3,
+
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
+    @patch("charm.generate_csr")
+    def test_given_private_keys_are_stored_when_on_config_changed_then_root_csr_is_generated_and_stored_in_relation_data(  # noqa: E501
+        self,
+        patch_generate_csr,
+    ):
+        root_private_key = generate_private_key()
+        domain_config = "whatever"
+        ca_private_key = generate_private_key()
+        ca_certificate = generate_ca(private_key=ca_private_key, subject="whatever")
+        application_private_key = generate_private_key()
+        application_csr = generate_csr(
+            private_key=application_private_key, subject=f"certifier.{domain_config}"
+        )
+        application_certificate = generate_certificate(
+            ca=ca_certificate, ca_key=ca_private_key, csr=application_csr
         )
 
+        root_csr = b"whatever csr"
+        patch_generate_csr.return_value = root_csr
+        self.harness.set_leader(is_leader=True)
+        peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
+        self.harness.add_relation_unit(peer_relation_id, self.harness.charm.unit.name)
+        self.harness.update_relation_data(
+            relation_id=peer_relation_id,
+            app_or_unit=self.harness.charm.app.name,
+            key_values={
+                "root_private_key": root_private_key.decode(),
+                "application_private_key": application_private_key.decode(),
+                "application_certificate": application_certificate.decode(),
+                "admin_operator_private_key": "whatever admin operator private key",
+                "admin_operator_certificate": "whatever admin operator cert",
+                "admin_operator_pfx_password": "whatever admin operator pfx password",
+                "admin_operator_pfx": "admin operator pfx package",
+                "bootstrapper_private_key": "whatever bootstrapper private key",
+            },
+        )
+        self.harness.container_pebble_ready("magma-orc8r-certifier")
+
+        self.harness.update_config(key_values={"domain": domain_config})
+
+        relation_data = self.harness.get_relation_data(
+            relation_id=peer_relation_id, app_or_unit=self.harness.charm.app.name
+        )
+        assert relation_data["root_csr"] == root_csr.decode()
+
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
+    @patch("charm.generate_csr")
+    def test_given_root_csr_is_stored_when_on_config_changed_then_root_csr_is_not_regenerated(  # noqa: E501
+        self,
+        patch_generate_csr,
+    ):
+        root_private_key = generate_private_key()
+        domain_config = "whatever"
+        ca_private_key = generate_private_key()
+        ca_certificate = generate_ca(private_key=ca_private_key, subject="whatever")
+        application_private_key = generate_private_key()
+        application_csr = generate_csr(
+            private_key=application_private_key, subject=f"certifier.{domain_config}"
+        )
+        application_certificate = generate_certificate(
+            ca=ca_certificate, ca_key=ca_private_key, csr=application_csr
+        )
+        root_csr = generate_csr(private_key=root_private_key, subject=f"*.{domain_config}")
+        self.harness.set_leader(is_leader=True)
+        peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
+        self.harness.add_relation_unit(peer_relation_id, self.harness.charm.unit.name)
+        self.harness.update_relation_data(
+            relation_id=peer_relation_id,
+            app_or_unit=self.harness.charm.app.name,
+            key_values={
+                "root_private_key": root_private_key.decode(),
+                "application_private_key": application_private_key.decode(),
+                "application_certificate": application_certificate.decode(),
+                "admin_operator_private_key": "whatever admin operator private key",
+                "admin_operator_certificate": "whatever admin operator cert",
+                "admin_operator_pfx_password": "whatever admin operator pfx password",
+                "admin_operator_pfx": "admin operator pfx package",
+                "bootstrapper_private_key": "whatever bootstrapper private key",
+                "root_csr": root_csr.decode(),
+            },
+        )
+        self.harness.container_pebble_ready("magma-orc8r-certifier")
+
+        self.harness.update_config(key_values={"domain": domain_config})
+
+        patch_generate_csr.assert_not_called()
+
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
+    @patch("ops.model.Container.push")
+    def test_given_unit_is_not_leader_and_csr_is_not_stored_when_on_config_changed_then_status_is_waiting(  # noqa: E501
+        self,
+        _,
+    ):
+        domain_config = "whatever"
+        self.harness.set_leader(is_leader=False)
+        peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
+        self.harness.add_relation_unit(peer_relation_id, self.harness.charm.unit.name)
+        self.harness.update_relation_data(
+            relation_id=peer_relation_id,
+            app_or_unit=self.harness.charm.app.name,
+            key_values={},
+        )
+        self.harness.container_pebble_ready("magma-orc8r-certifier")
+
+        self.harness.update_config(key_values={"domain": domain_config})
+
+        assert self.harness.charm.unit.status == WaitingStatus(
+            "Waiting for leader to generate root csr"
+        )
+
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
+    @patch("ops.model.Container.push")
+    def test_given_unit_is_not_leader_and_root_csr_is_stored_and_application_certificates_are_not_stored_when_on_config_changed_then_status_is_waiting(  # noqa: E501
+        self,
+        _,
+    ):
+        root_private_key = generate_private_key()
+        domain_config = "whatever"
+        self.harness.set_leader(is_leader=False)
+        root_csr = generate_csr(private_key=root_private_key, subject=f"*.{domain_config}")
+        peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
+        self.harness.add_relation_unit(peer_relation_id, self.harness.charm.unit.name)
+        self.harness.update_relation_data(
+            relation_id=peer_relation_id,
+            app_or_unit=self.harness.charm.app.name,
+            key_values={
+                "root_csr": root_csr.decode(),
+            },
+        )
+        self.harness.container_pebble_ready("magma-orc8r-certifier")
+
+        self.harness.update_config(key_values={"domain": domain_config})
+
+        assert self.harness.charm.unit.status == WaitingStatus(
+            "Waiting for leader to generate application certificates"
+        )
+
+    @patch("charm.MagmaOrc8rCertifierCharm._on_magma_orc8r_certifier_pebble_ready")
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
+    @patch("ops.model.Container.push")
+    def test_given_unit_is_not_leader_and_root_certificates_are_stored_when_on_config_changed_then_pebble_ready_handler_is_called(  # noqa: E501
+        self, _, patch_pebble_ready
+    ):
+        root_private_key = generate_private_key()
+        domain_config = "whatever"
+        ca_private_key = generate_private_key()
+        ca_certificate = generate_ca(private_key=ca_private_key, subject="whatever")
+        application_private_key = generate_private_key()
+        application_csr = generate_csr(
+            private_key=application_private_key, subject=f"certifier.{domain_config}"
+        )
+        application_certificate = generate_certificate(
+            ca=ca_certificate, ca_key=ca_private_key, csr=application_csr
+        )
+        root_csr = generate_csr(private_key=root_private_key, subject=f"*.{domain_config}")
+        self.harness.set_leader(is_leader=False)
+        peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
+        self.harness.add_relation_unit(peer_relation_id, self.harness.charm.unit.name)
+        self.harness.update_relation_data(
+            relation_id=peer_relation_id,
+            app_or_unit=self.harness.charm.app.name,
+            key_values={
+                "root_private_key": root_private_key.decode(),
+                "application_private_key": application_private_key.decode(),
+                "application_certificate": application_certificate.decode(),
+                "admin_operator_private_key": "whatever admin operator private key",
+                "admin_operator_certificate": "whatever admin operator cert",
+                "admin_operator_pfx_password": "whatever admin operator pfx password",
+                "admin_operator_pfx": "admin operator pfx package",
+                "bootstrapper_private_key": "whatever bootstrapper private key",
+                "root_csr": root_csr.decode(),
+            },
+        )
+        self.harness.container_pebble_ready("magma-orc8r-certifier")
+
+        self.harness.update_config(key_values={"domain": domain_config})
+
+        patch_pebble_ready.assert_called()
+
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     def test_given_default_domain_config_when_config_changed_then_status_is_blocked(self):
         key_values = {"domain": ""}
-        self.harness.container_pebble_ready("magma-orc8r-certifier")
+        self.harness.set_leader(is_leader=True)
 
         self.harness.update_config(key_values=key_values)
 
         assert self.harness.charm.unit.status == BlockedStatus("Config 'domain' is not valid")
 
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch(
-        "charms.tls_certificates_interface.v0.tls_certificates.TLSCertificatesRequires.request_certificate"  # noqa: E501,W505
+        "charms.tls_certificates_interface.v1.tls_certificates.TLSCertificatesRequiresV1.request_certificate_creation"  # noqa: E501,W505
     )
-    def test_given_correct_domain_when_certificates_relation_joined_then_certificates_are_requested(  # noqa: E501
+    def test_given_root_csr_is_stored_when_certificates_relation_joined_then_certificates_are_requested(  # noqa: E501
         self, patch_request_certificates
     ):
-        common_name = "whatever.domain"
-        key_values = {"domain": common_name}
-        relation_id = self.harness.add_relation(
+        self.harness.set_leader(is_leader=True)
+        csr = "whatever csr"
+        certificates_relation_id = self.harness.add_relation(
             relation_name="certificates", remote_app="whatever app"
         )
-        self.harness.update_config(key_values=key_values)
-
-        self.harness.add_relation_unit(
-            relation_id=relation_id, remote_unit_name="whatever unit name"
+        peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
+        self.harness.add_relation_unit(peer_relation_id, self.harness.charm.unit.name)
+        self.harness.update_relation_data(
+            relation_id=peer_relation_id,
+            app_or_unit=self.harness.charm.app.name,
+            key_values={
+                "root_csr": csr,
+            },
         )
 
-        calls = [call(cert_type="server", common_name=f"*.{common_name}")]
-        patch_request_certificates.assert_has_calls(calls)
+        self.harness.add_relation_unit(
+            relation_id=certificates_relation_id, remote_unit_name="whatever unit name"
+        )
 
+        patch_request_certificates.assert_called_with(certificate_signing_request=csr.encode())
+
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch(
-        "charms.tls_certificates_interface.v0.tls_certificates.TLSCertificatesRequires.request_certificate"  # noqa: E501,W505
+        "charms.tls_certificates_interface.v1.tls_certificates.TLSCertificatesRequiresV1.request_certificate_creation"  # noqa: E501,W505
     )
-    def test_given_domain_not_set_when_certificates_relation_joined_then_certificates_arent_set(  # noqa: E501
+    def test_given_root_csr_not_set_when_certificates_relation_joined_then_certificates_arent_requested(  # noqa: E501
         self, patch_request_certificates
     ):
-        key_values = {"domain": ""}
-        relation_id = self.harness.add_relation(
+        self.harness.set_leader(is_leader=True)
+        certificates_relation_id = self.harness.add_relation(
             relation_name="certificates", remote_app="whatever app"
         )
-        self.harness.update_config(key_values=key_values)
+        peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
+        self.harness.add_relation_unit(peer_relation_id, self.harness.charm.unit.name)
+        self.harness.update_relation_data(
+            relation_id=peer_relation_id, app_or_unit=self.harness.charm.app.name, key_values={}
+        )
 
         self.harness.add_relation_unit(
-            relation_id=relation_id, remote_unit_name="whatever unit name"
+            relation_id=certificates_relation_id, remote_unit_name="whatever unit name"
         )
 
         self.assertEqual(0, patch_request_certificates.call_count)
 
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
+    @patch(
+        "charms.tls_certificates_interface.v1.tls_certificates.TLSCertificatesRequiresV1.request_certificate_creation"  # noqa: E501,W505
+    )
+    def test_given_unit_is_not_leader_when_certificates_relation_joined_then_certificates_arent_requested(  # noqa: E501
+        self, patch_request_certificates
+    ):
+        csr = "whatever csr"
+        self.harness.set_leader(is_leader=False)
+        certificates_relation_id = self.harness.add_relation(
+            relation_name="certificates", remote_app="whatever app"
+        )
+        peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
+        self.harness.add_relation_unit(peer_relation_id, self.harness.charm.unit.name)
+        self.harness.update_relation_data(
+            relation_id=peer_relation_id,
+            app_or_unit=self.harness.charm.app.name,
+            key_values={
+                "root_csr": csr,
+            },
+        )
+
+        self.harness.add_relation_unit(
+            relation_id=certificates_relation_id, remote_unit_name="whatever unit name"
+        )
+
+        self.assertEqual(0, patch_request_certificates.call_count)
+
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("ops.model.Container.exists")
     @patch("ops.model.Container.push")
-    def test_given_pebble_ready_when_certificate_available_then_certificate_and_key_are_pushed_to_workload(  # noqa: E501
+    def test_given_unit_is_leader_and_stored_root_csr_is_the_same_as_in_certificates_relation_when_certificate_available_then_certificate_and_key_are_pushed_to_workload(  # noqa: E501
         self, patch_push, patch_container_file_exists
     ):
+        self.harness.set_leader(is_leader=True)
         patch_container_file_exists.return_value = False
-        common_name = "whatever.domain"
+        csr = "whatever csr"
         certificate = "whatever certificate"
-        private_key = "whatever private key"
         ca_certificate = "whatever ca certificate"
-        key_values = {"domain": common_name}
-        self.harness.update_config(key_values=key_values)
-        self.harness.container_pebble_ready("magma-orc8r-certifier")
         event = Mock()
-        event.certificate_data = {
-            "common_name": common_name,
-            "cert": certificate,
-            "key": private_key,
-            "ca": ca_certificate,
-        }
+        event.certificate_signing_request = csr
+        event.ca = ca_certificate
+        event.certificate = certificate
+        peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
+        self.harness.add_relation_unit(peer_relation_id, self.harness.charm.app.name)
+        self.harness.update_relation_data(
+            relation_id=peer_relation_id,
+            app_or_unit=self.harness.charm.app.name,
+            key_values={"root_csr": csr},
+        )
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
 
         self.harness.charm._on_certificate_available(event)
 
         calls = [
             call(path="/var/opt/magma/certs/rootCA.pem", source=ca_certificate),
             call(path="/var/opt/magma/certs/controller.crt", source=certificate),
-            call(path="/var/opt/magma/certs/controller.key", source=private_key),
         ]
         patch_push.assert_has_calls(calls)
 

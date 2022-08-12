@@ -20,7 +20,7 @@ juju relate orc8r-certifier vault-k8s
 
 > **Warning**: Deploying this charm must be done with an alias as shown above.
 
-To import the the admin operator HTTPS certificate, run this command:
+To import the admin operator HTTPS certificate, run this command:
 
 ```bash
 juju scp --container="magma-orc8r-certifier" orc8r-certifier/0:/var/opt/magma/certs/admin_operator.pfx admin_operator.pfx
