@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class MagmaOrc8rMetricsdCharm(CharmBase):
-    """An instance of this object everytime an event occurs.aaa"""
+    """An instance of this object everytime an event occurs."""
 
     BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
     REQUIRED_EXTERNAL_RELATIONS = [
