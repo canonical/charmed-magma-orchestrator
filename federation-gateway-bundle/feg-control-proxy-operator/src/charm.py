@@ -82,6 +82,12 @@ class FegControlProxyCharm(CharmBase):
     def _generate_nghttpx_config(self) -> None:
         """Generates nghttpx config file.
 
+        Generates nghttpx and deletes line that prevents logs redirection to syslog.
+        This prevents the service from crashing, as there is no syslog in the container.
+        NOTE: This is also done in the official magma codebase. Look at
+        https://github.com/magma/magma/blob/master/lte/gateway/docker/docker-compose.yaml
+        for more information.
+
         Returns:
             None
         """
@@ -91,11 +97,6 @@ class FegControlProxyCharm(CharmBase):
                 command=["/usr/local/bin/generate_nghttpx_config.py"]
             )
             process_generate.wait_output()
-            # Deleting this line removes logs redirection to syslog, which is not installed
-            # in the container. The service won't start without this change,
-            # and logs will be hidden.
-            # NOTE: This is also done in the official magma codebase. Look at
-            # magma/lte/gateway/docker/docker-compose.yaml for more information.
             process_delete_line = self._container.exec(
                 command=[
                     "sed",
