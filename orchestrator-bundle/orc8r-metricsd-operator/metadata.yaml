@@ -25,8 +25,14 @@ provides:
     interface: magma-orc8r-metricsd
 
 requires:
+  alertmanager-k8s:
+    interface: alertmanager_dispatch
   magma-orc8r-orchestrator:
     interface: magma-orc8r-orchestrator
+  prometheus-k8s:
+    interface: prometheus_scrape
+  prometheus-configurer-k8s:
+    interface: prometheus-configurer
 
 storage:
   config:

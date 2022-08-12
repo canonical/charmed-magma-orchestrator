@@ -42,7 +42,11 @@ class TestOrc8rMetricsd:
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail
     async def setup(self, ops_test):
+        await ops_test.model.set_config({"update-status-hook-interval": "2s"})
         await self._deploy_postgresql(ops_test)
+        await self._deploy_alertmanager(ops_test)
+        await self._deploy_prometheus(ops_test)
+        await self._deploy_prometheus_configurer(ops_test)
         await self._deploy_tls_certificates_operator(ops_test)
         await self._deploy_orc8r_service_registry(ops_test)
         await self._deploy_orc8r_certifier(ops_test)
@@ -61,6 +65,38 @@ class TestOrc8rMetricsd:
     @staticmethod
     async def _deploy_postgresql(ops_test):
         await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
+        await ops_test.model.wait_for_idle(apps=["postgresql-k8s"], status="active", timeout=1000)
+
+    @staticmethod
+    async def _deploy_alertmanager(ops_test):
+        await ops_test.model.deploy(
+            "alertmanager-k8s",
+            application_name="orc8r-alertmanager",
+            channel="edge",
+            trust=True,
+        )
+
+    @staticmethod
+    async def _deploy_prometheus(ops_test):
+        await ops_test.model.deploy(
+            "prometheus-k8s",
+            application_name="orc8r-prometheus",
+            channel="edge",
+            trust=True,
+        )
+
+    @staticmethod
+    async def _deploy_prometheus_configurer(ops_test):
+        await ops_test.model.deploy(
+            "prometheus-configurer-k8s",
+            application_name="orc8r-prometheus-configurer",
+            channel="edge",
+            trust=True,
+        )
+        await ops_test.model.add_relation(
+            relation1="orc8r-prometheus-configurer",
+            relation2="orc8r-prometheus:receive-remote-write",
+        )
 
     @staticmethod
     async def _deploy_tls_certificates_operator(ops_test):
@@ -69,6 +105,7 @@ class TestOrc8rMetricsd:
             application_name="tls-certificates-operator",
             config={"generate-self-signed-certificates": True},
             channel="edge",
+            trust=True,
         )
 
     async def _deploy_orc8r_service_registry(self, ops_test):
@@ -132,11 +169,11 @@ class TestOrc8rMetricsd:
         accessd_charm = self._find_charm("../orc8r-accessd-operator", ACCESSD_CHARM_FILE_NAME)
         if not accessd_charm:
             accessd_charm = await ops_test.build_charm("../orc8r-accessd-operator/")
-            resources = {
-                f"{ACCESSD_CHARM_NAME}-image": ACCESSD_METADATA["resources"][
-                    f"{ACCESSD_CHARM_NAME}-image"
-                ]["upstream-source"],
-            }
+        resources = {
+            f"{ACCESSD_CHARM_NAME}-image": ACCESSD_METADATA["resources"][
+                f"{ACCESSD_CHARM_NAME}-image"
+            ]["upstream-source"],
+        }
         await ops_test.model.deploy(
             accessd_charm,
             resources=resources,
@@ -201,8 +238,20 @@ class TestOrc8rMetricsd:
 
     async def test_relate_and_wait_for_idle(self, ops_test, build_and_deploy):
         await ops_test.model.add_relation(
+            relation1=f"{APPLICATION_NAME}:alertmanager-k8s",
+            relation2="orc8r-alertmanager:alerting",
+        )
+        await ops_test.model.add_relation(
             relation1=f"{APPLICATION_NAME}:magma-orc8r-orchestrator",
             relation2="orc8r-orchestrator:magma-orc8r-orchestrator",
+        )
+        await ops_test.model.add_relation(
+            relation1=f"{APPLICATION_NAME}:prometheus-k8s",
+            relation2="orc8r-prometheus:self-metrics-endpoint",
+        )
+        await ops_test.model.add_relation(
+            relation1=f"{APPLICATION_NAME}:prometheus-configurer-k8s",
+            relation2="orc8r-prometheus-configurer:prometheus-configurer",
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
 

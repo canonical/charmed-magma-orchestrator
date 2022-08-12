@@ -35,6 +35,14 @@ applications:
     trust: true
     resources:
       magma-orc8r-bootstrapper-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-certifier:
+    charm: ./orc8r-certifier-operator/orc8r-certifier.charm
+    scale: 1
+    trust: true
+    options:
+      domain: example.com
+    resources:
+      magma-orc8r-certifier-image: docker.artifactory.magmacore.org/controller:1.6.0
   orc8r-configurator:
     charm: ./orc8r-configurator-operator/orc8r-configurator.charm
     scale: 1
@@ -79,14 +87,6 @@ applications:
     trust: true
     resources:
       magma-orc8r-ha-image: docker.artifactory.magmacore.org/controller:1.6.0
-  orc8r-certifier:
-    charm: ./orc8r-certifier-operator/orc8r-certifier.charm
-    scale: 1
-    trust: true
-    options:
-      domain: example.com
-    resources:
-      magma-orc8r-certifier-image: docker.artifactory.magmacore.org/controller:1.6.0
   orc8r-lte:
     charm: ./orc8r-lte-operator/orc8r-lte.charm
     scale: 1
@@ -197,6 +197,11 @@ applications:
     trust: true
     options:
       metrics_count_limit: 500000
+  orc8r-prometheus-configurer:
+    charm: prometheus-configurer-k8s
+    channel: edge
+    scale: 1
+    trust: true
   tls-certificates-operator:
     charm: tls-certificates-operator
     channel: edge
@@ -215,6 +220,8 @@ relations:
   - postgresql-k8s:db
 - - orc8r-bootstrapper
   - orc8r-certifier
+- - orc8r-certifier
+  - tls-certificates-operator
 - - orc8r-certifier:db
   - postgresql-k8s:db
 - - orc8r-configurator:db
@@ -227,8 +234,14 @@ relations:
   - postgresql-k8s:db
 - - orc8r-lte:db
   - postgresql-k8s:db
+- - orc8r-metricsd:alertmanager-k8s
+  - orc8r-alertmanager:alerting
 - - orc8r-metricsd:magma-orc8r-orchestrator
   - orc8r-orchestrator:magma-orc8r-orchestrator
+- - orc8r-metricsd:magma-orc8r-prometheus
+  - orc8r-prometheus:self-metrics-endpoint
+- - orc8r-metricsd:magma-orc8r-prometheus-configurer
+  - orc8r-prometheus-configurer:prometheus-configurer
 - - orc8r-nginx:magma-orc8r-bootstrapper
   - orc8r-bootstrapper:magma-orc8r-bootstrapper
 - - orc8r-nginx:cert-certifier
@@ -239,6 +252,10 @@ relations:
   - orc8r-obsidian:magma-orc8r-obsidian
 - - orc8r-orchestrator
   - orc8r-certifier
+- - orc8r-orchestrator:magma-orc8r-accessd
+  - orc8r-accessd:magma-orc8r-accessd
+- - orc8r-orchestrator:magma-orc8r-service-registry
+  - orc8r-service-registry:magma-orc8r-service-registry
 - - orc8r-orchestrator:metrics-endpoint
   - orc8r-prometheus-cache:metrics-endpoint
 - - orc8r-policydb:db
@@ -247,10 +264,8 @@ relations:
   - orc8r-alertmanager:alerting
 - - orc8r-prometheus:metrics-endpoint
   - orc8r-prometheus-cache:metrics-endpoint
-- - orc8r-orchestrator:magma-orc8r-accessd
-  - orc8r-accessd:magma-orc8r-accessd
-- - orc8r-orchestrator:magma-orc8r-service-registry
-  - orc8r-service-registry:magma-orc8r-service-registry
+- - orc8r-prometheus-configurer:prometheus
+  - orc8r-prometheus:receive-remote-write
 - - orc8r-smsd:db
   - postgresql-k8s:db
 - - orc8r-state:db
@@ -263,5 +278,3 @@ relations:
   - postgresql-k8s:db
 - - orc8r-user-grafana:grafana-source
   - orc8r-prometheus:grafana-source
-- - orc8r-certifier
-  - tls-certificates-operator
