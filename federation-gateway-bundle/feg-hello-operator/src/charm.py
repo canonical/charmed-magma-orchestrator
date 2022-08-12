@@ -2,6 +2,12 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+"""feg-hello.
+
+TODO: Add comprehensive description.
+Federation Gateway hello service.
+"""
+
 
 import logging
 
@@ -14,7 +20,10 @@ logger = logging.getLogger(__name__)
 
 
 class FegHelloCharm(CharmBase):
+    """Main class that is instantiated everytime an event occurs."""
+
     def __init__(self, *args):
+        """Initializes all events that need to be observed."""
         super().__init__(*args)
         self.container = self.unit.get_container(self.meta.name)
         self.framework.observe(
@@ -22,6 +31,13 @@ class FegHelloCharm(CharmBase):
         )
 
     def _on_magma_feg_hello_pebble_ready(self, event) -> None:
+        """Juju event triggered when pebble is ready.
+
+        Args:
+            event (PebbleReadyEvent): Juju event
+        Returns:
+            None
+        """
         if not self.container.can_connect():
             self.unit.status = WaitingStatus("Waiting for container to be ready...")
             event.defer()
@@ -37,6 +53,11 @@ class FegHelloCharm(CharmBase):
 
     @property
     def _pebble_layer(self) -> Layer:
+        """Returns Pebble layer object containing the workload startup service.
+
+        Returns:
+            Layer: Pebble layer
+        """
         return Layer(
             {
                 "summary": f"{self.meta.name} layer",

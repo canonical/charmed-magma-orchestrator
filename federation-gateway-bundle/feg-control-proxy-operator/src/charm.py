@@ -94,7 +94,7 @@ class FegControlProxyCharm(CharmBase):
             # Deleting this line removes logs redirection to syslog, which is not installed
             # in the container. The service won't start without this change,
             # and logs will be hidden.
-            # NOTE: This is also done in the official magma codebase. Loot at
+            # NOTE: This is also done in the official magma codebase. Look at
             # magma/lte/gateway/docker/docker-compose.yaml for more information.
             process_delete_line = self._container.exec(
                 command=[

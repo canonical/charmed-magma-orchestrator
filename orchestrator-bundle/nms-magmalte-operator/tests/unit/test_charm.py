@@ -272,7 +272,7 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.push")
-    def test_given_pebble_ready_when_certificate_available_then(self, patch_push):
+    def test_given_pebble_ready_when_certificate_available_then_certificates_are_pushed(self, patch_push):
         certificate = "whatever certificate"
         private_key = "whatever private key"
         event = Mock()
