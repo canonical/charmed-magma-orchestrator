@@ -7,6 +7,7 @@ from typing import List, Optional
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.serialization import pkcs12
 
 
 def generate_private_key(
@@ -173,3 +174,35 @@ def generate_ca(
         .sign(private_key_object, hashes.SHA256())  # type: ignore[arg-type]
     )
     return cert.public_bytes(serialization.Encoding.PEM)
+
+
+def generate_pfx_package(
+    certificate: bytes,
+    private_key: bytes,
+    package_password: str,
+    private_key_password: Optional[bytes] = None,
+) -> bytes:
+    """Generates a PFX package to contain the TLS certificate and private key.
+
+    Args:
+        certificate (bytes): TLS certificate
+        private_key (bytes): Private key
+        package_password (str): Password to open the PFX package
+        private_key_password (bytes): Private key password
+
+    Returns:
+        bytes:
+    """
+    private_key_object = serialization.load_pem_private_key(
+        private_key, password=private_key_password
+    )
+    certificate_object = x509.load_pem_x509_certificate(certificate)
+    name = certificate_object.subject.rfc4514_string()
+    pfx_bytes = pkcs12.serialize_key_and_certificates(
+        name=name.encode(),
+        cert=certificate_object,
+        key=private_key_object,  # type: ignore[arg-type]
+        cas=None,
+        encryption_algorithm=serialization.BestAvailableEncryption(package_password.encode()),
+    )
+    return pfx_bytes

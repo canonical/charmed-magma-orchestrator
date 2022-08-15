@@ -4,9 +4,7 @@
 
 import logging
 
-from charms.magma_orc8r_certifier.v0.cert_controller import (  # type: ignore[import]
-    CertControllerProvides,
-)
+from charms.magma_orc8r_certifier.v0.cert_controller import CertControllerProvides
 from ops.charm import CharmBase
 from ops.main import main
 

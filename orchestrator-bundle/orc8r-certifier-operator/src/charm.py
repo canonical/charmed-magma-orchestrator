@@ -12,35 +12,29 @@ from typing import Optional, Union
 
 import ops.lib
 import psycopg2  # type: ignore[import]
-from charms.magma_orc8r_certifier.v0.cert_admin_operator import (  # type: ignore[import]
+from charms.magma_orc8r_certifier.v0.cert_admin_operator import (
     CertAdminOperatorProvides,
 )
 from charms.magma_orc8r_certifier.v0.cert_admin_operator import (
     CertificateRequestEvent as AdminOperatorCertificateRequestEvent,
 )
-from charms.magma_orc8r_certifier.v0.cert_bootstrapper import (  # type: ignore[import]  # noqa: E501
-    CertBootstrapperProvides,
-)
+from charms.magma_orc8r_certifier.v0.cert_bootstrapper import CertBootstrapperProvides
 from charms.magma_orc8r_certifier.v0.cert_bootstrapper import (
     CertificateRequestEvent as BootstrapperCertificateRequestEvent,
 )
-from charms.magma_orc8r_certifier.v0.cert_certifier import (  # type: ignore[import]  # noqa: E501
-    CertCertifierProvides,
-)
+from charms.magma_orc8r_certifier.v0.cert_certifier import CertCertifierProvides
 from charms.magma_orc8r_certifier.v0.cert_certifier import (
     CertificateRequestEvent as CertifierCertificateRequestEvent,
 )
-from charms.magma_orc8r_certifier.v0.cert_controller import (  # type: ignore[import]  # noqa: E501
-    CertControllerProvides,
-)
+from charms.magma_orc8r_certifier.v0.cert_controller import CertControllerProvides
 from charms.magma_orc8r_certifier.v0.cert_controller import (
     CertificateRequestEvent as ControllerCertificateRequestEvent,
 )
-from charms.observability_libs.v1.kubernetes_service_patch import (  # type: ignore[import]
+from charms.observability_libs.v1.kubernetes_service_patch import (
     KubernetesServicePatch,
     ServicePort,
 )
-from charms.tls_certificates_interface.v1.tls_certificates import (  # type: ignore[import]
+from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
     CertificateExpiredEvent,
     CertificateExpiringEvent,
@@ -59,7 +53,6 @@ from ops.charm import (
     ConfigChangedEvent,
     InstallEvent,
     PebbleReadyEvent,
-    RelationCreatedEvent,
     RelationJoinedEvent,
 )
 from ops.main import main
@@ -145,9 +138,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self.cert_bootstrapper.on.private_key_request,
             self._on_bootstrapper_private_key_request,
         )
-        self.framework.observe(
-            self.on.replicas_relation_created, self._on_replicas_relation_created
-        )
+        self.framework.observe(self.on.replicas_relation_joined, self._on_replicas_relation_joined)
 
     @property
     def _root_certs_are_pushed(self) -> bool:
@@ -338,7 +329,18 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             return
         self._push_metricsd_config_file()
 
-    def _on_config_changed(self, event: ConfigChangedEvent):
+    def _on_config_changed(self, event: ConfigChangedEvent):  # noqa: C901
+        """Triggered on config changes.
+
+        If the 'domain' config changed, new root certificates will be requested and new
+        application certificates will be generated.
+
+        Args:
+            event (ConfigChangedEvent): Juju event
+
+        Returns:
+            None
+        """
         if self.unit.is_leader():
             if not self._domain_config_is_valid:
                 self.unit.status = BlockedStatus("Config 'domain' is not valid")
@@ -359,12 +361,29 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                 return
             if not self._root_csr_is_stored:
                 self._generate_root_csr()
+                self._request_certificate_based_on_stored_csr()
+            if not self._stored_root_csr_matches_config:
+                old_csr = self._root_csr
+                self._generate_root_csr()
+                self.certificates.request_certificate_renewal(
+                    old_certificate_signing_request=old_csr.encode(),  # type: ignore[union-attr]  # noqa: E501
+                    new_certificate_signing_request=self._root_csr.encode(),  # type: ignore[union-attr]  # noqa: E501
+                )
             if not self._application_certificates_are_stored:
+                logger.info("Application certificates not stored")
+                self._generate_application_certificates()
+                self._push_application_certificates()
+            if not self._stored_application_certificate_matches_config:
+                logger.info("Stored application certificates dont match config")
                 self._generate_application_certificates()
                 self._push_application_certificates()
         else:
             if not self._root_csr_is_stored:
                 self.unit.status = WaitingStatus("Waiting for leader to generate root csr")
+                event.defer()
+                return
+            if not self._stored_root_csr_matches_config:
+                self.unit.status = WaitingStatus("Waiting for leader to generate new root csr")
                 event.defer()
                 return
             if not self._application_certificates_are_stored:
@@ -373,9 +392,15 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                 )
                 event.defer()
                 return
-        self._on_magma_orc8r_certifier_pebble_ready(event)
+            if not self._stored_application_certificate_matches_config:
+                self.unit.status = WaitingStatus(
+                    "Waiting for leader to generate new application certificates"
+                )
+                event.defer()
+                return
+            self._push_application_certificates()
 
-    def _on_replicas_relation_created(self, event: RelationCreatedEvent) -> None:
+    def _on_replicas_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Juju event triggered when the replicas relation is created.
 
         Args:
@@ -433,15 +458,15 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             event.defer()
             return
         if not self._root_certs_are_pushed:
-            self.unit.status = WaitingStatus("Waiting for root certs to be available")
+            self.unit.status = WaitingStatus("Waiting for root certs to be pushed")
             event.defer()
             return
         if not self._application_private_keys_are_pushed:
-            self.unit.status = WaitingStatus("Waiting for application certs to be available")
+            self.unit.status = WaitingStatus("Waiting for application private keys to be pushed")
             event.defer()
             return
         if not self._application_certificates_are_pushed:
-            self.unit.status = WaitingStatus("Waiting for application certs to be available")
+            self.unit.status = WaitingStatus("Waiting for application certs to be pushed")
             event.defer()
             return
         self._configure_magma_orc8r_certifier(event)
@@ -482,14 +507,19 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             return
         peer_relation = self.model.get_relation("replicas")
         if not peer_relation:
-            logger.info("Waiting for peer relation to be created")
+            self.unit.status = WaitingStatus("Waiting for peer relation to be created")
             event.defer()
             return
+        if not self._root_csr:
+            self.unit.status = WaitingStatus("Waiting for root CSR to be generated")
+            event.defer()
+            return
+        self._request_certificate_based_on_stored_csr()
+
+    def _request_certificate_based_on_stored_csr(self):
         csr = self._root_csr
         if not csr:
-            logger.info("Waiting for root CSR to be generated")
-            event.defer()
-            return
+            raise RuntimeError("No stored root CSR.")
         self.certificates.request_certificate_creation(certificate_signing_request=csr.encode())
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
@@ -670,12 +700,12 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         Returns:
             None
         """
-        if (
-            not self._application_certificate
-            or not self._admin_operator_certificate  # noqa: W503
-            or not self._admin_operator_pfx  # noqa: W503
-        ):
-            raise RuntimeError("Application certificates are not available")
+        if not self._application_certificate:
+            raise RuntimeError("Application certificate is not available")
+        if not self._admin_operator_certificate:
+            raise RuntimeError("Admin Operator certificate is not available")
+        if not self._admin_operator_pfx:
+            raise RuntimeError("Admin Operator PFX package is not available")
         self._container.push(
             path=f"{self.BASE_CERTS_PATH}/certifier.pem",
             source=self._application_certificate,
@@ -702,12 +732,12 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         Returns:
             None
         """
-        if (
-            not self._application_private_key  # noqa: W503
-            or not self._admin_operator_private_key  # noqa: W503
-            or not self._bootstrapper_private_key  # noqa: W503
-        ):
-            raise RuntimeError("Application private keys are not available")
+        if not self._application_private_key:
+            raise RuntimeError("Application private key is not available")
+        if not self._admin_operator_private_key:
+            raise RuntimeError("Admin Operator private key is not available")
+        if not self._bootstrapper_private_key:
+            raise RuntimeError("Bootstrapper private key is not available")
         self._container.push(
             path=f"{self.BASE_CERTS_PATH}/certifier.key",
             source=self._application_private_key,
@@ -726,8 +756,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         Returns:
             None
         """
-        if not self._root_ca_certificate or not self._root_certificate:
-            raise RuntimeError("Root certificates not available.")
+        if not self._root_ca_certificate:
+            raise RuntimeError("Root CA certificate is not available")
+        if not self._root_certificate:
+            raise RuntimeError("Root certificate is not available")
         self._container.push(
             path=f"{self.BASE_CERTS_PATH}/rootCA.pem", source=self._root_ca_certificate
         )
@@ -754,26 +786,36 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         Returns:
             bool: Whether certificates have been generated.
         """
-        if (
-            not self._application_certificate
-            or not self._admin_operator_certificate  # noqa: W503
-            or not self._admin_operator_pfx_password  # noqa: W503
-            or not self._admin_operator_pfx  # noqa: W503
-        ):
-            logger.info("Application certificates not stored")
+        if not self._application_certificate:
+            logger.info("Application certificate is not stored")
             return False
+        if not self._admin_operator_certificate:
+            logger.info("Admin Operator certificate is not stored")
+            return False
+        if not self._admin_operator_pfx_password:
+            logger.info("Admin Operator PFX password is not stored")
+            return False
+        if not self._admin_operator_pfx:
+            logger.info("Admin Operator PFX package is not stored")
+            return False
+        return True
+
+    @property
+    def _stored_application_certificate_matches_config(self) -> bool:
+        """Returns whether application certificates matches config.
+
+        Returns:
+            bool: Whether certificates have been generated.
+        """
+        if not self._application_certificate:
+            raise RuntimeError("Application certificates not stored")
         application_certificate = x509.load_pem_x509_certificate(
             data=self._application_certificate.encode()
         )
-        try:
-            assert (
-                f"certifier.{self._domain_config}"
-                == list(application_certificate.subject)[0].value  # noqa: W503
-            )
-            return True
-        except AssertionError:
-            logger.info("Application CA Certificate domain name doesnt match with config value.")
-            return False
+        for subject in application_certificate.subject:
+            if subject.value == f"certifier.{self._domain_config}":
+                return True
+        return False
 
     @property
     def _application_private_keys_are_stored(self) -> bool:
@@ -782,15 +824,16 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         Returns:
             bool: Whether certificates have been generated.
         """
-        if (
-            self._application_private_key
-            and self._admin_operator_private_key  # noqa: W503
-            and self._bootstrapper_private_key  # noqa: W503
-        ):
-            return True
-        else:
-            logger.info("Application private keys not stored")
+        if not self._application_private_key:
+            logger.info("Application private key not stored")
             return False
+        if not self._admin_operator_private_key:
+            logger.info("Admin operator private key not stored")
+            return False
+        if not self._bootstrapper_private_key:
+            logger.info("Bootstrapper private key not stored")
+            return False
+        return True
 
     @property
     def _application_private_key(self) -> Optional[str]:
@@ -913,6 +956,17 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         if not self._root_csr:
             logger.info("Root CSR not stored")
             return False
+        return True
+
+    @property
+    def _stored_root_csr_matches_config(self) -> bool:
+        """Returns whether the stored root CSR matches the config.
+
+        Returns:
+            bool: True/False
+        """
+        if not self._root_csr:
+            raise RuntimeError("No stored root CSR")
         csr_object = x509.load_pem_x509_csr(data=self._root_csr.encode())
         try:
             assert f"*.{self._domain_config}" == list(csr_object.subject)[0].value
@@ -1071,8 +1125,8 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         private_key_string = private_key.read()
         self.cert_admin_operator.set_certificate(
             relation_id=event.relation_id,
-            certificate=certificate_string,
-            private_key=private_key_string,
+            certificate=str(certificate_string),
+            private_key=str(private_key_string),
         )
 
     def _on_certifier_certificate_request(self, event: CertifierCertificateRequestEvent) -> None:
@@ -1097,7 +1151,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         certificate_string = certificate.read()
         self.cert_certifier.set_certificate(
             relation_id=event.relation_id,
-            certificate=certificate_string,
+            certificate=str(certificate_string),
         )
 
     def _on_controller_certificate_request(self, event: ControllerCertificateRequestEvent) -> None:
@@ -1124,8 +1178,8 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         private_key_string = private_key.read()
         self.cert_controller.set_certificate(
             relation_id=event.relation_id,
-            certificate=certificate_string,
-            private_key=private_key_string,
+            certificate=str(certificate_string),
+            private_key=str(private_key_string),
         )
 
     def _on_bootstrapper_private_key_request(
@@ -1152,7 +1206,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         private_key_string = private_key.read()
         self.cert_bootstrapper.set_private_key(
             relation_id=event.relation_id,
-            private_key=private_key_string,
+            private_key=str(private_key_string),
         )
 
     def _on_certificate_expiring(

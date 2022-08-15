@@ -4,7 +4,7 @@
 
 import logging
 
-from charms.magma_orc8r_certifier.v0.cert_admin_operator import (  # type: ignore[import]
+from charms.magma_orc8r_certifier.v0.cert_admin_operator import (
     CertAdminOperatorProvides,
 )
 from ops.charm import CharmBase
