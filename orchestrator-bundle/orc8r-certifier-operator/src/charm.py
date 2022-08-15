@@ -369,6 +369,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                     old_certificate_signing_request=old_csr.encode(),  # type: ignore[union-attr]  # noqa: E501
                     new_certificate_signing_request=self._root_csr.encode(),  # type: ignore[union-attr]  # noqa: E501
                 )
+                self.unit.status = WaitingStatus(
+                    "Waiting to receive new certificate from provider"
+                )
             if not self._application_certificates_are_stored:
                 logger.info("Application certificates not stored")
                 self._generate_application_certificates()
@@ -638,8 +641,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         Returns:
             None
         """
-        if not self._application_private_key or not self._admin_operator_private_key:  # noqa: W503
-            raise RuntimeError("Application certificates are not available")
+        if not self._application_private_key:
+            raise RuntimeError("Application private key not available")
+        if not self._admin_operator_private_key:
+            raise RuntimeError("Admin Operator private key not available")
         application_ca_certificate = generate_ca(
             private_key=self._application_private_key.encode(),
             subject=f"certifier.{self._domain_config}",

@@ -14,7 +14,9 @@ from certificates import (
     generate_pfx_package,
     generate_private_key,
 )
+from cryptography import x509
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.serialization import pkcs12
 from ops import testing
 from ops.model import BlockedStatus, WaitingStatus
 from pgconnstr import ConnectionString  # type: ignore[import]
@@ -36,6 +38,106 @@ class TestCharm(unittest.TestCase):
         "port=1234 "
         "user=test_db_user"
     )
+
+    def create_peer_relation_with_certificates(  # noqa: C901
+        self,
+        domain_config: str,
+        root_private_key: bool = False,
+        admin_operator_private_key: bool = False,
+        application_private_key: bool = False,
+        application_certificate: bool = False,
+        admin_operator_certificate: bool = False,
+        root_csr: bool = False,
+        root_certificate: bool = False,
+        bootstrapper_private_key: bool = False,
+    ) -> Tuple[int, dict]:
+        """Creates a peer relation and adds certificates in its data.
+
+        Args:
+            domain_config: Domain config
+            root_private_key: Set root private key
+            admin_operator_private_key: Set admin operator private key
+            application_private_key: Set application private key
+            application_certificate: Set Application certificate
+            admin_operator_certificate: Set Admin Operator certificate
+            root_csr: Set Root CSR
+            root_certificate: Set Root certificate
+            bootstrapper_private_key: Set Bootstrapper private key
+
+        Returns:
+            int: Peer relation ID
+            dict: Relation data
+        """
+        key_values = {}
+        if root_private_key:
+            key_values["root_private_key"] = generate_private_key().decode()
+        if application_private_key:
+            key_values["application_private_key"] = generate_private_key().decode()
+        if admin_operator_private_key:
+            key_values["admin_operator_private_key"] = generate_private_key().decode()
+        if bootstrapper_private_key:
+            key_values["bootstrapper_private_key"] = generate_private_key().decode()
+        if root_csr:
+            if not root_private_key:
+                raise ValueError("root_private_key must be True if root_csr is True")
+            key_values["root_csr"] = generate_csr(
+                private_key=key_values["root_private_key"].encode(), subject=f"*.{domain_config}"
+            ).decode()
+        if root_certificate:
+            if not root_csr:
+                raise ValueError("root_csr must be True if root_certificate is True")
+            if not root_private_key:
+                raise ValueError("root_private_key must be True if root_certificate is True")
+            ca_private_key = generate_private_key()
+            ca_certificate = generate_ca(private_key=ca_private_key, subject="whatever")
+            key_values["root_ca_certificate"] = ca_certificate.decode()
+            key_values["root_certificate"] = generate_certificate(
+                ca=ca_certificate,
+                ca_key=ca_private_key,
+                csr=key_values["root_csr"].encode(),
+            ).decode()
+        if application_certificate:
+            application_ca_certificate = generate_ca(
+                private_key=key_values["application_private_key"].encode(),
+                subject=f"certifier.{domain_config}",
+            )
+            key_values["application_certificate"] = application_ca_certificate.decode()
+        if admin_operator_certificate:
+            if not application_certificate:
+                raise ValueError(
+                    "application_certificate must be True if admin_operator_certificate is True"
+                )
+            if not admin_operator_private_key:
+                raise ValueError(
+                    "admin_operator_private_key must be True if admin_operator_certificate is True"
+                )
+            pfx_password = "whatever"
+            admin_operator_csr = generate_csr(
+                private_key=key_values["admin_operator_private_key"].encode(),
+                subject="admin_operator",
+            )
+            key_values["admin_operator_certificate"] = generate_certificate(
+                csr=admin_operator_csr,
+                ca=key_values["application_certificate"].encode(),
+                ca_key=key_values["application_private_key"].encode(),
+            ).decode()
+            key_values["admin_operator_pfx_password"] = "whatever"
+            pfx_package = generate_pfx_package(
+                certificate=key_values["admin_operator_certificate"].encode(),
+                private_key=key_values["admin_operator_private_key"].encode(),
+                package_password=pfx_password,
+            )
+            key_values["admin_operator_pfx"] = base64.b64encode(pfx_package).decode()
+
+        peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
+        self.harness.add_relation_unit(peer_relation_id, self.harness.charm.unit.name)
+
+        self.harness.update_relation_data(
+            relation_id=peer_relation_id,
+            app_or_unit=self.harness.charm.app.name,
+            key_values=key_values,
+        )
+        return peer_relation_id, key_values
 
     @staticmethod
     def get_certificate_from_file(filename: str) -> str:
@@ -160,7 +262,7 @@ class TestCharm(unittest.TestCase):
         patch_exists.return_value = False
         key_values = {"domain": "whatever.com"}
         self.harness.update_config(key_values=key_values)
-        self.harness.container_pebble_ready("magma-orc8r-certifier")
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
 
         self.harness.charm.on.install.emit()
 
@@ -184,10 +286,11 @@ class TestCharm(unittest.TestCase):
         self,
     ):
         self.harness.set_leader(is_leader=True)
-        self.harness.container_pebble_ready("magma-orc8r-certifier")
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
 
-        peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
-        self.harness.add_relation_unit(peer_relation_id, self.harness.charm.app.name)
+        peer_relation_id, relation_data = self.create_peer_relation_with_certificates(
+            domain_config="whatever"
+        )
 
         relation_data = self.harness.get_relation_data(
             relation_id=peer_relation_id, app_or_unit=self.harness.charm.app.name
@@ -207,10 +310,9 @@ class TestCharm(unittest.TestCase):
         self, patch_push
     ):
         self.harness.set_leader(is_leader=True)
-        self.harness.container_pebble_ready("magma-orc8r-certifier")
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
 
-        peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
-        self.harness.add_relation_unit(peer_relation_id, self.harness.charm.app.name)
+        self.create_peer_relation_with_certificates(domain_config="whatever")
 
         call_list = patch_push.call_args_list
         assert len(call_list) == 4
@@ -227,10 +329,9 @@ class TestCharm(unittest.TestCase):
         self,
     ):
         self.harness.set_leader(is_leader=False)
-        self.harness.container_pebble_ready("magma-orc8r-certifier")
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
 
-        peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
-        self.harness.add_relation_unit(peer_relation_id, self.harness.charm.app.name)
+        self.create_peer_relation_with_certificates(domain_config="whatever")
 
         assert self.harness.charm.unit.status == WaitingStatus(
             "Waiting for application private keys to be stored"
@@ -240,21 +341,13 @@ class TestCharm(unittest.TestCase):
         self,
     ):
         event = Mock()
-        application_private_key = generate_private_key()
-        bootstrapper_private_key = generate_private_key()
-        admin_operator_private_key = generate_private_key()
         self.harness.set_leader(is_leader=False)
-        self.harness.container_pebble_ready("magma-orc8r-certifier")
-        peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
-        self.harness.add_relation_unit(peer_relation_id, self.harness.charm.app.name)
-        self.harness.update_relation_data(
-            relation_id=peer_relation_id,
-            app_or_unit=self.harness.charm.app.name,
-            key_values={
-                "application_private_key": application_private_key.decode(),
-                "bootstrapper_private_key": bootstrapper_private_key.decode(),
-                "admin_operator_private_key": admin_operator_private_key.decode(),
-            },
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
+        self.create_peer_relation_with_certificates(
+            domain_config="whatever",
+            application_private_key=True,
+            bootstrapper_private_key=True,
+            admin_operator_private_key=True,
         )
 
         self.harness.charm._on_replicas_relation_joined(event=event)
@@ -269,23 +362,14 @@ class TestCharm(unittest.TestCase):
         self, patch_push
     ):
         event = Mock()
-        root_private_key = generate_private_key()
-        application_private_key = generate_private_key()
-        bootstrapper_private_key = generate_private_key()
-        admin_operator_private_key = generate_private_key()
         self.harness.set_leader(is_leader=False)
-        self.harness.container_pebble_ready("magma-orc8r-certifier")
-        peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
-        self.harness.add_relation_unit(peer_relation_id, self.harness.charm.app.name)
-        self.harness.update_relation_data(
-            relation_id=peer_relation_id,
-            app_or_unit=self.harness.charm.app.name,
-            key_values={
-                "root_private_key": root_private_key.decode(),
-                "application_private_key": application_private_key.decode(),
-                "bootstrapper_private_key": bootstrapper_private_key.decode(),
-                "admin_operator_private_key": admin_operator_private_key.decode(),
-            },
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
+        self.create_peer_relation_with_certificates(
+            domain_config="whatever",
+            root_private_key=True,
+            application_private_key=True,
+            bootstrapper_private_key=True,
+            admin_operator_private_key=True,
         )
 
         self.harness.charm._on_replicas_relation_joined(event=event)
@@ -306,7 +390,7 @@ class TestCharm(unittest.TestCase):
         self,
     ):
         self.harness.set_leader(is_leader=True)
-        self.harness.container_pebble_ready("magma-orc8r-certifier")
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
 
         self.harness.update_config(key_values={})
 
@@ -317,7 +401,7 @@ class TestCharm(unittest.TestCase):
         self,
     ):
         self.harness.set_leader(is_leader=True)
-        self.harness.container_pebble_ready("magma-orc8r-certifier")
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
 
         self.harness.update_config(key_values={"domain": "whatever.com"})
 
@@ -334,106 +418,6 @@ class TestCharm(unittest.TestCase):
         self.harness.update_config(key_values={"domain": "whatever.com"})
 
         assert self.harness.charm.unit.status == WaitingStatus("Waiting for container to be ready")
-
-    def create_peer_relation_with_certificates(  # noqa: C901
-        self,
-        domain_config: str,
-        root_private_key: bool = False,
-        admin_operator_private_key: bool = False,
-        application_private_key: bool = False,
-        application_certificate: bool = False,
-        admin_operator_certificate: bool = False,
-        root_csr: bool = False,
-        root_certificate: bool = False,
-        bootstrapper_private_key: bool = False,
-    ) -> Tuple[int, dict]:
-        """Creates a peer relation and adds certificates in its data.
-
-        Args:
-            domain_config: Domain config
-            root_private_key: Set root private key
-            admin_operator_private_key: Set admin operator private key
-            application_private_key: Set application private key
-            application_certificate: Set Application certificate
-            admin_operator_certificate: Set Admin Operator certificate
-            root_csr: Set Root CSR
-            root_certificate: Set Root certificate
-            bootstrapper_private_key: Set Bootstrapper private key
-
-        Returns:
-            int: Peer relation ID
-            dict: Relation data
-        """
-        key_values = {}
-        if root_private_key:
-            key_values["root_private_key"] = generate_private_key().decode()
-        if application_private_key:
-            key_values["application_private_key"] = generate_private_key().decode()
-        if admin_operator_private_key:
-            key_values["admin_operator_private_key"] = generate_private_key().decode()
-        if bootstrapper_private_key:
-            key_values["bootstrapper_private_key"] = generate_private_key().decode()
-        if root_csr:
-            if not root_private_key:
-                raise ValueError("root_private_key must be True if root_csr is True")
-            key_values["root_csr"] = generate_csr(
-                private_key=key_values["root_private_key"].encode(), subject=f"*.{domain_config}"
-            ).decode()
-        if root_certificate:
-            if not root_csr:
-                raise ValueError("root_csr must be True if root_certificate is True")
-            if not root_private_key:
-                raise ValueError("root_private_key must be True if root_certificate is True")
-            ca_private_key = generate_private_key()
-            ca_certificate = generate_ca(private_key=ca_private_key, subject="whatever")
-            key_values["root_ca_certificate"] = ca_certificate.decode()
-            key_values["root_certificate"] = generate_certificate(
-                ca=ca_certificate,
-                ca_key=ca_private_key,
-                csr=key_values["root_csr"].encode(),
-            ).decode()
-        if application_certificate:
-            application_ca_certificate = generate_ca(
-                private_key=key_values["application_private_key"].encode(),
-                subject=f"certifier.{domain_config}",
-            )
-            key_values["application_certificate"] = application_ca_certificate.decode()
-        if admin_operator_certificate:
-            if not application_certificate:
-                raise ValueError(
-                    "application_certificate must be True if admin_operator_certificate is True"
-                )
-            if not admin_operator_private_key:
-                raise ValueError(
-                    "admin_operator_private_key must be True if admin_operator_certificate is True"
-                )
-            pfx_password = "whatever"
-            admin_operator_csr = generate_csr(
-                private_key=key_values["admin_operator_private_key"].encode(),
-                subject="admin_operator",
-            )
-            key_values["admin_operator_certificate"] = generate_certificate(
-                csr=admin_operator_csr,
-                ca=key_values["application_certificate"].encode(),
-                ca_key=key_values["application_private_key"].encode(),
-            ).decode()
-            key_values["admin_operator_pfx_password"] = "whatever"
-            pfx_package = generate_pfx_package(
-                certificate=key_values["admin_operator_certificate"].encode(),
-                private_key=key_values["admin_operator_private_key"].encode(),
-                package_password=pfx_password,
-            )
-            key_values["admin_operator_pfx"] = str(base64.b64encode(pfx_package))
-
-        peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
-        self.harness.add_relation_unit(peer_relation_id, self.harness.charm.unit.name)
-
-        self.harness.update_relation_data(
-            relation_id=peer_relation_id,
-            app_or_unit=self.harness.charm.app.name,
-            key_values=key_values,
-        )
-        return peer_relation_id, key_values
 
     @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("charm.generate_csr")
@@ -475,7 +459,7 @@ class TestCharm(unittest.TestCase):
             root_certificate=True,
         )
         self.harness.set_leader(is_leader=True)
-        self.harness.container_pebble_ready("magma-orc8r-certifier")
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
 
         self.harness.update_config(key_values={"domain": new_domain_config})
 
@@ -517,7 +501,7 @@ class TestCharm(unittest.TestCase):
             application_certificate=True,
             admin_operator_certificate=True,
         )
-        self.harness.container_pebble_ready("magma-orc8r-certifier")
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
 
         self.harness.update_config(key_values={"domain": domain_config})
 
@@ -528,18 +512,99 @@ class TestCharm(unittest.TestCase):
 
     @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("charm.generate_csr")
-    def test_given_root_csr_is_stored_when_on_config_changed_then_root_csr_is_not_regenerated(
+    def test_given_unit_is_leader_and_root_csr_is_stored_when_on_config_changed_then_root_csr_is_not_regenerated(  # noqa: E501
         self,
         patch_generate_csr,
     ):
         domain_config = "whatever"
         self.harness.set_leader(is_leader=True)
         self.create_peer_relation_with_certificates(domain_config=domain_config)
-        self.harness.container_pebble_ready("magma-orc8r-certifier")
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
 
         self.harness.update_config(key_values={"domain": domain_config})
 
         patch_generate_csr.assert_not_called()
+
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
+    def test_given_unit_is_leader_and_application_private_keys_not_stored_when_on_config_changed_then_status_is_waiting(  # noqa: E501
+        self,
+    ):
+        domain_config = "whatever"
+        self.harness.set_leader(is_leader=True)
+        self.create_peer_relation_with_certificates(
+            domain_config=domain_config,
+            root_csr=True,
+            root_private_key=True,
+            application_private_key=False,
+        )
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
+
+        self.harness.update_config(key_values={"domain": domain_config})
+
+        assert self.harness.charm.unit.status == WaitingStatus(
+            "Waiting for application private key to be generated"
+        )
+
+    @patch("ops.model.Container.push", new=Mock())
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
+    def test_given_unit_is_leader_and_application_certificates_not_stored_when_on_config_changed_then_application_certificates_are_generated(  # noqa: E501
+        self,
+    ):
+        domain_config = "whatever"
+        self.harness.set_leader(is_leader=True)
+        relation_id, key_values = self.create_peer_relation_with_certificates(
+            domain_config=domain_config,
+            root_csr=True,
+            root_private_key=True,
+            application_private_key=True,
+            admin_operator_private_key=True,
+            bootstrapper_private_key=True,
+        )
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
+
+        self.harness.update_config(key_values={"domain": domain_config})
+
+        relation_data = self.harness.get_relation_data(
+            relation_id=relation_id, app_or_unit=self.harness.charm.app.name
+        )
+
+        x509.load_pem_x509_certificate(data=relation_data["admin_operator_certificate"].encode())
+        x509.load_pem_x509_certificate(data=relation_data["application_certificate"].encode())
+        pkcs12.load_key_and_certificates(
+            data=base64.b64decode(relation_data["admin_operator_pfx"]),
+            password=relation_data["admin_operator_pfx_password"].encode(),
+        )
+
+    @patch("ops.model.Container.push")
+    @patch(
+        "charms.tls_certificates_interface.v1.tls_certificates.TLSCertificatesRequiresV1.request_certificate_renewal",  # noqa: E501,W505
+    )
+    @patch(
+        "charms.tls_certificates_interface.v1.tls_certificates.TLSCertificatesRequiresV1.request_certificate_creation",  # noqa: E501,W505
+    )
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
+    def test_given_unit_is_leader_and_certificates_are_stored_when_on_config_changed_then_no_certificate_request_is_made(  # noqa: E501
+        self, patch_certificate_creation, patch_certificate_renewal, patch_push
+    ):
+        domain_config = "whatever"
+        self.harness.set_leader(is_leader=True)
+        self.create_peer_relation_with_certificates(
+            domain_config=domain_config,
+            root_csr=True,
+            root_private_key=True,
+            application_private_key=True,
+            application_certificate=True,
+            admin_operator_private_key=True,
+            bootstrapper_private_key=True,
+            admin_operator_certificate=True,
+        )
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
+
+        self.harness.update_config(key_values={"domain": domain_config})
+
+        patch_push.assert_not_called()
+        patch_certificate_creation.assert_not_called()
+        patch_certificate_renewal.assert_not_called()
 
     @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("ops.model.Container.push")
@@ -549,13 +614,7 @@ class TestCharm(unittest.TestCase):
     ):
         domain_config = "whatever"
         self.harness.set_leader(is_leader=False)
-        peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
-        self.harness.add_relation_unit(peer_relation_id, self.harness.charm.unit.name)
-        self.harness.update_relation_data(
-            relation_id=peer_relation_id,
-            app_or_unit=self.harness.charm.app.name,
-            key_values={},
-        )
+        self.create_peer_relation_with_certificates(domain_config=domain_config)
         self.harness.container_pebble_ready("magma-orc8r-certifier")
 
         self.harness.update_config(key_values={"domain": domain_config})
@@ -570,18 +629,10 @@ class TestCharm(unittest.TestCase):
         self,
         _,
     ):
-        root_private_key = generate_private_key()
         domain_config = "whatever"
         self.harness.set_leader(is_leader=False)
-        root_csr = generate_csr(private_key=root_private_key, subject=f"*.{domain_config}")
-        peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
-        self.harness.add_relation_unit(peer_relation_id, self.harness.charm.unit.name)
-        self.harness.update_relation_data(
-            relation_id=peer_relation_id,
-            app_or_unit=self.harness.charm.app.name,
-            key_values={
-                "root_csr": root_csr.decode(),
-            },
+        self.create_peer_relation_with_certificates(
+            domain_config=domain_config, root_private_key=True, root_csr=True
         )
         self.harness.container_pebble_ready("magma-orc8r-certifier")
 
@@ -636,7 +687,6 @@ class TestCharm(unittest.TestCase):
         certificates_relation_id = self.harness.add_relation(
             relation_name="certificates", remote_app="whatever app"
         )
-
         peer_relation_id, key_values = self.create_peer_relation_with_certificates(
             domain_config="whatever", root_csr=True, root_private_key=True
         )
@@ -692,27 +742,21 @@ class TestCharm(unittest.TestCase):
         patch_request_certificates.assert_not_called()
 
     @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
-    @patch("ops.model.Container.exists")
     @patch("ops.model.Container.push")
     def test_given_unit_is_leader_and_stored_root_csr_is_the_same_as_in_certificates_relation_when_certificate_available_then_certificate_and_key_are_pushed_to_workload(  # noqa: E501
-        self, patch_push, patch_container_file_exists
+        self, patch_push
     ):
+        domain_config = "whatever"
         self.harness.set_leader(is_leader=True)
-        patch_container_file_exists.return_value = False
-        csr = "whatever csr"
         certificate = "whatever certificate"
         ca_certificate = "whatever ca certificate"
         event = Mock()
-        event.certificate_signing_request = csr
         event.ca = ca_certificate
         event.certificate = certificate
-        peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
-        self.harness.add_relation_unit(peer_relation_id, self.harness.charm.app.name)
-        self.harness.update_relation_data(
-            relation_id=peer_relation_id,
-            app_or_unit=self.harness.charm.app.name,
-            key_values={"root_csr": csr},
+        relation_id, key_values = self.create_peer_relation_with_certificates(
+            domain_config=domain_config, root_private_key=True, root_csr=True
         )
+        event.certificate_signing_request = key_values["root_csr"]
         self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
 
         self.harness.charm._on_certificate_available(event)
