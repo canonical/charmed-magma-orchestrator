@@ -1224,7 +1224,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             return
         event.set_results(
             {
-                "password": self._root_csr,
+                "csr": self._root_csr,
             }
         )
 
