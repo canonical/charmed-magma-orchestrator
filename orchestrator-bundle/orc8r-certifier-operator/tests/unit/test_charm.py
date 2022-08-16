@@ -196,67 +196,9 @@ class TestCharm(unittest.TestCase):
             self.harness.charm._on_database_relation_joined(db_event)
         self.assertEqual(db_event.database, self.TEST_DB_NAME)
 
-    @patch("psycopg2.connect", new=Mock())
-    @patch("ops.model.Container.exists")
-    @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined")
-    def test_given_pebble_ready_when_get_plan_then_plan_is_filled_with_magma_orc8r_certifier_service_content(  # noqa: E501
-        self, _, patch_file_exists
-    ):
-        patch_file_exists.return_value = True
-        config_key_values = {"domain": "whatever domain"}
-        self.harness.update_config(key_values=config_key_values)
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
-        certificates_relation_id = self.harness.add_relation(
-            relation_name="certificates", remote_app="vault-k8s"
-        )
-        self.harness.add_relation_unit(
-            relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
-        )
-        self.harness.add_relation_unit(
-            relation_id=certificates_relation_id, remote_unit_name="vault-k8s/0"
-        )
-        key_values = {"master": self.TEST_DB_CONNECTION_STRING.__str__()}
-        self.harness.update_relation_data(
-            relation_id=db_relation_id, app_or_unit="postgresql-k8s", key_values=key_values
-        )
-
-        self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
-
-        expected_plan = {
-            "services": {
-                "magma-orc8r-certifier": {
-                    "override": "replace",
-                    "startup": "enabled",
-                    "command": "/usr/bin/envdir "
-                    "/var/opt/magma/envdir "
-                    "/var/opt/magma/bin/certifier "
-                    "-cac=/var/opt/magma/certs/certifier.pem "
-                    "-cak=/var/opt/magma/certs/certifier.key "
-                    "-vpnc=/var/opt/magma/certs/vpn_ca.crt "
-                    "-vpnk=/var/opt/magma/certs/vpn_ca.key "
-                    "-logtostderr=true "
-                    "-v=0",
-                    "environment": {
-                        "DATABASE_SOURCE": f"dbname={self.TEST_DB_NAME} "
-                        f"user={self.TEST_DB_CONNECTION_STRING.user} "
-                        f"password={self.TEST_DB_CONNECTION_STRING.password} "
-                        f"host={self.TEST_DB_CONNECTION_STRING.host} "
-                        f"sslmode=disable",
-                        "SQL_DRIVER": "postgres",
-                        "SQL_DIALECT": "psql",
-                        "SERVICE_HOSTNAME": "magma-orc8r-certifier",
-                        "SERVICE_REGISTRY_MODE": "k8s",
-                        "SERVICE_REGISTRY_NAMESPACE": self.model_name,
-                    },
-                }
-            },
-        }
-        updated_plan = self.harness.get_container_pebble_plan("magma-orc8r-certifier").to_dict()
-        self.assertEqual(expected_plan, updated_plan)
-
     @patch("ops.model.Container.exists")
     @patch("ops.model.Container.push")
-    def test_given_pebble_ready_when_install_then_metricsd_config_file_is_created(
+    def test_given_can_connect_to_container_when_on_install_then_metricsd_config_file_is_created(
         self, patch_push, patch_exists
     ):
         patch_exists.return_value = False
@@ -273,9 +215,11 @@ class TestCharm(unittest.TestCase):
             '"profile": "prometheus"\n',
         )
 
-    def test_given_pebble_not_ready_when_install_then_status_is_waiting(
+    def test_given_cant_connect_to_container_when_on_install_then_status_is_waiting(
         self,
     ):
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=False)
+
         self.harness.charm.on.install.emit()
 
         assert self.harness.charm.unit.status == WaitingStatus("Waiting for container to be ready")
@@ -615,7 +559,7 @@ class TestCharm(unittest.TestCase):
         domain_config = "whatever"
         self.harness.set_leader(is_leader=False)
         self.create_peer_relation_with_certificates(domain_config=domain_config)
-        self.harness.container_pebble_ready("magma-orc8r-certifier")
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
 
         self.harness.update_config(key_values={"domain": domain_config})
 
@@ -625,7 +569,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("ops.model.Container.push")
-    def test_given_unit_is_not_leader_and_root_csr_is_stored_and_application_certificates_are_not_stored_when_on_config_changed_then_status_is_waiting(  # noqa: E501
+    def test_given_unit_is_not_leader_and_and_application_certificates_are_not_stored_when_on_config_changed_then_status_is_waiting(  # noqa: E501
         self,
         _,
     ):
@@ -634,7 +578,7 @@ class TestCharm(unittest.TestCase):
         self.create_peer_relation_with_certificates(
             domain_config=domain_config, root_private_key=True, root_csr=True
         )
-        self.harness.container_pebble_ready("magma-orc8r-certifier")
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
 
         self.harness.update_config(key_values={"domain": domain_config})
 
@@ -642,16 +586,15 @@ class TestCharm(unittest.TestCase):
             "Waiting for leader to generate application certificates"
         )
 
-    @patch("charm.MagmaOrc8rCertifierCharm._on_magma_orc8r_certifier_pebble_ready")
     @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
-    @patch("ops.model.Container.push")
-    def test_given_unit_is_not_leader_and_root_certificates_are_stored_when_on_config_changed_then_pebble_ready_handler_is_called(  # noqa: E501
-        self, _, patch_pebble_ready
+    def test_given_unit_is_not_leader_and_stored_root_csr_doesnt_match_config_when_on_config_changed_then_status_is_waiting(  # noqa: E501
+        self,
     ):
-        domain_config = "whatever"
+        initial_domain_config = "old_domain.com"
+        new_domain_config = "new_domain.com"
         self.harness.set_leader(is_leader=False)
         self.create_peer_relation_with_certificates(
-            domain_config=domain_config,
+            domain_config=initial_domain_config,
             root_csr=True,
             application_private_key=True,
             root_private_key=True,
@@ -661,20 +604,137 @@ class TestCharm(unittest.TestCase):
             root_certificate=True,
             admin_operator_certificate=True,
         )
-        self.harness.container_pebble_ready("magma-orc8r-certifier")
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
 
-        self.harness.update_config(key_values={"domain": domain_config})
+        self.harness.update_config(key_values={"domain": new_domain_config})
 
-        patch_pebble_ready.assert_called()
+        assert self.harness.charm.unit.status == WaitingStatus(
+            "Waiting for leader to generate new root csr"
+        )
 
     @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
-    def test_given_default_domain_config_when_config_changed_then_status_is_blocked(self):
+    def test_given_default_domain_config_when_on_config_changed_then_status_is_blocked(self):
         key_values = {"domain": ""}
         self.harness.set_leader(is_leader=True)
 
         self.harness.update_config(key_values=key_values)
 
         assert self.harness.charm.unit.status == BlockedStatus("Config 'domain' is not valid")
+
+    def test_given_db_relation_not_created_when_on_pebble_ready_then_status_is_blocked(self):
+        self.harness.update_config(key_values={"domain": "whatever"})
+
+        self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
+
+        assert self.harness.charm.unit.status == BlockedStatus(
+            "Waiting for database relation to be created"
+        )
+
+    def test_given_certificates_relation_not_created_when_on_pebble_ready_then_status_is_blocked(
+        self,
+    ):
+        self.harness.update_config(key_values={"domain": "whatever"})
+        self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+
+        self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
+
+        assert self.harness.charm.unit.status == BlockedStatus(
+            "Waiting for tls-certificates relation to be created"
+        )
+
+    def test_given_db_relation_not_established_when_on_pebble_ready_then_status_is_waiting(self):
+        self.harness.update_config(key_values={"domain": "whatever"})
+        self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        self.harness.add_relation(
+            relation_name="certificates", remote_app="tls-certificates-provider"
+        )
+
+        self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
+
+        assert self.harness.charm.unit.status == WaitingStatus(
+            "Waiting for db relation to be ready"
+        )
+
+    @patch("psycopg2.connect", new=Mock())
+    @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined", new=Mock())
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
+    def test_given_private_keys_not_pushed_when_on_pebble_ready_then_status_is_waiting(self):
+        self.harness.update_config(key_values={"domain": "whatever"})
+        self.harness.add_relation(
+            relation_name="certificates", remote_app="tls-certificates-provider"
+        )
+        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        self.harness.add_relation_unit(
+            relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
+        )
+        key_values = {"master": self.TEST_DB_CONNECTION_STRING.__str__()}
+        self.harness.update_relation_data(
+            relation_id=db_relation_id, app_or_unit="postgresql-k8s", key_values=key_values
+        )
+
+        self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
+
+        assert self.harness.charm.unit.status == WaitingStatus(
+            "Waiting for root private key to be pushed"
+        )
+
+    @patch("psycopg2.connect", new=Mock())
+    @patch("ops.model.Container.exists")
+    @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined")
+    def test_given_relations_are_created_and_certificates_are_stored_when_pebble_ready_then_plan_is_filled_with_magma_orc8r_certifier_service_content(  # noqa: E501
+        self, _, patch_file_exists
+    ):
+        patch_file_exists.return_value = True
+        config_key_values = {"domain": "whatever domain"}
+        self.harness.update_config(key_values=config_key_values)
+        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        certificates_relation_id = self.harness.add_relation(
+            relation_name="certificates", remote_app="vault-k8s"
+        )
+        self.harness.add_relation_unit(
+            relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
+        )
+        self.harness.add_relation_unit(
+            relation_id=certificates_relation_id, remote_unit_name="vault-k8s/0"
+        )
+        key_values = {"master": self.TEST_DB_CONNECTION_STRING.__str__()}
+        self.harness.update_relation_data(
+            relation_id=db_relation_id, app_or_unit="postgresql-k8s", key_values=key_values
+        )
+
+        self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
+
+        expected_plan = {
+            "services": {
+                "magma-orc8r-certifier": {
+                    "override": "replace",
+                    "startup": "enabled",
+                    "command": "/usr/bin/envdir "
+                    "/var/opt/magma/envdir "
+                    "/var/opt/magma/bin/certifier "
+                    "-cac=/var/opt/magma/certs/certifier.pem "
+                    "-cak=/var/opt/magma/certs/certifier.key "
+                    "-vpnc=/var/opt/magma/certs/vpn_ca.crt "
+                    "-vpnk=/var/opt/magma/certs/vpn_ca.key "
+                    "-logtostderr=true "
+                    "-v=0",
+                    "environment": {
+                        "DATABASE_SOURCE": f"dbname={self.TEST_DB_NAME} "
+                        f"user={self.TEST_DB_CONNECTION_STRING.user} "
+                        f"password={self.TEST_DB_CONNECTION_STRING.password} "
+                        f"host={self.TEST_DB_CONNECTION_STRING.host} "
+                        f"sslmode=disable",
+                        "SQL_DRIVER": "postgres",
+                        "SQL_DIALECT": "psql",
+                        "SERVICE_HOSTNAME": "magma-orc8r-certifier",
+                        "SERVICE_REGISTRY_MODE": "k8s",
+                        "SERVICE_REGISTRY_NAMESPACE": self.model_name,
+                    },
+                }
+            },
+        }
+        updated_plan = self.harness.get_container_pebble_plan("magma-orc8r-certifier").to_dict()
+        self.assertEqual(expected_plan, updated_plan)
 
     @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch(
