@@ -137,6 +137,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self.on.get_pfx_package_password_action, self._on_get_pfx_package_password
         )
         self.framework.observe(
+            self.on.get_root_csr_action, self._on_get_root_csr_action
+        )
+        self.framework.observe(
             self.certificates_admin_operator_provider.on.certificate_request,
             self._on_admin_operator_certificate_request,
         )
@@ -1206,6 +1209,24 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         event.set_results(
             {
                 "password": self._admin_operator_pfx_password,
+            }
+        )
+
+    def _on_get_root_csr_action(self, event: ActionEvent) -> None:
+        """Sets the action result as the root CSR.
+
+        Args:
+            event (ActionEvent): Juju event
+
+        Returns:
+            None
+        """
+        if not self._root_csr:
+            event.fail("Admin Operator PFX package is not available")
+            return
+        event.set_results(
+            {
+                "password": self._root_csr,
             }
         )
 

@@ -26,10 +26,11 @@ applications:
       domain: <your domain name>
   tls-certificates-operator:
     options:
-      certificate: <your base64 encoded certificate>
-      private-key: <your base64 encoded private key>
-      ca-certificate: <your base64 encoded ca certificate>
+      generate-self-signed-certificates: true
+      ca-common-name: rootca.<your domain name>
 ```
+
+> **Warning**: This configuration is unsecure because it uses self-signed certificates.
 
 Deploy orchestrator:
 

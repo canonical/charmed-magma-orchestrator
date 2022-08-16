@@ -180,7 +180,6 @@ applications:
     charm: tls-certificates-operator
     channel: edge
     scale: 1
-    trust: true
 relations:
 - - nms-magmalte
   - orc8r-certifier
