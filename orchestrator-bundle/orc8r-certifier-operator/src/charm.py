@@ -136,9 +136,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self.framework.observe(
             self.on.get_pfx_package_password_action, self._on_get_pfx_package_password
         )
-        self.framework.observe(
-            self.on.get_root_csr_action, self._on_get_root_csr_action
-        )
+        self.framework.observe(self.on.get_root_csr_action, self._on_get_root_csr_action)
         self.framework.observe(
             self.certificates_admin_operator_provider.on.certificate_request,
             self._on_admin_operator_certificate_request,
