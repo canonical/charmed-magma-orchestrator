@@ -53,6 +53,7 @@ from ops.charm import (
     ConfigChangedEvent,
     InstallEvent,
     PebbleReadyEvent,
+    RelationCreatedEvent,
     RelationJoinedEvent,
 )
 from ops.main import main
@@ -150,6 +151,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self.framework.observe(
             self.certificates_bootstrapper_provider.on.private_key_request,
             self._on_bootstrapper_private_key_request,
+        )
+        self.framework.observe(
+            self.on.replicas_relation_created, self._on_replicas_relation_created
         )
         self.framework.observe(self.on.replicas_relation_joined, self._on_replicas_relation_joined)
 
@@ -397,26 +401,41 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                 return
             if not self._root_csr_is_stored:
                 self._generate_root_csr()
-                self._request_certificate_based_on_stored_csr()
+                if self._certificates_relation_created:
+                    self._request_certificate_based_on_stored_csr()
+                    self.unit.status = WaitingStatus(
+                        "Waiting to receive new certificate from provider"
+                    )
+                else:
+                    self.unit.status = BlockedStatus(
+                        "Waiting for tls-certificates relation to be created"
+                    )
             if not self._stored_root_csr_matches_config:
                 old_csr = self._root_csr
                 self._generate_root_csr()
-                self.tls_certificates_requirer.request_certificate_renewal(
-                    old_certificate_signing_request=old_csr.encode(),  # type: ignore[union-attr]  # noqa: E501
-                    new_certificate_signing_request=self._root_csr.encode(),  # type: ignore[union-attr]  # noqa: E501
-                )
-                self.unit.status = WaitingStatus(
-                    "Waiting to receive new certificate from provider"
-                )
+                if self._certificates_relation_created:
+                    self.tls_certificates_requirer.request_certificate_renewal(
+                        old_certificate_signing_request=old_csr.encode(),  # type: ignore[union-attr]  # noqa: E501
+                        new_certificate_signing_request=self._root_csr.encode(),  # type: ignore[union-attr]  # noqa: E501
+                    )
+                    self.unit.status = WaitingStatus(
+                        "Waiting to receive new certificate from provider"
+                    )
+                else:
+                    self.unit.status = BlockedStatus(
+                        "Waiting for tls-certificates relation to be created"
+                    )
             if not self._application_certificates_are_stored:
-                logger.info("Application certificates not stored")
                 self._generate_application_certificates()
                 self._push_application_certificates()
             if not self._stored_application_certificate_matches_config:
-                logger.info("Stored application certificates dont match config")
                 self._generate_application_certificates()
                 self._push_application_certificates()
         else:
+            if not self._container.can_connect():
+                self.unit.status = WaitingStatus("Waiting for container to be ready")
+                event.defer()
+                return
             if not self._root_csr_is_stored:
                 self.unit.status = WaitingStatus("Waiting for leader to generate root csr")
                 event.defer()
@@ -439,7 +458,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                 return
             self._push_application_certificates()
 
-    def _on_replicas_relation_joined(self, event: RelationJoinedEvent) -> None:
+    def _on_replicas_relation_created(self, event: RelationCreatedEvent) -> None:
         """Juju event triggered when the replicas relation is created.
 
         Args:
@@ -448,29 +467,48 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         Returns:
             None
         """
+        if not self.unit.is_leader():
+            return
         if not self._container.can_connect():
             self.unit.status = WaitingStatus("Waiting for container to be ready")
             event.defer()
             return
-        if self.unit.is_leader():
-            self._generate_root_private_key()
-            self._generate_application_private_keys()
-        else:
-            if not self._application_private_keys_are_stored:
-                self.unit.status = WaitingStatus(
-                    "Waiting for application private keys to be stored"
-                )
-                event.defer()
-                return
-            if not self._root_private_key_is_stored:
-                self.unit.status = WaitingStatus("Waiting for root private key to be stored")
-                event.defer()
-                return
+        self._generate_root_private_key()
+        self._generate_application_private_keys()
         self._push_application_private_keys()
         self._push_root_private_key()
 
+    def _on_replicas_relation_joined(self, event: RelationJoinedEvent):
+        if self.unit.is_leader():
+            return
+        if not self._application_private_keys_are_stored:
+            self.unit.status = WaitingStatus(
+                "Waiting for leader to generate application private keys"
+            )
+            event.defer()
+            return
+        if not self._root_private_key_is_stored:
+            self.unit.status = WaitingStatus("Waiting for leader to generate root private key")
+            event.defer()
+            return
+        if not self._application_certificates_are_stored:
+            self.unit.status = WaitingStatus(
+                "Waiting for leader to generate application certificates"
+            )
+            event.defer()
+            return
+        if not self._root_certificate_is_stored:
+            self.unit.status = WaitingStatus("Waiting for root certificate to be stored")
+            event.defer()
+            return
+        self._push_application_private_keys()
+        self._push_root_private_key()
+        self._push_root_certificates()
+        self._push_application_certificates()
+        self._on_magma_orc8r_certifier_pebble_ready(event)
+
     def _on_magma_orc8r_certifier_pebble_ready(
-        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationJoinedEvent]
     ) -> None:
         """Juju event triggered when pebble is ready.
 
@@ -639,7 +677,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._container.push(path=f"{self.BASE_CONFIG_PATH}/metricsd.yml", source=metricsd_config)
 
     def _configure_magma_orc8r_certifier(
-        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationJoinedEvent]
     ) -> None:
         """Adds layer to pebble config if the proposed config is different from the current one.
 
@@ -771,6 +809,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             path=f"{self.BASE_CERTIFICATES_PATH}/admin_operator.pfx",
             source=base64.b64decode(self._admin_operator_pfx),
         )
+        logger.info("Pushed application certificates")
 
     def _push_application_private_keys(self) -> None:
         """Pushes application certificates to the workload container.
@@ -801,6 +840,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             path=f"{self.BASE_CERTIFICATES_PATH}/bootstrapper.key",
             source=self._bootstrapper_private_key,
         )
+        logger.info("Pushed application private keys")
 
     def _push_root_certificates(self) -> None:
         """Pushes root certificates to workload container.
@@ -818,6 +858,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._container.push(
             path=f"{self.BASE_CERTIFICATES_PATH}/controller.crt", source=self._root_certificate
         )
+        logger.info("Pushed root certificates")
 
     def _push_root_private_key(self) -> None:
         """Pushes root certificates to workload container.
@@ -830,6 +871,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._container.push(
             path=f"{self.BASE_CERTIFICATES_PATH}/controller.key", source=self._root_private_key
         )
+        logger.info("Pushed root private key")
 
     @property
     def _application_certificates_are_stored(self) -> bool:
@@ -867,6 +909,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         for subject in application_certificate.subject:
             if subject.value == f"certifier.{self._domain_config}":
                 return True
+        logger.info("Stored application certificates dont match config")
         return False
 
     @property
@@ -1157,10 +1200,12 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         Returns:
             None
         """
-        app_data = self.model.get_relation("replicas").data[self.app]  # type: ignore[union-attr]
+        if not self._admin_operator_pfx:
+            event.fail("Admin Operator PFX package is not available")
+            return
         event.set_results(
             {
-                "password": app_data.get("admin_operator_password"),
+                "password": self._admin_operator_pfx_password,
             }
         )
 
@@ -1288,8 +1333,41 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self,
         event: Union[CertificateExpiringEvent, CertificateExpiredEvent, CertificateRevokedEvent],
     ) -> None:
-        # TODO
-        pass
+        """Triggered on certificate expiring/expired/revoked events.
+
+        Will ask for new certificates.
+
+        Args:
+            event: Juju event
+
+        Returns:
+            None
+        """
+        if not self.unit.is_leader():
+            return
+        if not self._domain_config_is_valid:
+            self.unit.status = BlockedStatus("Config 'domain' is not valid")
+            return
+        if not self._container.can_connect():
+            self.unit.status = WaitingStatus("Waiting for container to be ready")
+            event.defer()
+            return
+        if not self._root_private_key_is_stored:
+            self.unit.status = WaitingStatus("Waiting for root private key to be generated")
+            event.defer()
+            return
+        if not self._root_csr_is_stored:
+            self._generate_root_csr()
+            self._request_certificate_based_on_stored_csr()
+            self.unit.status = WaitingStatus("Waiting to receive new certificate from provider")
+            return
+        old_csr = self._root_csr
+        self._generate_root_csr()
+        self.tls_certificates_requirer.request_certificate_renewal(
+            old_certificate_signing_request=old_csr.encode(),  # type: ignore[union-attr]
+            new_certificate_signing_request=self._root_csr.encode(),  # type: ignore[union-attr]
+        )
+        self.unit.status = WaitingStatus("Waiting to receive new certificate from provider")
 
 
 if __name__ == "__main__":
