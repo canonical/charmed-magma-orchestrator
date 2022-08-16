@@ -10,6 +10,21 @@ summary: |
 containers:
   magma-feg-control-proxy:
     resource: magma-feg-control-proxy-image
+    mounts:
+      - storage: certs
+        location: /var/opt/magma/certs
+      - storage: config
+        location: /var/opt/magma/tmp
+
+storage:
+  certs:
+    type: filesystem
+    description: Certs storage
+    minimum-size: 1M
+  config:
+    type: filesystem
+    description: Config storage
+    minimum-size: 1M
 
 resources:
   magma-feg-control-proxy-image:

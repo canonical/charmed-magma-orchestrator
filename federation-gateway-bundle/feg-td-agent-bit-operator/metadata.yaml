@@ -10,6 +10,15 @@ summary: |
 containers:
   magma-feg-td-agent-bit:
     resource: magma-feg-td-agent-bit-image
+    mounts:
+      - storage: config
+        location: /var/opt/magma/tmp
+
+storage:
+  config:
+    type: filesystem
+    description: Config storage
+    minimum-size: 1M
 
 resources:
   magma-feg-td-agent-bit-image:
