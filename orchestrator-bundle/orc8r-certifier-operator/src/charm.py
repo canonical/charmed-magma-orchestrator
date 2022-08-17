@@ -483,12 +483,8 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         Returns:
             None
         """
-        if not self._root_csr_is_stored:
-            self.unit.status = WaitingStatus("Waiting for leader to generate root csr")
-            event.defer()
-            return
-        if not self._stored_root_csr_matches_config:
-            self.unit.status = WaitingStatus("Waiting for leader to generate new root csr")
+        if not self._root_csr_is_stored or not self._stored_root_csr_matches_config:
+            self.unit.status = WaitingStatus("Waiting for leader to generate a root csr")
             event.defer()
             return
         if not self._application_certificates_are_stored:
@@ -607,10 +603,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         Returns:
             None
         """
-        if not self._container.can_connect():
-            logger.info("Cant connect to container - Won't push certificates to workload")
-            event.defer()
-            return
         if event.certificate_signing_request != self._root_csr:
             logger.info("Certificate's CSR doesn't match stored root CSR")
             return
@@ -619,18 +611,21 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             logger.info("No peer relation created")
             event.defer()
             return
+        if not self._container.can_connect():
+            self.unit.status = WaitingStatus("Waiting for container to be ready")
+            event.defer()
+            return
         if self.unit.is_leader():
             self._store_root_ca_certificate(event.ca)
             self._store_root_certificate(event.certificate)
         else:
-            if not self._root_certificates_are_stored:
-                self.unit.status = WaitingStatus("Waiting for leader to store root certificates")
-                event.defer()
-                return
-            if not self._stored_root_certificate_matches_certificate(event.certificate):
-                self.unit.status = WaitingStatus(
-                    "Waiting for leader to store new root certificates"
+            if (
+                not self._root_certificates_are_stored
+                or not self._stored_root_certificate_matches_certificate(  # noqa: W503
+                    event.certificate
                 )
+            ):
+                self.unit.status = WaitingStatus("Waiting for leader to store root certificates")
                 event.defer()
                 return
         self._push_root_certificates()

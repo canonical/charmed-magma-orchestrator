@@ -570,7 +570,7 @@ class TestCharm(unittest.TestCase):
         self.harness.update_config(key_values={"domain": domain_config})
 
         assert self.harness.charm.unit.status == WaitingStatus(
-            "Waiting for leader to generate root csr"
+            "Waiting for leader to generate a root csr"
         )
 
     @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
@@ -614,7 +614,7 @@ class TestCharm(unittest.TestCase):
         self.harness.update_config(key_values={"domain": new_domain_config})
 
         assert self.harness.charm.unit.status == WaitingStatus(
-            "Waiting for leader to generate new root csr"
+            "Waiting for leader to generate a root csr"
         )
 
     @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
