@@ -41,7 +41,7 @@ class TestCharm(unittest.TestCase):
 
     def create_peer_relation_with_certificates(  # noqa: C901
         self,
-        domain_config: str,
+        domain_config: str = None,
         root_private_key: bool = False,
         admin_operator_private_key: bool = False,
         application_private_key: bool = False,
@@ -49,7 +49,6 @@ class TestCharm(unittest.TestCase):
         admin_operator_certificate: bool = False,
         root_csr: bool = False,
         root_certificate: bool = False,
-        bootstrapper_private_key: bool = False,
     ) -> Tuple[int, dict]:
         """Creates a peer relation and adds certificates in its data.
 
@@ -62,7 +61,6 @@ class TestCharm(unittest.TestCase):
             admin_operator_certificate: Set Admin Operator certificate
             root_csr: Set Root CSR
             root_certificate: Set Root certificate
-            bootstrapper_private_key: Set Bootstrapper private key
 
         Returns:
             int: Peer relation ID
@@ -75,8 +73,6 @@ class TestCharm(unittest.TestCase):
             key_values["application_private_key"] = generate_private_key().decode()
         if admin_operator_private_key:
             key_values["admin_operator_private_key"] = generate_private_key().decode()
-        if bootstrapper_private_key:
-            key_values["bootstrapper_private_key"] = generate_private_key().decode()
         if root_csr:
             if not root_private_key:
                 raise ValueError("root_private_key must be True if root_csr is True")
@@ -196,15 +192,14 @@ class TestCharm(unittest.TestCase):
             self.harness.charm._on_database_relation_joined(db_event)
         self.assertEqual(db_event.database, self.TEST_DB_NAME)
 
-    @patch("ops.model.Container.exists")
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("ops.model.Container.push")
     def test_given_can_connect_to_container_when_on_install_then_metricsd_config_file_is_created(
-        self, patch_push, patch_exists
+        self, patch_push
     ):
-        patch_exists.return_value = False
-        key_values = {"domain": "whatever.com"}
-        self.harness.update_config(key_values=key_values)
+        self.harness.set_leader(is_leader=True)
         self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
+        self.create_peer_relation_with_certificates()
 
         self.harness.charm.on.install.emit()
 
@@ -226,62 +221,60 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.push", new=Mock())
     @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
-    def test_given_private_keys_are_not_stored_and_unit_is_leader_when_replicas_relation_created_then_private_keys_are_generated(  # noqa: E501
+    def test_given_private_keys_are_not_stored_and_unit_is_leader_when_on_install_then_private_keys_are_generated(  # noqa: E501
         self,
     ):
         self.harness.set_leader(is_leader=True)
         self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
+        peer_relation_id, relation_data = self.create_peer_relation_with_certificates()
 
-        peer_relation_id, relation_data = self.create_peer_relation_with_certificates(
-            domain_config="whatever"
-        )
+        self.harness.charm.on.install.emit()
 
         relation_data = self.harness.get_relation_data(
             relation_id=peer_relation_id, app_or_unit=self.harness.charm.app.name
         )
         root_private_key = relation_data["root_private_key"]
         application_private_key = relation_data["application_private_key"]
-        bootstrapper_private_key = relation_data["bootstrapper_private_key"]
         admin_operator_private_key = relation_data["admin_operator_private_key"]
         serialization.load_pem_private_key(root_private_key.encode(), password=None)
         serialization.load_pem_private_key(application_private_key.encode(), password=None)
-        serialization.load_pem_private_key(bootstrapper_private_key.encode(), password=None)
         serialization.load_pem_private_key(admin_operator_private_key.encode(), password=None)
 
     @patch("ops.model.Container.push")
     @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
-    def test_given_private_keys_are_not_stored_and_unit_is_leader_when_replicas_relation_created_then_private_keys_are_pushed_to_workload(  # noqa: E501
+    def test_given_private_keys_are_not_stored_and_unit_is_leader_when_on_install_then_private_keys_are_pushed_to_workload(  # noqa: E501
         self, patch_push
     ):
         self.harness.set_leader(is_leader=True)
         self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
+        self.create_peer_relation_with_certificates()
 
-        self.create_peer_relation_with_certificates(domain_config="whatever")
+        self.harness.charm.on.install.emit()
 
         call_list = patch_push.call_args_list
         assert len(call_list) == 4
-        assert call_list[0].kwargs["path"] == "/var/opt/magma/certs/certifier.key"
-        assert call_list[1].kwargs["path"] == "/var/opt/magma/certs/admin_operator.key.pem"
-        assert call_list[2].kwargs["path"] == "/var/opt/magma/certs/bootstrapper.key"
+        # The first item is the metricsd config file
+        assert call_list[1].kwargs["path"] == "/var/opt/magma/certs/certifier.key"
+        assert call_list[2].kwargs["path"] == "/var/opt/magma/certs/admin_operator.key.pem"
         assert call_list[3].kwargs["path"] == "/var/opt/magma/certs/controller.key"
-        serialization.load_pem_private_key(call_list[0].kwargs["source"].encode(), password=None)
         serialization.load_pem_private_key(call_list[1].kwargs["source"].encode(), password=None)
         serialization.load_pem_private_key(call_list[2].kwargs["source"].encode(), password=None)
         serialization.load_pem_private_key(call_list[3].kwargs["source"].encode(), password=None)
 
-    def test_given_application_keys_are_not_stored_and_unit_is_not_leader_when_replicas_relation_created_then_status_is_waiting(  # noqa: E501
+    def test_given_application_keys_are_not_stored_and_unit_is_not_leader_when_on_install_then_created_then_status_is_waiting(  # noqa: E501
         self,
     ):
         self.harness.set_leader(is_leader=False)
         self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
-
         self.create_peer_relation_with_certificates(domain_config="whatever")
+
+        self.harness.charm.on.install.emit()
 
         assert self.harness.charm.unit.status == WaitingStatus(
             "Waiting for leader to generate application private keys"
         )
 
-    def test_given_root_private_keys_are_not_stored_and_unit_is_not_leader_when_replicas_relation_created_then_status_is_waiting(  # noqa: E501
+    def test_given_root_private_keys_are_not_stored_and_unit_is_not_leader_when_on_install_then_status_is_waiting(  # noqa: E501
         self,
     ):
         self.harness.set_leader(is_leader=False)
@@ -289,13 +282,13 @@ class TestCharm(unittest.TestCase):
         relation_id, key_values = self.create_peer_relation_with_certificates(
             domain_config="whatever",
             application_private_key=True,
-            bootstrapper_private_key=True,
             admin_operator_private_key=True,
         )
-
         self.harness.add_relation_unit(
             relation_id=relation_id, remote_unit_name="magma-orc8r-certifier/1"
         )
+
+        self.harness.charm.on.install.emit()
 
         assert self.harness.charm.unit.status == WaitingStatus(
             "Waiting for leader to generate root private key"
@@ -303,7 +296,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.push")
     @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
-    def test_given_private_keys_and_certificates_are_stored_and_unit_is_not_leader_when_replicas_relation_joined_then_private_keys_are_pushed_to_workload(  # noqa: E501
+    def test_given_private_keys_and_certificates_are_stored_and_unit_is_not_leader_when_on_install_then_private_keys_are_pushed_to_workload(  # noqa: E501
         self, patch_push
     ):
         self.harness.set_leader(is_leader=False)
@@ -312,7 +305,6 @@ class TestCharm(unittest.TestCase):
             domain_config="whatever",
             root_private_key=True,
             application_private_key=True,
-            bootstrapper_private_key=True,
             admin_operator_private_key=True,
             application_certificate=True,
             admin_operator_certificate=True,
@@ -320,33 +312,32 @@ class TestCharm(unittest.TestCase):
             root_csr=True,
         )
 
-        self.harness.add_relation_unit(
-            relation_id=peer_relation_id, remote_unit_name="magma-orc8r-certifier-1"
-        )
+        self.harness.charm.on.install.emit()
 
         call_list = patch_push.call_args_list
         assert len(call_list) == 9
-        assert call_list[0].kwargs["path"] == "/var/opt/magma/certs/certifier.key"
-        assert call_list[1].kwargs["path"] == "/var/opt/magma/certs/admin_operator.key.pem"
-        assert call_list[2].kwargs["path"] == "/var/opt/magma/certs/bootstrapper.key"
-        assert call_list[3].kwargs["path"] == "/var/opt/magma/certs/controller.key"
-        assert call_list[4].kwargs["path"] == "/var/opt/magma/certs/rootCA.pem"
-        assert call_list[5].kwargs["path"] == "/var/opt/magma/certs/controller.crt"
-        assert call_list[6].kwargs["path"] == "/var/opt/magma/certs/certifier.pem"
-        assert call_list[7].kwargs["path"] == "/var/opt/magma/certs/admin_operator.pem"
-        assert call_list[8].kwargs["path"] == "/var/opt/magma/certs/admin_operator.pfx"
-        serialization.load_pem_private_key(call_list[0].kwargs["source"].encode(), password=None)
-        serialization.load_pem_private_key(call_list[1].kwargs["source"].encode(), password=None)
-        serialization.load_pem_private_key(call_list[2].kwargs["source"].encode(), password=None)
-        serialization.load_pem_private_key(call_list[3].kwargs["source"].encode(), password=None)
-        x509.load_pem_x509_certificate(call_list[4].kwargs["source"].encode())
-        x509.load_pem_x509_certificate(call_list[5].kwargs["source"].encode())
-        x509.load_pem_x509_certificate(call_list[6].kwargs["source"].encode())
-        x509.load_pem_x509_certificate(call_list[7].kwargs["source"].encode())
+        assert call_list[0].kwargs["path"] == "/var/opt/magma/certs/rootCA.pem"
+        assert call_list[1].kwargs["path"] == "/var/opt/magma/certs/controller.crt"
+        assert call_list[2].kwargs["path"] == "/var/opt/magma/certs/certifier.pem"
+        assert call_list[3].kwargs["path"] == "/var/opt/magma/certs/admin_operator.pem"
+        assert call_list[4].kwargs["path"] == "/var/opt/magma/certs/admin_operator.pfx"
+        # Sixth item is metricsd config file.
+        assert call_list[6].kwargs["path"] == "/var/opt/magma/certs/certifier.key"
+        assert call_list[7].kwargs["path"] == "/var/opt/magma/certs/admin_operator.key.pem"
+        assert call_list[8].kwargs["path"] == "/var/opt/magma/certs/controller.key"
+
+        x509.load_pem_x509_certificate(call_list[0].kwargs["source"].encode())
+        x509.load_pem_x509_certificate(call_list[1].kwargs["source"].encode())
+        x509.load_pem_x509_certificate(call_list[2].kwargs["source"].encode())
+        x509.load_pem_x509_certificate(call_list[3].kwargs["source"].encode())
         pkcs12.load_key_and_certificates(
-            data=call_list[8].kwargs["source"],
+            data=call_list[4].kwargs["source"],
             password=key_values["admin_operator_pfx_password"].encode(),
         )
+        # Sixth item is metricsd config file.
+        serialization.load_pem_private_key(call_list[6].kwargs["source"].encode(), password=None)
+        serialization.load_pem_private_key(call_list[7].kwargs["source"].encode(), password=None)
+        serialization.load_pem_private_key(call_list[8].kwargs["source"].encode(), password=None)
 
     @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     def test_given_config_not_valid_when_on_config_changed_then_status_is_blocked(
@@ -416,7 +407,6 @@ class TestCharm(unittest.TestCase):
             root_private_key=True,
             application_private_key=True,
             admin_operator_private_key=True,
-            bootstrapper_private_key=True,
             admin_operator_certificate=True,
             application_certificate=True,
             root_certificate=True,
@@ -460,7 +450,6 @@ class TestCharm(unittest.TestCase):
             root_private_key=True,
             application_private_key=True,
             admin_operator_private_key=True,
-            bootstrapper_private_key=True,
             application_certificate=True,
             admin_operator_certificate=True,
         )
@@ -521,7 +510,6 @@ class TestCharm(unittest.TestCase):
             root_private_key=True,
             application_private_key=True,
             admin_operator_private_key=True,
-            bootstrapper_private_key=True,
         )
         self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
 
@@ -558,7 +546,6 @@ class TestCharm(unittest.TestCase):
             application_private_key=True,
             application_certificate=True,
             admin_operator_private_key=True,
-            bootstrapper_private_key=True,
             admin_operator_certificate=True,
         )
         self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
@@ -618,7 +605,6 @@ class TestCharm(unittest.TestCase):
             application_private_key=True,
             root_private_key=True,
             admin_operator_private_key=True,
-            bootstrapper_private_key=True,
             application_certificate=True,
             root_certificate=True,
             admin_operator_certificate=True,
@@ -892,28 +878,6 @@ class TestCharm(unittest.TestCase):
 
         patch_set_private_key.assert_called_with(
             private_key=private_key_string, certificate=certificate_string, relation_id=relation_id
-        )
-
-    @patch("ops.model.Container.pull")
-    @patch(
-        "charms.magma_orc8r_certifier.v0.cert_bootstrapper.CertBootstrapperProvides.set_private_key"  # noqa: E501, W505
-    )
-    def test_given_private_key_is_stored_when_bootstrapper_private_key_request_then_private_key_is_set_in_bootstrapper_lib(  # noqa: E501
-        self, patch_set_private_key, patch_pull
-    ):
-        private_key_string = "whatever private key"
-        event = Mock()
-        relation_id = 3
-        event.relation_id = relation_id
-        private_key = io.StringIO(private_key_string)
-        patch_pull.return_value = private_key
-        container = self.harness.model.unit.get_container("magma-orc8r-certifier")
-        self.harness.set_can_connect(container=container, val=True)
-
-        self.harness.charm._on_bootstrapper_private_key_request(event=event)
-
-        patch_set_private_key.assert_called_with(
-            private_key=private_key_string, relation_id=relation_id
         )
 
     @patch("charm.generate_csr")

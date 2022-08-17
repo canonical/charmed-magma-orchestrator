@@ -1,4 +1,4 @@
-# Copyright 2021 Ubuntu
+# Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 name: magma-orc8r-bootstrapper
@@ -32,7 +32,6 @@ provides:
   magma-orc8r-bootstrapper:
     interface: magma-orc8r-bootstrapper
 
-requires:
-  cert-bootstrapper:
-    interface: cert-bootstrapper
-    limit: 1
+peers:
+  replicas:
+    interface: orc8r-certifier-replica

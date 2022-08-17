@@ -18,10 +18,6 @@ from charms.magma_orc8r_certifier.v0.cert_admin_operator import (
 from charms.magma_orc8r_certifier.v0.cert_admin_operator import (
     CertificateRequestEvent as AdminOperatorCertificateRequestEvent,
 )
-from charms.magma_orc8r_certifier.v0.cert_bootstrapper import CertBootstrapperProvides
-from charms.magma_orc8r_certifier.v0.cert_bootstrapper import (
-    CertificateRequestEvent as BootstrapperCertificateRequestEvent,
-)
 from charms.magma_orc8r_certifier.v0.cert_certifier import CertCertifierProvides
 from charms.magma_orc8r_certifier.v0.cert_certifier import (
     CertificateRequestEvent as CertifierCertificateRequestEvent,
@@ -53,7 +49,6 @@ from ops.charm import (
     ConfigChangedEvent,
     InstallEvent,
     PebbleReadyEvent,
-    RelationCreatedEvent,
     RelationJoinedEvent,
 )
 from ops.main import main
@@ -87,15 +82,11 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         """Initializes all events that need to be observed."""
         super().__init__(*args)
         self.tls_certificates_requirer = TLSCertificatesRequiresV1(self, "certificates")
-        self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.certificates_admin_operator_provider = CertAdminOperatorProvides(
             self, "cert-admin-operator"
         )
         self.certificates_certifier_provider = CertCertifierProvides(self, "cert-certifier")
         self.certificates_controller_provider = CertControllerProvides(self, "cert-controller")
-        self.certificates_bootstrapper_provider = CertBootstrapperProvides(
-            self, "cert-bootstrapper"
-        )
         self._container_name = self._service_name = "magma-orc8r-certifier"
         self.provided_relation_name = list(self.meta.provides.keys())[0]
         self._container = self.unit.get_container(self._container_name)
@@ -108,11 +99,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                 "orc8r.io/analytics_collector": "true",
             },
         )
+        self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(
             self.tls_certificates_requirer.on.certificate_available, self._on_certificate_available
-        )
-        self.framework.observe(
-            self.tls_certificates_requirer.on.certificate_expiring, self._on_certificate_expiring
         )
         self.framework.observe(
             self.tls_certificates_requirer.on.certificate_expiring, self._on_certificate_expiring
@@ -149,14 +138,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self.certificates_controller_provider.on.certificate_request,
             self._on_controller_certificate_request,
         )
-        self.framework.observe(
-            self.certificates_bootstrapper_provider.on.private_key_request,
-            self._on_bootstrapper_private_key_request,
-        )
-        self.framework.observe(
-            self.on.replicas_relation_created, self._on_replicas_relation_created
-        )
-        self.framework.observe(self.on.replicas_relation_joined, self._on_replicas_relation_joined)
 
     @property
     def _root_certificates_are_pushed(self) -> bool:
@@ -216,8 +197,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         if not self._container.exists(f"{self.BASE_CERTIFICATES_PATH}/admin_operator.key.pem"):
             logger.info("Admin operator private key is not pushed")
             return False
-        if not self._container.exists(f"{self.BASE_CERTIFICATES_PATH}/bootstrapper.key"):
-            logger.info("Bootstrapper private key is not pushed")
         return True
 
     @property
@@ -302,6 +281,15 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         return self._relation_created("certificates")
 
     @property
+    def _replicas_relation_created(self) -> bool:
+        """Returns whether the replicas  relation is created.
+
+        Returns:
+            bool: Whether the certificates relation is created.
+        """
+        return self._relation_created("replicas")
+
+    @property
     def _get_db_connection_string(self) -> Optional[ConnectionString]:
         """Returns DB connection string provided by the DB relation.
 
@@ -368,7 +356,39 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for container to be ready")
             event.defer()
             return
+        if not self._replicas_relation_created:
+            self.unit.status = WaitingStatus("Waiting for replicas relation to be created")
+            event.defer()
+            return
+        if self.unit.is_leader():
+            self._generate_root_private_key()
+            self._generate_application_private_keys()
+        else:
+            if not self._application_private_keys_are_stored:
+                self.unit.status = WaitingStatus(
+                    "Waiting for leader to generate application private keys"
+                )
+                event.defer()
+                return
+            if not self._root_private_key_is_stored:
+                self.unit.status = WaitingStatus("Waiting for leader to generate root private key")
+                event.defer()
+                return
+            if not self._application_certificates_are_stored:
+                self.unit.status = WaitingStatus(
+                    "Waiting for leader to generate application certificates"
+                )
+                event.defer()
+                return
+            if not self._root_certificate_is_stored:
+                self.unit.status = WaitingStatus("Waiting for root certificate to be stored")
+                event.defer()
+                return
+            self._push_root_certificates()
+            self._push_application_certificates()
         self._push_metricsd_config_file()
+        self._push_application_private_keys()
+        self._push_root_private_key()
 
     def _on_config_changed(self, event: ConfigChangedEvent):  # noqa: C901
         """Triggered on config changes.
@@ -459,57 +479,8 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                 return
             self._push_application_certificates()
 
-    def _on_replicas_relation_created(self, event: RelationCreatedEvent) -> None:
-        """Juju event triggered when the replicas relation is created.
-
-        Args:
-            event: Juju event
-
-        Returns:
-            None
-        """
-        if not self.unit.is_leader():
-            return
-        if not self._container.can_connect():
-            self.unit.status = WaitingStatus("Waiting for container to be ready")
-            event.defer()
-            return
-        self._generate_root_private_key()
-        self._generate_application_private_keys()
-        self._push_application_private_keys()
-        self._push_root_private_key()
-
-    def _on_replicas_relation_joined(self, event: RelationJoinedEvent):
-        if self.unit.is_leader():
-            return
-        if not self._application_private_keys_are_stored:
-            self.unit.status = WaitingStatus(
-                "Waiting for leader to generate application private keys"
-            )
-            event.defer()
-            return
-        if not self._root_private_key_is_stored:
-            self.unit.status = WaitingStatus("Waiting for leader to generate root private key")
-            event.defer()
-            return
-        if not self._application_certificates_are_stored:
-            self.unit.status = WaitingStatus(
-                "Waiting for leader to generate application certificates"
-            )
-            event.defer()
-            return
-        if not self._root_certificate_is_stored:
-            self.unit.status = WaitingStatus("Waiting for root certificate to be stored")
-            event.defer()
-            return
-        self._push_application_private_keys()
-        self._push_root_private_key()
-        self._push_root_certificates()
-        self._push_application_certificates()
-        self._on_magma_orc8r_certifier_pebble_ready(event)
-
     def _on_magma_orc8r_certifier_pebble_ready(
-        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationJoinedEvent]
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
     ) -> None:
         """Juju event triggered when pebble is ready.
 
@@ -678,7 +649,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._container.push(path=f"{self.BASE_CONFIG_PATH}/metricsd.yml", source=metricsd_config)
 
     def _configure_magma_orc8r_certifier(
-        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationJoinedEvent]
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
     ) -> None:
         """Adds layer to pebble config if the proposed config is different from the current one.
 
@@ -765,10 +736,8 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         """
         application_private_key = generate_private_key()
         admin_operator_private_key = generate_private_key()
-        bootstrapper_key = generate_private_key()
         self._store_application_private_key(application_private_key.decode())
         self._store_admin_operator_private_key(admin_operator_private_key.decode())
-        self._store_bootstrapper_private_key(bootstrapper_key.decode())
         logger.info("Generated application private keys")
 
     def _generate_root_private_key(self) -> None:
@@ -827,8 +796,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             raise RuntimeError("Application private key is not available")
         if not self._admin_operator_private_key:
             raise RuntimeError("Admin Operator private key is not available")
-        if not self._bootstrapper_private_key:
-            raise RuntimeError("Bootstrapper private key is not available")
         self._container.push(
             path=f"{self.BASE_CERTIFICATES_PATH}/certifier.key",
             source=self._application_private_key,
@@ -836,10 +803,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._container.push(
             path=f"{self.BASE_CERTIFICATES_PATH}/admin_operator.key.pem",
             source=self._admin_operator_private_key,
-        )
-        self._container.push(
-            path=f"{self.BASE_CERTIFICATES_PATH}/bootstrapper.key",
-            source=self._bootstrapper_private_key,
         )
         logger.info("Pushed application private keys")
 
@@ -926,9 +889,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         if not self._admin_operator_private_key:
             logger.info("Admin operator private key not stored")
             return False
-        if not self._bootstrapper_private_key:
-            logger.info("Bootstrapper private key not stored")
-            return False
         return True
 
     @property
@@ -984,15 +944,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             str: PFX Package
         """
         return self._get_item_from_relation_data("admin_operator_pfx")
-
-    @property
-    def _bootstrapper_private_key(self) -> Optional[str]:
-        """Returns bootstrapper private key.
-
-        Returns:
-            str: Private key
-        """
-        return self._get_item_from_relation_data("bootstrapper_private_key")
 
     @property
     def _root_private_key(self) -> Optional[str]:
@@ -1113,9 +1064,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     def _store_admin_operator_pfx_password(self, password: str) -> None:
         self._store_item_in_peer_relation_data(key="admin_operator_pfx_password", value=password)
-
-    def _store_bootstrapper_private_key(self, private_key: str) -> None:
-        self._store_item_in_peer_relation_data(key="bootstrapper_private_key", value=private_key)
 
     def _store_root_private_key(self, private_key: str) -> None:
         self._store_item_in_peer_relation_data(key="root_private_key", value=private_key)
@@ -1316,35 +1264,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self.certificates_controller_provider.set_certificate(
             relation_id=event.relation_id,
             certificate=str(certificate_string),
-            private_key=str(private_key_string),
-        )
-
-    def _on_bootstrapper_private_key_request(
-        self, event: BootstrapperCertificateRequestEvent
-    ) -> None:
-        """Triggered when a private key request is made on the cert-bootstrapper relation.
-
-        Args:
-            event (BootstrapperCertificateRequestEvent): Juju event
-
-        Returns:
-            None
-        """
-        if not self._container.can_connect():
-            logger.info("Container not yet available")
-            event.defer()
-            return
-        try:
-            private_key = self._container.pull(
-                path=f"{self.BASE_CERTIFICATES_PATH}/bootstrapper.key"
-            )
-        except (ops.pebble.PathError, FileNotFoundError):
-            logger.info("Certificate 'bootstrapper' not yet available")
-            event.defer()
-            return
-        private_key_string = private_key.read()
-        self.certificates_bootstrapper_provider.set_private_key(
-            relation_id=event.relation_id,
             private_key=str(private_key_string),
         )
 
