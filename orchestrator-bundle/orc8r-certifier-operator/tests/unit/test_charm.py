@@ -745,17 +745,17 @@ class TestCharm(unittest.TestCase):
     @patch(
         "charms.tls_certificates_interface.v1.tls_certificates.TLSCertificatesRequiresV1.request_certificate_creation"  # noqa: E501,W505
     )
-    def test_given_root_csr_is_stored_when_certificates_relation_joined_then_certificates_are_requested(  # noqa: E501
+    def test_given_root_csr_is_stored_when_certificates_relation_created_then_certificates_are_requested(  # noqa: E501
         self, patch_request_certificates
     ):
         self.harness.set_leader(is_leader=True)
-        certificates_relation_id = self.harness.add_relation(
-            relation_name="certificates", remote_app="whatever app"
-        )
         peer_relation_id, key_values = self.create_peer_relation_with_certificates(
             domain_config="whatever", root_csr=True, root_private_key=True
         )
 
+        certificates_relation_id = self.harness.add_relation(
+            relation_name="certificates", remote_app="whatever app"
+        )
         self.harness.add_relation_unit(
             relation_id=certificates_relation_id, remote_unit_name="whatever unit name"
         )

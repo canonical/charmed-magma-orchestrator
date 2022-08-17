@@ -114,7 +114,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self.tls_certificates_requirer.on.certificate_revoked, self._on_certificate_expiring
         )
         self.framework.observe(
-            self.on.certificates_relation_joined, self._on_certificates_relation_created
+            self.on.certificates_relation_created, self._on_certificates_relation_created
         )
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(
@@ -304,6 +304,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     @property
     def _domain_config(self) -> Optional[str]:
+        """Returns domain config."""
         return self.model.config.get("domain")
 
     @property
@@ -464,10 +465,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                 self.unit.status = BlockedStatus(
                     "Waiting for tls-certificates relation to be created"
                 )
-        if not self._application_certificates_are_stored:
-            self._generate_application_certificates()
-            self._push_application_certificates()
-        if not self._stored_application_certificate_matches_config:
+        if (
+            not self._application_certificates_are_stored
+            or not self._stored_application_certificate_matches_config  # noqa: W503
+        ):
             self._generate_application_certificates()
             self._push_application_certificates()
 
@@ -561,14 +562,13 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         if not peer_relation:
             raise RuntimeError("No peer relation")
         csr = generate_csr(
-            private_key=self._root_private_key.encode(), subject=f"*.{self._domain_config}"
+            private_key=self._root_private_key.encode(), subject=f"*.{self._domain_config}"  # type: ignore[union-attr]  # noqa: E501
         )
-
         self._store_root_csr(csr.decode())
         logger.info("Generated CSR for root certificate")
 
     def _on_certificates_relation_created(self, event: RelationJoinedEvent) -> None:
-        """Juju event triggered when pebble is ready.
+        """Juju event triggered when the certificates relation is created.
 
         Args:
             event: Juju event
