@@ -77,7 +77,7 @@ def generate_certificate(
     ca: bytes,
     ca_key: bytes,
     ca_key_password: Optional[bytes] = None,
-    validity: int = 24 * 365,
+    validity: int = 365 * 24,
 ) -> bytes:
     """Generates a TLS certificate based on a CSR.
 
