@@ -782,7 +782,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         logger.info("Pushed application certificates")
 
     def _push_application_private_keys(self) -> None:
-        """Pushes application certificates to the workload container.
+        """Pushes application private keys to the workload container.
 
         The following keys are pushed:
             - certifier.key
