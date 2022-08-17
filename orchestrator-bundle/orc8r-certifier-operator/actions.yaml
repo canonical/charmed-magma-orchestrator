@@ -3,6 +3,3 @@
 
 get-pfx-package-password:
   description: Returns the password to open the pfx package.
-
-get-root-csr:
-  description: Returns the root CSR.

@@ -6,6 +6,7 @@
 
 import base64
 import logging
+import re
 import secrets
 import string
 from typing import Optional, Union
@@ -113,7 +114,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self.tls_certificates_requirer.on.certificate_revoked, self._on_certificate_expiring
         )
         self.framework.observe(
-            self.on.certificates_relation_joined, self._on_certificates_relation_joined
+            self.on.certificates_relation_joined, self._on_certificates_relation_created
         )
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(
@@ -125,7 +126,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self.framework.observe(
             self.on.get_pfx_package_password_action, self._on_get_pfx_package_password
         )
-        self.framework.observe(self.on.get_root_csr_action, self._on_get_root_csr_action)
         self.framework.observe(
             self.certificates_admin_operator_provider.on.certificate_request,
             self._on_admin_operator_certificate_request,
@@ -310,14 +310,20 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     def _domain_config_is_valid(self) -> bool:
         """Returns whether the "domain" config is valid.
 
-        For now simply checks if the config is set as a non-null value.
-
         Returns:
             bool: Whether the domain is a valid one.
         """
         if not self._domain_config:
             return False
-        return True
+        pattern = re.compile(
+            r"^(?:[a-zA-Z0-9]"  # First character of the domain
+            r"(?:[a-zA-Z0-9-_]{0,61}[A-Za-z0-9])?\.)"  # Sub domain + hostname
+            r"+[A-Za-z0-9][A-Za-z0-9-_]{0,61}"  # First 61 characters of the gTLD
+            r"[A-Za-z]$"  # Last character of the gTLD
+        )
+        if pattern.match(self._domain_config):
+            return True
+        return False
 
     @property
     def _service_is_running(self) -> bool:
@@ -380,8 +386,8 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                 )
                 event.defer()
                 return
-            if not self._root_certificate_is_stored:
-                self.unit.status = WaitingStatus("Waiting for root certificate to be stored")
+            if not self._root_certificates_are_stored:
+                self.unit.status = WaitingStatus("Waiting for root certificates to be stored")
                 event.defer()
                 return
             self._push_root_certificates()
@@ -390,11 +396,8 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._push_application_private_keys()
         self._push_root_private_key()
 
-    def _on_config_changed(self, event: ConfigChangedEvent):  # noqa: C901
+    def _on_config_changed(self, event: ConfigChangedEvent):
         """Triggered on config changes.
-
-        If the 'domain' config changed, new root certificates will be requested and new
-        application certificates will be generated.
 
         Args:
             event (ConfigChangedEvent): Juju event
@@ -402,82 +405,104 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         Returns:
             None
         """
+        if not self._container.can_connect():
+            self.unit.status = WaitingStatus("Waiting for container to be ready")
+            event.defer()
+            return
         if self.unit.is_leader():
-            if not self._domain_config_is_valid:
-                self.unit.status = BlockedStatus("Config 'domain' is not valid")
-                return
-            if not self._container.can_connect():
-                self.unit.status = WaitingStatus("Waiting for container to be ready")
-                event.defer()
-                return
-            if not self._root_private_key_is_stored:
-                self.unit.status = WaitingStatus("Waiting for root private key to be generated")
-                event.defer()
-                return
-            if not self._application_private_keys_are_stored:
-                self.unit.status = WaitingStatus(
-                    "Waiting for application private key to be generated"
-                )
-                event.defer()
-                return
-            if not self._root_csr_is_stored:
-                self._generate_root_csr()
-                if self._certificates_relation_created:
-                    self._request_certificate_based_on_stored_csr()
-                    self.unit.status = WaitingStatus(
-                        "Waiting to receive new certificate from provider"
-                    )
-                else:
-                    self.unit.status = BlockedStatus(
-                        "Waiting for tls-certificates relation to be created"
-                    )
-            if not self._stored_root_csr_matches_config:
-                old_csr = self._root_csr
-                self._generate_root_csr()
-                if self._certificates_relation_created:
-                    self.tls_certificates_requirer.request_certificate_renewal(
-                        old_certificate_signing_request=old_csr.encode(),  # type: ignore[union-attr]  # noqa: E501
-                        new_certificate_signing_request=self._root_csr.encode(),  # type: ignore[union-attr]  # noqa: E501
-                    )
-                    self.unit.status = WaitingStatus(
-                        "Waiting to receive new certificate from provider"
-                    )
-                else:
-                    self.unit.status = BlockedStatus(
-                        "Waiting for tls-certificates relation to be created"
-                    )
-            if not self._application_certificates_are_stored:
-                self._generate_application_certificates()
-                self._push_application_certificates()
-            if not self._stored_application_certificate_matches_config:
-                self._generate_application_certificates()
-                self._push_application_certificates()
+            self._on_leader_config_changed(event)
         else:
-            if not self._container.can_connect():
-                self.unit.status = WaitingStatus("Waiting for container to be ready")
-                event.defer()
-                return
-            if not self._root_csr_is_stored:
-                self.unit.status = WaitingStatus("Waiting for leader to generate root csr")
-                event.defer()
-                return
-            if not self._stored_root_csr_matches_config:
-                self.unit.status = WaitingStatus("Waiting for leader to generate new root csr")
-                event.defer()
-                return
-            if not self._application_certificates_are_stored:
+            self._on_non_leader_config_changed(event)
+
+    def _on_leader_config_changed(self, event: ConfigChangedEvent) -> None:
+        """Triggered on config changed for leader unit.
+
+        If the 'domain' config changed, new root certificates will be requested and new
+        application certificates will be generated.
+
+        Args:
+            event: Juju event
+
+        Returns:
+            None
+        """
+        if not self._domain_config_is_valid:
+            self.unit.status = BlockedStatus("Config 'domain' is not valid")
+            event.defer()
+            return
+        if not self._root_private_key_is_stored:
+            self.unit.status = WaitingStatus("Waiting for root private key to be generated")
+            event.defer()
+            return
+        if not self._application_private_keys_are_stored:
+            self.unit.status = WaitingStatus("Waiting for application private key to be generated")
+            event.defer()
+            return
+        if not self._root_csr_is_stored:
+            self._generate_root_csr()
+            if self._certificates_relation_created:
+                self._request_certificate_based_on_stored_csr()
                 self.unit.status = WaitingStatus(
-                    "Waiting for leader to generate application certificates"
+                    "Waiting to receive new certificate from provider"
                 )
-                event.defer()
-                return
-            if not self._stored_application_certificate_matches_config:
+            else:
+                self.unit.status = BlockedStatus(
+                    "Waiting for tls-certificates relation to be created"
+                )
+        if not self._stored_root_csr_matches_config:
+            old_csr = self._root_csr
+            self._generate_root_csr()
+            if self._certificates_relation_created:
+                self.tls_certificates_requirer.request_certificate_renewal(
+                    old_certificate_signing_request=old_csr.encode(),  # type: ignore[union-attr]  # noqa: E501
+                    new_certificate_signing_request=self._root_csr.encode(),  # type: ignore[union-attr]  # noqa: E501
+                )
                 self.unit.status = WaitingStatus(
-                    "Waiting for leader to generate new application certificates"
+                    "Waiting to receive new certificate from provider"
                 )
-                event.defer()
-                return
+            else:
+                self.unit.status = BlockedStatus(
+                    "Waiting for tls-certificates relation to be created"
+                )
+        if not self._application_certificates_are_stored:
+            self._generate_application_certificates()
             self._push_application_certificates()
+        if not self._stored_application_certificate_matches_config:
+            self._generate_application_certificates()
+            self._push_application_certificates()
+
+    def _on_non_leader_config_changed(self, event: ConfigChangedEvent):
+        """Triggered on config changed for non-leader unit.
+
+        Pushes application certificates to workload.
+
+        Args:
+            event: Juju event
+
+        Returns:
+            None
+        """
+        if not self._root_csr_is_stored:
+            self.unit.status = WaitingStatus("Waiting for leader to generate root csr")
+            event.defer()
+            return
+        if not self._stored_root_csr_matches_config:
+            self.unit.status = WaitingStatus("Waiting for leader to generate new root csr")
+            event.defer()
+            return
+        if not self._application_certificates_are_stored:
+            self.unit.status = WaitingStatus(
+                "Waiting for leader to generate application certificates"
+            )
+            event.defer()
+            return
+        if not self._stored_application_certificate_matches_config:
+            self.unit.status = WaitingStatus(
+                "Waiting for leader to generate new application certificates"
+            )
+            event.defer()
+            return
+        self._push_application_certificates()
 
     def _on_magma_orc8r_certifier_pebble_ready(
         self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
@@ -530,16 +555,11 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         Returns:
             None
         """
-        domain_name = self._domain_config
         peer_relation = self.model.get_relation("replicas")
-        if not domain_name:
-            raise RuntimeError("No domain name set")
-        if not peer_relation:
-            raise RuntimeError("No peer relation")
         if not self._domain_config_is_valid:
             raise ValueError("Domain config is not valid")
-        if not self._root_private_key:
-            raise RuntimeError("No stored private key")
+        if not peer_relation:
+            raise RuntimeError("No peer relation")
         csr = generate_csr(
             private_key=self._root_private_key.encode(), subject=f"*.{self._domain_config}"
         )
@@ -547,7 +567,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._store_root_csr(csr.decode())
         logger.info("Generated CSR for root certificate")
 
-    def _on_certificates_relation_joined(self, event: RelationJoinedEvent) -> None:
+    def _on_certificates_relation_created(self, event: RelationJoinedEvent) -> None:
         """Juju event triggered when pebble is ready.
 
         Args:
@@ -558,8 +578,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         """
         if not self.unit.is_leader():
             return
-        peer_relation = self.model.get_relation("replicas")
-        if not peer_relation:
+        if not self._replicas_relation_created:
             self.unit.status = WaitingStatus("Waiting for peer relation to be created")
             event.defer()
             return
@@ -604,13 +623,13 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self._store_root_ca_certificate(event.ca)
             self._store_root_certificate(event.certificate)
         else:
-            if not self._root_certificate_is_stored:
-                self.unit.status = WaitingStatus("Waiting for leader to store root certificates.")
+            if not self._root_certificates_are_stored:
+                self.unit.status = WaitingStatus("Waiting for leader to store root certificates")
                 event.defer()
                 return
             if not self._stored_root_certificate_matches_certificate(event.certificate):
                 self.unit.status = WaitingStatus(
-                    "Waiting for leader to store new root certificates."
+                    "Waiting for leader to store new root certificates"
                 )
                 event.defer()
                 return
@@ -1015,22 +1034,24 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         if not self._root_csr:
             raise RuntimeError("No stored root CSR")
         csr_object = x509.load_pem_x509_csr(data=self._root_csr.encode())
-        try:
-            assert f"*.{self._domain_config}" == list(csr_object.subject)[0].value
+        if f"*.{self._domain_config}" == list(csr_object.subject)[0].value:
             return True
-        except AssertionError:
+        else:
             logger.info("Root CSR subject doesn't match with config")
             return False
 
     @property
-    def _root_certificate_is_stored(self) -> bool:
-        """Returns whether root certificate is stored.
+    def _root_certificates_are_stored(self) -> bool:
+        """Returns whether root certificates are stored.
 
         Returns:
-            bool: True/False
+            bool: Whether root certificates are stored.
         """
         if not self._root_certificate:
             logger.info("Root certificate not stored")
+            return False
+        if not self._root_ca_certificate:
+            logger.info("Root CA certificate not stored")
             return False
         return True
 
@@ -1041,7 +1062,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             certificate: TLS Certificate.
 
         Returns:
-            bool: True/False
+            bool: Whether root certificate matches provided certificate.
         """
         if not self._root_certificate:
             raise RuntimeError("Root certificate not stored")

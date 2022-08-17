@@ -266,7 +266,7 @@ class TestCharm(unittest.TestCase):
     ):
         self.harness.set_leader(is_leader=False)
         self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
-        self.create_peer_relation_with_certificates(domain_config="whatever")
+        self.create_peer_relation_with_certificates(domain_config="whatever.com")
 
         self.harness.charm.on.install.emit()
 
@@ -280,7 +280,7 @@ class TestCharm(unittest.TestCase):
         self.harness.set_leader(is_leader=False)
         self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
         relation_id, key_values = self.create_peer_relation_with_certificates(
-            domain_config="whatever",
+            domain_config="whatever.com",
             application_private_key=True,
             admin_operator_private_key=True,
         )
@@ -302,7 +302,7 @@ class TestCharm(unittest.TestCase):
         self.harness.set_leader(is_leader=False)
         self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
         peer_relation_id, key_values = self.create_peer_relation_with_certificates(
-            domain_config="whatever",
+            domain_config="whatever.com",
             root_private_key=True,
             application_private_key=True,
             admin_operator_private_key=True,
@@ -439,7 +439,7 @@ class TestCharm(unittest.TestCase):
         self,
         patch_generate_csr,
     ):
-        domain_config = "whatever"
+        domain_config = "whatever.com"
         private_key = generate_private_key()
         generated_csr = generate_csr(private_key=private_key, subject="whatever subject")
         patch_generate_csr.return_value = generated_csr
@@ -481,7 +481,7 @@ class TestCharm(unittest.TestCase):
     def test_given_unit_is_leader_and_application_private_keys_not_stored_when_on_config_changed_then_status_is_waiting(  # noqa: E501
         self,
     ):
-        domain_config = "whatever"
+        domain_config = "whatever.com"
         self.harness.set_leader(is_leader=True)
         self.create_peer_relation_with_certificates(
             domain_config=domain_config,
@@ -502,7 +502,7 @@ class TestCharm(unittest.TestCase):
     def test_given_unit_is_leader_and_application_certificates_not_stored_when_on_config_changed_then_application_certificates_are_generated(  # noqa: E501
         self,
     ):
-        domain_config = "whatever"
+        domain_config = "whatever.com"
         self.harness.set_leader(is_leader=True)
         relation_id, key_values = self.create_peer_relation_with_certificates(
             domain_config=domain_config,
@@ -621,13 +621,14 @@ class TestCharm(unittest.TestCase):
     def test_given_default_domain_config_when_on_config_changed_then_status_is_blocked(self):
         key_values = {"domain": ""}
         self.harness.set_leader(is_leader=True)
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
 
         self.harness.update_config(key_values=key_values)
 
         assert self.harness.charm.unit.status == BlockedStatus("Config 'domain' is not valid")
 
     def test_given_db_relation_not_created_when_on_pebble_ready_then_status_is_blocked(self):
-        self.harness.update_config(key_values={"domain": "whatever"})
+        self.harness.update_config(key_values={"domain": "whatever.com"})
 
         self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
 
@@ -638,7 +639,7 @@ class TestCharm(unittest.TestCase):
     def test_given_certificates_relation_not_created_when_on_pebble_ready_then_status_is_blocked(
         self,
     ):
-        self.harness.update_config(key_values={"domain": "whatever"})
+        self.harness.update_config(key_values={"domain": "whatever.com"})
         self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
 
         self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
@@ -648,7 +649,7 @@ class TestCharm(unittest.TestCase):
         )
 
     def test_given_db_relation_not_established_when_on_pebble_ready_then_status_is_waiting(self):
-        self.harness.update_config(key_values={"domain": "whatever"})
+        self.harness.update_config(key_values={"domain": "whatever.com"})
         self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
         self.harness.add_relation(
             relation_name="certificates", remote_app="tls-certificates-provider"
@@ -664,7 +665,7 @@ class TestCharm(unittest.TestCase):
     @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined", new=Mock())
     @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     def test_given_private_keys_not_pushed_when_on_pebble_ready_then_status_is_waiting(self):
-        self.harness.update_config(key_values={"domain": "whatever"})
+        self.harness.update_config(key_values={"domain": "whatever.com"})
         self.harness.add_relation(
             relation_name="certificates", remote_app="tls-certificates-provider"
         )
@@ -690,8 +691,7 @@ class TestCharm(unittest.TestCase):
         self, _, patch_file_exists
     ):
         patch_file_exists.return_value = True
-        config_key_values = {"domain": "whatever domain"}
-        self.harness.update_config(key_values=config_key_values)
+        self.harness.update_config(key_values={"domain": "whatever.com"})
         db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
         certificates_relation_id = self.harness.add_relation(
             relation_name="certificates", remote_app="vault-k8s"
@@ -889,7 +889,7 @@ class TestCharm(unittest.TestCase):
         self, patch_certificate_renewal, patch_generate_csr
     ):
         event = Mock()
-        domain_config = "whatever"
+        domain_config = "whatever.com"
         new_csr = b"new CSR"
         patch_generate_csr.return_value = new_csr
         relation_id, key_values = self.create_peer_relation_with_certificates(
@@ -917,7 +917,7 @@ class TestCharm(unittest.TestCase):
         self, patch_certificate_request, patch_generate_csr
     ):
         event = Mock()
-        domain_config = "whatever"
+        domain_config = "whatever.com"
         new_csr = b"new CSR"
         patch_generate_csr.return_value = new_csr
         self.create_peer_relation_with_certificates(
@@ -944,7 +944,7 @@ class TestCharm(unittest.TestCase):
         self, patch_certificate_renewal, patch_certificate_request, patch_generate_csr
     ):
         event = Mock()
-        domain_config = "whatever"
+        domain_config = "whatever.com"
         new_csr = b"new CSR"
         patch_generate_csr.return_value = new_csr
         self.create_peer_relation_with_certificates(
