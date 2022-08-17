@@ -29,7 +29,10 @@ class TestOrc8rCertifier:
         await ops_test.model.deploy(
             "tls-certificates-operator",
             application_name="tls-certificates-operator",
-            config={"generate-self-signed-certificates": True, "ca-common-name": DOMAIN},
+            config={
+                "generate-self-signed-certificates": True,
+                "ca-common-name": f"rootca.{DOMAIN}",
+            },
             channel="edge",
         )
 
