@@ -5,7 +5,7 @@
 import logging
 
 import pytest
-from pytest_operator.plugin import OpsTest  # type: ignore[import]
+from pytest_operator.plugin import OpsTest
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,6 @@ class TestOrc8rBundle:
 
     async def test_wait_for_idle(self, ops_test: OpsTest, deploy_bundle):
         try:
-            await ops_test.model.wait_for_idle(status="active", timeout=1000)
+            await ops_test.model.wait_for_idle(status="active", timeout=1000)  # type: ignore[union-attr]  # noqa: E501
         except Exception as e:
             logger.error(e)
