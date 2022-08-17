@@ -873,7 +873,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         for subject in application_certificate.subject:
             if subject.value == f"certifier.{self._domain_config}":
                 return True
-        logger.info("Stored application certificates dont match config")
+        logger.info("Stored application certificates does not match config")
         return False
 
     @property
