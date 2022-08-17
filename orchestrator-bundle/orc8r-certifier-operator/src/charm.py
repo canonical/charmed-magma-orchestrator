@@ -825,7 +825,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         logger.info("Pushed root certificates")
 
     def _push_root_private_key(self) -> None:
-        """Pushes root certificates to workload container.
+        """Pushes root private key to workload container.
 
         Returns:
             None
