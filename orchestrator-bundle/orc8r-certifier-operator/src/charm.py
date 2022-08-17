@@ -144,7 +144,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         """Returns whether root certificate are pushed to workload.
 
         Returns:
-            bool: True/False
+            bool: Whether root certificate are pushed to workload.
         """
         if not self._container.exists(f"{self.BASE_CERTIFICATES_PATH}/controller.crt"):
             logger.info("Root certificate is not pushed")
