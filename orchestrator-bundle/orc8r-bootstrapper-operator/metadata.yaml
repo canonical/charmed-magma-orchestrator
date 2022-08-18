@@ -34,4 +34,4 @@ provides:
 
 peers:
   replicas:
-    interface: orc8r-certifier-replica
+    interface: orc8r-bootstrapper-replica
