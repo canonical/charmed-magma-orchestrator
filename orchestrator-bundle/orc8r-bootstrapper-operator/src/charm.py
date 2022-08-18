@@ -48,11 +48,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
 
     @property
     def _pebble_layer(self) -> Layer:
-        """Returns pebble layer for the charm.
-
-        Returns:
-            Layer: Pebble Layer
-        """
+        """Returns pebble layer for the charm."""
         return Layer(
             {
                 "summary": f"{self._service_name} pebble layer",
@@ -77,20 +73,12 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
 
     @property
     def _namespace(self) -> str:
-        """Returns the namespace.
-
-        Returns:
-            str: Kubernetes namespace.
-        """
+        """Returns the Kubernetes namespace."""
         return self.model.name
 
     @property
     def _service_is_running(self) -> bool:
-        """Retrieves the workload service and returns whether it is running.
-
-        Returns:
-            bool: Whether service is running
-        """
+        """Retrieves the workload service and returns whether it is running."""
         if self._container.can_connect():
             try:
                 self._container.get_service(self._service_name)
@@ -101,11 +89,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
 
     @property
     def _bootstrapper_private_key(self) -> Optional[str]:
-        """Returns bootstrapper private key.
-
-        Returns:
-            str: Private key
-        """
+        """Returns bootstrapper private key."""
         replicas = self.model.get_relation("replicas")
         if not replicas:
             return None
@@ -113,11 +97,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
 
     @property
     def _bootstrapper_private_key_is_stored(self) -> bool:
-        """Returns whether bootstrapper private key is stored in peer relation data.
-
-        Returns:
-            bool: Whether private key has been stored.
-        """
+        """Returns whether bootstrapper private key is stored in peer relation data."""
         if not self._bootstrapper_private_key:
             logger.info("Bootstrapper private key not stored")
             return False
@@ -125,22 +105,14 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
 
     @property
     def _replicas_relation_created(self) -> bool:
-        """Returns whether the replicas Juju relation was crated.
-
-        Returns:
-            str: Whether the relation was created.
-        """
+        """Returns whether the replicas Juju relation was created."""
         if not self.model.get_relation("replicas"):
             return False
         return True
 
     @property
     def _bootstrapper_private_key_is_pushed(self) -> bool:
-        """Returns whether bootstrapper private key is pushed to workload.
-
-        Returns:
-            bool: Whether bootstrapper private key is pushed to workload.
-        """
+        """Returns whether bootstrapper private key is pushed to workload."""
         if not self._container.exists(f"{self.CERTIFICATE_DIRECTORY}/bootstrapper.key"):
             logger.info("Bootstrapper private key is not pushed")
             return False
