@@ -436,7 +436,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             event.defer()
             return
         if not self._application_private_keys_are_stored:
-            self.unit.status = WaitingStatus("Waiting for application private key to be generated")
+            self.unit.status = WaitingStatus("Waiting for application private keys to be generated")
             event.defer()
             return
         if not self._root_csr_is_stored:
