@@ -494,7 +494,7 @@ class TestCharm(unittest.TestCase):
         self.harness.update_config(key_values={"domain": domain_config})
 
         assert self.harness.charm.unit.status == WaitingStatus(
-            "Waiting for application private key to be generated"
+            "Waiting for application private keys to be generated"
         )
 
     @patch("ops.model.Container.push", new=Mock())
