@@ -113,7 +113,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
 
     @property
     def _bootstrapper_private_key_is_stored(self) -> bool:
-        """Returns whether certificates are stored in relation data.
+        """Returns whether bootstrapper private key is stored in peer relation data.
 
         Returns:
             bool: Whether certificates have been generated.
