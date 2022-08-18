@@ -181,7 +181,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
             return
         self._configure_pebble(event)
 
-    def _configure_pebble(self, event: Union[PebbleReadyEvent]) -> None:
+    def _configure_pebble(self, event: PebbleReadyEvent) -> None:
         """Adds layer to pebble config if the proposed config is different from the current one."""
         if self._container.can_connect():
             pebble_layer = self._pebble_layer
