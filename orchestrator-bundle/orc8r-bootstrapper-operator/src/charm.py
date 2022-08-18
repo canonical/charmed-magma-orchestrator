@@ -162,7 +162,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
             raise RuntimeError("No peer relation")
         peer_relation.data[self.app].update({"bootstrapper_private_key": private_key})
 
-    def _on_magma_orc8r_bootstrapper_pebble_ready(self, event: Union[PebbleReadyEvent]) -> None:
+    def _on_magma_orc8r_bootstrapper_pebble_ready(self, event: PebbleReadyEvent) -> None:
         """Triggered when pebble is ready.
 
         Args:
