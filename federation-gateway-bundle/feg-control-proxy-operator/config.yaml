@@ -1,0 +1,17 @@
+options:
+  controller-key:
+    type: string
+    description: controller key
+    default: ""
+  controller-crt:
+    type: string
+    description: controller crt
+    default: ""
+  root-ca-pem:
+    type: string
+    description: root ca pem
+    default: ""
+  root-ca-key:
+    type: string
+    description: root ca pem
+    default: ""
