@@ -242,8 +242,6 @@ relations:
   - nms-magmalte:magma-nms-magmalte
 - - orc8r-accessd:db
   - postgresql-k8s:db
-- - orc8r-bootstrapper
-  - orc8r-certifier
 - - orc8r-certifier
   - tls-certificates-operator
 - - orc8r-certifier:db

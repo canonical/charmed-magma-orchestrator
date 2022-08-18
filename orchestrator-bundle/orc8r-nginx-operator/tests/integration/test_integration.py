@@ -96,10 +96,6 @@ class TestOrc8rNginx:
             application_name=BOOTSTRAPPER_APPLICATION_NAME,
             trust=True,
         )
-        await ops_test.model.add_relation(
-            relation1=BOOTSTRAPPER_APPLICATION_NAME,
-            relation2="orc8r-certifier:cert-bootstrapper",
-        )
 
     async def _deploy_orc8r_obsidian(self, ops_test):
         obsidian_charm = self._find_charm("../orc8r-obsidian-operator", OBSIDIAN_CHARM_FILE_NAME)
@@ -122,7 +118,10 @@ class TestOrc8rNginx:
         await ops_test.model.deploy(
             "tls-certificates-operator",
             application_name="tls-certificates-operator",
-            config={"generate-self-signed-certificates": True},
+            config={
+                "generate-self-signed-certificates": True,
+                "ca-common-name": f"rootca.{DOMAIN}",
+            },
             channel="edge",
         )
 

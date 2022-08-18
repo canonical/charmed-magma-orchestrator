@@ -29,6 +29,7 @@ ACCESSD_CHARM_FILE_NAME = "magma-orc8r-accessd_ubuntu-20.04-amd64.charm"
 SERVICE_REGISTRY_APPLICATION_NAME = "orc8r-service-registry"
 SERVICE_REGISTRY_CHARM_NAME = "magma-orc8r-service-registry"
 SERVICE_REGISTRY_CHARM_FILE_NAME = "magma-orc8r-service-registry_ubuntu-20.04-amd64.charm"
+DOMAIN = "whatever.com"
 
 
 class TestOrchestrator:
@@ -59,7 +60,10 @@ class TestOrchestrator:
         await ops_test.model.deploy(
             "tls-certificates-operator",
             application_name="tls-certificates-operator",
-            config={"generate-self-signed-certificates": True},
+            config={
+                "generate-self-signed-certificates": True,
+                "ca-common-name": f"rootca.{DOMAIN}",
+            },
             channel="edge",
         )
 
@@ -91,9 +95,6 @@ class TestOrchestrator:
             application_name=SERVICE_REGISTRY_APPLICATION_NAME,
             trust=True,
         )
-        await ops_test.model.wait_for_idle(
-            apps=[SERVICE_REGISTRY_APPLICATION_NAME], status="active", timeout=1000
-        )
 
     async def _deploy_orc8r_accessd(self, ops_test):
         accessd_charm = self._find_charm("../orc8r-accessd-operator", ACCESSD_CHARM_FILE_NAME)
@@ -110,14 +111,8 @@ class TestOrchestrator:
             application_name=ACCESSD_APPLICATION_NAME,
             trust=True,
         )
-        await ops_test.model.wait_for_idle(
-            apps=[ACCESSD_APPLICATION_NAME], status="blocked", timeout=1000
-        )
         await ops_test.model.add_relation(
             relation1=ACCESSD_APPLICATION_NAME, relation2="postgresql-k8s:db"
-        )
-        await ops_test.model.wait_for_idle(
-            apps=[ACCESSD_APPLICATION_NAME], status="active", timeout=1000
         )
 
     async def _deploy_orc8r_certifier(self, ops_test):
@@ -135,7 +130,7 @@ class TestOrchestrator:
             certifier_charm,
             resources=resources,
             application_name=CERTIFIER_APPLICATION_NAME,
-            config={"domain": "example.com"},
+            config={"domain": DOMAIN},
             trust=True,
         )
         await ops_test.model.add_relation(

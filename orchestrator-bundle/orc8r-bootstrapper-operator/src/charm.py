@@ -5,7 +5,7 @@
 """Manages the certificate bootstrapping process for registered gateways."""
 
 import logging
-from typing import Optional, Union
+from typing import Optional
 
 from charms.observability_libs.v1.kubernetes_service_patch import (
     KubernetesServicePatch,

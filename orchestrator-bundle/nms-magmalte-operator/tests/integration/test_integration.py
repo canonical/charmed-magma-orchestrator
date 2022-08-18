@@ -19,6 +19,7 @@ CHARM_NAME = "magma-nms-magmalte"
 CERTIFIER_APPLICATION_NAME = "orc8r-certifier"
 CERTIFIER_CHARM_NAME = "magma-orc8r-certifier"
 CERTIFIER_CHARM_FILE_NAME = "magma-orc8r-certifier_ubuntu-20.04-amd64.charm"
+DOMAIN = "whatever.com"
 
 
 class TestNmsMagmaLTE:
@@ -46,7 +47,10 @@ class TestNmsMagmaLTE:
         await ops_test.model.deploy(
             "tls-certificates-operator",
             application_name="tls-certificates-operator",
-            config={"generate-self-signed-certificates": True},
+            config={
+                "generate-self-signed-certificates": True,
+                "ca-common-name": f"rootca.{DOMAIN}",
+            },
             channel="edge",
         )
 
@@ -65,7 +69,7 @@ class TestNmsMagmaLTE:
             certifier_charm,
             resources=resources,
             application_name=CERTIFIER_APPLICATION_NAME,
-            config={"domain": "example.com"},
+            config={"domain": DOMAIN},
             trust=True,
         )
         await ops_test.model.add_relation(
