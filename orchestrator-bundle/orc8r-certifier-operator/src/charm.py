@@ -584,7 +584,8 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             return
         self._request_certificate_based_on_stored_csr()
 
-    def _request_certificate_based_on_stored_csr(self):
+    def _request_certificate_based_on_stored_csr(self) -> None:
+        """Makes a certificate request using the tls-certificates interface."""
         csr = self._root_csr
         if not csr:
             raise RuntimeError("No stored root CSR.")
@@ -702,17 +703,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             )
 
     def _generate_application_certificates(self) -> None:
-        """Generates application certificates.
-
-        The following certificates are created:
-            - certifier.pem
-            - admin_operator.pem
-            - admin_operator.pfx
-            - admin_operator_password
-
-        Returns:
-            None
-        """
+        """Generates application certificates."""
         if not self._application_private_key:
             raise RuntimeError("Application private key not available")
         if not self._admin_operator_private_key:
@@ -743,11 +734,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         logger.info("Generated Application Certificates")
 
     def _generate_application_private_keys(self) -> None:
-        """Generates application private keys.
-
-        Returns:
-            None
-        """
+        """Generates application private keys."""
         application_private_key = generate_private_key()
         admin_operator_private_key = generate_private_key()
         self._store_application_private_key(application_private_key.decode())
@@ -755,26 +742,13 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         logger.info("Generated application private keys")
 
     def _generate_root_private_key(self) -> None:
-        """Generates the root private key and stores it in peer relation data.
-
-        Returns:
-            None
-        """
+        """Generates the root private key and stores it in peer relation data."""
         root_private_key = generate_private_key()
         self._store_root_private_key(root_private_key.decode())
         logger.info("Generated root private key")
 
     def _push_application_certificates(self) -> None:
-        """Pushes application certificates to the workload container.
-
-        The following certificates are pushed:
-            - certifier.pem
-            - admin_operator.pem
-            - admin_operator.pfx
-
-        Returns:
-            None
-        """
+        """Pushes application certificates to the workload container."""
         if not self._application_certificate:
             raise RuntimeError("Application certificate is not available")
         if not self._admin_operator_certificate:
@@ -796,16 +770,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         logger.info("Pushed application certificates")
 
     def _push_application_private_keys(self) -> None:
-        """Pushes application private keys to the workload container.
-
-        The following keys are pushed:
-            - certifier.key
-            - admin_operator.key.pem
-            - admin_operator.pfx
-
-        Returns:
-            None
-        """
+        """Pushes application private keys to the workload container."""
         if not self._application_private_key:
             raise RuntimeError("Application private key is not available")
         if not self._admin_operator_private_key:
@@ -821,11 +786,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         logger.info("Pushed application private keys")
 
     def _push_root_certificates(self) -> None:
-        """Pushes root certificates to workload container.
-
-        Returns:
-            None
-        """
+        """Pushes root certificates to workload container."""
         if not self._root_ca_certificate:
             raise RuntimeError("Root CA certificate is not available")
         if not self._root_certificate:
@@ -839,11 +800,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         logger.info("Pushed root certificates")
 
     def _push_root_private_key(self) -> None:
-        """Pushes root private key to workload container.
-
-        Returns:
-            None
-        """
+        """Pushes root private key to workload container."""
         if not self._root_private_key:
             raise RuntimeError("Root Private key not available.")
         self._container.push(
@@ -853,11 +810,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     @property
     def _application_certificates_are_stored(self) -> bool:
-        """Returns whether certificates are stored in relation data.
-
-        Returns:
-            bool: Whether certificates have been generated.
-        """
+        """Returns whether application certificates are stored in relation data."""
         if not self._application_certificate:
             logger.info("Application certificate is not stored")
             return False
@@ -874,11 +827,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     @property
     def _stored_application_certificate_matches_config(self) -> bool:
-        """Returns whether application certificates matches config.
-
-        Returns:
-            bool: Whether certificates have been generated.
-        """
+        """Returns whether application certificate content matches juju config."""
         if not self._application_certificate:
             raise RuntimeError("Application certificates not stored")
         application_certificate = x509.load_pem_x509_certificate(
@@ -892,11 +841,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     @property
     def _application_private_keys_are_stored(self) -> bool:
-        """Returns whether certificates are stored in relation data.
-
-        Returns:
-            bool: Whether certificates have been generated.
-        """
+        """Returns whether certificates are stored in relation data."""
         if not self._application_private_key:
             logger.info("Application private key not stored")
             return False
@@ -907,101 +852,57 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     @property
     def _application_private_key(self) -> Optional[str]:
-        """Returns application private key.
-
-        Returns:
-            str: Private key
-        """
-        return self._get_item_from_relation_data("application_private_key")
+        """Returns application private key."""
+        return self._get_value_from_relation_data("application_private_key")
 
     @property
     def _application_certificate(self) -> Optional[str]:
-        """Returns application certificate.
-
-        Returns:
-            str: Certificate
-        """
-        return self._get_item_from_relation_data("application_certificate")
+        """Returns application certificate."""
+        return self._get_value_from_relation_data("application_certificate")
 
     @property
     def _admin_operator_private_key(self) -> Optional[str]:
-        """Returns admin operator private key.
-
-        Returns:
-            str: Private key
-        """
-        return self._get_item_from_relation_data("admin_operator_private_key")
+        """Returns admin operator private key."""
+        return self._get_value_from_relation_data("admin_operator_private_key")
 
     @property
     def _admin_operator_certificate(self) -> Optional[str]:
-        """Returns admin operator certificate.
-
-        Returns:
-            str: Certificate
-        """
-        return self._get_item_from_relation_data("admin_operator_certificate")
+        """Returns admin operator certificate."""
+        return self._get_value_from_relation_data("admin_operator_certificate")
 
     @property
     def _admin_operator_pfx_password(self) -> Optional[str]:
-        """Returns admin operator password.
-
-        Returns:
-            str: Password
-        """
-        return self._get_item_from_relation_data("admin_operator_pfx_password")
+        """Returns admin operator pfx password."""
+        return self._get_value_from_relation_data("admin_operator_pfx_password")
 
     @property
     def _admin_operator_pfx(self) -> Optional[str]:
-        """Returns admin operator pfx package.
-
-        Returns:
-            str: PFX Package
-        """
-        return self._get_item_from_relation_data("admin_operator_pfx")
+        """Returns admin operator pfx package."""
+        return self._get_value_from_relation_data("admin_operator_pfx")
 
     @property
     def _root_private_key(self) -> Optional[str]:
-        """Returns root private key.
-
-        Returns:
-            str: Private key
-        """
-        return self._get_item_from_relation_data("root_private_key")
+        """Returns root private key."""
+        return self._get_value_from_relation_data("root_private_key")
 
     @property
     def _root_csr(self) -> Optional[str]:
-        """Returns root CSR.
-
-        Returns:
-            str: Root CSR
-        """
-        return self._get_item_from_relation_data("root_csr")
+        """Returns root CSR."""
+        return self._get_value_from_relation_data("root_csr")
 
     @property
     def _root_certificate(self) -> Optional[str]:
-        """Returns root certificate.
-
-        Returns:
-            str: Root certificate
-        """
-        return self._get_item_from_relation_data("root_certificate")
+        """Returns root certificate."""
+        return self._get_value_from_relation_data("root_certificate")
 
     @property
     def _root_ca_certificate(self) -> Optional[str]:
-        """Returns root ca certificate.
-
-        Returns:
-            str: Root CA certificate
-        """
-        return self._get_item_from_relation_data("root_ca_certificate")
+        """Returns root ca certificate."""
+        return self._get_value_from_relation_data("root_ca_certificate")
 
     @property
     def _root_private_key_is_stored(self) -> bool:
-        """Returns whether private key is stored in peer relation data.
-
-        Returns:
-            bool: True/False
-        """
+        """Returns whether private key is stored in peer relation data."""
         if self._root_private_key:
             return True
         else:
@@ -1009,11 +910,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     @property
     def _root_csr_is_stored(self) -> bool:
-        """Returns whether root CSR is stored in peer relation data.
-
-        Returns:
-            bool: True/False
-        """
+        """Returns whether root CSR is stored in peer relation data."""
         if not self._root_csr:
             logger.info("Root CSR not stored")
             return False
@@ -1021,11 +918,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     @property
     def _stored_root_csr_matches_config(self) -> bool:
-        """Returns whether the stored root CSR matches the config.
-
-        Returns:
-            bool: True/False
-        """
+        """Returns whether the stored root CSR matches the config."""
         if not self._root_csr:
             raise RuntimeError("No stored root CSR")
         csr_object = x509.load_pem_x509_csr(data=self._root_csr.encode())
@@ -1037,11 +930,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     @property
     def _root_certificates_are_stored(self) -> bool:
-        """Returns whether root certificates are stored.
-
-        Returns:
-            bool: Whether root certificates are stored.
-        """
+        """Returns whether root certificates are stored."""
         if not self._root_certificate:
             logger.info("Root certificate not stored")
             return False
@@ -1064,42 +953,69 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         return certificate == self._root_certificate
 
     def _store_application_private_key(self, private_key: str) -> None:
+        """Stores application private key in peer relation data."""
         self._store_item_in_peer_relation_data(key="application_private_key", value=private_key)
 
     def _store_application_ca_certificate(self, certificate: str) -> None:
+        """Stores application certificate in peer relation data."""
         self._store_item_in_peer_relation_data(key="application_certificate", value=certificate)
 
     def _store_admin_operator_private_key(self, private_key: str) -> None:
+        """Stores admin operator private key in peer relation data."""
         self._store_item_in_peer_relation_data(key="admin_operator_private_key", value=private_key)
 
     def _store_admin_operator_certificate(self, certificate: str) -> None:
+        """Stores admin operator certificate in peer relation data."""
         self._store_item_in_peer_relation_data(key="admin_operator_certificate", value=certificate)
 
     def _store_admin_operator_pfx(self, pfx: str) -> None:
+        """Stores admin operator pfx package in peer relation data."""
         self._store_item_in_peer_relation_data(key="admin_operator_pfx", value=pfx)
 
     def _store_admin_operator_pfx_password(self, password: str) -> None:
+        """Stores admin operator pfx password in peer relation data."""
         self._store_item_in_peer_relation_data(key="admin_operator_pfx_password", value=password)
 
     def _store_root_private_key(self, private_key: str) -> None:
+        """Stores root private key in peer relation data."""
         self._store_item_in_peer_relation_data(key="root_private_key", value=private_key)
 
     def _store_root_csr(self, csr: str) -> None:
+        """Stores root CSR in peer relation data."""
         self._store_item_in_peer_relation_data(key="root_csr", value=csr)
 
     def _store_root_ca_certificate(self, ca_certificate: str) -> None:
+        """Stores root CA certificate in peer relation data."""
         self._store_item_in_peer_relation_data(key="root_ca_certificate", value=ca_certificate)
 
     def _store_root_certificate(self, certificate: str) -> None:
+        """Stores root certificate in peer relation data."""
         self._store_item_in_peer_relation_data(key="root_certificate", value=certificate)
 
-    def _get_item_from_relation_data(self, item: str) -> Optional[str]:
+    def _get_value_from_relation_data(self, key: str) -> Optional[str]:
+        """Returns value from relation data.
+
+        Args:
+            key (str): Relation data key
+
+        Returns:
+            str: Relation data value
+        """
         replicas = self.model.get_relation("replicas")
         if not replicas:
             return None
-        return replicas.data[self.app].get(item, None)
+        return replicas.data[self.app].get(key, None)
 
     def _store_item_in_peer_relation_data(self, key: str, value: str) -> None:
+        """Stores key/value in peer relation data.
+
+        Args:
+            key (str): Relation data key
+            value (str): Relation data value
+
+        Returns:
+            None
+        """
         peer_relation = self.model.get_relation("replicas")
         if not peer_relation:
             raise RuntimeError("No peer relation")
@@ -1135,18 +1051,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         return True
 
     @staticmethod
-    def _encode_in_base64(byte_string: bytes) -> str:
-        """Encodes given byte string in Base64.
-
-        Args:
-            byte_string (bytes): Byte data
-
-        Returns:
-            str: String of the bytes data.
-        """
-        return base64.b64encode(byte_string).decode("utf-8")
-
-    @staticmethod
     def _generate_password() -> str:
         """Generates a random 12 character password.
 
@@ -1171,24 +1075,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         event.set_results(
             {
                 "password": self._admin_operator_pfx_password,
-            }
-        )
-
-    def _on_get_root_csr_action(self, event: ActionEvent) -> None:
-        """Sets the action result as the root CSR.
-
-        Args:
-            event (ActionEvent): Juju event
-
-        Returns:
-            None
-        """
-        if not self._root_csr:
-            event.fail("Admin Operator PFX package is not available")
-            return
-        event.set_results(
-            {
-                "csr": self._root_csr,
             }
         )
 

@@ -166,13 +166,12 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         if self.unit.is_leader():
             bootstrapper_key = generate_private_key()
             self._store_bootstrapper_private_key(bootstrapper_key.decode())
-        else:
-            if not self._bootstrapper_private_key_is_stored:
-                self.unit.status = WaitingStatus(
-                    "Waiting for leader to generate bootstrapper private key"
-                )
-                event.defer()
-                return
+        elif not self._bootstrapper_private_key_is_stored:
+            self.unit.status = WaitingStatus(
+                "Waiting for leader to generate bootstrapper private key"
+            )
+            event.defer()
+            return
         self._push_bootstrapper_private_key()
 
     def _push_bootstrapper_private_key(self) -> None:
