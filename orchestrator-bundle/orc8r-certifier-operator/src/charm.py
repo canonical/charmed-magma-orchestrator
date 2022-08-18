@@ -282,7 +282,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     @property
     def _replicas_relation_created(self) -> bool:
-        """Returns whether the replicas  relation is created.
+        """Returns whether the replicas relation is created.
 
         Returns:
             bool: Whether the certificates relation is created.
