@@ -227,7 +227,7 @@ class TestCharm(unittest.TestCase):
         assert kwargs["path"] == "/var/opt/magma/certs/bootstrapper.key"
         assert kwargs["source"] == key_values["bootstrapper_private_key"]
 
-    def test_given_unit_is_not_leader_and_bootstrapper_private_key_is_not_stored_when_on_install_then_bootstrapper_private_key_is_pushed_to_workload(  # noqa: E501
+    def test_given_unit_is_not_leader_and_bootstrapper_private_key_is_not_stored_when_on_install_then_status_is_waiting(  # noqa: E501
         self,
     ):
         self.harness.set_leader(is_leader=False)
