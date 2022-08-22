@@ -607,9 +607,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             None
         """
         if event.certificate_signing_request != self._root_csr:
-            logger.info(f"Stored root CSR: {self._root_csr}")
-            logger.info(f"Received CSR: {event.certificate_signing_request}")
-            logger.info("Certificate's CSR doesn't match stored root CSR")
+            logger.warning("Certificate's CSR doesn't match stored root CSR")
             return
         peer_relation = self.model.get_relation("replicas")
         if not peer_relation:

@@ -68,17 +68,22 @@ class TestCharm(unittest.TestCase):
         """
         key_values = {}
         if root_private_key:
-            key_values["root_private_key"] = generate_private_key().decode()
+            key_values["root_private_key"] = generate_private_key().decode().strip()
         if application_private_key:
-            key_values["application_private_key"] = generate_private_key().decode()
+            key_values["application_private_key"] = generate_private_key().decode().strip()
         if admin_operator_private_key:
-            key_values["admin_operator_private_key"] = generate_private_key().decode()
+            key_values["admin_operator_private_key"] = generate_private_key().decode().strip()
         if root_csr:
             if not root_private_key:
                 raise ValueError("root_private_key must be True if root_csr is True")
-            key_values["root_csr"] = generate_csr(
-                private_key=key_values["root_private_key"].encode(), subject=f"*.{domain_config}"
-            ).decode()
+            key_values["root_csr"] = (
+                generate_csr(
+                    private_key=key_values["root_private_key"].encode(),
+                    subject=f"*.{domain_config}",
+                )
+                .decode()
+                .strip()
+            )
         if root_certificate:
             if not root_csr:
                 raise ValueError("root_csr must be True if root_certificate is True")
@@ -86,18 +91,22 @@ class TestCharm(unittest.TestCase):
                 raise ValueError("root_private_key must be True if root_certificate is True")
             ca_private_key = generate_private_key()
             ca_certificate = generate_ca(private_key=ca_private_key, subject="whatever")
-            key_values["root_ca_certificate"] = ca_certificate.decode()
-            key_values["root_certificate"] = generate_certificate(
-                ca=ca_certificate,
-                ca_key=ca_private_key,
-                csr=key_values["root_csr"].encode(),
-            ).decode()
+            key_values["root_ca_certificate"] = ca_certificate.decode().strip()
+            key_values["root_certificate"] = (
+                generate_certificate(
+                    ca=ca_certificate,
+                    ca_key=ca_private_key,
+                    csr=key_values["root_csr"].encode(),
+                )
+                .decode()
+                .strip()
+            )
         if application_certificate:
             application_ca_certificate = generate_ca(
                 private_key=key_values["application_private_key"].encode(),
                 subject=f"certifier.{domain_config}",
             )
-            key_values["application_certificate"] = application_ca_certificate.decode()
+            key_values["application_certificate"] = application_ca_certificate.decode().strip()
         if admin_operator_certificate:
             if not application_certificate:
                 raise ValueError(
@@ -112,18 +121,22 @@ class TestCharm(unittest.TestCase):
                 private_key=key_values["admin_operator_private_key"].encode(),
                 subject="admin_operator",
             )
-            key_values["admin_operator_certificate"] = generate_certificate(
-                csr=admin_operator_csr,
-                ca=key_values["application_certificate"].encode(),
-                ca_key=key_values["application_private_key"].encode(),
-            ).decode()
+            key_values["admin_operator_certificate"] = (
+                generate_certificate(
+                    csr=admin_operator_csr,
+                    ca=key_values["application_certificate"].encode(),
+                    ca_key=key_values["application_private_key"].encode(),
+                )
+                .decode()
+                .strip()
+            )
             key_values["admin_operator_pfx_password"] = "whatever"
             pfx_package = generate_pfx_package(
                 certificate=key_values["admin_operator_certificate"].encode(),
                 private_key=key_values["admin_operator_private_key"].encode(),
                 package_password=pfx_password,
             )
-            key_values["admin_operator_pfx"] = base64.b64encode(pfx_package).decode()
+            key_values["admin_operator_pfx"] = base64.b64encode(pfx_package).decode().strip()
 
         peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
         self.harness.add_relation_unit(peer_relation_id, self.harness.charm.unit.name)
@@ -460,7 +473,7 @@ class TestCharm(unittest.TestCase):
         relation_data = self.harness.get_relation_data(
             relation_id=peer_relation_id, app_or_unit=self.harness.charm.app.name
         )
-        assert relation_data["root_csr"] == generated_csr.decode()
+        assert relation_data["root_csr"] == generated_csr.decode().strip()
 
     @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("charm.generate_csr")
