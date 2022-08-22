@@ -4,7 +4,7 @@
 import unittest
 
 from ops import testing
-from test_charms.test_admin_operator_provider.src.charm import (  # type: ignore[import]  # noqa: E501
+from test_charms.test_admin_operator_provider.src.charm import (  # type: ignore[import]
     WhateverCharm,
 )
 

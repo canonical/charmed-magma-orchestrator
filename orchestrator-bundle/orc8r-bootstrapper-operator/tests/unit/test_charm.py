@@ -2,17 +2,75 @@
 # See LICENSE file for licensing details.
 
 import unittest
+from typing import Optional, Tuple
 from unittest.mock import Mock, patch
 
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 from ops import testing
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.model import ActiveStatus, WaitingStatus
 
 from charm import MagmaOrc8rBootstrapperCharm
 
 testing.SIMULATE_CAN_CONNECT = True
 
 
+def generate_private_key(
+    password: Optional[bytes] = None,
+    key_size: int = 2048,
+    public_exponent: int = 65537,
+) -> bytes:
+    """Generates a private key.
+
+    Args:
+        password (bytes): Password for decrypting the private key
+        key_size (int): Key size in bytes
+        public_exponent: Public exponent.
+
+    Returns:
+        bytes: Private Key
+    """
+    private_key = rsa.generate_private_key(
+        public_exponent=public_exponent,
+        key_size=key_size,
+    )
+    key_bytes = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.BestAvailableEncryption(password)
+        if password
+        else serialization.NoEncryption(),
+    )
+    return key_bytes
+
+
 class TestCharm(unittest.TestCase):
+    def create_peer_relation_with_private_key(
+        self, bootstrapper_private_key: bool = False
+    ) -> Tuple[int, dict]:
+        """Creates a peer relation and adds certificates in its data.
+
+        Args:
+            bootstrapper_private_key: Set bootstrapper private key
+
+        Returns:
+            int: Peer relation ID
+            dict: Relation data
+        """
+        key_values = {}
+        if bootstrapper_private_key:
+            key_values["bootstrapper_private_key"] = generate_private_key().decode()
+
+        peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
+        self.harness.add_relation_unit(peer_relation_id, self.harness.charm.unit.name)
+
+        self.harness.update_relation_data(
+            relation_id=peer_relation_id,
+            app_or_unit=self.harness.charm.app.name,
+            key_values=key_values,
+        )
+        return peer_relation_id, key_values
+
     @patch("charm.KubernetesServicePatch", lambda charm, ports, additional_labels: None)
     def setUp(self):
         self.namespace = "whatever namespace"
@@ -22,40 +80,27 @@ class TestCharm(unittest.TestCase):
         self.harness.begin()
         self.maxDiff = None
 
-    def test_given_cert_bootstrapper_relation_not_created_when_pebble_ready_status_is_blocked(
-        self,
-    ):
-        self.harness.container_pebble_ready(container_name="magma-orc8r-bootstrapper")
-
-        self.assertEqual(
-            self.harness.charm.unit.status,
-            BlockedStatus("Waiting for cert-bootstrapper relation to be created"),
-        )
-
     @patch("ops.model.Container.exists")
-    def test_given_cert_bootstrapper_relation_created_and_certs_not_stored_when_pebble_ready_status_is_waiting(  # noqa: E501
+    def test_given_private_key_not_stored_when_pebble_ready_then_status_is_waiting(  # noqa: E501
         self, patch_exists
     ):
         patch_exists.return_value = False
-        self.harness.add_relation(
-            relation_name="cert-bootstrapper", remote_app="magma-orc8r-certifier"
-        )
+        self.create_peer_relation_with_private_key(bootstrapper_private_key=False)
+
         self.harness.container_pebble_ready(container_name="magma-orc8r-bootstrapper")
 
         self.assertEqual(
             self.harness.charm.unit.status,
-            WaitingStatus("Waiting for certs to be available"),
+            WaitingStatus("Waiting for bootstrapper private key to be stored"),
         )
 
     @patch("ops.model.Container.exec", new=Mock())
     @patch("ops.model.Container.exists")
-    def test_given_cert_bootstrapper_relation_is_created_and_certs_are_stored_when_pebble_ready_then_pebble_plan_is_filled_with_workload_service_content(  # noqa: E501
+    def test_given_private_key_is_stored_when_pebble_ready_then_pebble_plan_is_filled_with_workload_service_content(  # noqa: E501
         self, patch_file_exists
     ):
         patch_file_exists.return_value = True
-        self.harness.add_relation(
-            relation_name="cert-bootstrapper", remote_app="magma-orc8r-certifier"
-        )
+        self.create_peer_relation_with_private_key(bootstrapper_private_key=True)
 
         self.harness.container_pebble_ready(container_name="magma-orc8r-bootstrapper")
         expected_plan = {
@@ -82,13 +127,11 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.exec", new=Mock())
     @patch("ops.model.Container.exists")
-    def test_given_bootstrapper_relation_is_created_and_certs_are_stored_when_pebble_ready_then_unit_status_is_active(  # noqa: E501
+    def test_given_private_key_is_stored_when_pebble_ready_then_unit_status_is_active(
         self, patch_file_exists
     ):
         patch_file_exists.return_value = True
-        self.harness.add_relation(
-            relation_name="cert-bootstrapper", remote_app="magma-orc8r-certifier"
-        )
+        self.create_peer_relation_with_private_key(bootstrapper_private_key=True)
 
         self.harness.container_pebble_ready(container_name="magma-orc8r-bootstrapper")
 
@@ -127,15 +170,75 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.push")
-    def test_given_when_private_key_available_then_key_is_stored(self, patch_push):
+    def test_given_unit_is_leader_and_replicas_relation_is_created_when_on_install_then_bootstrapper_private_key_is_stored(  # noqa: E501
+        self, _
+    ):
+        self.harness.set_leader(is_leader=True)
+        self.harness.set_can_connect(container="magma-orc8r-bootstrapper", val=True)
         event = Mock()
-        private_key = "whatever"
-        event.private_key = private_key
-        container = self.harness.model.unit.get_container("magma-orc8r-bootstrapper")
-        self.harness.set_can_connect(container=container, val=True)
 
-        self.harness.charm._on_private_key_available(event=event)
+        peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
 
-        patch_push.assert_called_with(
-            path="/var/opt/magma/certs/bootstrapper.key", source="whatever"
+        relation_data = self.harness.get_relation_data(
+            relation_id=peer_relation_id, app_or_unit=self.harness.charm.app.name
+        )
+
+        self.harness.charm._on_install(event=event)
+
+        serialization.load_pem_private_key(
+            relation_data["bootstrapper_private_key"].encode(), password=None
+        )
+
+    @patch("ops.model.Container.push")
+    def test_given_unit_is_leader_and_replicas_relation_is_created_when_on_install_then_bootstrapper_private_key_is_pushed_to_workload(  # noqa: E501
+        self, patch_push
+    ):
+        self.harness.set_leader(is_leader=True)
+        self.harness.set_can_connect(container="magma-orc8r-bootstrapper", val=True)
+        event = Mock()
+
+        peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
+
+        self.harness.get_relation_data(
+            relation_id=peer_relation_id, app_or_unit=self.harness.charm.app.name
+        )
+
+        self.harness.charm._on_install(event=event)
+
+        args, kwargs = patch_push.call_args
+        assert kwargs["path"] == "/var/opt/magma/certs/bootstrapper.key"
+        serialization.load_pem_private_key(kwargs["source"].encode(), password=None)
+
+    @patch("ops.model.Container.push")
+    def test_given_unit_is_not_leader_and_bootstrapper_private_key_is_stored_when_on_install_then_bootstrapper_private_key_is_pushed_to_workload(  # noqa: E501
+        self, patch_push
+    ):
+        self.harness.set_leader(is_leader=False)
+        self.harness.set_can_connect(container="magma-orc8r-bootstrapper", val=True)
+        event = Mock()
+
+        relation_id, key_values = self.create_peer_relation_with_private_key(
+            bootstrapper_private_key=True
+        )
+
+        self.harness.charm._on_install(event=event)
+
+        args, kwargs = patch_push.call_args
+        assert kwargs["path"] == "/var/opt/magma/certs/bootstrapper.key"
+        assert kwargs["source"] == key_values["bootstrapper_private_key"]
+
+    def test_given_unit_is_not_leader_and_bootstrapper_private_key_is_not_stored_when_on_install_then_status_is_waiting(  # noqa: E501
+        self,
+    ):
+        self.harness.set_leader(is_leader=False)
+        self.harness.set_can_connect(container="magma-orc8r-bootstrapper", val=True)
+        event = Mock()
+
+        self.create_peer_relation_with_private_key(bootstrapper_private_key=False)
+
+        self.harness.charm._on_install(event=event)
+
+        self.assertEqual(
+            self.harness.charm.unit.status,
+            WaitingStatus("Waiting for leader to generate bootstrapper private key"),
         )

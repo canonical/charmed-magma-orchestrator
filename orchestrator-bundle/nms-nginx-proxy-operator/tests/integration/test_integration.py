@@ -9,7 +9,6 @@ from typing import Optional
 
 import pytest
 import yaml
-from pytest_operator.plugin import OpsTest  # type: ignore[import]  # noqa: F401
 
 logger = logging.getLogger(__name__)
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
@@ -24,6 +23,7 @@ CERTIFIER_CHARM_FILE_NAME = "magma-orc8r-certifier_ubuntu-20.04-amd64.charm"
 NMS_MAGMALTE_APPLICATION_NAME = "nms-magmalte"
 NMS_MAGMALTE_CHARM_NAME = "magma-nms-magmalte"
 NMS_MAGMALTE_CHARM_FILE_NAME = "magma-nms-magmalte_ubuntu-20.04-amd64.charm"
+DOMAIN = "whatever.com"
 
 
 class TestNmsNginxProxy:
@@ -52,7 +52,10 @@ class TestNmsNginxProxy:
         await ops_test.model.deploy(
             "tls-certificates-operator",
             application_name="tls-certificates-operator",
-            config={"generate-self-signed-certificates": True},
+            config={
+                "generate-self-signed-certificates": True,
+                "ca-common-name": f"rootca.{DOMAIN}",
+            },
             channel="edge",
         )
 
@@ -71,7 +74,7 @@ class TestNmsNginxProxy:
             certifier_charm,
             resources=resources,
             application_name=CERTIFIER_APPLICATION_NAME,
-            config={"domain": "example.com"},
+            config={"domain": DOMAIN},
             trust=True,
         )
         await ops_test.model.add_relation(

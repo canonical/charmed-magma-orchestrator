@@ -1,3 +1,4 @@
 ops
 lightkube
 lightkube-models
+cryptography

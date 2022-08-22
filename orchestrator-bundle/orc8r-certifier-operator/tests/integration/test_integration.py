@@ -7,13 +7,13 @@ from pathlib import Path
 
 import pytest
 import yaml
-from pytest_operator.plugin import OpsTest  # type: ignore[import]  # noqa: F401
 
 logger = logging.getLogger(__name__)
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 
 APPLICATION_NAME = "orc8r-certifier"
 CHARM_NAME = "magma-orc8r-certifier"
+DOMAIN = "whatever.com"
 
 
 class TestOrc8rCertifier:
@@ -29,7 +29,10 @@ class TestOrc8rCertifier:
         await ops_test.model.deploy(
             "tls-certificates-operator",
             application_name="tls-certificates-operator",
-            config={"generate-self-signed-certificates": True},
+            config={
+                "generate-self-signed-certificates": True,
+                "ca-common-name": f"rootca.{DOMAIN}",
+            },
             channel="edge",
         )
 
@@ -44,7 +47,7 @@ class TestOrc8rCertifier:
             charm,
             resources=resources,
             application_name=APPLICATION_NAME,
-            config={"domain": "example.com"},
+            config={"domain": DOMAIN},
             trust=True,
         )
 

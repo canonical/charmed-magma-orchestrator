@@ -5,20 +5,18 @@
 """Manages the certificate bootstrapping process for registered gateways."""
 
 import logging
-from typing import Union
+from typing import Optional
 
-from charms.magma_orc8r_certifier.v0.cert_bootstrapper import (
-    CertBootstrapperRequires,
-    PrivateKeyAvailableEvent,
-)
 from charms.observability_libs.v1.kubernetes_service_patch import (
     KubernetesServicePatch,
     ServicePort,
 )
-from ops.charm import CharmBase, PebbleReadyEvent, RelationJoinedEvent
+from ops.charm import CharmBase, InstallEvent, PebbleReadyEvent, RelationJoinedEvent
 from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus, ModelError, Relation, WaitingStatus
+from ops.model import ActiveStatus, ModelError, Relation, WaitingStatus
 from ops.pebble import Layer
+
+from private_key import generate_private_key
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +31,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         super().__init__(*args)
         self._container_name = self._service_name = "magma-orc8r-bootstrapper"
         self._container = self.unit.get_container(self._container_name)
-        self.cert_bootstrapper = CertBootstrapperRequires(
-            charm=self, relationship_name="cert-bootstrapper"
-        )
+        self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(
             self.on.magma_orc8r_bootstrapper_pebble_ready,
             self._on_magma_orc8r_bootstrapper_pebble_ready,
@@ -43,9 +39,6 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         self.framework.observe(
             self.on.magma_orc8r_bootstrapper_relation_joined,
             self._on_magma_orc8r_bootstrapper_relation_joined,
-        )
-        self.framework.observe(
-            self.cert_bootstrapper.on.private_key_available, self._on_private_key_available
         )
         self._service_patcher = KubernetesServicePatch(
             charm=self,
@@ -55,11 +48,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
 
     @property
     def _pebble_layer(self) -> Layer:
-        """Returns pebble layer for the charm.
-
-        Returns:
-            Layer: Pebble Layer
-        """
+        """Returns pebble layer for the charm."""
         return Layer(
             {
                 "summary": f"{self._service_name} pebble layer",
@@ -84,20 +73,12 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
 
     @property
     def _namespace(self) -> str:
-        """Returns the namespace.
-
-        Returns:
-            str: Kubernetes namespace.
-        """
+        """Returns the Kubernetes namespace."""
         return self.model.name
 
     @property
     def _service_is_running(self) -> bool:
-        """Retrieves the workload service and returns whether it is running.
-
-        Returns:
-            bool: Whether service is running
-        """
+        """Retrieves the workload service and returns whether it is running."""
         if self._container.can_connect():
             try:
                 self._container.get_service(self._service_name)
@@ -107,42 +88,81 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         return False
 
     @property
-    def _certs_are_stored(self) -> bool:
-        """Returns whether the bootstrapper private key is stored.
-
-        Returns:
-            bool: True/False
-        """
-        return self._container.exists(f"{self.CERTIFICATE_DIRECTORY}/bootstrapper.key")
+    def _bootstrapper_private_key(self) -> Optional[str]:
+        """Returns bootstrapper private key."""
+        replicas = self.model.get_relation("replicas")
+        if not replicas:
+            return None
+        return replicas.data[self.app].get("bootstrapper_private_key", None)
 
     @property
-    def _cert_bootstrapper_relation_created(self) -> bool:
-        """Returns whether cert-bootstrapper relation is created.
+    def _bootstrapper_private_key_is_stored(self) -> bool:
+        """Returns whether bootstrapper private key is stored in peer relation data."""
+        if not self._bootstrapper_private_key:
+            logger.info("Bootstrapper private key not stored")
+            return False
+        return True
 
-        Returns:
-            bool: True/False
-        """
-        return self._relation_created("cert-bootstrapper")
+    @property
+    def _replicas_relation_created(self) -> bool:
+        """Returns whether the replicas Juju relation was created."""
+        if not self.model.get_relation("replicas"):
+            return False
+        return True
 
-    def _relation_created(self, relation_name: str) -> bool:
-        """Returns whether given relation was created.
+    @property
+    def _bootstrapper_private_key_is_pushed(self) -> bool:
+        """Returns whether bootstrapper private key is pushed to workload."""
+        if not self._container.exists(f"{self.CERTIFICATE_DIRECTORY}/bootstrapper.key"):
+            logger.info("Bootstrapper private key is not pushed")
+            return False
+        return True
+
+    def _on_install(self, event: InstallEvent) -> None:
+        """Triggered on charm install.
 
         Args:
-            relation_name (str): Relation name
+            event: Juju event
 
         Returns:
-            bool: True/False
+            None
         """
-        try:
-            if self.model.get_relation(relation_name):
-                return True
-            return False
-        except KeyError:
-            return False
+        if not self._replicas_relation_created:
+            self.unit.status = WaitingStatus("Waiting for replicas relation to be created")
+            event.defer()
+            return
+        if not self._container.can_connect():
+            self.unit.status = WaitingStatus("Waiting for container to be ready")
+            event.defer()
+            return
+        if self.unit.is_leader():
+            bootstrapper_key = generate_private_key()
+            self._store_bootstrapper_private_key(bootstrapper_key.decode())
+        elif not self._bootstrapper_private_key_is_stored:
+            self.unit.status = WaitingStatus(
+                "Waiting for leader to generate bootstrapper private key"
+            )
+            event.defer()
+            return
+        self._push_bootstrapper_private_key()
 
-    def _on_magma_orc8r_bootstrapper_pebble_ready(
-        self, event: Union[PebbleReadyEvent, PrivateKeyAvailableEvent]
-    ) -> None:
+    def _push_bootstrapper_private_key(self) -> None:
+        """Pushes bootstrapper private key to workload container."""
+        if not self._bootstrapper_private_key:
+            raise RuntimeError("Bootstrapper private key is not available")
+        self._container.push(
+            path=f"{self.CERTIFICATE_DIRECTORY}/bootstrapper.key",
+            source=self._bootstrapper_private_key,
+        )
+
+    def _store_bootstrapper_private_key(self, private_key: str) -> None:
+        """Stores bootstrapper private key in peer relation data."""
+        peer_relation = self.model.get_relation("replicas")
+        if not peer_relation:
+            raise RuntimeError("No peer relation")
+        peer_relation.data[self.app].update({"bootstrapper_private_key": private_key})
+
+    def _on_magma_orc8r_bootstrapper_pebble_ready(self, event: PebbleReadyEvent) -> None:
         """Triggered when pebble is ready.
 
         Args:
@@ -151,19 +171,17 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         Returns:
             None
         """
-        if not self._cert_bootstrapper_relation_created:
-            self.unit.status = BlockedStatus(
-                "Waiting for cert-bootstrapper relation to be created"
-            )
+        if not self._bootstrapper_private_key_is_stored:
+            self.unit.status = WaitingStatus("Waiting for bootstrapper private key to be stored")
             event.defer()
             return
-        if not self._certs_are_stored:
-            self.unit.status = WaitingStatus("Waiting for certs to be available")
+        if not self._bootstrapper_private_key_is_pushed:
+            self.unit.status = WaitingStatus("Waiting for bootstrapper private key to be pushed")
             event.defer()
             return
         self._configure_pebble(event)
 
-    def _configure_pebble(self, event: Union[PebbleReadyEvent, PrivateKeyAvailableEvent]) -> None:
+    def _configure_pebble(self, event: PebbleReadyEvent) -> None:
         """Adds layer to pebble config if the proposed config is different from the current one."""
         if self._container.can_connect():
             pebble_layer = self._pebble_layer
@@ -221,25 +239,6 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
             self._update_relation_active_status(
                 relation=relation, is_active=self._service_is_running
             )
-
-    def _on_private_key_available(self, event: PrivateKeyAvailableEvent) -> None:
-        """Triggered when bootstrapper private key is available from relation data.
-
-        Args:
-            event (PrivateKeyAvailableEvent): Event for whenever private key is available.
-
-        Returns:
-            None
-        """
-        logger.info("Bootstrapper private key available")
-        if not self._container.can_connect():
-            logger.info("Can't connect to container - Deferring")
-            event.defer()
-            return
-        self._container.push(
-            path=f"{self.CERTIFICATE_DIRECTORY}/bootstrapper.key", source=event.private_key
-        )
-        self._on_magma_orc8r_bootstrapper_pebble_ready(event)
 
 
 if __name__ == "__main__":
