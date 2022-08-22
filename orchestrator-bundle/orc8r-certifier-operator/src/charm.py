@@ -607,7 +607,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             None
         """
         if event.certificate_signing_request != self._root_csr:
-            logger.info("Certificate's CSR doesn't match stored root CSR")
+            logger.warning("Certificate's CSR doesn't match stored root CSR")
             return
         peer_relation = self.model.get_relation("replicas")
         if not peer_relation:
@@ -1006,7 +1006,11 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         replicas = self.model.get_relation("replicas")
         if not replicas:
             return None
-        return replicas.data[self.app].get(key, None)
+        relation_data = replicas.data[self.app].get(key, None)
+        if relation_data:
+            return relation_data.strip()
+        else:
+            return None
 
     def _store_item_in_peer_relation_data(self, key: str, value: str) -> None:
         """Stores key/value in peer relation data.
@@ -1021,7 +1025,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         peer_relation = self.model.get_relation("replicas")
         if not peer_relation:
             raise RuntimeError("No peer relation")
-        peer_relation.data[self.app].update({key: value})
+        peer_relation.data[self.app].update({key: value.strip()})
 
     def _update_relation_active_status(self, relation: Relation, is_active: bool) -> None:
         """Updates the relation data content.
