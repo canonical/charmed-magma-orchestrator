@@ -9,8 +9,15 @@ Federation Gateway control proxy service.
 Deploy using Juju:
 
 ```bash
-juju deploy magma-feg-control-proxy feg-control-proxy --trust
+juju deploy magma-feg-control-proxy feg-control-proxy
 ```
+
+Provide required certificates through config file.
+```bash
+juju config feg-control-proxy --file <config file>
+```
+**NOTE**: If you want to try it out with dummy certs for the sake of testing,
+you can use the `certs-config.yaml` file provided.
 
 ## OCI Images
 

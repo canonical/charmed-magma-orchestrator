@@ -57,7 +57,7 @@ class FegTdAgentBitCharm(CharmBase):
             process_generate.wait_output()
         except ExecError as e:
             logger.error("Exited with code %d. Stderr:", e.exit_code)
-            for line in e.stderr.splitlines():  # type: ignore[union-attr]
+            for line in e.stderr.splitlines():
                 logger.error("    %s", line)
             raise e
         logger.info("Successfully generated fluent bit config file")

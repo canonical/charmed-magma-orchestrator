@@ -10,6 +10,7 @@ import yaml
 
 logger = logging.getLogger(__name__)
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
+CONFIG_CERTIFICATES = yaml.safe_load(Path("./certs-config.yaml").read_text())
 
 APPLICATION_NAME = "feg-control-proxy"
 CHARM_NAME = "magma-feg-control-proxy"
@@ -23,8 +24,19 @@ class TestFegControlProxy:
         resources = {
             f"{CHARM_NAME}-image": METADATA["resources"][f"{CHARM_NAME}-image"]["upstream-source"],
         }
+        config_certificates = {
+            "controller-key": CONFIG_CERTIFICATES["feg-control-proxy"]["controller-key"],
+            "controller-crt": CONFIG_CERTIFICATES["feg-control-proxy"]["controller-crt"],
+            "root-ca-pem": CONFIG_CERTIFICATES["feg-control-proxy"]["root-ca-pem"],
+            "root-ca-key": CONFIG_CERTIFICATES["feg-control-proxy"]["root-ca-key"],
+        }
+
         await ops_test.model.deploy(
-            charm, resources=resources, application_name=APPLICATION_NAME, trust=True
+            charm,
+            resources=resources,
+            application_name=APPLICATION_NAME,
+            config=config_certificates,
+            trust=True,
         )
 
     async def test_wait_for_idle(self, ops_test, build_and_deploy):
