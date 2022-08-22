@@ -157,6 +157,9 @@ class TestOrchestrator:
             relation1=APPLICATION_NAME, relation2="orc8r-certifier:cert-admin-operator"
         )
         await ops_test.model.add_relation(
+            relation1=APPLICATION_NAME, relation2="orc8r-certifier:magma-orc8r-certifier"
+        )
+        await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="orc8r-prometheus-cache:metrics-endpoint"
         )
         await ops_test.model.add_relation(

@@ -89,7 +89,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self.certificates_certifier_provider = CertCertifierProvides(self, "cert-certifier")
         self.certificates_controller_provider = CertControllerProvides(self, "cert-controller")
         self._container_name = self._service_name = "magma-orc8r-certifier"
-        self.provided_relation_name = list(self.meta.provides.keys())[0]
+        self.provided_relation_name = "magma-orc8r-certifier"
         self._container = self.unit.get_container(self._container_name)
         self._db = pgsql.PostgreSQLClient(self, "db")
         self._service_patcher = KubernetesServicePatch(

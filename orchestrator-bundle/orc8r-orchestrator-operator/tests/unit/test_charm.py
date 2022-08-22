@@ -12,7 +12,7 @@ from lightkube.models.core_v1 import (
 )
 from lightkube.models.meta_v1 import ObjectMeta
 from ops import testing
-from ops.model import ActiveStatus, BlockedStatus
+from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 
 from charm import MagmaOrc8rOrchestratorCharm
 
@@ -60,9 +60,9 @@ class TestCharm(unittest.TestCase):
         self.harness.begin()
 
     @patch("ops.model.Container.exec", new_callable=Mock)
-    @patch("ops.model.Container.exists")
+    @patch("ops.model.Container.exists", new=Mock())
     def test_given_relations_created_and_certs_are_mounted_when_pebble_ready_then_pebble_plan_containing_workload_service_is_created(  # noqa: E501
-        self, patch_exists, patch_exec
+        self, patch_exec
     ):
         patch_exec.return_value = MockExec()
         self.harness.add_relation(
@@ -73,33 +73,39 @@ class TestCharm(unittest.TestCase):
         accessd_relation = self.harness.add_relation(
             relation_name="magma-orc8r-accessd", remote_app="orc8r-accessd"
         )
-
         self.harness.add_relation_unit(
             relation_id=accessd_relation, remote_unit_name="magma-orc8r-accessd/0"
         )
-
         self.harness.update_relation_data(
             relation_id=accessd_relation,
             app_or_unit="magma-orc8r-accessd/0",
             key_values={"active": "True"},
         )
-
         service_registry_relation = self.harness.add_relation(
             relation_name="magma-orc8r-service-registry", remote_app="orc8r-service-registry"
         )
-
         self.harness.add_relation_unit(
             relation_id=service_registry_relation,
             remote_unit_name="magma-orc8r-service-registry/0",
         )
-
         self.harness.update_relation_data(
             relation_id=service_registry_relation,
             app_or_unit="magma-orc8r-service-registry/0",
             key_values={"active": "True"},
         )
+        certifier_relation = self.harness.add_relation(
+            relation_name="magma-orc8r-certifier", remote_app="orc8r-certifier"
+        )
+        self.harness.add_relation_unit(
+            relation_id=certifier_relation,
+            remote_unit_name="magma-orc8r-certifier/0",
+        )
+        self.harness.update_relation_data(
+            relation_id=certifier_relation,
+            app_or_unit="magma-orc8r-certifier/0",
+            key_values={"active": "True"},
+        )
 
-        patch_exists.return_value = True
         expected_plan = {
             "services": {
                 "magma-orc8r-orchestrator": {
@@ -118,7 +124,9 @@ class TestCharm(unittest.TestCase):
                 },
             },
         }
+
         self.harness.container_pebble_ready("magma-orc8r-orchestrator")
+
         updated_plan = self.harness.get_container_pebble_plan("magma-orc8r-orchestrator").to_dict()
         self.assertEqual(expected_plan, updated_plan)
 
@@ -170,13 +178,12 @@ class TestCharm(unittest.TestCase):
             '"metricsPrefix": ""\n',
         )
 
-    @patch("ops.model.Container.exists")
+    @patch("ops.model.Container.exists", new=Mock())
     @patch("ops.model.Container.exec", new_callable=Mock)
-    @patch("ops.model.Container.push")
+    @patch("ops.model.Container.push", new=Mock())
     def test_given_relations_ready_and_container_can_connect_and_unit_is_leader_when_on_pebble_ready_event_then_orchestrator_admin_user_is_created(  # noqa: E501
-        self, patch_push, patch_exec, patch_exists
+        self, patch_exec
     ):
-        patch_exists.return_value = True
         patch_exec.return_value = MockExec()
         self.harness.set_leader(True)
 
@@ -187,29 +194,36 @@ class TestCharm(unittest.TestCase):
         accessd_relation = self.harness.add_relation(
             relation_name="magma-orc8r-accessd", remote_app="orc8r-accessd"
         )
-
         self.harness.add_relation_unit(
             relation_id=accessd_relation, remote_unit_name="magma-orc8r-accessd/0"
         )
-
         self.harness.update_relation_data(
             relation_id=accessd_relation,
             app_or_unit="magma-orc8r-accessd/0",
             key_values={"active": "True"},
         )
-
         service_registry_relation = self.harness.add_relation(
             relation_name="magma-orc8r-service-registry", remote_app="orc8r-service-registry"
         )
-
         self.harness.add_relation_unit(
             relation_id=service_registry_relation,
             remote_unit_name="magma-orc8r-service-registry/0",
         )
-
         self.harness.update_relation_data(
             relation_id=service_registry_relation,
             app_or_unit="magma-orc8r-service-registry/0",
+            key_values={"active": "True"},
+        )
+        certifier_relation = self.harness.add_relation(
+            relation_name="magma-orc8r-certifier", remote_app="orc8r-certifier"
+        )
+        self.harness.add_relation_unit(
+            relation_id=certifier_relation,
+            remote_unit_name="magma-orc8r-certifier/0",
+        )
+        self.harness.update_relation_data(
+            relation_id=certifier_relation,
+            app_or_unit="magma-orc8r-certifier/0",
             key_values={"active": "True"},
         )
 
@@ -227,11 +241,103 @@ class TestCharm(unittest.TestCase):
         ]
         self.assertIn(call_command, args)
 
+    @patch("ops.model.Container.exists", new=Mock())
+    @patch("ops.model.Container.exec", new_callable=Mock)
+    @patch("ops.model.Container.push", new=Mock())
+    def test_given_certifier_relation_not_created_when_on_pebble_ready_event_then_status_is_blocked(  # noqa: E501
+        self, _
+    ):
+        self.harness.set_leader(True)
+
+        self.harness.add_relation(
+            relation_name="cert-admin-operator", remote_app="orc8r-certifier"
+        )
+        self.harness.add_relation(relation_name="metrics-endpoint", remote_app="prometheus-k8s")
+        accessd_relation = self.harness.add_relation(
+            relation_name="magma-orc8r-accessd", remote_app="orc8r-accessd"
+        )
+        self.harness.add_relation_unit(
+            relation_id=accessd_relation, remote_unit_name="magma-orc8r-accessd/0"
+        )
+        self.harness.update_relation_data(
+            relation_id=accessd_relation,
+            app_or_unit="magma-orc8r-accessd/0",
+            key_values={"active": "True"},
+        )
+        service_registry_relation = self.harness.add_relation(
+            relation_name="magma-orc8r-service-registry", remote_app="orc8r-service-registry"
+        )
+        self.harness.add_relation_unit(
+            relation_id=service_registry_relation,
+            remote_unit_name="magma-orc8r-service-registry/0",
+        )
+        self.harness.update_relation_data(
+            relation_id=service_registry_relation,
+            app_or_unit="magma-orc8r-service-registry/0",
+            key_values={"active": "True"},
+        )
+
+        self.harness.container_pebble_ready("magma-orc8r-orchestrator")
+
+        assert self.harness.charm.unit.status == BlockedStatus(
+            "Waiting for magma-orc8r-certifier relation to be created"
+        )
+
+    @patch("ops.model.Container.exists", new=Mock())
+    @patch("ops.model.Container.exec", new_callable=Mock)
+    @patch("ops.model.Container.push", new=Mock())
+    def test_given_certifier_relation_not_ready_when_on_pebble_ready_event_then_status_is_waiting(
+        self, patch_exec
+    ):
+        patch_exec.return_value = MockExec()
+        self.harness.set_leader(True)
+
+        self.harness.add_relation(
+            relation_name="cert-admin-operator", remote_app="orc8r-certifier"
+        )
+        self.harness.add_relation(relation_name="metrics-endpoint", remote_app="prometheus-k8s")
+        accessd_relation = self.harness.add_relation(
+            relation_name="magma-orc8r-accessd", remote_app="orc8r-accessd"
+        )
+        self.harness.add_relation_unit(
+            relation_id=accessd_relation, remote_unit_name="magma-orc8r-accessd/0"
+        )
+        self.harness.update_relation_data(
+            relation_id=accessd_relation,
+            app_or_unit="magma-orc8r-accessd/0",
+            key_values={"active": "True"},
+        )
+        service_registry_relation = self.harness.add_relation(
+            relation_name="magma-orc8r-service-registry", remote_app="orc8r-service-registry"
+        )
+        self.harness.add_relation_unit(
+            relation_id=service_registry_relation,
+            remote_unit_name="magma-orc8r-service-registry/0",
+        )
+        self.harness.update_relation_data(
+            relation_id=service_registry_relation,
+            app_or_unit="magma-orc8r-service-registry/0",
+            key_values={"active": "True"},
+        )
+        certifier_relation = self.harness.add_relation(
+            relation_name="magma-orc8r-certifier", remote_app="orc8r-certifier"
+        )
+        self.harness.add_relation_unit(
+            relation_id=certifier_relation,
+            remote_unit_name="magma-orc8r-certifier/0",
+        )
+
+        self.harness.container_pebble_ready("magma-orc8r-orchestrator")
+
+        assert self.harness.charm.unit.status == WaitingStatus(
+            "Waiting for magma-orc8r-certifier to be active"
+        )
+
     @patch("ops.model.Container.exists")
     @patch("ops.model.Container.exec", new_callable=Mock)
-    @patch("ops.model.Container.push")
+    @patch("ops.model.Container.push", new=Mock())
     def test_given_relations_ready_and_container_can_connect_and_unit_is_not_leader_when_on_pebble_ready_event_then_orchestrator_admin_user_is_not_created(  # noqa: E501
-        self, patch_push, patch_exec, patch_exists
+        self, patch_exec, patch_exists
     ):
         patch_exists.return_value = True
         patch_exec.return_value = MockExec()
@@ -417,6 +523,9 @@ class TestCharm(unittest.TestCase):
         self,
     ):
         self.harness.add_relation(relation_name="metrics-endpoint", remote_app="prometheus-k8s")
+        self.harness.add_relation(
+            relation_name="magma-orc8r-certifier", remote_app="orc8r-certifier"
+        )
 
         accessd_relation = self.harness.add_relation(
             relation_name="magma-orc8r-accessd", remote_app="orc8r-accessd"

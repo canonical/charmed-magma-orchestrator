@@ -51,5 +51,5 @@ provides:
     interface: cert-controller
   cert-certifier:
     interface: cert-certifier
-  cert-bootstrapper:
-    interface: cert-bootstrapper
+  magma-orc8r-certifier:
+    interface: magma-orc8r-certifier
