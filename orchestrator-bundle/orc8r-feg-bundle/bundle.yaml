@@ -244,8 +244,10 @@ relations:
   - orc8r-certifier:cert-controller
 - - orc8r-nginx:magma-orc8r-obsidian
   - orc8r-obsidian:magma-orc8r-obsidian
-- - orc8r-orchestrator
-  - orc8r-certifier
+- - orc8r-orchestrator:cert-admin-operator
+  - orc8r-certifier:cert-admin-operator
+- - orc8r-orchestrator:magma-orc8r-certifier
+  - orc8r-certifier:magma-orc8r-certifier
 - - orc8r-orchestrator:magma-orc8r-accessd
   - orc8r-accessd:magma-orc8r-accessd
 - - orc8r-orchestrator:magma-orc8r-service-registry
