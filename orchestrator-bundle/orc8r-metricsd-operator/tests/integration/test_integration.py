@@ -207,6 +207,10 @@ class TestOrc8rMetricsd:
             relation2="orc8r-certifier:cert-admin-operator",
         )
         await ops_test.model.add_relation(
+            relation1=f"{ORCHESTRATOR_APPLICATION_NAME}:magma-orc8r-certifier",
+            relation2="orc8r-certifier:magma-orc8r-certifier",
+        )
+        await ops_test.model.add_relation(
             relation1=f"{ORCHESTRATOR_APPLICATION_NAME}:metrics-endpoint",
             relation2="orc8r-prometheus-cache:metrics-endpoint",
         )

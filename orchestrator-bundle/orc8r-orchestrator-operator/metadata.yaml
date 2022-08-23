@@ -35,6 +35,8 @@ requires:
     limit: 1
   magma-orc8r-accessd:
     interface: magma-orc8r-accessd
+  magma-orc8r-certifier:
+    interface: magma-orc8r-certifier
   cert-admin-operator:
     interface: cert-admin-operator
     limit: 1

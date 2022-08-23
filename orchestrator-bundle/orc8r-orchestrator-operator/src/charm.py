@@ -253,6 +253,11 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         return self._relation_created("magma-orc8r-service-registry")
 
     @property
+    def _certifier_relation_created(self) -> bool:
+        """Returns whether magma-orc8r-certifier relation is created."""
+        return self._relation_created("magma-orc8r-certifier")
+
+    @property
     def _service_registry_relation_active(self) -> bool:
         """Returns whether magma-orc8r-service-registry relation is ready.
 
@@ -260,6 +265,11 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             bool: True/False
         """
         return self._relation_active("magma-orc8r-service-registry")
+
+    @property
+    def _certifier_relation_active(self) -> bool:
+        """Returns whether magma-orc8r-certifier relation is ready."""
+        return self._relation_active("magma-orc8r-certifier")
 
     def _relation_created(self, relation_name: str) -> bool:
         """Returns whether given relation was created.
@@ -477,7 +487,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             for line in e.stderr.splitlines():
                 logger.error("    %s", line)
 
-    def _on_magma_orc8r_orchestrator_pebble_ready(
+    def _on_magma_orc8r_orchestrator_pebble_ready(  # noqa: C901
         self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
     ) -> None:
         """Triggered when pebble is ready.
@@ -494,6 +504,12 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             return
         if not self._metrics_relation_created:
             self.unit.status = BlockedStatus("Waiting for metrics-endpoint relation to be created")
+            event.defer()
+            return
+        if not self._certifier_relation_created:
+            self.unit.status = BlockedStatus(
+                "Waiting for magma-orc8r-certifier relation to be created"
+            )
             event.defer()
             return
         if not self._accessd_operator_relation_created:
@@ -524,13 +540,17 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             return
         if not self._service_registry_relation_active:
             self.unit.status = WaitingStatus(
-                "waiting for magma-orc8r-service-registry to be active"
+                "Waiting for magma-orc8r-service-registry to be active"
             )
+            event.defer()
+            return
+        if not self._certifier_relation_active:
+            self.unit.status = WaitingStatus("Waiting for magma-orc8r-certifier to be active")
             event.defer()
             return
         self._configure_orc8r(event)
         if self.unit.is_leader():
-            self._create_orchestrator_admin_user()
+            self._create_orchestrator_admin_user()  # TODO: New user shouldn't be created at every pebble ready (just the first one).  # noqa: E501
         self.unit.status = ActiveStatus()
 
     def _configure_orc8r(self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]) -> None:
