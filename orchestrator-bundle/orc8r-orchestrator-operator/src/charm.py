@@ -550,7 +550,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             return
         self._configure_orc8r(event)
         if self.unit.is_leader():
-            self._create_orchestrator_admin_user()  # TODO: New user souldn't be created at every pebble ready (just the first one).  # noqa: E501
+            self._create_orchestrator_admin_user()  # TODO: New user shouldn't be created at every pebble ready (just the first one).  # noqa: E501
         self.unit.status = ActiveStatus()
 
     def _configure_orc8r(self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]) -> None:
