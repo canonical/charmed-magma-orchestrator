@@ -9,12 +9,16 @@ and it has been tested with all major public cloud platforms.
 
 For more information about Magma, see the official documentation [here](https://magmacore.org/).
 
+> :warning: **The bundle is still not available**. If you wish to test the deployment locally, please use the `build.sh` and `deploy.sh` scripts.
+
 ## Usage
+
+TODO: Fill when bundle available in Charmhub
 
 ### Deploy the bundle
 
-# TODO
+TODO: Fill when bundle available in Charmhub
 
 ## Verify the deployment
 
-# TODO
+TODO: Fill when bundle available in Charmhub
