@@ -14,7 +14,7 @@ and it has been tested with all major public cloud platforms.
 
 ### Deploy the bundle
 
-Create an `overlay.yaml` file that contains the following:
+From your Ubuntu machine, create an `overlay.yaml` file that contains the following content:
 
 ```yaml
 applications:
@@ -32,7 +32,7 @@ applications:
 
 > **Warning**: This configuration is unsecure because it uses self-signed certificates.
 
-Deploy orchestrator:
+Deploy Orchestrator:
 
 ```bash
 juju deploy magma-orc8r --overlay overlay.yaml --trust --channel=edge
@@ -43,15 +43,14 @@ The deployment is completed when all services are in the `Active-Idle` state.
 
 ### Import the admin operator HTTPS certificate
 
-Retrieve the PFX package and password that contains the certificates to authenticate against 
-Magma Orchestrator:
+Retrieve the PFX package and password that contains the certificates to authenticate against Magma Orchestrator:
 
 ```bash
 juju scp --container="magma-orc8r-certifier" orc8r-certifier/0:/var/opt/magma/certs/admin_operator.pfx admin_operator.pfx
 juju run-action orc8r-certifier/leader get-pfx-package-password --wait
 ```
 
-The pfx package was copied to your current working directory and can now be loaded in your browser.
+> The pfx package was copied to your current working directory and can now be loaded in your browser.
 
 ### Setup DNS
 
@@ -70,7 +69,7 @@ In your domain registrar, create A records for the following Kubernetes services
 | `<orc8r-clientcert-nginx External IP>` | `controller.<your domain>`              | 
 | `<nginx-proxy External IP>`            | `*.nms.<your domain>`                   | 
 
-## Verify the deployment
+### Verify the deployment
 
 Get the master organization's username and password:
 
