@@ -102,6 +102,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         )
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(
+            self.on.magma_orc8r_certifier_relation_joined,
+            self._on_magma_orc8r_certifier_relation_joined,
+        )
+        self.framework.observe(
             self.tls_certificates_requirer.on.certificate_available, self._on_certificate_available
         )
         self.framework.observe(
@@ -689,6 +693,20 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         else:
             self.unit.status = WaitingStatus("Waiting for container to be ready")
             event.defer()
+
+    def _on_magma_orc8r_certifier_relation_joined(self, event: RelationJoinedEvent) -> None:
+        """Triggered when charms join the orc8r-certifier relation.
+
+        Args:
+            event (RelationEvent): Juju event
+
+        Returns:
+            None
+        """
+        self._update_relations()
+        if not self._service_is_running:
+            event.defer()
+            return
 
     def _update_relations(self) -> None:
         """Updates all the "provided" relation with the workload service status.
