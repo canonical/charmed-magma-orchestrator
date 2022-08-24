@@ -9,7 +9,7 @@ Federation Gateway session-proxy service translates calls from GRPC to gx/gy pro
 Deploy using Juju:
 
 ```bash
-juju deploy magma-feg-session-proxy  feg-session-proxy --trust
+juju deploy magma-feg-session-proxy feg-session-proxy
 ```
 
 ## OCI Images

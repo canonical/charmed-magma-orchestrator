@@ -9,7 +9,7 @@ Federation Gateway eap-aka service.
 Deploy using Juju:
 
 ```bash
-juju deploy magma-feg-eap-aka  feg-eap-aka --trust
+juju deploy magma-feg-eap-aka feg-eap-aka
 ```
 
 ## OCI Images

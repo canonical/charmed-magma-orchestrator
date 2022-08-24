@@ -9,7 +9,7 @@ Federation Gateway csfb service translates calls from GRPC interface to csfb pro
 Deploy using Juju:
 
 ```bash
-juju deploy magma-feg-csfb feg-csfb --trust
+juju deploy magma-feg-csfb feg-csfb
 ```
 
 ## OCI Images

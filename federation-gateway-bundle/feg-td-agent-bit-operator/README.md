@@ -9,7 +9,7 @@ Federation Gateway td-agent-bit service.
 Deploy using Juju:
 
 ```bash
-juju deploy magma-feg-td-agent-bit feg-td-agent-bit --trust
+juju deploy magma-feg-td-agent-bit feg-td-agent-bit
 ```
 
 ## OCI Images

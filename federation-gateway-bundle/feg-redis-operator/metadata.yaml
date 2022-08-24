@@ -10,6 +10,15 @@ summary: |
 containers:
   magma-feg-redis:
     resource: magma-feg-redis-image
+    mounts:
+      - storage: config
+        location: /var/opt/magma/tmp
+
+storage:
+  config:
+    type: filesystem
+    description: Service config storage
+    minimum-size: 1M
 
 resources:
   magma-feg-redis-image:

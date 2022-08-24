@@ -9,7 +9,7 @@ Federation Gateway eventd service.
 Deploy using Juju:
 
 ```bash
-juju deploy magma-feg-eventd  feg-eventd --trust
+juju deploy magma-feg-eventd feg-eventd
 ```
 
 ## OCI Images

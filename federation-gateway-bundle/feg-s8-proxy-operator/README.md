@@ -9,7 +9,7 @@ Federation Gateway s8-proxy service.
 Deploy using Juju:
 
 ```bash
-juju deploy magma-feg-s8-proxy  feg-s8-proxy --trust
+juju deploy magma-feg-s8-proxy feg-s8-proxy
 ```
 
 ## OCI Images

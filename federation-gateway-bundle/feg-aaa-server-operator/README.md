@@ -9,7 +9,7 @@ Federation Gateway aaa-server service.
 Deploy using Juju:
 
 ```bash
-juju deploy magma-feg-aaa-server feg-aaa-server --trust
+juju deploy magma-feg-aaa-server feg-aaa-server
 ```
 
 ## OCI Images

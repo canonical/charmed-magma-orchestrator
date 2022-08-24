@@ -10,7 +10,7 @@ clusters.
 Deploy using Juju:
 
 ```bash
-juju deploy magma-feg-health  feg-health --trust
+juju deploy magma-feg-health feg-health
 ```
 
 ## OCI Images

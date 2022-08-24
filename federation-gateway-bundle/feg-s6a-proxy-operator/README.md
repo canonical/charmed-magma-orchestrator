@@ -9,7 +9,7 @@ Federation Gateway s6a proxy service translates calls from GRPC to S6a protocol 
 Deploy using Juju:
 
 ```bash
-juju deploy magma-feg-s6a-proxy feg-s6a-proxy --trust
+juju deploy magma-feg-s6a-proxy feg-s6a-proxy
 ```
 
 ## OCI Images

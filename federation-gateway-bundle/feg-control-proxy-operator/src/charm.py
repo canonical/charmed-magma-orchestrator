@@ -234,7 +234,7 @@ class FegControlProxyCharm(CharmBase):
         """Juju event triggered only once when charm is installed.
 
         Args:
-            event: Juju event
+            event (InstallEvent): Juju event
         Returns:
             None
         """

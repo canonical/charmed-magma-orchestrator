@@ -9,7 +9,7 @@ Federation Gateway eap-sim service.
 Deploy using Juju:
 
 ```bash
-juju deploy magma-feg-eap-sim  feg-eap-sim --trust
+juju deploy magma-feg-eap-sim feg-eap-sim
 ```
 
 ## OCI Images

@@ -9,7 +9,7 @@ Federation Gateway hello service.
 Deploy using Juju:
 
 ```bash
-juju deploy magma-feg-hello  feg-hello --trust
+juju deploy magma-feg-hello feg-hello
 ```
 
 ## OCI Images

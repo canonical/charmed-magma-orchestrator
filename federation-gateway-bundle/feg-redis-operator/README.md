@@ -9,7 +9,7 @@ Federation Gateway redis service.
 Deploy using Juju:
 
 ```bash
-juju deploy magma-feg-redis  feg-redis --trust
+juju deploy magma-feg-redis feg-redis
 ```
 
 ## OCI Images

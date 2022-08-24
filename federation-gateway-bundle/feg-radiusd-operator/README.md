@@ -9,7 +9,7 @@ Fetches metrics from the running radius server and exports them.
 Deploy using Juju:
 
 ```bash
-juju deploy magma-feg-radiusd  feg-radiusd --trust
+juju deploy magma-feg-radiusd  feg-radiusd
 ```
 
 ## OCI Images

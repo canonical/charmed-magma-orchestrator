@@ -9,7 +9,7 @@ Federation Gateway swx-proxy service translates GRPC interface to SWx protocol b
 Deploy using Juju:
 
 ```bash
-juju deploy magma-feg-swx-proxy feg-swx-proxy --trust
+juju deploy magma-feg-swx-proxy feg-swx-proxy
 ```
 
 ## OCI Images
