@@ -101,9 +101,7 @@ class FegControlProxyCharm(CharmBase):
         Returns:
             bool: Whether certificate is valid.
         """
-        if certificate is None:
-            return False
-        if certificate == "":
+        if not certificate:
             return False
         return True
 
@@ -117,9 +115,7 @@ class FegControlProxyCharm(CharmBase):
         Returns:
             bool: Whether key is valid.
         """
-        if key is None:
-            return False
-        if key == "":
+        if not key:
             return False
         return True
 

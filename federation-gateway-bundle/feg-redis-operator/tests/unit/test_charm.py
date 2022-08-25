@@ -49,7 +49,10 @@ class TestCharm(unittest.TestCase):
 
         self.harness.container_pebble_ready(container_name=self.container_name)
 
-        self.assertEqual(self.harness.model.unit.status, WaitingStatus("Waiting for service config to be available"))
+        self.assertEqual(
+            self.harness.model.unit.status,
+            WaitingStatus("Waiting for service config to be available"),
+        )
 
     @patch("ops.model.Container.exists")
     def test_given_can_connect_to_container_and_service_config_file_is_stored_when_pebble_ready_then_status_is_active(

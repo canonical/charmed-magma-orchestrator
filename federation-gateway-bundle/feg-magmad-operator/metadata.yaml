@@ -14,5 +14,5 @@ containers:
 resources:
   magma-feg-magmad-image:
     type: oci-image
-    description: OCI image for magma-feg-magmad (docker.artifactory.magmacore.org/gateway_python:latest)
-    upstream-source: docker.artifactory.magmacore.org/gateway_python:latest
+    description: OCI image for magma-feg-magmad (docker.artifactory.magmacore.org/gateway_python:1.6.1)
+    upstream-source: docker.artifactory.magmacore.org/gateway_python:1.6.1
