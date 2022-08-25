@@ -11,7 +11,7 @@ Federation Gateway magmad service.
 
 import logging
 
-from ops.charm import CharmBase, PebbleReadyEvent
+from ops.charm import ActionEvent, CharmBase, PebbleReadyEvent
 from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import Layer
@@ -25,10 +25,31 @@ class FegMagmadCharm(CharmBase):
     def __init__(self, *args):
         """Initializes all events that need to be observed."""
         super().__init__(*args)
-        self.container = self.unit.get_container(self.meta.name)
+        self._container = self.unit.get_container(self.meta.name)
         self.framework.observe(
             self.on.magma_feg_magmad_pebble_ready, self._on_magma_feg_magmad_pebble_ready
         )
+        self.framework.observe(self.on.show_gateway_info_action, self._on_show_gateway_info_action)
+
+    def _on_show_gateway_info_action(self, event: ActionEvent) -> None:
+        """Juju event triggered when show gateway info action is triggered.
+
+        Args:
+            event (ActionEvent): Juju event
+        Returns:
+            None
+        """
+        if not self._container.can_connect():
+            self.unit.status = WaitingStatus("Waiting for container to be ready...")
+            event.defer()
+
+        logger.info("Running show-gateway-info action")
+        process_show_gw_info = self._container.exec(
+            command=["/usr/local/bin/show_gateway_info.py"]
+        )
+
+        stdout, _ = process_show_gw_info.wait_output()
+        event.set_results({"result": stdout})
 
     def _on_magma_feg_magmad_pebble_ready(self, event: PebbleReadyEvent) -> None:
         """Juju event triggered when pebble is ready.
@@ -38,16 +59,16 @@ class FegMagmadCharm(CharmBase):
         Returns:
             None
         """
-        if not self.container.can_connect():
+        if not self._container.can_connect():
             self.unit.status = WaitingStatus("Waiting for container to be ready...")
             event.defer()
 
         pebble_layer = self._pebble_layer
-        plan = self.container.get_plan()
+        plan = self._container.get_plan()
         if plan.services != pebble_layer.services:
             self.unit.status = MaintenanceStatus("Configuring pod")
-            self.container.add_layer(self.meta.name, pebble_layer, combine=True)
-            self.container.replan()
+            self._container.add_layer(self.meta.name, pebble_layer, combine=True)
+            self._container.replan()
             logger.info(f"Restarted container {self.meta.name}")
             self.unit.status = ActiveStatus()
 

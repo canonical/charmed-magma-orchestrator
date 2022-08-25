@@ -1,0 +1,2 @@
+show-gateway-info:
+  description: This action will output a hardware ID and a challenge key for registering with the Orchestrator
