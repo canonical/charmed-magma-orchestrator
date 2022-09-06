@@ -22,7 +22,7 @@ jobs:
       charm_dir: orc8r-libs
 
   orc8r-libs-charmhub-upload:
-    if: github.ref_name == "main"
+    if: github.ref_name == 'main'
     runs-on: ubuntu-20.04
     name: Charmhub upload orc8r-libs
     steps:

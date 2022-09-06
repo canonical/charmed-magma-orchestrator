@@ -27,7 +27,7 @@ jobs:
       charm_dir: nms-nginx-proxy-operator
 
   nms-nginx-proxy-charmhub-upload:
-    if: github.ref_name == "main"
+    if: github.ref_name == 'main'
     uses: ./.github/workflows/upload-charm.yml
     with:
       charm: nms-nginx-proxy

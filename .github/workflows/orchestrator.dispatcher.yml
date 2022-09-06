@@ -27,7 +27,7 @@ jobs:
       charm_dir: orc8r-dispatcher-operator
 
   orc8r-dispatcher-charmhub-upload:
-    if: github.ref_name == "main"
+    if: github.ref_name == 'main'
     uses: ./.github/workflows/upload-charm.yml
     with:
       charm: orc8r-dispatcher
