@@ -36,3 +36,4 @@ class MagmaOrc8rAccessdCharm(CharmBase):
 
 if __name__ == "__main__":
     main(MagmaOrc8rAccessdCharm)
+
