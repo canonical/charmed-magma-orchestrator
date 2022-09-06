@@ -1,0 +1,28 @@
+name: Integration Tests
+
+on:
+  workflow_call:
+    inputs:
+      charm_dir:
+        required: true
+        type: string
+
+jobs:
+  integration-tests:
+    name: Integration tests for ${{ inputs.charm_dir }}
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+      - name: Run integration tests
+        run: cd orchestrator-bundle/${{ inputs.charm_dir }} && tox -e integration
+      - name: Archive charmcraft logs
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: charmcraft-logs
+          path: /home/runner/snap/charmcraft/common/cache/charmcraft/log/*.log

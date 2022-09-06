@@ -7,37 +7,27 @@ on:
 
 jobs:
   orc8r-feg-relay-lint-report:
-    name: Lint report (orc8r-feg-relay)
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install tox
-        run: pip install tox
-      - name: Run tests using tox
-        run: cd orchestrator-bundle/orc8r-feg-relay-operator && tox -e lint
+    uses: ./.github/workflows/lint-report.yml
+    with:
+      charm_dir: orc8r-feg-relay-operator
 
   orc8r-feg-relay-static-analysis:
-    name: Static analysis (orc8r-feg-relay)
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install tox
-        run: pip install tox
-      - name: Run tests using tox
-        run: cd orchestrator-bundle/orc8r-feg-relay-operator && tox -e static
+    uses: ./.github/workflows/static-analysis.yml
+    with:
+      charm_dir: orc8r-feg-relay-operator
 
   orc8r-feg-relay-unit-tests-with-coverage:
-    name: Unit tests (orc8r-feg-relay)
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install tox
-        run: pip install tox
-      - name: Run tests using tox
-        run: cd orchestrator-bundle/orc8r-feg-relay-operator && tox -e unit
-      - name: Archive charmcraft logs
-        if: failure()
-        uses: actions/upload-artifact@v3
-        with:
-          name: charmcraft-logs
-          path: /home/runner/snap/charmcraft/common/cache/charmcraft/log/*.log
+    uses: ./.github/workflows/unit-tests.yml
+    with:
+      charm_dir: orc8r-feg-relay-operator
+
+  orc8r-feg-relay-integration-test:
+    uses: ./.github/workflows/integration-tests.yml
+    with:
+      charm_dir: orc8r-feg-relay-operator
+
+  orc8r-feg-relay-charmhub-upload:
+    if: github.ref_name == "main"
+    uses: ./.github/workflows/upload-charm.yml
+    with:
+      charm: orc8r-feg-relay

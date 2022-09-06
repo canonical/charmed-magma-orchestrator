@@ -7,37 +7,27 @@ on:
 
 jobs:
   orc8r-base-acct-lint-report:
-    name: Lint report (orc8r-base-acct)
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install tox
-        run: pip install tox
-      - name: Run tests using tox
-        run: cd orchestrator-bundle/orc8r-base-acct-operator && tox -e lint
+    uses: ./.github/workflows/lint-report.yml
+    with:
+      charm_dir: orc8r-base-acct-operator
 
   orc8r-base-acct-static-analysis:
-    name: Static analysis (orc8r-base-acct)
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install tox
-        run: pip install tox
-      - name: Run tests using tox
-        run: cd orchestrator-bundle/orc8r-base-acct-operator && tox -e static
+    uses: ./.github/workflows/static-analysis.yml
+    with:
+      charm_dir: orc8r-base-acct-operator
 
   orc8r-base-acct-unit-tests-with-coverage:
-    name: Unit tests (orc8r-base-acct)
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install tox
-        run: pip install tox
-      - name: Run tests using tox
-        run: cd orchestrator-bundle/orc8r-base-acct-operator && tox -e unit
-      - name: Archive charmcraft logs
-        if: failure()
-        uses: actions/upload-artifact@v3
-        with:
-          name: charmcraft-logs
-          path: /home/runner/snap/charmcraft/common/cache/charmcraft/log/*.log
+    uses: ./.github/workflows/unit-tests.yml
+    with:
+      charm_dir: orc8r-base-acct-operator
+
+  orc8r-base-acct-integration-test:
+    uses: ./.github/workflows/integration-tests.yml
+    with:
+      charm_dir: orc8r-base-acct-operator
+
+  orc8r-base-acct-charmhub-upload:
+    if: github.ref_name == "main"
+    uses: ./.github/workflows/upload-charm.yml
+    with:
+      charm: orc8r-base-acct
