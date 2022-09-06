@@ -10,106 +10,82 @@ applications:
   nms-magmalte:
     charm: magma-nms-magmalte
     scale: 1
-    trust: true
   nms-nginx-proxy:
     charm: magma-nms-nginx-proxy
     scale: 1
-    trust: true
   orc8r-accessd:
     charm: magma-orc8r-accessd
     scale: 1
-    trust: true
   orc8r-alertmanager:
     charm: alertmanager-k8s
     channel: edge
     scale: 1
-    trust: true
   orc8r-analytics:
     charm: magma-orc8r-analytics
     scale: 1
-    trust: true
   orc8r-base-acct:
     charm: magma-orc8r-base-acct
     scale: 1
-    trust: true
   orc8r-bootstrapper:
     charm: magma-orc8r-bootstrapper
     scale: 1
-    trust: true
   orc8r-certifier:
     charm: magma-orc8r-certifier
     scale: 1
-    trust: true
     options:
       domain: example.com
   orc8r-configurator:
     charm: magma-orc8r-configurator
     scale: 1
-    trust: true
   orc8r-ctraced:
     charm: magma-orc8r-ctraced
     scale: 1
-    trust: true
   orc8r-device:
     charm: magma-orc8r-device
     scale: 1
-    trust: true
   orc8r-directoryd:
     charm: magma-orc8r-directoryd
     scale: 1
-    trust: true
   orc8r-dispatcher:
     charm: magma-orc8r-dispatcher
     scale: 1
-    trust: true
   orc8r-eventd:
     charm: magma-orc8r-eventd
     scale: 1
-    trust: true
     options:
       elasticsearch-url: "orc8r-elasticsearch:1234"
   orc8r-feg:
     charm: magma-orc8r-feg
     scale: 1
-    trust: true
   orc8r-feg-relay:
     charm: magma-orc8r-feg-relay
     scale: 1
-    trust: true
   orc8r-ha:
     charm: magma-orc8r-ha
     scale: 1
-    trust: true
   orc8r-health:
     charm: magma-orc8r-health
     scale: 1
-    trust: true
   orc8r-lte:
     charm: magma-orc8r-lte
     scale: 1
-    trust: true
   orc8r-metricsd:
     charm: magma-orc8r-metricsd
     scale: 1
-    trust: true
   orc8r-nginx:
     charm: magma-orc8r-nginx
     scale: 1
-    trust: true
   orc8r-obsidian:
     charm: magma-orc8r-obsidian
     scale: 1
-    trust: true
   orc8r-orchestrator:
     charm: magma-orc8r-orchestrator
     scale: 1
-    trust: true
     options:
       elasticsearch-url: "orc8r-elasticsearch:1234"
   orc8r-policydb:
     charm: magma-orc8r-policydb
     scale: 1
-    trust: true
   orc8r-prometheus:
     charm: prometheus-k8s
     channel: edge
@@ -130,31 +106,24 @@ applications:
   orc8r-service-registry:
     charm: magma-orc8r-service-registry
     scale: 1
-    trust: true
   orc8r-smsd:
     charm: magma-orc8r-smsd
     scale: 1
-    trust: true
   orc8r-state:
     charm: magma-orc8r-state
     scale: 1
-    trust: true
   orc8r-streamer:
     charm: magma-orc8r-streamer
     scale: 1
-    trust: true
   orc8r-subscriberdb:
     charm: magma-orc8r-subscriberdb
     scale: 1
-    trust: true
   orc8r-subscriberdb-cache:
     charm: magma-orc8r-subscriberdb-cache
     scale: 1
-    trust: true
   orc8r-tenants:
     charm: magma-orc8r-tenants
     scale: 1
-    trust: true
   orc8r-user-grafana:
     charm: grafana-k8s
     channel: edge
@@ -167,7 +136,6 @@ applications:
     series: kubernetes
     channel: stable
     scale: 1
-    trust: true
   tls-certificates-operator:
     charm: tls-certificates-operator
     channel: edge
