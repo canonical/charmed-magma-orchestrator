@@ -17,6 +17,7 @@ from typing import Optional, Union
 
 import ops.lib
 import psycopg2  # type: ignore[import]
+from charms.grafana_auth.v0.grafana_auth import GrafanaAuthProxyProvider
 from charms.magma_orc8r_certifier.v0.cert_admin_operator import (
     CertAdminOperatorRequires,
     CertificateAvailableEvent,
@@ -46,7 +47,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
     """Main class that is instantiated everytime an event occurs."""
 
     DB_NAME = "magma_dev"
-    GRAFANA_URL = "orc8r-user-grafana:3000"
+    GRAFANA_AUTH_RELATION = "grafana-auth"
     BASE_CERTS_PATH = "/run/secrets"
     NMS_ADMIN_USERNAME = "admin@juju.com"
     CERT_ADMIN_OPERATOR_RELATION = "cert-admin-operator"
@@ -54,6 +55,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
     def __init__(self, *args):
         """Initializes all event that need to be observed."""
         super().__init__(*args)
+        self.grafana_url = None
         self._container_name = self._service_name = "magma-nms-magmalte"
         self._container = self.unit.get_container(self._container_name)
         self._db = pgsql.PostgreSQLClient(self, "db")
@@ -66,6 +68,9 @@ class MagmaNmsMagmalteCharm(CharmBase):
                 "app.kubernetes.io/part-of": "magma",
                 "app.kubernetes.io/component": "magmalte",
             },
+        )
+        self._grafana_auth_provider = GrafanaAuthProxyProvider(
+            self, auto_sign_up=False, relation_name=self.GRAFANA_AUTH_RELATION
         )
         self.framework.observe(
             self.on.magma_nms_magmalte_pebble_ready, self._on_magma_nms_magmalte_pebble_ready
@@ -85,6 +90,9 @@ class MagmaNmsMagmalteCharm(CharmBase):
         )
         self.framework.observe(
             self.admin_operator.on.certificate_available, self._on_certificate_available
+        )
+        self.framework.observe(
+            self._grafana_auth_provider.on.urls_available, self._on_urls_available
         )
 
     @property
@@ -136,7 +144,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             "MAPBOX_ACCESS_TOKEN": "",
             "MYSQL_DIALECT": "postgres",
             "PUPPETEER_SKIP_DOWNLOAD": "true",
-            "USER_GRAFANA_ADDRESS": self.GRAFANA_URL,
+            "USER_GRAFANA_ADDRESS": self.grafana_url,
         }
 
     @property
@@ -228,6 +236,15 @@ class MagmaNmsMagmalteCharm(CharmBase):
         """
         return self._relation_created(self.CERT_ADMIN_OPERATOR_RELATION)
 
+    @property
+    def _grafana_auth_relation_created(self) -> bool:
+        """Returns whether grafana-auth relation is created.
+
+        Returns:
+            bool: True/False
+        """
+        return self._relation_created(self.GRAFANA_AUTH_RELATION)
+
     def _relation_created(self, relation_name: str) -> bool:
         """Returns whether given relation was created.
 
@@ -287,12 +304,22 @@ class MagmaNmsMagmalteCharm(CharmBase):
             )
             event.defer()
             return
+        if not self._grafana_auth_relation_created:
+            self.unit.status = BlockedStatus(
+                f"Waiting for {self.GRAFANA_AUTH_RELATION} relation to be created"
+            )
+            event.defer()
+            return
         if not self._db_relation_established:
             self.unit.status = WaitingStatus("Waiting for db relation to be ready")
             event.defer()
             return
         if not self._certs_are_stored:
             self.unit.status = WaitingStatus("Waiting for certs to be available")
+            event.defer()
+            return
+        if not self.grafana_url:
+            self.unit.status = WaitingStatus("Grafana url not yet available from relation data.")
             event.defer()
             return
         self._configure_pebble(event)
@@ -512,6 +539,10 @@ class MagmaNmsMagmalteCharm(CharmBase):
         """
         chars = string.ascii_letters + string.digits
         return "".join(secrets.choice(chars) for _ in range(12))
+
+    def _on_urls_available(self, event):
+        if event.urls:
+            self.grafana_url = event.urls[0]
 
 
 if __name__ == "__main__":
