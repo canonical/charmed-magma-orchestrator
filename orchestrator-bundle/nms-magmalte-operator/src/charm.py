@@ -7,6 +7,7 @@
 Magmalte is a microservice built using express framework. It contains set of application and
 router level middlewares. It uses sequelize ORM to connect to the NMS DB for servicing any
 routes involving DB interaction.
+TEST
 """
 
 import logging
