@@ -25,8 +25,8 @@ jobs:
       - name: Check libraries
         uses: canonical/charming-actions/check-libraries@2.0.0-rc
         with:
-          credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          credentials: ${{ secrets.CHARMCRAFT_AUTH }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           charm-path: ./orchestrator-bundle/${{ inputs.charm }}-operator
 
       - name: Select charmhub channel
