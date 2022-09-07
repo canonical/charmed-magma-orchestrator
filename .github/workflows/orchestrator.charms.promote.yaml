@@ -75,5 +75,5 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           destination-channel: latest/${{ env.promote-to }}
           origin-channel: latest/${{ env.promote-from }}
-          tag-prefix: ${{ github.event.inputs.charm-name }}
+          tag-prefix: magma-${{ github.event.inputs.charm-name }}
           charm-path: ./orchestrator-bundle/${{ github.event.inputs.charm-name }}-operator
