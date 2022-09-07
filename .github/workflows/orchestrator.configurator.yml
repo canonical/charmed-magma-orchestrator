@@ -7,50 +7,27 @@ on:
 
 jobs:
   orc8r-configurator-lint-report:
-    name: Lint report (orc8r-configurator)
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install tox
-        run: pip install tox
-      - name: Run tests using tox
-        run: cd orchestrator-bundle/orc8r-configurator-operator && tox -e lint
+    uses: ./.github/workflows/lint-report.yml
+    with:
+      charm_dir: orc8r-configurator-operator
 
   orc8r-configurator-static-analysis:
-    name: Static analysis (orc8r-configurator)
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install tox
-        run: pip install tox
-      - name: Run tests using tox
-        run: cd orchestrator-bundle/orc8r-configurator-operator && tox -e static
+    uses: ./.github/workflows/static-analysis.yml
+    with:
+      charm_dir: orc8r-configurator-operator
 
   orc8r-configurator-unit-tests-with-coverage:
-    name: Unit tests (orc8r-configurator)
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install tox
-        run: pip install tox
-      - name: Run tests using tox
-        run: cd orchestrator-bundle/orc8r-configurator-operator && tox -e unit
+    uses: ./.github/workflows/unit-tests.yml
+    with:
+      charm_dir: orc8r-configurator-operator
 
   orc8r-configurator-integration-test:
-    name: Integration tests (orc8r-configurator)
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Setup operator environment
-        uses: charmed-kubernetes/actions-operator@main
-        with:
-          provider: microk8s
-      - name: Run integration tests
-        run: cd orchestrator-bundle/orc8r-configurator-operator && tox -e integration
-      - name: Archive charmcraft logs
-        if: failure()
-        uses: actions/upload-artifact@v3
-        with:
-          name: charmcraft-logs
-          path: /home/runner/snap/charmcraft/common/cache/charmcraft/log/*.log
+    uses: ./.github/workflows/integration-tests.yml
+    with:
+      charm_dir: orc8r-configurator-operator
+
+  orc8r-configurator-charmhub-upload:
+    if: github.ref_name == 'main'
+    uses: ./.github/workflows/upload-charm.yml
+    with:
+      charm: orc8r-configurator

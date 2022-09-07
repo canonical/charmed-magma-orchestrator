@@ -1,26 +1,33 @@
-name: Upload charm orc8r-base-acct-operator
+name: Upload Charm
 
 on:
-  push:
-    branches:
-      - "main"
-    paths:
-      - "orchestrator-bundle/orc8r-base-acct-operator/**"
+  workflow_call:
+    inputs:
+      charm:
+        required: true
+        type: string
 
 jobs:
-  orc8r-base-acct-charmhub-upload:
+  charmhub-upload:
     runs-on: ubuntu-20.04
-    name: Charmhub upload orc8r-base-acct-operator
+    name: Charmhub upload ${{ inputs.charm }}-operator
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
+
+      - name: Wait for integration tests to succeed
+        uses: lewagon/wait-on-check-action@v1.1.2
+        with:
+          ref: main
+          check-name: "Integration tests"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 20
 
       - name: Check libraries
         uses: canonical/charming-actions/check-libraries@2.0.0-rc
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
           github-token: "${{ secrets.GITHUB_TOKEN }}"
-          charm-path: ./orchestrator-bundle/orc8r-base-acct-operator
+          charm-path: ./orchestrator-bundle/${{ inputs.charm }}-operator
 
       - name: Select charmhub channel
         uses: canonical/charming-actions/channel@2.0.0-rc
@@ -33,6 +40,5 @@ jobs:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
           upload-image: "false"
           channel: "${{ steps.channel.outputs.name }}"
-          charm-path: ./orchestrator-bundle/orc8r-base-acct-operator
-          tag-prefix: "magma-orc8r-base-acct"
-
+          charm-path: ./orchestrator-bundle/${{ inputs.charm }}-operator
+          tag-prefix: magma-${{ inputs.charm }}
