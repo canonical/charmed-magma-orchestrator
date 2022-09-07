@@ -29,5 +29,6 @@ jobs:
   orc8r-metricsd-charmhub-upload:
     if: github.ref_name == 'main'
     uses: ./.github/workflows/upload-charm.yml
+    secrets: inherit
     with:
       charm: orc8r-metricsd
