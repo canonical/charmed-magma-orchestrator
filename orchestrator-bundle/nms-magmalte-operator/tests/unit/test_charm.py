@@ -52,6 +52,9 @@ class TestCharm(unittest.TestCase):
         self.harness.set_model_name(name=self.namespace)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
+        self.grafana_auth_rel_id = self.harness.add_relation(
+            "grafana-auth", 'auth-requirer'
+        )
         self.harness.set_leader(True)
         self.peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
         self.harness.add_relation_unit(self.peer_relation_id, self.harness.charm.unit.name)
