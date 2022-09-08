@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class MagmaOrc8rFEGCharm(CharmBase):
-    """An instance of this object everytime an event occurs."""
+    """Creates a new instance of this object everytime an event occurs."""
 
     def __init__(self, *args):
         """Uses the Orc8rBase library to manage events."""
