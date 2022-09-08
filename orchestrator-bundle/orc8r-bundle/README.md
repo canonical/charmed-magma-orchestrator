@@ -34,6 +34,8 @@ applications:
 
 Deploy Orchestrator:
 
+**Note**: The magma-orc8r bundle is available on edge and beta channels.
+
 ```bash
 juju deploy magma-orc8r --overlay overlay.yaml --trust --channel=edge
 ```
