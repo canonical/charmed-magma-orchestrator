@@ -1,14 +1,14 @@
-name: orc8r-main-branch
+name: feg-main-branch
 
 on:
   pull_request:
     paths:
-      - "orchestrator-bundle/**"
+      - "federation-gateway-bundle/**"
     branches:
       - main
 
 jobs:
-  orchestrator-lint-report:
+  federation-gateway-lint-report:
     name: Lint report
     runs-on: ubuntu-20.04
     steps:
@@ -18,12 +18,12 @@ jobs:
       - name: Run tests using tox
         run: |
           set -eux
-          charms="$(find ./orchestrator-bundle/ -name tox.ini)"
+          charms="$(find ./federation-gateway-bundle/ -name tox.ini)"
           for charm in ${charms}; do
             tox -c "${charm}" -e lint
           done
 
-  orchestrator-static-analysis:
+  federation-gateway-static-analysis:
     name: Static analysis
     runs-on: ubuntu-20.04
     steps:
@@ -33,12 +33,12 @@ jobs:
       - name: Run tests using tox
         run: |
           set -eux
-          charms="$(find ./orchestrator-bundle/ -name tox.ini)"
+          charms="$(find ./federation-gateway-bundle/ -name tox.ini)"
           for charm in ${charms}; do
             tox -c "${charm}" -e static
           done
 
-  orchestrator-unit-tests-with-coverage:
+  federation-gateway-unit-tests-with-coverage:
     name: Unit tests
     runs-on: ubuntu-20.04
     steps:
@@ -48,12 +48,12 @@ jobs:
       - name: Run tests using tox
         run: |
           set -eux
-          charms="$(find ./orchestrator-bundle/ -name tox.ini  -not -path "./orchestrator-bundle/orc8r-bundle/*")"
+          charms="$(find ./federation-gateway-bundle/ -name tox.ini  -not -path "./federation-gateway-bundle/feg-bundle/*")"
           for charm in ${charms}; do
             tox -c "${charm}" -e unit
           done
 
-  orchestrator-integration-test:
+  federation-gateway-integration-test:
     name: Integration tests
     runs-on: self-hosted
     steps:
@@ -111,16 +111,16 @@ jobs:
 
           echo "# Bootstrap controller"
           sleep 180  # Microk8s needs time to initialize properly
-          /usr/bin/sg microk8s -c "juju bootstrap --debug --verbose microk8s orc8r-integration-tests --model-default test-mode=true --model-default automatically-retry-hooks=true --model-default logging-config='<root>=DEBUG'  --bootstrap-constraints=''"
+          /usr/bin/sg microk8s -c "juju bootstrap --debug --verbose microk8s feg-integration-tests --model-default test-mode=true --model-default automatically-retry-hooks=true --model-default logging-config='<root>=DEBUG'  --bootstrap-constraints=''"
 
       - name: Build charms
         run: |
           set -eux
-          ./orchestrator-bundle/build.sh
+          ./federation-gateway-bundle/build.sh
 
       - name: Run bundle integration tests
         run: |
-          tox -c "./orchestrator-bundle/orc8r-bundle/tox.ini" -e integration
+          tox -c "./federation-gateway-bundle/feg-bundle/tox.ini" -e integration
 
       - name: Archive charmcraft logs
         if: failure()
@@ -132,4 +132,4 @@ jobs:
       - name: Clean up
         if: always()
         run: |
-          yes | juju kill-controller orc8r-integration-tests
+          yes | juju kill-controller feg-integration-tests
