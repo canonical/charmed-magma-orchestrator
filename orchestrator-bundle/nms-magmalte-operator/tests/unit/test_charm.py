@@ -82,6 +82,9 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
         )
+        self.harness.add_relation(
+            relation_name="grafana-auth", remote_app="grafana-k8s-operator"
+        )
 
         self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
 
@@ -94,12 +97,28 @@ class TestCharm(unittest.TestCase):
         self,
     ):
         self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        self.harness.add_relation(
+            relation_name="grafana-auth", remote_app="grafana-k8s-operator"
+        )
 
         self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
 
         self.assertEqual(
             self.harness.charm.unit.status,
             BlockedStatus("Waiting for cert-admin-operator relation to be created"),
+        )
+
+    def test_given_grafana_auth_relation_not_created_when_pebble_ready_then_unit_is_in_blocked_state(self, patch_push):
+        self.harness.add_relation(
+            relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
+        )
+        self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+
+        self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
+
+        self.assertEqual(
+            self.harness.charm.unit.status,
+            BlockedStatus("Waiting for grafana-auth relation to be created"),
         )
 
     @patch("charm.MagmaNmsMagmalteCharm.DB_NAME", new_callable=PropertyMock)
@@ -346,7 +365,7 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.push")
-    def test_given_pebble_ready_when_certificate_available_then(self, patch_push):
+    def test_given_pebble_ready_when_certificate_available_then_certs_are_pushed_to_container(self, patch_push):
         certificate = "whatever certificate"
         private_key = "whatever private key"
         event = Mock()
@@ -363,4 +382,16 @@ class TestCharm(unittest.TestCase):
                 call(path="/run/secrets/admin_operator.pem", source=certificate),
                 call(path="/run/secrets/admin_operator.key.pem", source=private_key),
             ]
+        )
+
+    def test_given_grafana_auth_relation_not_created_when_pebble_ready_then_unit_is_in_blocked_state(self, patch_push):
+        self.harness.add_relation(
+            relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
+        )
+
+        self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
+
+        self.assertEqual(
+            self.harness.charm.unit.status,
+            BlockedStatus("Waiting for db relation to be created"),
         )

@@ -55,7 +55,6 @@ class MagmaNmsMagmalteCharm(CharmBase):
     def __init__(self, *args):
         """Initializes all event that need to be observed."""
         super().__init__(*args)
-        self.grafana_url = None
         self._container_name = self._service_name = "magma-nms-magmalte"
         self._container = self.unit.get_container(self._container_name)
         self._db = pgsql.PostgreSQLClient(self, "db")
@@ -92,7 +91,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             self.admin_operator.on.certificate_available, self._on_certificate_available
         )
         self.framework.observe(
-            self._grafana_auth_provider.on.urls_available, self._on_urls_available
+            self._grafana_auth_provider.on.urls_available, self._on_grafana_urls_available
         )
 
     @property
@@ -144,7 +143,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             "MAPBOX_ACCESS_TOKEN": "",
             "MYSQL_DIALECT": "postgres",
             "PUPPETEER_SKIP_DOWNLOAD": "true",
-            "USER_GRAFANA_ADDRESS": self.grafana_url,
+            "USER_GRAFANA_ADDRESS": self._grafana_url,
         }
 
     @property
@@ -318,7 +317,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for certs to be available")
             event.defer()
             return
-        if not self.grafana_url:
+        if not self._grafana_url:
             self.unit.status = WaitingStatus("Grafana url not yet available from relation data.")
             event.defer()
             return
@@ -540,9 +539,22 @@ class MagmaNmsMagmalteCharm(CharmBase):
         chars = string.ascii_letters + string.digits
         return "".join(secrets.choice(chars) for _ in range(12))
 
-    def _on_urls_available(self, event):
-        if event.urls:
-            self.grafana_url = event.urls[0]
+    def _on_grafana_urls_available(self, event):
+        if not self._grafana_url:
+            app_data = self.model.get_relation("replicas").data[self.app]  # type: ignore[union-attr]
+            app_data.update({"grafana_url": event.urls[0]})
+
+    @property
+    def _grafana_url(self) -> Optional[str]:
+        """Returns grafana url.
+
+        Returns:
+            str: grafana url
+        """
+        app_data = self.model.get_relation("replicas").data[self.app]  # type: ignore[union-attr]
+        if not app_data.get("grafana_url"):
+            return None
+        return app_data.get("grafana_url")
 
 
 if __name__ == "__main__":
