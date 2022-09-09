@@ -312,7 +312,7 @@ class AuthProvider(Object):
                     len(self._charm.meta.containers),
                 )
                 refresh_event = self._charm.on.update_status
-        self.framework.observe(refresh_event, self._get_urls_from_relation_data)
+        self.framework.observe(refresh_event, self._get_urls_from_relation_data)  # type: ignore[arg-type]
         self.framework.observe(
             self._charm.on[relation_name].relation_joined,
             self._set_auth_config_in_relation_data,
@@ -453,12 +453,12 @@ class AuthRequirer(Object):
             else:
                 logger.warning(
                     "%d containers are present in metadata.yaml and "
-                    "refresh_event was not specified. Defaulting to update_status. ",
+                    "refresh_event was not specified. Defaulting to update_status.",
                     len(self._charm.meta.containers),
                 )
                 refresh_event = self._charm.on.update_status
 
-        self.framework.observe(refresh_event, self._get_auth_config_from_relation_data)
+        self.framework.observe(refresh_event, self._get_auth_config_from_relation_data)  # type: ignore[arg-type]
 
         self.framework.observe(
             self._charm.on[relation_name].relation_changed,
