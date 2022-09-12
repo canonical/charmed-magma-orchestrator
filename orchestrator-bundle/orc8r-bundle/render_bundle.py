@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
 
+"""This script renders the jinja template given to it.
+
+This scripts takes a jinja template of the magma-orc8r bundle,
+and renders the bundle into an output file after adding the value of the cannel.
+Channel must be passed using the --channel option to this script.
+Example:
+```shell
+./render_bundle --template bundle.yaml.j2 --output bundle.yaml --channel beta
+```
+"""
 import jinja2
 import argparse
 from pathlib import Path
