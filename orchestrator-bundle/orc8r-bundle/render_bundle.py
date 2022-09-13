@@ -3,7 +3,7 @@
 """This script renders the jinja template given to it.
 
 This scripts takes a jinja template of the magma-orc8r bundle,
-and renders the bundle into an output file after adding the value of the cannel.
+and renders the bundle into an output file after adding the value of the channel.
 Channel must be passed using the --channel option to this script.
 Example:
 ```shell
@@ -35,6 +35,7 @@ def parse_args() -> Tuple[str, Path, str]:
         "--channel",
         type=Path,
         help="channel for the charms in the bundle",
+        choices=['edge', 'beta', 'candidate', 'stable'],
         required= True
     )
     bundle_args, _= parser.parse_known_args()
@@ -44,7 +45,6 @@ def parse_args() -> Tuple[str, Path, str]:
 if __name__ == "__main__":
     template, output, channel = parse_args()
     env = jinja2.Environment(loader=jinja2.FileSystemLoader("./"))
-    t = env.get_template(template)
     with open(template) as t:
         jinja_template = jinja2.Template(t.read(), autoescape=True)
     with open(output, 'wt') as o:
