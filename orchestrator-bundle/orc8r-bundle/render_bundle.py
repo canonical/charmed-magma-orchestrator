@@ -33,7 +33,7 @@ def parse_args() -> Tuple[str, Path, str]:
     )
     parser.add_argument(
         "--channel",
-        type=Path,
+        type=str,
         help="channel for the charms in the bundle",
         choices=['edge', 'beta', 'candidate', 'stable'],
         required= True
