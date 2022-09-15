@@ -1,23 +1,23 @@
 bundle: kubernetes
 name: magma-orc8r
 description: |
-  Orchestrator is a Magma service that provides a simple and consistent way to 
-  configure and monitor the wireless network securely. The metrics acquired through the platform 
+  Orchestrator is a Magma service that provides a simple and consistent way to
+  configure and monitor the wireless network securely. The metrics acquired through the platform
   allows you to see the analytics and traffic flows of the wireless users through the Magma web UI.
 applications:
   nms-magmalte:
     charm: magma-nms-magmalte
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
   nms-nginx-proxy:
     charm: magma-nms-nginx-proxy
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
   orc8r-accessd:
     charm: magma-orc8r-accessd
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
   orc8r-alertmanager:
@@ -27,88 +27,88 @@ applications:
     trust: true
   orc8r-analytics:
     charm: magma-orc8r-analytics
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
   orc8r-bootstrapper:
     charm: magma-orc8r-bootstrapper
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
   orc8r-certifier:
     charm: magma-orc8r-certifier
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
     options:
       domain: example.com
   orc8r-configurator:
     charm: magma-orc8r-configurator
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
   orc8r-ctraced:
     charm: magma-orc8r-ctraced
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
   orc8r-device:
     charm: magma-orc8r-device
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
   orc8r-directoryd:
     charm: magma-orc8r-directoryd
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
   orc8r-dispatcher:
     charm: magma-orc8r-dispatcher
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
   orc8r-eventd:
     charm: magma-orc8r-eventd
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
     options:
       elasticsearch-url: "orc8r-elasticsearch:1234"
   orc8r-ha:
     charm: magma-orc8r-ha
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
   orc8r-lte:
     charm: magma-orc8r-lte
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
   orc8r-metricsd:
     charm: magma-orc8r-metricsd
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
   orc8r-nginx:
     charm: magma-orc8r-nginx
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
   orc8r-obsidian:
     charm: magma-orc8r-obsidian
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
   orc8r-orchestrator:
     charm: magma-orc8r-orchestrator
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
     options:
       elasticsearch-url: "orc8r-elasticsearch:1234"
   orc8r-policydb:
     charm: magma-orc8r-policydb
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
   orc8r-prometheus:
@@ -130,37 +130,37 @@ applications:
     trust: true
   orc8r-service-registry:
     charm: magma-orc8r-service-registry
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
   orc8r-smsd:
     charm: magma-orc8r-smsd
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
   orc8r-state:
     charm: magma-orc8r-state
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
   orc8r-streamer:
     charm: magma-orc8r-streamer
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
   orc8r-subscriberdb:
     charm: magma-orc8r-subscriberdb
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
   orc8r-subscriberdb-cache:
     charm: magma-orc8r-subscriberdb-cache
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
   orc8r-tenants:
     charm: magma-orc8r-tenants
-    channel: edge
+    channel: {{ channel|default("edge") }}
     scale: 1
     trust: true
   orc8r-user-grafana:
