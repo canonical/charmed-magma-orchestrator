@@ -21,8 +21,8 @@ jobs:
         run: pip install -U Jinja2
       - name: render bundle.yaml
         run: |
-        python orchestrator-bundle/orc8r-bundle/render_bundle.py \
-        --template bundle.yaml.j2 --output orchestrator-bundle/orc8r-bundle/bundle.yaml --channel edge
+          python orchestrator-bundle/orc8r-bundle/render_bundle.py \
+          --template bundle.yaml.j2 --output orchestrator-bundle/orc8r-bundle/bundle.yaml --channel edge
       - name: Upload bundle
         uses: canonical/charming-actions/upload-bundle@1.0.2
         with:
