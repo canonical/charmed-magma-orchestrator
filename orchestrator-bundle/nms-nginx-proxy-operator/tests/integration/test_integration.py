@@ -86,8 +86,8 @@ class TestNmsNginxProxy:
     @staticmethod
     async def _deploy_grafana_k8s_operator(ops_test):
         await ops_test.model.deploy(
-            "grafana-k8s-operator",
-            application_name="grafana-k8s-operator",
+            "grafana-k8s",
+            application_name="grafana-k8s",
             channel="edge",
         )
 
@@ -115,7 +115,7 @@ class TestNmsNginxProxy:
         )
         await ops_test.model.add_relation(
             relation1=NMS_MAGMALTE_APPLICATION_NAME,
-            relation2="grafana-k8s-operator:grafana-auth",
+            relation2="grafana-k8s:grafana_auth",
         )
 
     @pytest.fixture(scope="module")
