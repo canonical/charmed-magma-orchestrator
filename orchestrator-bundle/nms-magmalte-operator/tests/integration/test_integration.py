@@ -29,6 +29,7 @@ class TestNmsMagmaLTE:
         await self._deploy_postgresql(ops_test)
         await self._deploy_tls_certificates_operator(ops_test)
         await self._deploy_orc8r_certifier(ops_test)
+        await self._deploy_grafana_k8s_operator(ops_test)
 
     @staticmethod
     def _find_charm(charm_dir: str, charm_file_name: str) -> Optional[str]:
@@ -79,6 +80,14 @@ class TestNmsMagmaLTE:
             relation1=CERTIFIER_APPLICATION_NAME, relation2="tls-certificates-operator"
         )
 
+    @staticmethod
+    async def _deploy_grafana_k8s_operator(ops_test):
+        await ops_test.model.deploy(
+            "grafana-k8s-operator",
+            application_name="grafana-k8s-operator",
+            channel="edge",
+        )
+
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail
     async def build_and_deploy_charm(self, ops_test):
@@ -99,6 +108,9 @@ class TestNmsMagmaLTE:
         )
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="orc8r-certifier:cert-admin-operator"
+        )
+        await ops_test.model.add_relation(
+            relation1=APPLICATION_NAME, relation2="grafana-k8s-operator:grafana-auth"
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
 

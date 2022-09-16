@@ -17,7 +17,10 @@ from typing import Optional, Union
 
 import ops.lib
 import psycopg2  # type: ignore[import]
-from charms.grafana_auth.v0.grafana_auth import GrafanaAuthProxyProvider
+from charms.grafana_auth.v0.grafana_auth import (
+    GrafanaAuthProxyProvider,
+    UrlsAvailableEvent,
+)
 from charms.magma_orc8r_certifier.v0.cert_admin_operator import (
     CertAdminOperatorRequires,
     CertificateAvailableEvent,
@@ -539,9 +542,14 @@ class MagmaNmsMagmalteCharm(CharmBase):
         chars = string.ascii_letters + string.digits
         return "".join(secrets.choice(chars) for _ in range(12))
 
-    def _on_grafana_urls_available(self, event):
+    def _on_grafana_urls_available(self, event: UrlsAvailableEvent):
+        """Triggered when grafana urls are available from relation data.
+
+        Args:
+            event: UrlsAvailableEvent.
+        """
         if not self._grafana_url:
-            app_data = self.model.get_relation("replicas").data[self.app]  # type: ignore[union-attr]
+            app_data = self.model.get_relation("replicas").data[self.app]  # type: ignore[union-attr]  # noqa: E501
             app_data.update({"grafana_url": event.urls[0]})
 
     @property

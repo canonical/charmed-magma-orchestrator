@@ -5,6 +5,7 @@
 import os
 from pathlib import Path
 from typing import Optional
+from xml.etree.ElementPath import ops
 
 import pytest
 import yaml
@@ -31,6 +32,7 @@ class TestNmsNginxProxy:
         await self._deploy_postgresql(ops_test)
         await self._deploy_tls_certificates_operator(ops_test)
         await self._deploy_orc8r_certifier(ops_test)
+        await self._deploy_grafana_k8s_operator(ops_test)
         await self._deploy_nms_magmalte(ops_test)
 
     @staticmethod
@@ -82,6 +84,14 @@ class TestNmsNginxProxy:
             relation1=CERTIFIER_APPLICATION_NAME, relation2="tls-certificates-operator"
         )
 
+    @staticmethod
+    async def _deploy_grafana_k8s_operator(ops_test):
+        await ops_test.model.deploy(
+            "grafana-k8s-operator",
+            application_name="grafana-k8s-operator",
+            channel="edge",
+        )
+
     async def _deploy_nms_magmalte(self, ops_test):
         magmalte_charm = self._find_charm("../nms-magmalte-operator", NMS_MAGMALTE_CHARM_FILE_NAME)
         if not magmalte_charm:
@@ -103,6 +113,10 @@ class TestNmsNginxProxy:
         await ops_test.model.add_relation(
             relation1=NMS_MAGMALTE_APPLICATION_NAME,
             relation2="orc8r-certifier:cert-admin-operator",
+        )
+        await ops_test.model.add_relation(
+            relation1=NMS_MAGMALTE_APPLICATION_NAME,
+            relation2="grafana-k8s-operator:grafana-auth",
         )
 
     @pytest.fixture(scope="module")
