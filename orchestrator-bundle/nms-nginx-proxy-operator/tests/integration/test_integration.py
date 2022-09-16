@@ -5,7 +5,6 @@
 import os
 from pathlib import Path
 from typing import Optional
-from xml.etree.ElementPath import ops
 
 import pytest
 import yaml

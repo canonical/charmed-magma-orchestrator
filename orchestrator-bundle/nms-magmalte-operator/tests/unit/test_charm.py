@@ -81,8 +81,6 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
         )
-        self.harness.add_relation(relation_name="grafana-auth", remote_app="grafana-k8s-operator")
-
         self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
 
         self.assertEqual(
@@ -94,7 +92,6 @@ class TestCharm(unittest.TestCase):
         self,
     ):
         self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
-        self.harness.add_relation(relation_name="grafana-auth", remote_app="grafana-k8s-operator")
 
         self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
 
@@ -193,7 +190,7 @@ class TestCharm(unittest.TestCase):
                         "MAPBOX_ACCESS_TOKEN": "",
                         "MYSQL_DIALECT": "postgres",
                         "PUPPETEER_SKIP_DOWNLOAD": "true",
-                        "USER_GRAFANA_ADDRESS": f"{self.GRAFANA_URLS[0]}:3000",
+                        "USER_GRAFANA_ADDRESS": self.GRAFANA_URLS[0],
                     },
                 },
             },
@@ -397,5 +394,7 @@ class TestCharm(unittest.TestCase):
         event = Mock()
         event.urls = self.GRAFANA_URLS
         self.harness.charm._on_grafana_urls_available(event=event)
-        url = self.model.get_relation("replicas").data[self.app].get("grafana_url")
+        url = self.harness.get_relation_data(
+            self.peer_relation_id, self.harness.charm.app.name
+        ).get("grafana_url")
         self.assertEqual("auth-requirer:3000", url)
