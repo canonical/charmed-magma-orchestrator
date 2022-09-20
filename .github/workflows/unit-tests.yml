@@ -1,0 +1,19 @@
+name: Unit Tests
+
+on:
+  workflow_call:
+    inputs:
+      charm_dir:
+        required: true
+        type: string
+
+jobs:
+  unit-tests:
+    name: Unit tests for ${{ inputs.charm_dir }}
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd orchestrator-bundle/${{ inputs.charm_dir }} && tox -e unit

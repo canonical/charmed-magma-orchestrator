@@ -35,7 +35,6 @@ from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
     CertificateExpiredEvent,
     CertificateExpiringEvent,
-    CertificateRevokedEvent,
     TLSCertificatesRequiresV1,
     generate_ca,
     generate_certificate,
@@ -113,9 +112,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         )
         self.framework.observe(
             self.tls_certificates_requirer.on.certificate_expired, self._on_certificate_expiring
-        )
-        self.framework.observe(
-            self.tls_certificates_requirer.on.certificate_revoked, self._on_certificate_expiring
         )
         self.framework.observe(
             self.on.certificates_relation_created, self._on_certificates_relation_created
@@ -1195,9 +1191,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     def _on_certificate_expiring(
         self,
-        event: Union[CertificateExpiringEvent, CertificateExpiredEvent, CertificateRevokedEvent],
+        event: Union[CertificateExpiringEvent, CertificateExpiredEvent],
     ) -> None:
-        """Triggered on certificate expiring/expired/revoked events.
+        """Triggered on certificate expiring/expired events.
 
         Will ask for new certificates.
 

@@ -5,9 +5,7 @@
 """magma-nms-nginx-proxy.
 
 This charm is an nginx web server that proxies communication between NMS UI and MagmaLTE.
-
 """
-
 
 import logging
 from typing import Union

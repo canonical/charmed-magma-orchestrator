@@ -7,37 +7,51 @@ on:
 
 jobs:
   orc8r-libs-lint-report:
-    name: Lint report (orc8r-libs)
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install tox
-        run: pip install tox
-      - name: Run tests using tox
-        run: cd orchestrator-bundle/orc8r-libs && tox -e lint
+    uses: ./.github/workflows/lint-report.yml
+    with:
+      charm_dir: orc8r-libs
 
   orc8r-libs-static-analysis:
-    name: Static analysis (orc8r-libs)
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install tox
-        run: pip install tox
-      - name: Run tests using tox
-        run: cd orchestrator-bundle/orc8r-libs && tox -e static
+    uses: ./.github/workflows/static-analysis.yml
+    with:
+      charm_dir: orc8r-libs
 
   orc8r-libs-unit-tests-with-coverage:
-    name: Unit tests (orc8r-libs)
+    uses: ./.github/workflows/unit-tests.yml
+    with:
+      charm_dir: orc8r-libs
+
+  orc8r-libs-charmhub-upload:
+    if: github.ref_name == 'main'
     runs-on: ubuntu-20.04
+    name: Charmhub upload orc8r-libs
     steps:
       - uses: actions/checkout@v2
-      - name: Install tox
-        run: pip install tox
-      - name: Run tests using tox
-        run: cd orchestrator-bundle/orc8r-libs && tox -e unit
-      - name: Archive charmcraft logs
-        if: failure()
-        uses: actions/upload-artifact@v3
+
+      - name: Wait for integration tests to succeed
+        uses: lewagon/wait-on-check-action@v1.1.2
         with:
-          name: charmcraft-logs
-          path: /home/runner/snap/charmcraft/common/cache/charmcraft/log/*.log
+          ref: main
+          check-name: "Integration tests"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 20
+
+      - uses: canonical/charmhub-upload-action@0.2.1
+        with:
+          credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
+          charm-path: ./orchestrator-bundle/orc8r-libs
+          upload-image: "false"
+
+      - name: Publish libs
+        env:
+          CHARMCRAFT_AUTH: "${{ secrets.CHARMCRAFT_AUTH }}"
+        run: |
+          set -eux
+          orc8r_libs="
+          charms.magma_orc8r_libs.v0.orc8r_base 
+          charms.magma_orc8r_libs.v0.orc8r_base_db
+          "
+          for lib in ${orc8r_libs}; do
+            echo "Publishing ${lib}"
+            (cd ./orchestrator-bundle/orc8r-libs && charmcraft publish-lib ${lib})
+          done
