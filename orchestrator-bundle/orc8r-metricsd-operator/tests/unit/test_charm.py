@@ -3,7 +3,7 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import Mock, call, patch
+from unittest.mock import Mock, patch
 
 from ops import testing
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
