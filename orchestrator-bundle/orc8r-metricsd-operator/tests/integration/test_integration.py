@@ -43,6 +43,7 @@ class TestOrc8rMetricsd:
         await ops_test.model.set_config({"update-status-hook-interval": "2s"})
         await self._deploy_postgresql(ops_test)
         await self._deploy_alertmanager(ops_test)
+        await self._deploy_alertmanager_configurer(ops_test)
         await self._deploy_prometheus(ops_test)
         await self._deploy_prometheus_configurer(ops_test)
         await self._deploy_tls_certificates_operator(ops_test)
@@ -72,6 +73,19 @@ class TestOrc8rMetricsd:
             application_name="orc8r-alertmanager",
             channel="edge",
             trust=True,
+        )
+
+    @staticmethod
+    async def _deploy_alertmanager_configurer(ops_test):
+        await ops_test.model.deploy(
+            "alertmanager-configurer-k8s",
+            application_name="orc8r-alertmanager-configurer",
+            channel="edge",
+            trust=True,
+        )
+        await ops_test.model.add_relation(
+            relation1="orc8r-alertmanager-configurer:alertmanager",
+            relation2="orc8r-alertmanager:remote-configuration",
         )
 
     @staticmethod
@@ -242,6 +256,10 @@ class TestOrc8rMetricsd:
         await ops_test.model.add_relation(
             relation1=f"{APPLICATION_NAME}:alertmanager-k8s",
             relation2="orc8r-alertmanager:alerting",
+        )
+        await ops_test.model.add_relation(
+            relation1=f"{APPLICATION_NAME}:alertmanager-configurer-k8s",
+            relation2="orc8r-alertmanager-configurer:alertmanager-configurer",
         )
         await ops_test.model.add_relation(
             relation1=f"{APPLICATION_NAME}:magma-orc8r-orchestrator",

@@ -12,6 +12,16 @@ from charm import MagmaOrc8rMetricsdCharm
 
 testing.SIMULATE_CAN_CONNECT = True
 
+TEST_ALERTMANAGER_APP_NAME = "test-alertmanager"
+TEST_ALERTMANAGER_CONFIGURER_APP_NAME = "test-alertmanager-configurer"
+TEST_ALERTMANAGER_CONFIGURER_SERVICE_NAME = "tank"
+TEST_ALERTMANAGER_CONFIGURER_PORT = 1234
+TEST_PROMETHEUS_APP_NAME = "test-prometheus"
+TEST_PROMETHEUS_CONFIGURER_APP_NAME = "test-prometheus-configurer"
+TEST_PROMETHEUS_CONFIGURER_SERVICE_NAME = "mortar"
+TEST_PROMETHEUS_CONFIGURER_PORT = 5678
+TEST_ORC8R_ORCHESTRATOR_APP_NAME = "test-orc8r-orchestrator"
+
 
 class MockModel:
     def __init__(self, name: str):
@@ -24,11 +34,6 @@ class MockModel:
 
 class TestCharm(unittest.TestCase):
     """Metricsd unit tests."""
-
-    TEST_ALERTMANAGER_APP_NAME = "test-alertmanager"
-    TEST_PROMETHEUS_APP_NAME = "test-prometheus"
-    TEST_PROMETHEUS_CONFIGURER_APP_NAME = "test-prometheus-configurer"
-    TEST_ORC8R_ORCHESTRATOR_APP_NAME = "test-orc8r-orchestrator"
 
     @patch(
         "charm.KubernetesServicePatch",
@@ -46,30 +51,28 @@ class TestCharm(unittest.TestCase):
     def test_given_no_relations_created_when_pebble_ready_then_charm_goes_to_blocked_status(self):
         self.harness.charm.on.magma_orc8r_metricsd_pebble_ready.emit(self.container)
         assert self.harness.charm.unit.status == BlockedStatus(
-            "Waiting for relation(s) to be created: alertmanager-k8s, prometheus-k8s, "
-            "prometheus-configurer-k8s, magma-orc8r-orchestrator"
+            "Waiting for relation(s) to be created: alertmanager-k8s, alertmanager-configurer-k8s,"
+            " prometheus-k8s, prometheus-configurer-k8s, magma-orc8r-orchestrator"
         )
 
     @patch("ops.model.Container.push")
     def test_given_all_relations_created_when_pebble_ready_then_config_file_is_created(
         self, patch_push
     ):
-        expected_calls = [
-            call(
-                "/var/opt/magma/configs/orc8r/metricsd.yml",
-                f'prometheusQueryAddress: "http://{self.TEST_PROMETHEUS_APP_NAME}:9090"\n'
-                f'alertmanagerApiURL: "http://{self.TEST_ALERTMANAGER_APP_NAME}:9093/api/v2"\n'
-                "prometheusConfigServiceURL: "
-                f'"http://{self.TEST_PROMETHEUS_CONFIGURER_APP_NAME}:9100/v1"\n'
-                'alertmanagerConfigServiceURL: "http://orc8r-alertmanager:9101/v1"\n'
-                '"profile": "prometheus"\n',
-            ),
-        ]
         self._create_relations()
 
         self.harness.charm.on.magma_orc8r_metricsd_pebble_ready.emit(self.container)
 
-        patch_push.assert_has_calls(expected_calls)
+        patch_push.assert_any_call(
+            "/var/opt/magma/configs/orc8r/metricsd.yml",
+            f'prometheusQueryAddress: "http://{TEST_PROMETHEUS_APP_NAME}:9090"\n'
+            f'alertmanagerApiURL: "http://{TEST_ALERTMANAGER_APP_NAME}:9093/api/v2"\n'
+            "prometheusConfigServiceURL: "
+            f'"http://{TEST_PROMETHEUS_CONFIGURER_SERVICE_NAME}:{TEST_PROMETHEUS_CONFIGURER_PORT}/v1"\n'  # noqa: E501, W505
+            "alertmanagerConfigServiceURL: "
+            f'"http://{TEST_ALERTMANAGER_CONFIGURER_SERVICE_NAME}:{TEST_ALERTMANAGER_CONFIGURER_PORT}/v1"\n'  # noqa: E501, W505
+            '"profile": "prometheus"\n',
+        )
 
     @patch("ops.model.Container.push", Mock())
     def test_given_all_relations_created_when_pebble_ready_then_charm_goes_to_waiting_status(
@@ -165,38 +168,62 @@ class TestCharm(unittest.TestCase):
 
     def _create_relations(self, activate=False):
         alertmanager_relation_id = self.harness.add_relation(
-            relation_name="alertmanager-k8s", remote_app=self.TEST_ALERTMANAGER_APP_NAME
+            relation_name="alertmanager-k8s", remote_app=TEST_ALERTMANAGER_APP_NAME
         )
         self.harness.add_relation_unit(
             relation_id=alertmanager_relation_id,
-            remote_unit_name=f"{self.TEST_ALERTMANAGER_APP_NAME}/0",
+            remote_unit_name=f"{TEST_ALERTMANAGER_APP_NAME}/0",
+        )
+        alertmanager_configurer_relation_id = self.harness.add_relation(
+            relation_name="alertmanager-configurer-k8s",
+            remote_app=TEST_ALERTMANAGER_CONFIGURER_APP_NAME,
+        )
+        self.harness.add_relation_unit(
+            relation_id=alertmanager_configurer_relation_id,
+            remote_unit_name=f"{TEST_ALERTMANAGER_CONFIGURER_APP_NAME}/0",
+        )
+        self.harness.update_relation_data(
+            relation_id=alertmanager_configurer_relation_id,
+            app_or_unit=f"{TEST_ALERTMANAGER_CONFIGURER_APP_NAME}",
+            key_values={
+                "service_name": TEST_ALERTMANAGER_CONFIGURER_SERVICE_NAME,
+                "port": TEST_ALERTMANAGER_CONFIGURER_PORT,
+            },
         )
         prometheus_relation_id = self.harness.add_relation(
-            relation_name="prometheus-k8s", remote_app=self.TEST_PROMETHEUS_APP_NAME
+            relation_name="prometheus-k8s", remote_app=TEST_PROMETHEUS_APP_NAME
         )
         self.harness.add_relation_unit(
             relation_id=prometheus_relation_id,
-            remote_unit_name=f"{self.TEST_PROMETHEUS_APP_NAME}/0",
+            remote_unit_name=f"{TEST_PROMETHEUS_APP_NAME}/0",
         )
         prometheus_configurer_relation_id = self.harness.add_relation(
             relation_name="prometheus-configurer-k8s",
-            remote_app=self.TEST_PROMETHEUS_CONFIGURER_APP_NAME,
+            remote_app=TEST_PROMETHEUS_CONFIGURER_APP_NAME,
         )
         self.harness.add_relation_unit(
             relation_id=prometheus_configurer_relation_id,
-            remote_unit_name=f"{self.TEST_PROMETHEUS_CONFIGURER_APP_NAME}/0",
+            remote_unit_name=f"{TEST_PROMETHEUS_CONFIGURER_APP_NAME}/0",
+        )
+        self.harness.update_relation_data(
+            relation_id=prometheus_configurer_relation_id,
+            app_or_unit=f"{TEST_PROMETHEUS_CONFIGURER_APP_NAME}",
+            key_values={
+                "service_name": TEST_PROMETHEUS_CONFIGURER_SERVICE_NAME,
+                "port": TEST_PROMETHEUS_CONFIGURER_PORT,
+            },
         )
         orc8r_orchestrator_relation_id = self.harness.add_relation(
             relation_name="magma-orc8r-orchestrator",
-            remote_app=self.TEST_ORC8R_ORCHESTRATOR_APP_NAME,
+            remote_app=TEST_ORC8R_ORCHESTRATOR_APP_NAME,
         )
         self.harness.add_relation_unit(
             relation_id=orc8r_orchestrator_relation_id,
-            remote_unit_name=f"{self.TEST_ORC8R_ORCHESTRATOR_APP_NAME}/0",
+            remote_unit_name=f"{TEST_ORC8R_ORCHESTRATOR_APP_NAME}/0",
         )
         if activate:
             self.harness.update_relation_data(
                 relation_id=orc8r_orchestrator_relation_id,
-                app_or_unit=f"{self.TEST_ORC8R_ORCHESTRATOR_APP_NAME}/0",
+                app_or_unit=f"{TEST_ORC8R_ORCHESTRATOR_APP_NAME}/0",
                 key_values={"active": "True"},
             )
