@@ -59,7 +59,7 @@ class TestCharm(unittest.TestCase):
     def test_given_all_relations_created_when_pebble_ready_then_config_file_is_created(
         self, patch_push
     ):
-        self._create_relations()
+        self._create_relations(activate=True)
 
         self.harness.charm.on.magma_orc8r_metricsd_pebble_ready.emit(self.container)
 
