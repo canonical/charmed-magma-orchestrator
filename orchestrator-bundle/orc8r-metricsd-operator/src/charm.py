@@ -5,7 +5,6 @@
 """Collects runtime metrics from gateways and Orchestrator services."""
 
 import logging
-from typing import Optional
 
 from charms.observability_libs.v1.kubernetes_service_patch import (
     KubernetesServicePatch,
@@ -243,7 +242,7 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
         return f"http://{alertmanager_service_name}:9093"
 
     @property
-    def _alertmanager_configurer_url(self) -> Optional[str]:
+    def _alertmanager_configurer_url(self) -> str:
         """Returns the URL of the Alertmanager Configurer API.
 
         Returns:
