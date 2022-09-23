@@ -170,6 +170,9 @@ class TestOrc8rMetricsd:
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="tls-certificates-operator"
         )
+        await ops_test.model.wait_for_idle(
+            apps=[CERTIFIER_APPLICATION_NAME], status="active", timeout=1000
+        )
 
     @staticmethod
     async def _deploy_prometheus_cache(ops_test):
@@ -197,6 +200,9 @@ class TestOrc8rMetricsd:
         )
         await ops_test.model.add_relation(
             relation1=ACCESSD_APPLICATION_NAME, relation2="postgresql-k8s:db"
+        )
+        await ops_test.model.wait_for_idle(
+            apps=[ACCESSD_APPLICATION_NAME], status="active", timeout=1000
         )
 
     async def _deploy_orc8r_orchestrator(self, ops_test):
@@ -235,6 +241,9 @@ class TestOrc8rMetricsd:
         await ops_test.model.add_relation(
             relation1=f"{ORCHESTRATOR_APPLICATION_NAME}:magma-orc8r-service-registry",
             relation2="orc8r-service-registry:magma-orc8r-service-registry",
+        )
+        await ops_test.model.wait_for_idle(
+            apps=[ORCHESTRATOR_APPLICATION_NAME], status="active", timeout=1000
         )
 
     @pytest.fixture(scope="module")

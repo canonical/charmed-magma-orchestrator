@@ -22,9 +22,23 @@ jobs:
       charm_dir: orc8r-metricsd-operator
 
   orc8r-metricsd-integration-test:
-    uses: ./.github/workflows/integration-tests.yml
-    with:
-      charm_dir: orc8r-metricsd-operator
+    name: Integration tests (orc8r-metricsd)
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+      - name: Run integration tests
+        run: cd orchestrator-bundle/orc8r-metricsd-operator && tox -e integration
+      - name: Archive charmcraft logs
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: charmcraft-logs
+          path: /home/runner/snap/charmcraft/common/cache/charmcraft/log/*.log
 
   orc8r-metricsd-charmhub-upload:
     if: github.ref_name == 'main'
