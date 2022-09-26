@@ -241,6 +241,8 @@ relations:
   - postgresql-k8s:db
 - - orc8r-metricsd:alertmanager-k8s
   - orc8r-alertmanager:alerting
+- - orc8r-metricsd:alertmanager-configurer-k8s
+  - orc8r-alertmanager-configurer:alertmanager-configurer
 - - orc8r-metricsd:magma-orc8r-orchestrator
   - orc8r-orchestrator:magma-orc8r-orchestrator
 - - orc8r-metricsd:magma-orc8r-prometheus
