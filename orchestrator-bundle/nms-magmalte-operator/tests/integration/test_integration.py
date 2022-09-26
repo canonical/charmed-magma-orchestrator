@@ -110,7 +110,7 @@ class TestNmsMagmaLTE:
             relation1=APPLICATION_NAME, relation2="orc8r-certifier:cert-admin-operator"
         )
         await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="grafana-k8sr:grafana_auth"
+            relation1=APPLICATION_NAME, relation2="grafana-k8s:grafana_auth"
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
 
