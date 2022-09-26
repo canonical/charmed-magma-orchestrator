@@ -34,6 +34,7 @@ SERVICE_REGISTRY_APPLICATION_NAME = "orc8r-service-registry"
 SERVICE_REGISTRY_CHARM_NAME = "magma-orc8r-service-registry"
 SERVICE_REGISTRY_CHARM_FILE_NAME = "magma-orc8r-service-registry_ubuntu-20.04-amd64.charm"
 DOMAIN = "whatever.com"
+WAIT_FOR_STATUS_TIMEOUT = 5 * 60
 
 
 class TestOrc8rMetricsd:
@@ -43,6 +44,7 @@ class TestOrc8rMetricsd:
         await ops_test.model.set_config({"update-status-hook-interval": "2s"})
         await self._deploy_postgresql(ops_test)
         await self._deploy_alertmanager(ops_test)
+        await self._deploy_alertmanager_configurer(ops_test)
         await self._deploy_prometheus(ops_test)
         await self._deploy_prometheus_configurer(ops_test)
         await self._deploy_tls_certificates_operator(ops_test)
@@ -63,7 +65,11 @@ class TestOrc8rMetricsd:
     @staticmethod
     async def _deploy_postgresql(ops_test):
         await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
-        await ops_test.model.wait_for_idle(apps=["postgresql-k8s"], status="active", timeout=1000)
+        await ops_test.model.wait_for_idle(
+            apps=["postgresql-k8s"],
+            status="active",
+            timeout=WAIT_FOR_STATUS_TIMEOUT,
+        )
 
     @staticmethod
     async def _deploy_alertmanager(ops_test):
@@ -72,6 +78,19 @@ class TestOrc8rMetricsd:
             application_name="orc8r-alertmanager",
             channel="edge",
             trust=True,
+        )
+
+    @staticmethod
+    async def _deploy_alertmanager_configurer(ops_test):
+        await ops_test.model.deploy(
+            "alertmanager-configurer-k8s",
+            application_name="orc8r-alertmanager-configurer",
+            channel="edge",
+            trust=True,
+        )
+        await ops_test.model.add_relation(
+            relation1="orc8r-alertmanager-configurer:alertmanager",
+            relation2="orc8r-alertmanager:remote-configuration",
         )
 
     @staticmethod
@@ -129,7 +148,9 @@ class TestOrc8rMetricsd:
             trust=True,
         )
         await ops_test.model.wait_for_idle(
-            apps=[SERVICE_REGISTRY_APPLICATION_NAME], status="active", timeout=1000
+            apps=[SERVICE_REGISTRY_APPLICATION_NAME],
+            status="active",
+            timeout=WAIT_FOR_STATUS_TIMEOUT,
         )
 
     async def _deploy_orc8r_certifier(self, ops_test):
@@ -155,6 +176,9 @@ class TestOrc8rMetricsd:
         )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="tls-certificates-operator"
+        )
+        await ops_test.model.wait_for_idle(
+            apps=[CERTIFIER_APPLICATION_NAME], status="active", timeout=WAIT_FOR_STATUS_TIMEOUT
         )
 
     @staticmethod
@@ -183,6 +207,9 @@ class TestOrc8rMetricsd:
         )
         await ops_test.model.add_relation(
             relation1=ACCESSD_APPLICATION_NAME, relation2="postgresql-k8s:db"
+        )
+        await ops_test.model.wait_for_idle(
+            apps=[ACCESSD_APPLICATION_NAME], status="active", timeout=WAIT_FOR_STATUS_TIMEOUT
         )
 
     async def _deploy_orc8r_orchestrator(self, ops_test):
@@ -222,6 +249,9 @@ class TestOrc8rMetricsd:
             relation1=f"{ORCHESTRATOR_APPLICATION_NAME}:magma-orc8r-service-registry",
             relation2="orc8r-service-registry:magma-orc8r-service-registry",
         )
+        await ops_test.model.wait_for_idle(
+            apps=[ORCHESTRATOR_APPLICATION_NAME], status="active", timeout=WAIT_FOR_STATUS_TIMEOUT
+        )
 
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail
@@ -236,12 +266,18 @@ class TestOrc8rMetricsd:
 
     @pytest.mark.abort_on_fail
     async def test_wait_for_blocked_status(self, ops_test, build_and_deploy):
-        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
+        await ops_test.model.wait_for_idle(
+            apps=[APPLICATION_NAME], status="blocked", timeout=WAIT_FOR_STATUS_TIMEOUT
+        )
 
     async def test_relate_and_wait_for_idle(self, ops_test, build_and_deploy):
         await ops_test.model.add_relation(
             relation1=f"{APPLICATION_NAME}:alertmanager-k8s",
             relation2="orc8r-alertmanager:alerting",
+        )
+        await ops_test.model.add_relation(
+            relation1=f"{APPLICATION_NAME}:alertmanager-configurer-k8s",
+            relation2="orc8r-alertmanager-configurer:alertmanager-configurer",
         )
         await ops_test.model.add_relation(
             relation1=f"{APPLICATION_NAME}:magma-orc8r-orchestrator",
@@ -255,13 +291,18 @@ class TestOrc8rMetricsd:
             relation1=f"{APPLICATION_NAME}:prometheus-configurer-k8s",
             relation2="orc8r-prometheus-configurer:prometheus-configurer",
         )
-        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
+        await ops_test.model.wait_for_idle(
+            apps=[APPLICATION_NAME], status="active", timeout=WAIT_FOR_STATUS_TIMEOUT
+        )
 
     async def test_scale_up(self, ops_test, setup, build_and_deploy):
         await ops_test.model.applications[APPLICATION_NAME].scale(2)
 
         await ops_test.model.wait_for_idle(
-            apps=[APPLICATION_NAME], status="active", timeout=1000, wait_for_exact_units=2
+            apps=[APPLICATION_NAME],
+            status="active",
+            timeout=WAIT_FOR_STATUS_TIMEOUT,
+            wait_for_exact_units=2,
         )
 
     @pytest.mark.xfail(reason="Bug in Juju: https://bugs.launchpad.net/juju/+bug/1977582")
@@ -269,5 +310,8 @@ class TestOrc8rMetricsd:
         await ops_test.model.applications[APPLICATION_NAME].scale(1)
 
         await ops_test.model.wait_for_idle(
-            apps=[APPLICATION_NAME], status="active", timeout=1000, wait_for_exact_units=1
+            apps=[APPLICATION_NAME],
+            status="active",
+            timeout=WAIT_FOR_STATUS_TIMEOUT,
+            wait_for_exact_units=1,
         )

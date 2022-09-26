@@ -22,9 +22,71 @@ jobs:
       charm_dir: orc8r-metricsd-operator
 
   orc8r-metricsd-integration-test:
-    uses: ./.github/workflows/integration-tests.yml
-    with:
-      charm_dir: orc8r-metricsd-operator
+    name: Integration tests (orc8r-metricsd)
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        run: |
+          echo "# Install core snap"
+          /usr/bin/sudo snap install core
+
+          echo "# Install LXD"
+          /usr/bin/sudo apt-get remove -qy lxd lxd-client || true
+          /usr/bin/sudo snap install lxd
+
+          echo "# Initialize LXD"
+          /usr/bin/sudo lxd waitready
+          /usr/bin/sudo lxd init --auto
+          /usr/bin/sudo chmod a+wr /var/snap/lxd/common/lxd/unix.socket
+          /snap/bin/lxc network set lxdbr0 ipv6.address none
+          /usr/bin/sudo usermod -a -G lxd $USER
+
+          echo "# Configure LXD"
+          /usr/bin/sudo lxc --project charmcraft project create local:charmcraft || true
+          /usr/bin/sudo lxc --project charmcraft profile device add default root disk path=/ pool=default type=disk || true
+          /usr/bin/sudo lxc --project charmcraft profile device add default eth0 nic name=eth0 network=lxdbr0 || true
+          /usr/bin/sudo lxc --project charmcraft profile set default environment.http_proxy http://squid.internal:3128/
+          /usr/bin/sudo lxc --project charmcraft profile set default environment.https_proxy http://squid.internal:3128/
+          /usr/bin/sudo lxc --project charmcraft profile set default environment.HTTP_PROXY http://squid.internal:3128/
+          /usr/bin/sudo lxc --project charmcraft profile set default environment.HTTPS_PROXY http://squid.internal:3128/
+
+          echo "# Install tox"
+          /usr/bin/sudo apt-get update -yqq
+          /usr/bin/sudo apt-get install -yqq python3-pip
+          /usr/bin/sudo --preserve-env=http_proxy,https_proxy,no_proxy pip3 install tox
+
+          echo "# Install Juju"
+          /usr/bin/sudo snap install juju --classic --channel=latest/stable
+
+          echo "# Install tools"
+          /usr/bin/sudo snap install jq
+          /usr/bin/sudo snap install charm --classic --channel=latest/stable
+          /usr/bin/sudo snap install charmcraft --classic --channel=latest/stable
+          /usr/bin/sudo snap install juju-bundle --classic --channel=latest/stable
+
+          echo "# Install microk8s"
+          /usr/bin/sudo snap install microk8s --classic
+
+          echo "# Initialize microk8s"
+          /usr/bin/bash -c "sudo usermod -a -G microk8s $USER"
+          /usr/bin/sg microk8s -c "microk8s status --wait-ready"
+          /usr/bin/sg microk8s -c "microk8s enable storage rbac dns:10.130.64.38,10.130.64.39"
+          /usr/bin/sg microk8s -c "microk8s kubectl -n kube-system rollout status deployment/coredns"
+          /usr/bin/sg microk8s -c "microk8s kubectl -n kube-system rollout status deployment/hostpath-provisioner"
+
+          echo "# Bootstrap controller"
+          sleep 180  # Microk8s needs time to initialize properly
+          /usr/bin/sg microk8s -c "juju bootstrap --debug --verbose microk8s integration-tests --model-default test-mode=true --model-default automatically-retry-hooks=true --model-default logging-config='<root>=DEBUG'  --bootstrap-constraints=''"
+      - name: Run integration tests
+        run: cd orchestrator-bundle/orc8r-metricsd-operator && tox -e integration
+      - name: Archive charmcraft logs
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: charmcraft-logs
+          path: /home/runner/snap/charmcraft/common/cache/charmcraft/log/*.log
 
   orc8r-metricsd-charmhub-upload:
     if: github.ref_name == 'main'

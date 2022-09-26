@@ -31,13 +31,11 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
     BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
     REQUIRED_EXTERNAL_RELATIONS = [
         "alertmanager-k8s",
+        "alertmanager-configurer-k8s",
         "prometheus-k8s",
         "prometheus-configurer-k8s",
     ]
     REQUIRED_ORC8R_RELATIONS = ["magma-orc8r-orchestrator"]
-
-    # TODO: The various URL's should be provided through relationships.
-    ALERTMANAGER_CONFIGURER_URL = "http://orc8r-alertmanager:9101"
 
     def __init__(self, *args):
         """Uses the Orc8rBase library to manage events."""
@@ -84,7 +82,6 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
         if not self._relations_created:
             event.defer()
             return
-        self._write_config_file()
         if not self._relations_ready:
             event.defer()
             return
@@ -92,6 +89,7 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for container to be ready")
             event.defer()
             return
+        self._write_config_file()
         self._configure_pebble()
 
     def _write_config_file(self) -> None:
@@ -104,7 +102,7 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
             f'prometheusQueryAddress: "{self._prometheus_url}"\n'
             f'alertmanagerApiURL: "{self._alertmanager_url}/api/v2"\n'
             f'prometheusConfigServiceURL: "{self._prometheus_configurer_url}/v1"\n'
-            f'alertmanagerConfigServiceURL: "{self.ALERTMANAGER_CONFIGURER_URL}/v1"\n'
+            f'alertmanagerConfigServiceURL: "{self._alertmanager_configurer_url}/v1"\n'
             '"profile": "prometheus"\n'
         )
         self._container.push(f"{self.BASE_CONFIG_PATH}/metricsd.yml", metricsd_config)
@@ -218,11 +216,19 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
         Returns:
             str: Prometheus Configurer URL
         """
-        prometheus_configurer_service_name = self.model.get_relation(
-            "prometheus-configurer-k8s"
-        ).app.name  # type: ignore[union-attr]
-        # TODO: Get port from the relation data once such information is available.
-        return f"http://{prometheus_configurer_service_name}:9100"
+        prometheus_configurer_relation = self.model.get_relation("prometheus-configurer-k8s")
+        prometheus_configurer_app = prometheus_configurer_relation.app  # type: ignore[union-attr]
+        prometheus_configurer_service_name = prometheus_configurer_relation.data[  # type: ignore[union-attr]  # noqa: E501
+            prometheus_configurer_app  # type: ignore[index]
+        ][
+            "service_name"
+        ]
+        prometheus_configurer_port = prometheus_configurer_relation.data[  # type: ignore[union-attr]  # noqa: E501
+            prometheus_configurer_app  # type: ignore[index]
+        ][
+            "port"
+        ]
+        return f"http://{prometheus_configurer_service_name}:{prometheus_configurer_port}"
 
     @property
     def _alertmanager_url(self) -> str:
@@ -234,6 +240,27 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
         alertmanager_service_name = self.model.get_relation("alertmanager-k8s").app.name  # type: ignore[union-attr]  # noqa: E501
         # TODO: Get port from the relation data once such information is available.
         return f"http://{alertmanager_service_name}:9093"
+
+    @property
+    def _alertmanager_configurer_url(self) -> str:
+        """Returns the URL of the Alertmanager Configurer API.
+
+        Returns:
+            str: Alertmanager Configurer URL
+        """
+        alertmanager_configurer_relation = self.model.get_relation("alertmanager-configurer-k8s")
+        alertmanager_configurer_app = alertmanager_configurer_relation.app  # type: ignore[union-attr]  # noqa: E501
+        alertmanager_configurer_service_name = alertmanager_configurer_relation.data[  # type: ignore[union-attr]  # noqa: E501
+            alertmanager_configurer_app  # type: ignore[index]
+        ][
+            "service_name"
+        ]
+        alertmanager_configurer_port = alertmanager_configurer_relation.data[  # type: ignore[union-attr]  # noqa: E501
+            alertmanager_configurer_app  # type: ignore[index]
+        ][
+            "port"
+        ]
+        return f"http://{alertmanager_configurer_service_name}:{alertmanager_configurer_port}"
 
     @property
     def _relations_created(self) -> bool:

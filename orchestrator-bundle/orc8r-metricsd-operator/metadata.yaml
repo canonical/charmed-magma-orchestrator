@@ -27,6 +27,8 @@ provides:
 requires:
   alertmanager-k8s:
     interface: alertmanager_dispatch
+  alertmanager-configurer-k8s:
+    interface: alertmanager_configurer
   magma-orc8r-orchestrator:
     interface: magma-orc8r-orchestrator
   prometheus-k8s:
