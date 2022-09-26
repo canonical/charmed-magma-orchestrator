@@ -286,7 +286,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         self._on_magma_nms_magmalte_pebble_ready(event)
 
     def _on_magma_nms_magmalte_pebble_ready(
-        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, UrlsAvailableEvent]
     ) -> None:
         """Triggered when pebble is ready.
 
@@ -407,7 +407,9 @@ class MagmaNmsMagmalteCharm(CharmBase):
             }
         )
 
-    def _configure_pebble(self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]) -> None:
+    def _configure_pebble(
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, UrlsAvailableEvent]
+    ) -> None:
         """Configures pebble layer.
 
         Args:
@@ -548,9 +550,9 @@ class MagmaNmsMagmalteCharm(CharmBase):
         Args:
             event: UrlsAvailableEvent.
         """
-        if not self._grafana_url:
-            app_data = self.model.get_relation("replicas").data[self.app]  # type: ignore[union-attr]  # noqa: E501
-            app_data.update({"grafana_url": event.urls[0]})
+        app_data = self.model.get_relation("replicas").data[self.app]  # type: ignore[union-attr]  # noqa: E501
+        app_data.update({"grafana_url": event.urls[0]})
+        self._on_magma_nms_magmalte_pebble_ready(event)
 
     @property
     def _grafana_url(self) -> Optional[str]:
@@ -560,8 +562,6 @@ class MagmaNmsMagmalteCharm(CharmBase):
             str: grafana url
         """
         app_data = self.model.get_relation("replicas").data[self.app]  # type: ignore[union-attr]
-        if not app_data.get("grafana_url"):
-            return None
         return app_data.get("grafana_url")
 
 
