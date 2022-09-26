@@ -85,11 +85,11 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
         if not self._relations_ready:
             event.defer()
             return
-        self._write_config_file()
         if not self._container.can_connect():
             self.unit.status = WaitingStatus("Waiting for container to be ready")
             event.defer()
             return
+        self._write_config_file()
         self._configure_pebble()
 
     def _write_config_file(self) -> None:
