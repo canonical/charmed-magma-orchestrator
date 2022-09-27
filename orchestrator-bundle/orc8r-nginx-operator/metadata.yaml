@@ -14,6 +14,8 @@ containers:
     mounts:
       - storage: certs
         location: /var/opt/magma/certs
+      - storage: config
+        location: /etc/nginx
 
 resources:
   magma-orc8r-nginx-image:
@@ -25,6 +27,10 @@ storage:
   certs:
     type: filesystem
     description: Certs storage
+    minimum-size: 1M
+  config:
+    type: filesystem
+    description: Nginx config storage
     minimum-size: 1M
 
 requires:
