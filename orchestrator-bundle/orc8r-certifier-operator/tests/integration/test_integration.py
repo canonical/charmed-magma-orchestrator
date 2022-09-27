@@ -64,6 +64,21 @@ class TestOrc8rCertifier:
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
 
+    async def test_db_relation_broken_then_joined(self, ops_test, setup, build_and_deploy_charm):
+        rel_id = await ops_test.model.add_relation(
+            relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
+        )
+        await ops_test.model.add_relation(
+            relation1=APPLICATION_NAME, relation2="tls-certificates-operator"
+        )
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
+        await ops_test.model.remove_relation(rel_id)
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
+        await ops_test.model.add_relation(
+            relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
+        )
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
+
     async def test_build_and_deploy_and_scale_up(self, ops_test, setup, build_and_deploy):
         await ops_test.model.applications[APPLICATION_NAME].scale(2)
 
