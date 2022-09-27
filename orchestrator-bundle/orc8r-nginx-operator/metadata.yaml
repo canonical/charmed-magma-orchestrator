@@ -27,6 +27,10 @@ storage:
     description: Certs storage
     minimum-size: 1M
 
+provides:
+  magma-orc8r-nginx:
+    interface: magma-orc8r-nginx
+
 requires:
   magma-orc8r-bootstrapper:
     interface: magma-orc8r-bootstrapper
