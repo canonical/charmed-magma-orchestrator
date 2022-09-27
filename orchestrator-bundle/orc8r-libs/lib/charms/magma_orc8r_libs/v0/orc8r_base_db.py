@@ -118,7 +118,7 @@ class Orc8rBase(Object):
         relation_joined_event = getattr(
             self.charm.on, f"{provided_relation_name_with_underscores}_relation_joined"
         )
-        self.framework.observe(pebble_ready_event, self._on_magma_orc8r_pebble_ready)
+        self.framework.observe(pebble_ready_event, self._configure_orc8r)
 
         if additional_environment_variables:
             self.additional_environment_variables = additional_environment_variables
@@ -129,9 +129,7 @@ class Orc8rBase(Object):
         self.framework.observe(
             self.db.on.database_relation_joined, self._on_database_relation_joined
         )
-        self.framework.observe(
-            self.db.on.database_relation_broken, self._on_database_relation_broken
-        )
+        self.framework.observe(self.db.on.database_relation_broken, self._configure_orc8r)
         self.framework.observe(relation_joined_event, self._on_relation_joined)
 
     @property
@@ -141,7 +139,7 @@ class Orc8rBase(Object):
             return False
         return True
 
-    def _on_magma_orc8r_pebble_ready(self, event: Union[PebbleReadyEvent, RelationBrokenEvent]):
+    def _configure_orc8r(self, event: Union[PebbleReadyEvent, RelationBrokenEvent]):
         if not self._db_relation_created:
             self.charm.unit.status = BlockedStatus("Waiting for db relation to be created")
             event.defer()
@@ -150,9 +148,9 @@ class Orc8rBase(Object):
             self.charm.unit.status = WaitingStatus("Waiting for db relation to be ready")
             event.defer()
             return
-        self._configure_orc8r(event)
+        self._configure_pebble(event)
 
-    def _configure_orc8r(self, event: Union[PebbleReadyEvent, RelationBrokenEvent]):
+    def _configure_pebble(self, event: Union[PebbleReadyEvent, RelationBrokenEvent]):
         """Adds layer to pebble config if the proposed config is different from the current one."""
         if self.container.can_connect():
             self.charm.unit.status = MaintenanceStatus("Configuring pod")
@@ -199,18 +197,6 @@ class Orc8rBase(Object):
             event.database = self.DB_NAME  # type: ignore[attr-defined]
         else:
             event.defer()
-
-    def _on_database_relation_broken(self, event: RelationBrokenEvent) -> None:
-        """Event handler for database relation broken.
-
-        Args:
-            event (RelationJoinedEvent): Juju event
-
-        Returns:
-            None
-        """
-        self.charm.unit.status = BlockedStatus("Waiting for db relation to be created")
-        self._on_magma_orc8r_pebble_ready(event)
 
     @property
     def _db_relation_ready(self) -> bool:

@@ -6,7 +6,7 @@ from unittest.mock import Mock, PropertyMock, patch
 
 from charms.magma_orc8r_libs.v0.orc8r_base_db import Orc8rBase
 from ops import testing
-from ops.model import ActiveStatus
+from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from pgconnstr import ConnectionString  # type: ignore[import]
 from test_orc8r_base_db_charm.src.charm import (  # type: ignore[import]
     MagmaOrc8rDummyCharm,
@@ -145,6 +145,24 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready("magma-orc8r-dummy")
 
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
+
+    def test_given_db_relation_not_created_when_configure_orc8r_then_status_is_blocked(
+        self,
+    ):
+        self.harness.container_pebble_ready(container_name="magma-orc8r-dummy")
+        assert self.harness.charm.unit.status == BlockedStatus(
+            "Waiting for db relation to be created"
+        )
+
+    @patch("charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._db_relation_created")
+    def test_given_db_relation_not_ready_when_configure_orc8r_then_status_is_blocked(
+        self, db_relation_created
+    ):
+        db_relation_created.return_value = True
+        self.harness.container_pebble_ready(container_name="magma-orc8r-dummy")
+        assert self.harness.charm.unit.status == WaitingStatus(
+            "Waiting for db relation to be ready"
+        )
 
     @patch(
         "charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase.namespace",
