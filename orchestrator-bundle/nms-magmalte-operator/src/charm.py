@@ -25,7 +25,13 @@ from charms.observability_libs.v1.kubernetes_service_patch import (
     KubernetesServicePatch,
     ServicePort,
 )
-from ops.charm import ActionEvent, CharmBase, PebbleReadyEvent, RelationJoinedEvent
+from ops.charm import (
+    ActionEvent,
+    CharmBase,
+    PebbleReadyEvent,
+    RelationBrokenEvent,
+    RelationJoinedEvent,
+)
 from ops.main import main
 from ops.model import (
     ActiveStatus,
@@ -72,6 +78,9 @@ class MagmaNmsMagmalteCharm(CharmBase):
         )
         self.framework.observe(
             self._db.on.database_relation_joined, self._on_database_relation_joined
+        )
+        self.framework.observe(
+            self._db.on.database_relation_broken, self._on_database_relation_broken
         )
         self.framework.observe(
             self.on.magma_nms_magmalte_relation_joined,
@@ -267,7 +276,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         self._on_magma_nms_magmalte_pebble_ready(event)
 
     def _on_magma_nms_magmalte_pebble_ready(
-        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationBrokenEvent]
     ) -> None:
         """Triggered when pebble is ready.
 
@@ -348,6 +357,18 @@ class MagmaNmsMagmalteCharm(CharmBase):
         else:
             event.defer()
 
+    def _on_database_relation_broken(self, event: RelationBrokenEvent) -> None:
+        """Event handler for database relation broken.
+
+        Args:
+            event (RelationJoinedEvent): Juju event
+
+        Returns:
+            None
+        """
+        self.unit.status = BlockedStatus("Waiting for db relation to be created")
+        self._on_magma_nms_magmalte_pebble_ready(event)
+
     def _on_magma_nms_magmalte_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Triggered when requirers join the nms_magmalte relation.
 
@@ -378,7 +399,9 @@ class MagmaNmsMagmalteCharm(CharmBase):
             }
         )
 
-    def _configure_pebble(self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]) -> None:
+    def _configure_pebble(
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationBrokenEvent]
+    ) -> None:
         """Configures pebble layer.
 
         Args:

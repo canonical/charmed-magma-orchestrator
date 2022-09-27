@@ -49,6 +49,7 @@ from ops.charm import (
     ConfigChangedEvent,
     InstallEvent,
     PebbleReadyEvent,
+    RelationBrokenEvent,
     RelationJoinedEvent,
 )
 from ops.main import main
@@ -122,6 +123,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         )
         self.framework.observe(
             self._db.on.database_relation_joined, self._on_database_relation_joined
+        )
+        self.framework.observe(
+            self._db.on.database_relation_broken, self._on_database_relation_broken
         )
         self.framework.observe(
             self.on.get_pfx_package_password_action, self._on_get_pfx_package_password
@@ -504,7 +508,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._push_application_certificates()
 
     def _on_magma_orc8r_certifier_pebble_ready(
-        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationBrokenEvent]
     ) -> None:
         """Juju event triggered when pebble is ready.
 
@@ -652,6 +656,18 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         if self.unit.is_leader():
             event.database = self.DB_NAME  # type: ignore[attr-defined]
 
+    def _on_database_relation_broken(self, event: RelationBrokenEvent) -> None:
+        """Event handler for database relation broken.
+
+        Args:
+            event (RelationJoinedEvent): Juju event
+
+        Returns:
+            None
+        """
+        self.unit.status = BlockedStatus("Waiting for db relation to be created")
+        self._on_magma_orc8r_certifier_pebble_ready(event)
+
     def _push_metricsd_config_file(self) -> None:
         """Writes the config file for metricsd in the workload container.
 
@@ -666,7 +682,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._container.push(path=f"{self.BASE_CONFIG_PATH}/metricsd.yml", source=metricsd_config)
 
     def _configure_magma_orc8r_certifier(
-        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationBrokenEvent]
     ) -> None:
         """Adds layer to pebble config if the proposed config is different from the current one.
 
