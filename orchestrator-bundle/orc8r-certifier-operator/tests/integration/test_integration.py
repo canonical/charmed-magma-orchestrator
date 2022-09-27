@@ -14,13 +14,14 @@ METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 APPLICATION_NAME = "orc8r-certifier"
 CHARM_NAME = "magma-orc8r-certifier"
 DOMAIN = "whatever.com"
+DB_APPLICATION_NAME = "postgresql-k8s"
 
 
 class TestOrc8rCertifier:
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail
     async def setup(self, ops_test):
-        await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
+        await ops_test.model.deploy("postgresql-k8s", application_name=DB_APPLICATION_NAME)
         await ops_test.model.wait_for_idle(apps=["postgresql-k8s"], status="active", timeout=1000)
         await self._deploy_tls_certificates_operator(ops_test)
 
@@ -56,17 +57,11 @@ class TestOrc8rCertifier:
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
 
     async def test_build_and_deploy(self, ops_test, setup, build_and_deploy):
-        rel_id = await ops_test.model.add_relation(
+        await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
         )
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="tls-certificates-operator"
-        )
-        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
-        await ops_test.model.remove_relation(rel_id)
-        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
-        await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
 
@@ -84,3 +79,12 @@ class TestOrc8rCertifier:
         await ops_test.model.wait_for_idle(
             apps=[APPLICATION_NAME], status="active", timeout=1000, wait_for_exact_units=1
         )
+
+    async def test_remove_db_application(self, ops_test, setup, build_and_deploy_charm):
+        await ops_test.model.applications[DB_APPLICATION_NAME].remove()
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
+        await ops_test.model.deploy("postgresql-k8s", application_name=DB_APPLICATION_NAME)
+        await ops_test.model.add_relation(
+            relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
+        )
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)

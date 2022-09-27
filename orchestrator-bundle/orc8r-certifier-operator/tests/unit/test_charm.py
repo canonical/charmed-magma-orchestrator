@@ -640,7 +640,9 @@ class TestCharm(unittest.TestCase):
 
         assert self.harness.charm.unit.status == BlockedStatus("Config 'domain' is not valid")
 
-    def test_given_db_relation_not_created_when_on_pebble_ready_then_status_is_blocked(self):
+    def test_given_db_relation_not_created_when_on_configure_certifier_then_status_is_blocked(
+        self,
+    ):
         self.harness.update_config(key_values={"domain": "whatever.com"})
 
         self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
@@ -649,7 +651,7 @@ class TestCharm(unittest.TestCase):
             "Waiting for database relation to be created"
         )
 
-    def test_given_certificates_relation_not_created_when_on_pebble_ready_then_status_is_blocked(
+    def test_given_certificates_relation_not_created_when_on_configure_certifier_then_status_is_blocked(  # noqa: E501
         self,
     ):
         self.harness.update_config(key_values={"domain": "whatever.com"})
@@ -661,7 +663,9 @@ class TestCharm(unittest.TestCase):
             "Waiting for tls-certificates relation to be created"
         )
 
-    def test_given_db_relation_not_established_when_on_pebble_ready_then_status_is_waiting(self):
+    def test_given_db_relation_not_established_when_on_configure_certifier_then_status_is_waiting(
+        self,
+    ):
         self.harness.update_config(key_values={"domain": "whatever.com"})
         self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
         self.harness.add_relation(
@@ -677,7 +681,9 @@ class TestCharm(unittest.TestCase):
     @patch("psycopg2.connect", new=Mock())
     @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined", new=Mock())
     @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
-    def test_given_private_keys_not_pushed_when_on_pebble_ready_then_status_is_waiting(self):
+    def test_given_private_keys_not_pushed_when_on_configure_certifier_then_status_is_waiting(
+        self,
+    ):
         self.harness.update_config(key_values={"domain": "whatever.com"})
         self.harness.add_relation(
             relation_name="certificates", remote_app="tls-certificates-provider"
