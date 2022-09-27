@@ -55,6 +55,7 @@ provides:
 """
 
 import logging
+from typing import Union
 
 import ops.lib
 import psycopg2  # type: ignore[import]
@@ -75,7 +76,6 @@ from ops.model import (
 )
 from ops.pebble import Layer
 from pgconnstr import ConnectionString  # type: ignore[import]
-from typing import Union
 
 # The unique Charmhub library identifier, never change it
 LIBID = "7e1096554dd649b78acd5f3187c017c8"
