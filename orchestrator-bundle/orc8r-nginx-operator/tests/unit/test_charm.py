@@ -291,7 +291,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.exists")
     def test_given_magma_orc8r_bootstrapper_relation_not_ready_when_pebble_ready_event_emitted_then_status_is_waiting(  # noqa: E501
-    self, patch_file_exists
+        self, patch_file_exists
     ):
         patch_file_exists.return_value = True
         self.harness.update_config(key_values={"domain": "whatever.com"})
