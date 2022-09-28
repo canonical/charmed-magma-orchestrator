@@ -3,15 +3,19 @@
 # See LICENSE file for licensing details.
 
 
+import logging
+import time
 from typing import Tuple
 
 import jinja2
 import pytest
+import requests
 from pytest_operator.plugin import OpsTest
 from python_hosts import Hosts, HostsEntry  # type: ignore[import]
 
 from tests.integration.orchestrator import Orc8r
 
+logger = logging.getLogger(__name__)
 DOMAIN = "pizza.com"
 
 
@@ -196,6 +200,14 @@ class TestOrc8rBundle:
             admin_operator_pfx_path=pfx_package_path,
             admin_operator_pfx_password=pfx_password,
         )
-        response = orc8r.get(endpoint="lte")
-
-        assert response.status_code == 200
+        timeout = 300
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            try:
+                response = orc8r.get(endpoint="lte")
+                assert response.status_code == 200
+                return
+            except requests.exceptions.HTTPError as e:
+                logger.error(e)
+                time.sleep(5)
+        raise TimeoutError("Could not connect to Orc8r API")
