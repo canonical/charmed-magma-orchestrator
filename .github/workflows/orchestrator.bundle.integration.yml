@@ -1,0 +1,26 @@
+name: Bundle Integration Tests
+
+on:
+  push:
+
+jobs:
+  integration-tests:
+    name: Integration tests for ${{ inputs.charm_dir }}
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+
+      - name: Enable metallb
+        run: microk8 enable metallb:10.1.1.1-10.1.1.10
+
+      - name: Change /etc/hosts permissions
+        run: sudo chmod a=rw /etc/hosts
+
+      - name: Run integration tests
+        run: cd orchestrator-bundle/orc8r-bundle && tox -e integration
