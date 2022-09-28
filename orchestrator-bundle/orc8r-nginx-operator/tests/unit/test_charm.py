@@ -222,7 +222,7 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
 
         self.assertEqual(
-            BlockedStatus("Waiting for 'cert-certifier' relation to be created"),
+            BlockedStatus("Waiting for relation(s) to be created: cert-certifier"),
             self.harness.charm.unit.status,
         )
 
@@ -245,7 +245,7 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
 
         self.assertEqual(
-            BlockedStatus("Waiting for 'cert-controller' relation to be created"),
+            BlockedStatus("Waiting for relation(s) to be created: cert-controller"),
             self.harness.charm.unit.status,
         )
 
@@ -268,7 +268,7 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
 
         self.assertEqual(
-            BlockedStatus("Waiting for 'magma-orc8r-bootstrapper' relation to be created"),
+            BlockedStatus("Waiting for relation(s) to be created: magma-orc8r-bootstrapper"),
             self.harness.charm.unit.status,
         )
 
@@ -291,7 +291,7 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
 
         self.assertEqual(
-            BlockedStatus("Waiting for 'magma-orc8r-obsidian' relation to be created"),
+            BlockedStatus("Waiting for relation(s) to be created: magma-orc8r-obsidian"),
             self.harness.charm.unit.status,
         )
 
@@ -325,7 +325,7 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
 
         self.assertEqual(
-            WaitingStatus("Waiting for 'magma-orc8r-obsidian' relation to be ready"),
+            WaitingStatus("Waiting for relation(s) to be ready: magma-orc8r-obsidian"),
             self.harness.charm.unit.status,
         )
 
@@ -359,7 +359,7 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
 
         self.assertEqual(
-            WaitingStatus("Waiting for 'magma-orc8r-bootstrapper' relation to be ready"),
+            WaitingStatus("Waiting for relation(s) to be ready: magma-orc8r-bootstrapper"),
             self.harness.charm.unit.status,
         )
 

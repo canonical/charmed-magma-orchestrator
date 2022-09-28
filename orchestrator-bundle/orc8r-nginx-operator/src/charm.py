@@ -82,8 +82,8 @@ class MagmaOrc8rNginxCharm(CharmBase):
 
         for required_rel in self.RELATIONS_TO_HANDLE_WHEN_BROKEN:
             self.framework.observe(
-            self.on[required_rel].relation_broken, self._configure_magma_orc8r_nginx
-        )
+                self.on[required_rel].relation_broken, self._configure_magma_orc8r_nginx
+            )
 
     @property
     def _certs_are_stored(self) -> bool:

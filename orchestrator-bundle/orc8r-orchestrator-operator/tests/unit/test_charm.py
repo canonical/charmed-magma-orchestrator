@@ -280,7 +280,7 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready("magma-orc8r-orchestrator")
 
         assert self.harness.charm.unit.status == BlockedStatus(
-            "Waiting for magma-orc8r-certifier relation to be created"
+            "Waiting for relation(s) to be created: magma-orc8r-certifier"
         )
 
     @patch("ops.model.Container.exists", new=Mock())
@@ -295,7 +295,17 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="orc8r-certifier"
         )
-        self.harness.add_relation(relation_name="metrics-endpoint", remote_app="prometheus-k8s")
+        metricsd_relation = self.harness.add_relation(
+            relation_name="metrics-endpoint", remote_app="prometheus-k8s"
+        )
+        self.harness.add_relation_unit(
+            relation_id=metricsd_relation, remote_unit_name="prometheus-k8s/0"
+        )
+        self.harness.update_relation_data(
+            relation_id=metricsd_relation,
+            app_or_unit="prometheus-k8s/0",
+            key_values={"active": "True"},
+        )
         accessd_relation = self.harness.add_relation(
             relation_name="magma-orc8r-accessd", remote_app="orc8r-accessd"
         )
@@ -330,7 +340,7 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready("magma-orc8r-orchestrator")
 
         assert self.harness.charm.unit.status == WaitingStatus(
-            "Waiting for magma-orc8r-certifier to be active"
+           'Waiting for relation(s) to be ready: magma-orc8r-certifier'
         )
 
     @patch("ops.model.Container.exists")
@@ -512,10 +522,21 @@ class TestCharm(unittest.TestCase):
             relation_name="cert-admin-operator", remote_app="orc8r-certifier"
         )
 
+        self.harness.add_relation(
+            relation_name="magma-orc8r-certifier", remote_app="orc8r-certifier"
+        )
+
+        self.harness.add_relation(
+            relation_name="magma-orc8r-accessd", remote_app="orc8r-accessd"
+        )
+        self.harness.add_relation(
+            relation_name="magma-orc8r-service-registry", remote_app="orc8r-service-registry"
+        )
+
         self.harness.container_pebble_ready(container_name="magma-orc8r-orchestrator")
 
         self.assertEqual(
-            BlockedStatus("Waiting for metrics-endpoint relation to be created"),
+            BlockedStatus("Waiting for relation(s) to be created: metrics-endpoint"),
             self.harness.charm.unit.status,
         )
 
@@ -529,6 +550,9 @@ class TestCharm(unittest.TestCase):
 
         accessd_relation = self.harness.add_relation(
             relation_name="magma-orc8r-accessd", remote_app="orc8r-accessd"
+        )
+        self.harness.add_relation(
+            relation_name="magma-orc8r-service-registry", remote_app="orc8r-service-registry"
         )
 
         self.harness.add_relation_unit(
@@ -544,7 +568,7 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready(container_name="magma-orc8r-orchestrator")
 
         self.assertEqual(
-            BlockedStatus("Waiting for cert-admin-operator relation to be created"),
+            BlockedStatus("Waiting for relation(s) to be created: cert-admin-operator"),
             self.harness.charm.unit.status,
         )
 

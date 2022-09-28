@@ -5,6 +5,7 @@
 """Collects runtime metrics from gateways and Orchestrator services."""
 
 import logging
+from typing import Union
 
 from charms.observability_libs.v1.kubernetes_service_patch import (
     KubernetesServicePatch,
@@ -13,8 +14,8 @@ from charms.observability_libs.v1.kubernetes_service_patch import (
 from ops.charm import (
     CharmBase,
     PebbleReadyEvent,
+    RelationBrokenEvent,
     RelationJoinedEvent,
-    RelationBrokenEvent
 )
 from ops.main import main
 from ops.model import (
@@ -26,7 +27,6 @@ from ops.model import (
     WaitingStatus,
 )
 from ops.pebble import Layer
-from typing import Union
 
 logger = logging.getLogger(__name__)
 
@@ -77,8 +77,8 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
         )
         for required_rel in self.RELATIONS_TO_HANDLE_WHEN_BROKEN:
             self.framework.observe(
-            self.on[required_rel].relation_broken, self._configure_magma_orc8r_metricsd
-        )
+                self.on[required_rel].relation_broken, self._configure_magma_orc8r_metricsd
+            )
 
     def _configure_magma_orc8r_metricsd(
         self, event: Union[PebbleReadyEvent, RelationBrokenEvent]

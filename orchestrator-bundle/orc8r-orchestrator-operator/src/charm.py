@@ -53,10 +53,9 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
     PROMETHEUS_CACHE_METRICS_URL = "http://orc8r-prometheus-cache:9091"
     ALERTMANAGER_URL = "http://orc8r-alertmanager:9093"
 
-    REQUIRED_EXTERNAL_RELATIONS = ["cert-admin-operator",]
+    REQUIRED_EXTERNAL_RELATIONS = ["metrics-endpoint", "cert-admin-operator"]
     REQUIRED_ORC8R_RELATIONS = [
         "magma-orc8r-accessd",
-        "metrics-endpoint",
         "magma-orc8r-service-registry",
         "magma-orc8r-certifier",
     ]
@@ -118,8 +117,8 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         )
         for required_rel in self.RELATIONS_TO_HANDLE_WHEN_BROKEN:
             self.framework.observe(
-            self.on[required_rel].relation_broken, self._configure_magma_orc8r_orchestrator
-        )
+                self.on[required_rel].relation_broken, self._configure_magma_orc8r_orchestrator
+            )
 
     @property
     def _environment_variables(self) -> dict:
