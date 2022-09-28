@@ -195,6 +195,6 @@ class TestOrc8rBundle:
             admin_operator_pfx_path=pfx_package_path,
             admin_operator_pfx_password=pfx_password,
         )
-        response = orc8r.get(endpoint="foo")
+        response = orc8r.get(endpoint="lte")
 
         assert response.status_code == 200
