@@ -39,6 +39,12 @@ class MagmaOrc8rNginxCharm(CharmBase):
     """An instance of this object everytime an event occurs."""
 
     BASE_CERTS_PATH = "/var/opt/magma/certs"
+    REQUIRED_EXTERNAL_RELATIONS = [
+        "cert-controller",
+        "cert-certifier",
+    ]
+    REQUIRED_ORC8R_RELATIONS = ["magma-orc8r-obsidian", "magma-orc8r-bootstrapper"]
+    RELATIONS_TO_HANDLE_WHEN_BROKEN = REQUIRED_ORC8R_RELATIONS
 
     def __init__(self, *args):
         """Initializes all event that need to be observed."""
@@ -61,7 +67,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
             additional_selectors={"app.kubernetes.io/name": "orc8r-nginx"},
         )
         self.framework.observe(
-            self.on.magma_orc8r_nginx_pebble_ready, self._on_magma_orc8r_nginx_pebble_ready
+            self.on.magma_orc8r_nginx_pebble_ready, self._configure_magma_orc8r_nginx
         )
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.remove, self._on_remove)
@@ -72,7 +78,12 @@ class MagmaOrc8rNginxCharm(CharmBase):
             self._cert_controller.on.certificate_available,
             self._on_controller_certificate_available,
         )
-        self.framework.observe(self.on.config_changed, self._on_magma_orc8r_nginx_pebble_ready)
+        self.framework.observe(self.on.config_changed, self._configure_magma_orc8r_nginx)
+
+        for required_rel in self.RELATIONS_TO_HANDLE_WHEN_BROKEN:
+            self.framework.observe(
+            self.on[required_rel].relation_broken, self._configure_magma_orc8r_nginx
+        )
 
     @property
     def _certs_are_stored(self) -> bool:
@@ -182,40 +193,21 @@ class MagmaOrc8rNginxCharm(CharmBase):
         return self.model.name
 
     @property
-    def _magma_orc8r_bootstrapper_relation_created(self) -> bool:
-        """Returns whether magma-orc8r-bootstrapper relation is created.
+    def _relations_created(self) -> bool:
+        """Checks whether required relations are created.
 
         Returns:
             bool: True/False
         """
-        return self._relation_created("magma-orc8r-bootstrapper")
-
-    @property
-    def _magma_orc8r_obsidian_relation_created(self) -> bool:
-        """Returns whether magma-orc8r-obsidian relation is created.
-
-        Returns:
-            bool: True/False
-        """
-        return self._relation_created("magma-orc8r-obsidian")
-
-    @property
-    def _cert_certifier_relation_created(self) -> bool:
-        """Returns whether cert-certifier relation is created.
-
-        Returns:
-            bool: True/False
-        """
-        return self._relation_created("cert-certifier")
-
-    @property
-    def _cert_controller_relation_created(self) -> bool:
-        """Returns whether cert-controller relation is created.
-
-        Returns:
-            bool: True/False
-        """
-        return self._relation_created("cert-controller")
+        if missing_relations := [
+            relation
+            for relation in self.REQUIRED_EXTERNAL_RELATIONS + self.REQUIRED_ORC8R_RELATIONS
+            if not self._relation_created(relation)
+        ]:
+            msg = f"Waiting for relation(s) to be created: {', '.join(missing_relations)}"
+            self.unit.status = BlockedStatus(msg)
+            return False
+        return True
 
     @property
     def _domain_config_is_valid(self) -> bool:
@@ -230,22 +222,21 @@ class MagmaOrc8rNginxCharm(CharmBase):
         return True
 
     @property
-    def _magma_orc8r_bootstrapper_relation_ready(self) -> bool:
-        """Returns whether the magma-orc8r-bootstrapper workload service is running.
+    def _relations_ready(self) -> bool:
+        """Checks whether required relations are ready.
 
         Returns:
             bool: True/False
         """
-        return self._magma_relation_ready(relation_name="magma-orc8r-bootstrapper")
-
-    @property
-    def _magma_orc8r_obsidian_relation_ready(self) -> bool:
-        """Returns whether the magma-orc8r-obsidian workload service is running.
-
-        Returns:
-            bool: True/False
-        """
-        return self._magma_relation_ready(relation_name="magma-orc8r-obsidian")
+        if missing_relations := [
+            relation
+            for relation in self.REQUIRED_ORC8R_RELATIONS
+            if not self._magma_relation_ready(relation)
+        ]:
+            msg = f"Waiting for relation(s) to be ready: {', '.join(missing_relations)}"
+            self.unit.status = WaitingStatus(msg)
+            return False
+        return True
 
     def _magma_relation_ready(self, relation_name: str) -> bool:
         """Returns whether a given Magma relation is ready.
@@ -297,7 +288,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
         self._generate_nginx_config()
         self._create_additional_orc8r_nginx_services()
 
-    def _on_magma_orc8r_nginx_pebble_ready(
+    def _configure_magma_orc8r_nginx(
         self,
         event: Union[
             PebbleReadyEvent,
@@ -317,42 +308,14 @@ class MagmaOrc8rNginxCharm(CharmBase):
         if not self._domain_config_is_valid:
             self.unit.status = BlockedStatus("Domain config is not valid")
             return
-        if not self._magma_orc8r_bootstrapper_relation_created:
-            self.unit.status = BlockedStatus(
-                "Waiting for 'magma-orc8r-bootstrapper' relation to be created"
-            )
-            event.defer()
-            return
-        if not self._magma_orc8r_obsidian_relation_created:
-            self.unit.status = BlockedStatus(
-                "Waiting for 'magma-orc8r-obsidian' relation to be created"
-            )
-            event.defer()
-            return
-        if not self._cert_certifier_relation_created:
-            self.unit.status = BlockedStatus("Waiting for 'cert-certifier' relation to be created")
-            event.defer()
-            return
-        if not self._cert_controller_relation_created:
-            self.unit.status = BlockedStatus(
-                "Waiting for 'cert-controller' relation to be created"
-            )
+        if not self._relations_created:
             event.defer()
             return
         if not self._certs_are_stored:
             self.unit.status = WaitingStatus("Waiting for certificates to be available.")
             event.defer()
             return
-        if not self._magma_orc8r_bootstrapper_relation_ready:
-            self.unit.status = WaitingStatus(
-                "Waiting for 'magma-orc8r-bootstrapper' relation to be ready"
-            )
-            event.defer()
-            return
-        if not self._magma_orc8r_obsidian_relation_ready:
-            self.unit.status = WaitingStatus(
-                "Waiting for 'magma-orc8r-obsidian' relation to be ready"
-            )
+        if not self._relations_ready:
             event.defer()
             return
         self._configure_pebble_layer(event)
@@ -482,7 +445,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
         self._container.push(
             path=f"{self.BASE_CERTS_PATH}/controller.key", source=event.private_key
         )
-        self._on_magma_orc8r_nginx_pebble_ready(event)
+        self._configure_magma_orc8r_nginx(event)
 
     def _on_certifier_certificate_available(
         self, event: CertifierCertificateAvailableEvent
@@ -503,7 +466,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
         self._container.push(
             path=f"{self.BASE_CERTS_PATH}/certifier.pem", source=event.certificate
         )
-        self._on_magma_orc8r_nginx_pebble_ready(event)
+        self._configure_magma_orc8r_nginx(event)
 
 
 if __name__ == "__main__":

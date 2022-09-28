@@ -42,6 +42,7 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
         "prometheus-configurer-k8s",
     ]
     REQUIRED_ORC8R_RELATIONS = ["magma-orc8r-orchestrator"]
+    RELATIONS_TO_HANDLE_WHEN_BROKEN = REQUIRED_EXTERNAL_RELATIONS + REQUIRED_ORC8R_RELATIONS
 
     def __init__(self, *args):
         """Uses the Orc8rBase library to manage events."""
@@ -74,7 +75,7 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
         self.framework.observe(
             self.on.magma_orc8r_metricsd_pebble_ready, self._configure_magma_orc8r_metricsd
         )
-        for required_rel in self.REQUIRED_EXTERNAL_RELATIONS + self.REQUIRED_ORC8R_RELATIONS:
+        for required_rel in self.RELATIONS_TO_HANDLE_WHEN_BROKEN:
             self.framework.observe(
             self.on[required_rel].relation_broken, self._configure_magma_orc8r_metricsd
         )
