@@ -80,7 +80,7 @@ class TestOrc8rCertifier:
             apps=[APPLICATION_NAME], status="active", timeout=1000, wait_for_exact_units=1
         )
 
-    async def test_remove_db_application(self, ops_test, setup, build_and_deploy_charm):
+    async def test_remove_db_application(self, ops_test, setup, build_and_deploy):
         await ops_test.model.applications[DB_APPLICATION_NAME].remove()
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
         await ops_test.model.deploy("postgresql-k8s", application_name=DB_APPLICATION_NAME)
