@@ -17,7 +17,7 @@ jobs:
           provider: microk8s
 
       - name: Enable metallb
-        run: microk8s enable metallb:10.1.1.1-10.1.1.10
+        run: sudo microk8s enable metallb:10.1.1.1-10.1.1.10
 
       - name: Change /etc/hosts permissions
         run: sudo chmod a=rw /etc/hosts
