@@ -5,7 +5,7 @@ on:
 
 jobs:
   integration-tests:
-    name: Integration tests for ${{ inputs.charm_dir }}
+    name: Integration tests for bundle
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
@@ -17,7 +17,7 @@ jobs:
           provider: microk8s
 
       - name: Enable metallb
-        run: microk8 enable metallb:10.1.1.1-10.1.1.10
+        run: microk8s enable metallb:10.1.1.1-10.1.1.10
 
       - name: Change /etc/hosts permissions
         run: sudo chmod a=rw /etc/hosts

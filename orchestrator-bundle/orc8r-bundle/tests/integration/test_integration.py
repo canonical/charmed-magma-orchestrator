@@ -6,11 +6,12 @@ import logging
 from contextlib import contextmanager
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from typing import Iterator, Tuple
 
 import jinja2
 import pytest
-import requests
-import urllib3
+import requests  # type: ignore[import]
+import urllib3  # type: ignore[import]
 from cryptography.hazmat.primitives.serialization import (
     Encoding,
     NoEncryption,
@@ -20,7 +21,7 @@ from cryptography.hazmat.primitives.serialization.pkcs12 import (
     load_key_and_certificates,
 )
 from pytest_operator.plugin import OpsTest
-from python_hosts import Hosts, HostsEntry
+from python_hosts import Hosts, HostsEntry  # type: ignore[import]
 
 logger = logging.getLogger(__name__)
 urllib3.disable_warnings()
@@ -29,7 +30,7 @@ DOMAIN = "pizza.com"
 
 
 @contextmanager
-def pfx_to_pem(pfx_path: str, pfx_password: str) -> str:
+def pfx_to_pem(pfx_path: str, pfx_password: str) -> Iterator[str]:
     """Decrypts the .pfx file to be used with requests.
 
     Args:
@@ -43,6 +44,8 @@ def pfx_to_pem(pfx_path: str, pfx_password: str) -> str:
     private_key, certificate, _ = load_key_and_certificates(
         pfx_file, pfx_password.encode("utf-8"), None
     )
+    if not private_key or not certificate:
+        raise RuntimeError("Could not load pfx package")
     with NamedTemporaryFile(suffix=".pem") as t_pem:
         with open(t_pem.name, "wb") as pem_file:
             pem_file.write(
@@ -88,7 +91,7 @@ def update_etc_host(
     hosts.write()
 
 
-async def run_get_load_balancer_services_action(ops_test: OpsTest) -> (str, str, str, str):
+async def run_get_load_balancer_services_action(ops_test: OpsTest) -> Tuple[str, str, str, str]:
     """Runs `get-load-balancer-services` on the `orc8r-orchestrator/0` unit.
 
     Args:
@@ -98,11 +101,11 @@ async def run_get_load_balancer_services_action(ops_test: OpsTest) -> (str, str,
         (str, str, str, str): External loadbalancer IP's
 
     """
-    orc8r_orchestrator_unit = ops_test.model.units["orc8r-orchestrator/0"]
+    orc8r_orchestrator_unit = ops_test.model.units["orc8r-orchestrator/0"]  # type: ignore[union-attr]  # noqa: E501
     load_balancer_action = await orc8r_orchestrator_unit.run_action(
         action_name="get-load-balancer-services"
     )
-    load_balancer_action_output = await ops_test.model.get_action_output(
+    load_balancer_action_output = await ops_test.model.get_action_output(  # type: ignore[union-attr]  # noqa: E501
         action_uuid=load_balancer_action.entity_id, wait=60
     )
     return (
@@ -122,11 +125,11 @@ async def run_get_pfx_password_action(ops_test: OpsTest) -> str:
     Returns:
         str: PFX package password
     """
-    orc8r_certifier_unit = ops_test.model.units["orc8r-certifier/0"]
+    orc8r_certifier_unit = ops_test.model.units["orc8r-certifier/0"]  # type: ignore[union-attr]  # noqa: E501
     pfx_password_action = await orc8r_certifier_unit.run_action(
         action_name="get-pfx-package-password"
     )
-    pfx_password_action_output = await ops_test.model.get_action_output(
+    pfx_password_action_output = await ops_test.model.get_action_output(  # type: ignore[union-attr]  # noqa: E501
         action_uuid=pfx_password_action.entity_id, wait=60
     )
     return pfx_password_action_output["password"]
@@ -194,9 +197,9 @@ class TestOrc8rBundle:
             raise RuntimeError(f"Error: {stderr}")
 
     async def test_given_bundle_deployed_when_create_network_then_network_is_created(
-            self, ops_test: OpsTest, deploy_bundle
+        self, ops_test: OpsTest, deploy_bundle
     ):
-        await ops_test.model.wait_for_idle(
+        await ops_test.model.wait_for_idle(  # type: ignore[union-attr]
             status="active",
             timeout=1000,
         )
