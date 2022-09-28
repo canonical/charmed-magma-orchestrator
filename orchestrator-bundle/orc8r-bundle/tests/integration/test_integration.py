@@ -125,7 +125,8 @@ class TestOrc8rBundle:
         overlay_file_path = "tests/integration/overlay.yaml"
         orc8r_applications = [
             "nms-magmalte",
-            "nms-nginx-proxy" "orc8r-accessd",
+            "nms-nginx-proxy",
+            "orc8r-accessd",
             "orc8r-analytics",
             "orc8r-bootstrapper",
             "orc8r-certifier",
