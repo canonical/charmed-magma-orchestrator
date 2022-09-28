@@ -10,7 +10,12 @@ from charms.observability_libs.v1.kubernetes_service_patch import (
     KubernetesServicePatch,
     ServicePort,
 )
-from ops.charm import CharmBase, PebbleReadyEvent, RelationJoinedEvent
+from ops.charm import (
+    CharmBase,
+    PebbleReadyEvent,
+    RelationJoinedEvent,
+    RelationBrokenEvent
+)
 from ops.main import main
 from ops.model import (
     ActiveStatus,
@@ -21,6 +26,7 @@ from ops.model import (
     WaitingStatus,
 )
 from ops.pebble import Layer
+from typing import Union
 
 logger = logging.getLogger(__name__)
 
@@ -66,10 +72,16 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
             self._on_magma_orc8r_metricsd_relation_joined,
         )
         self.framework.observe(
-            self.on.magma_orc8r_metricsd_pebble_ready, self._on_magma_orc8r_metricsd_pebble_ready
+            self.on.magma_orc8r_metricsd_pebble_ready, self._configure_magma_orc8r_metricsd
+        )
+        for required_rel in self.REQUIRED_EXTERNAL_RELATIONS + self.REQUIRED_ORC8R_RELATIONS:
+            self.framework.observe(
+            self.on[required_rel].relation_broken, self._configure_magma_orc8r_metricsd
         )
 
-    def _on_magma_orc8r_metricsd_pebble_ready(self, event: PebbleReadyEvent) -> None:
+    def _configure_magma_orc8r_metricsd(
+        self, event: Union[PebbleReadyEvent, RelationBrokenEvent]
+    ) -> None:
         """Charm's main callback function, which, after ensuring all conditions are met, handles
         charm setup.
 
