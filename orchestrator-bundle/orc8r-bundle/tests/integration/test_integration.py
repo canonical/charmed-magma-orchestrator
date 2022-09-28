@@ -2,7 +2,6 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import logging
 from contextlib import contextmanager
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -23,7 +22,6 @@ from cryptography.hazmat.primitives.serialization.pkcs12 import (
 from pytest_operator.plugin import OpsTest
 from python_hosts import Hosts, HostsEntry  # type: ignore[import]
 
-logger = logging.getLogger(__name__)
 urllib3.disable_warnings()
 
 DOMAIN = "pizza.com"
@@ -176,8 +174,36 @@ class Orc8r:
 class TestOrc8rBundle:
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail
-    async def deploy_bundle(self, ops_test: OpsTest):
+    async def deploy_bundle_and_wait_for_idle(self, ops_test: OpsTest):
         overlay_file_path = "tests/integration/overlay.yaml"
+        orc8r_applications = [
+            "nms-magmalte",
+            "nms-nginx-proxy" "orc8r-accessd",
+            "orc8r-analytics",
+            "orc8r-bootstrapper",
+            "orc8r-certifier",
+            "orc8r-configurator",
+            "orc8r-ctraced",
+            "orc8r-device",
+            "orc8r-directoryd",
+            "orc8r-dispatcher",
+            "orc8r-eventd",
+            "orc8r-ha",
+            "orc8r-lte",
+            "orc8r-metricsd",
+            "orc8r-nginx",
+            "orc8r-obsidian",
+            "orc8r-orchestrator",
+            "orc8r-policydb",
+            "orc8r-service-registry",
+            "orc8r-smsd",
+            "orc8r-state",
+            "orc8r-streamer",
+            "orc8r-subscriberdb",
+            "orc8r-subscriberdb-cache",
+            "orc8r-tenants",
+            "tls-certificates-operator",
+        ]
         with open("tests/integration/overlay.yaml.j2", "r") as t:
             jinja_template = jinja2.Template(t.read(), autoescape=True)
         with open(overlay_file_path, "wt") as o:
@@ -190,19 +216,18 @@ class TestOrc8rBundle:
             "--channel=edge",
             f"--overlay={overlay_file_path}",
         ]
-
-        logger.info("Deploying bundle")
         retcode, stdout, stderr = await ops_test.run(*run_args)
         if retcode != 0:
             raise RuntimeError(f"Error: {stderr}")
-
-    async def test_given_bundle_deployed_when_create_network_then_network_is_created(
-        self, ops_test: OpsTest, deploy_bundle
-    ):
         await ops_test.model.wait_for_idle(  # type: ignore[union-attr]
+            apps=orc8r_applications,
             status="active",
             timeout=1000,
         )
+
+    async def test_given_bundle_deployed_when_set_api_client_then_magma_returns_200(
+        self, ops_test: OpsTest, deploy_bundle_and_wait_for_idle
+    ):
         (
             orc8r_bootstrap_nginx_ip,
             orc8r_clientcert_nginx_ip,
@@ -217,10 +242,12 @@ class TestOrc8rBundle:
             nginx_proxy_ip=nginx_proxy_ip,
         )
         pfx_package_path = await get_pfx_package(ops_test)
+
         orc8r = Orc8r(
             url=f"https://api.{DOMAIN}/magma/v1/",
             admin_operator_pfx_path=pfx_package_path,
             admin_operator_pfx_password=pfx_password,
         )
-        response = orc8r.get(endpoint="lte")
-        print(response.json())
+        response = orc8r.get(endpoint="foo")
+
+        assert response.status_code == 200
