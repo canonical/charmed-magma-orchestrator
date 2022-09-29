@@ -118,7 +118,7 @@ class Orc8rBase(Object):
         relation_joined_event = getattr(
             self.charm.on, f"{provided_relation_name_with_underscores}_relation_joined"
         )
-        self.framework.observe(pebble_ready_event, self._configure_orc8r)
+        self.framework.observe(pebble_ready_event, self._configure_charm)
 
         if additional_environment_variables:
             self.additional_environment_variables = additional_environment_variables
@@ -129,7 +129,7 @@ class Orc8rBase(Object):
         self.framework.observe(
             self.db.on.database_relation_joined, self._on_database_relation_joined
         )
-        self.framework.observe(self.db.on.database_relation_broken, self._configure_orc8r)
+        self.framework.observe(self.db.on.database_relation_broken, self._configure_charm)
         self.framework.observe(relation_joined_event, self._on_relation_joined)
 
     @property
@@ -139,7 +139,7 @@ class Orc8rBase(Object):
             return False
         return True
 
-    def _configure_orc8r(self, event: Union[PebbleReadyEvent, RelationBrokenEvent]):
+    def _configure_charm(self, event: Union[PebbleReadyEvent, RelationBrokenEvent]):
         if not self._db_relation_created:
             self.charm.unit.status = BlockedStatus("Waiting for db relation to be created")
             event.defer()
