@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import PropertyMock, patch
 
 from ops import testing
-from test_charms.test_root_provider.src.charm import (  # type: ignore[import]
+from test_charms.test_root_ca_provider.src.charm import (  # type: ignore[import]
     WhateverCharm,
 )
 
@@ -15,10 +15,10 @@ class TestCertRootProvides(unittest.TestCase):
         self.harness = testing.Harness(WhateverCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
-        self.relationship_name = "cert-root"
+        self.relationship_name = "cert-root-ca"
 
     @patch(
-        "test_charms.test_root_provider.src.charm.WhateverCharm.TEST_CERTIFICATE",
+        "test_charms.test_root_ca_provider.src.charm.WhateverCharm.TEST_CERTIFICATE",
         new_callable=PropertyMock,
     )
     def test_given_cert_root_relation_when_set_certificate_then_certificate_is_added_to_relation_data(  # noqa: E501

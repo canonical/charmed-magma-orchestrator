@@ -14,5 +14,5 @@ resources:
     description: whatever image
 
 requires:
-  cert-root:
-    interface: cert-root
+  cert-root-ca:
+    interface: cert-root-ca

@@ -4,7 +4,7 @@
 
 import logging
 
-from charms.magma_orc8r_certifier.v0.cert_root import CertRootCARequires
+from charms.magma_orc8r_certifier.v0.cert_root_ca import CertRootCAProvides
 from ops.charm import CharmBase
 from ops.main import main
 
@@ -12,19 +12,22 @@ logger = logging.getLogger(__name__)
 
 
 class WhateverCharm(CharmBase):
-    CERT_PATH = ""
+    TEST_CERTIFICATE = ""
 
     def __init__(self, *args):
         """Creates a new instance of this object for each event."""
         super().__init__(*args)
-        self.root_cert = CertRootCARequires(self, "cert-root")
+        self.root_ca_cert_provider = CertRootCAProvides(self, "cert-root-ca")
 
         self.framework.observe(
-            self.root_cert.on.certificate_available, self._on_certificate_available
+            self.root_ca_cert_provider.on.certificate_request, self._on_certificate_request
         )
 
-    def _on_certificate_available(self, event):
-        self.model.unit.get_container("whatever-container").push(self.CERT_PATH, event.certificate)
+    def _on_certificate_request(self, event):
+        self.root_ca_cert_provider.set_certificate(
+            relation_id=event.relation_id,
+            certificate=self.TEST_CERTIFICATE,
+        )
 
 
 if __name__ == "__main__":
