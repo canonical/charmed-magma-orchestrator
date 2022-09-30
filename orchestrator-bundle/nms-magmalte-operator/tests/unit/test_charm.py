@@ -73,7 +73,7 @@ class TestCharm(unittest.TestCase):
         db_event.master.port = postgres_port
         return db_event
 
-    def test_given_db_relation_not_created_when_configure_nms_magmalte_then_unit_is_in_blocked_state(  # noqa: E501
+    def test_given_db_relation_not_created_when_pebble_ready_then_unit_is_in_blocked_state(  # noqa: E501
         self,
     ):
         self.harness.add_relation(
@@ -87,7 +87,7 @@ class TestCharm(unittest.TestCase):
             BlockedStatus("Waiting for db relation to be created"),
         )
 
-    def test_given_cert_admin_operator_relation_not_created_when_configure_nms_magmalte_then_unit_is_in_blocked_state(  # noqa: E501
+    def test_given_cert_admin_operator_relation_not_created_when_pebble_ready_then_unit_is_in_blocked_state(  # noqa: E501
         self,
     ):
         self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
@@ -184,7 +184,7 @@ class TestCharm(unittest.TestCase):
     @patch("ops.model.Container.exists")
     @patch("psycopg2.connect", new=Mock())
     @patch("charm.ConnectionString")
-    def test_given_relations_are_created_and_certs_are_stored_when_configure_nms_magmalte_then_charm_goes_to_active_state(  # noqa: E501
+    def test_given_relations_are_created_and_certs_are_stored_when_pebble_ready_then_charm_goes_to_active_state(  # noqa: E501
         self, patch_connection_string, patch_exists
     ):
         patch_exists.return_value = True
@@ -238,7 +238,9 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
 
         self.harness.charm.on.db_relation_broken.emit(self.harness.model.get_relation("db"))
-        self.assertEqual(self.harness.charm.unit.status, BlockedStatus("Waiting for db relation to be created"))
+        self.assertEqual(
+            self.harness.charm.unit.status, BlockedStatus("Waiting for db relation to be created")
+        )
 
     @patch("ops.model.Container.exec")
     @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)

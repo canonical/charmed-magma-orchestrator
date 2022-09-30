@@ -18,7 +18,7 @@ from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.serialization import pkcs12
 from ops import testing
-from ops.model import BlockedStatus, WaitingStatus, ActiveStatus
+from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from pgconnstr import ConnectionString  # type: ignore[import]
 
 from charm import MagmaOrc8rCertifierCharm
@@ -640,7 +640,7 @@ class TestCharm(unittest.TestCase):
 
         assert self.harness.charm.unit.status == BlockedStatus("Config 'domain' is not valid")
 
-    def test_given_db_relation_not_created_when_on_configure_certifier_then_status_is_blocked(
+    def test_given_db_relation_not_created_when_on_pebble_ready_then_status_is_blocked(
         self,
     ):
         self.harness.update_config(key_values={"domain": "whatever.com"})
@@ -651,7 +651,7 @@ class TestCharm(unittest.TestCase):
             "Waiting for database relation to be created"
         )
 
-    def test_given_certificates_relation_not_created_when_on_configure_certifier_then_status_is_blocked(  # noqa: E501
+    def test_given_certificates_relation_not_created_when_on_pebble_ready_then_status_is_blocked(  # noqa: E501
         self,
     ):
         self.harness.update_config(key_values={"domain": "whatever.com"})
@@ -662,6 +662,7 @@ class TestCharm(unittest.TestCase):
         assert self.harness.charm.unit.status == BlockedStatus(
             "Waiting for tls-certificates relation to be created"
         )
+
     @patch("psycopg2.connect", new=Mock())
     @patch("ops.model.Container.exists")
     @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined")
@@ -688,9 +689,12 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
         assert self.harness.charm.unit.status == ActiveStatus()
         self.harness.charm.on.db_relation_broken.emit(self.harness.model.get_relation("db"))
-        self.assertEqual(self.harness.charm.unit.status, BlockedStatus("Waiting for database relation to be created"))
+        self.assertEqual(
+            self.harness.charm.unit.status,
+            BlockedStatus("Waiting for database relation to be created"),
+        )
 
-    def test_given_db_relation_not_established_when_on_configure_certifier_then_status_is_waiting(
+    def test_given_db_relation_not_established_when_on_pebble_ready_then_status_is_waiting(
         self,
     ):
         self.harness.update_config(key_values={"domain": "whatever.com"})
@@ -708,7 +712,7 @@ class TestCharm(unittest.TestCase):
     @patch("psycopg2.connect", new=Mock())
     @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined", new=Mock())
     @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
-    def test_given_private_keys_not_pushed_when_on_configure_certifier_then_status_is_waiting(
+    def test_given_private_keys_not_pushed_when_on_pebble_ready_certifier_then_status_is_waiting(
         self,
     ):
         self.harness.update_config(key_values={"domain": "whatever.com"})

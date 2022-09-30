@@ -508,7 +508,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._push_application_certificates()
 
     def _on_magma_orc8r_certifier_pebble_ready(
-        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationBrokenEvent]
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationJoinedEvent]
     ) -> None:
         """Juju event triggered when pebble is ready.
 
@@ -661,6 +661,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     def _on_database_relation_broken(self, event: RelationBrokenEvent):
         """Event handler for database relation broken.
+
         Args:
             event (RelationJoinedEvent): Juju event
         Returns:
@@ -682,7 +683,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._container.push(path=f"{self.BASE_CONFIG_PATH}/metricsd.yml", source=metricsd_config)
 
     def _configure_pebble(
-        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationBrokenEvent]
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationJoinedEvent]
     ) -> None:
         """Adds layer to pebble config if the proposed config is different from the current one.
 

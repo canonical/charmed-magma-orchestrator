@@ -358,6 +358,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
 
     def _on_database_relation_broken(self, event: RelationBrokenEvent):
         """Event handler for database relation broken.
+
         Args:
             event (RelationJoinedEvent): Juju event
         Returns:
@@ -396,7 +397,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         )
 
     def _configure_pebble(
-        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationBrokenEvent]
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationJoinedEvent]
     ) -> None:
         """Configures pebble layer.
 
