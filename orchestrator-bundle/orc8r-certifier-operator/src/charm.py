@@ -27,6 +27,10 @@ from charms.magma_orc8r_certifier.v0.cert_controller import CertControllerProvid
 from charms.magma_orc8r_certifier.v0.cert_controller import (
     CertificateRequestEvent as ControllerCertificateRequestEvent,
 )
+from charms.magma_orc8r_certifier.v0.cert_root import CertRootCAProvides
+from charms.magma_orc8r_certifier.v0.cert_root import (
+    CertificateRequestEvent as RootCACertificateRequestEvent,
+)
 from charms.observability_libs.v1.kubernetes_service_patch import (
     KubernetesServicePatch,
     ServicePort,
@@ -87,6 +91,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         )
         self.certificates_certifier_provider = CertCertifierProvides(self, "cert-certifier")
         self.certificates_controller_provider = CertControllerProvides(self, "cert-controller")
+        self.certificates_root_ca_provider = CertRootCAProvides(self, "cert-root")
         self._container_name = self._service_name = "magma-orc8r-certifier"
         self.provided_relation_name = "magma-orc8r-certifier"
         self._container = self.unit.get_container(self._container_name)
@@ -99,33 +104,27 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                 "orc8r.io/analytics_collector": "true",
             },
         )
-        self.framework.observe(self.on.config_changed, self._on_config_changed)
-        self.framework.observe(
-            self.on.magma_orc8r_certifier_relation_joined,
-            self._on_magma_orc8r_certifier_relation_joined,
-        )
-        self.framework.observe(
-            self.tls_certificates_requirer.on.certificate_available, self._on_certificate_available
-        )
-        self.framework.observe(
-            self.tls_certificates_requirer.on.certificate_expiring, self._on_certificate_expiring
-        )
-        self.framework.observe(
-            self.tls_certificates_requirer.on.certificate_expired, self._on_certificate_expiring
-        )
-        self.framework.observe(
-            self.on.certificates_relation_created, self._on_certificates_relation_created
-        )
+
+        # Main charm lifecycle events
         self.framework.observe(self.on.install, self._on_install)
+        self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(
             self.on.magma_orc8r_certifier_pebble_ready, self._on_magma_orc8r_certifier_pebble_ready
         )
+
+        # Relation events
         self.framework.observe(
             self._db.on.database_relation_joined, self._on_database_relation_joined
         )
         self.framework.observe(
-            self.on.get_pfx_package_password_action, self._on_get_pfx_package_password
+            self.on.certificates_relation_created, self._on_certificates_relation_created
         )
+        self.framework.observe(
+            self.on.magma_orc8r_certifier_relation_joined,
+            self._on_magma_orc8r_certifier_relation_joined,
+        )
+
+        # Certs events
         self.framework.observe(
             self.certificates_admin_operator_provider.on.certificate_request,
             self._on_admin_operator_certificate_request,
@@ -138,217 +137,20 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self.certificates_controller_provider.on.certificate_request,
             self._on_controller_certificate_request,
         )
-
-    @property
-    def _root_certificates_are_pushed(self) -> bool:
-        """Returns whether root certificate are pushed to workload.
-
-        Returns:
-            bool: Whether root certificate are pushed to workload.
-        """
-        if not self._container.exists(f"{self.BASE_CERTIFICATES_PATH}/controller.crt"):
-            logger.info("Root certificate is not pushed")
-            return False
-        if not self._container.exists(f"{self.BASE_CERTIFICATES_PATH}/rootCA.pem"):
-            logger.info("Root CA Certificate is not pushed")
-            return False
-        return True
-
-    @property
-    def _root_private_key_is_pushed(self) -> bool:
-        """Returns whether root private key is pushed to workload.
-
-        Returns:
-            bool: True/False
-        """
-        if not self._container.exists(f"{self.BASE_CERTIFICATES_PATH}/controller.key"):
-            logger.info("Root private key is not pushed")
-            return False
-        return True
-
-    @property
-    def _application_certificates_are_pushed(self) -> bool:
-        """Returns whether application certificate are stored.
-
-        Returns:
-            bool: Whether application certificate are stored.
-        """
-        if not self._container.exists(f"{self.BASE_CERTIFICATES_PATH}/admin_operator.pem"):
-            logger.info("Admin Operator certificate is not pushed")
-            return False
-        if not self._container.exists(f"{self.BASE_CERTIFICATES_PATH}/admin_operator.pfx"):
-            logger.info("Admin operator PFX package is not pushed")
-            return False
-        if not self._container.exists(f"{self.BASE_CERTIFICATES_PATH}/certifier.pem"):
-            logger.info("Application certificate is not pushed")
-            return False
-        return True
-
-    @property
-    def _application_private_keys_are_pushed(self) -> bool:
-        """Returns whether application private keys are pushed.
-
-        Returns:
-            bool: Whether application private keys are pushed.
-        """
-        if not self._container.exists(f"{self.BASE_CERTIFICATES_PATH}/certifier.key"):
-            logger.info("Application private key is not pushed")
-            return False
-        if not self._container.exists(f"{self.BASE_CERTIFICATES_PATH}/admin_operator.key.pem"):
-            logger.info("Admin operator private key is not pushed")
-            return False
-        return True
-
-    @property
-    def _db_relation_created(self) -> bool:
-        """Checks whether db relation is created.
-
-        Returns:
-            bool: Whether required relation
-        """
-        return self._relation_created("db")
-
-    @property
-    def _db_relation_established(self) -> bool:
-        """Validates that database relation is established.
-
-        Checks that there is a relation and that credentials have been passed.
-
-        Returns:
-            bool: Whether the database relation is established.
-        """
-        db_connection_string = self._get_db_connection_string
-        if not db_connection_string:
-            return False
-        try:
-            psycopg2.connect(
-                f"dbname='{self.DB_NAME}' "
-                f"user='{db_connection_string.user}' "
-                f"host='{db_connection_string.host}' "
-                f"password='{db_connection_string.password}'"
-            ).close()
-            return True
-        except psycopg2.OperationalError:
-            return False
-
-    @property
-    def _pebble_layer(self) -> Layer:
-        """Returns Pebble layer object containing the workload startup service.
-
-        Returns:
-            Layer: Pebble layer
-        """
-        return Layer(
-            {
-                "summary": f"{self._service_name} pebble layer",
-                "services": {
-                    self._service_name: {
-                        "override": "replace",
-                        "startup": "enabled",
-                        "command": "/usr/bin/envdir "
-                        "/var/opt/magma/envdir "
-                        "/var/opt/magma/bin/certifier "
-                        f"-cac={self.BASE_CERTIFICATES_PATH}/certifier.pem "
-                        f"-cak={self.BASE_CERTIFICATES_PATH}/certifier.key "
-                        f"-vpnc={self.BASE_CERTIFICATES_PATH}/vpn_ca.crt "
-                        f"-vpnk={self.BASE_CERTIFICATES_PATH}/vpn_ca.key "
-                        "-logtostderr=true "
-                        "-v=0",
-                        "environment": {
-                            "DATABASE_SOURCE": f"dbname={self.DB_NAME} "  # type: ignore[union-attr]  # noqa: E501
-                            f"user={self._get_db_connection_string.user} "
-                            f"password={self._get_db_connection_string.password} "
-                            f"host={self._get_db_connection_string.host} "
-                            f"sslmode=disable",
-                            "SQL_DRIVER": "postgres",
-                            "SQL_DIALECT": "psql",
-                            "SERVICE_HOSTNAME": "magma-orc8r-certifier",
-                            "SERVICE_REGISTRY_MODE": "k8s",
-                            "SERVICE_REGISTRY_NAMESPACE": self._namespace,
-                        },
-                    }
-                },
-            }
+        self.framework.observe(
+            self.tls_certificates_requirer.on.certificate_available, self._on_certificate_available
+        )
+        self.framework.observe(
+            self.tls_certificates_requirer.on.certificate_expiring, self._on_certificate_expiring
+        )
+        self.framework.observe(
+            self.tls_certificates_requirer.on.certificate_expired, self._on_certificate_expiring
         )
 
-    @property
-    def _certificates_relation_created(self) -> bool:
-        """Returns whether the certificates relation is created.
-
-        Returns:
-            bool: Whether the certificates relation is created.
-        """
-        return self._relation_created("certificates")
-
-    @property
-    def _replicas_relation_created(self) -> bool:
-        """Returns whether the replicas relation is created.
-
-        Returns:
-            bool: Whether the certificates relation is created.
-        """
-        return self._relation_created("replicas")
-
-    @property
-    def _get_db_connection_string(self) -> Optional[ConnectionString]:
-        """Returns DB connection string provided by the DB relation.
-
-        Returns:
-            ConnectionString: Database connection object.
-        """
-        try:
-            db_relation = self.model.get_relation("db")
-            return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[union-attr, index]  # noqa: E501
-        except (AttributeError, KeyError):
-            return None
-
-    @property
-    def _domain_config(self) -> Optional[str]:
-        """Returns domain config."""
-        return self.model.config.get("domain")
-
-    @property
-    def _domain_config_is_valid(self) -> bool:
-        """Returns whether the "domain" config is valid.
-
-        Returns:
-            bool: Whether the domain is a valid one.
-        """
-        if not self._domain_config:
-            return False
-        pattern = re.compile(
-            r"^(?:[a-zA-Z0-9]"  # First character of the domain
-            r"(?:[a-zA-Z0-9-_]{0,61}[A-Za-z0-9])?\.)"  # Sub domain + hostname
-            r"+[A-Za-z0-9][A-Za-z0-9-_]{0,61}"  # First 61 characters of the gTLD
-            r"[A-Za-z]$"  # Last character of the gTLD
+        # Action events
+        self.framework.observe(
+            self.on.get_pfx_package_password_action, self._on_get_pfx_package_password
         )
-        if pattern.match(self._domain_config):
-            return True
-        return False
-
-    @property
-    def _service_is_running(self) -> bool:
-        """Returns whether workload service is running.
-
-        Returns:
-            bool: Whether workload service is running.
-        """
-        if self._container.can_connect():
-            try:
-                self._container.get_service(self._service_name)
-                return True
-            except ModelError:
-                pass
-        return False
-
-    @property
-    def _namespace(self) -> str:
-        """Kubernetes namespace.
-
-        Returns:
-            str: Namespace
-        """
-        return self.model.name
 
     def _on_install(self, event: InstallEvent) -> None:
         """Juju event triggered only once when charm is installed.
@@ -397,7 +199,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._push_application_private_keys()
         self._push_root_private_key()
 
-    def _on_config_changed(self, event: ConfigChangedEvent):
+    def _on_config_changed(self, event: ConfigChangedEvent) -> None:
         """Triggered on config changes.
 
         Args:
@@ -414,94 +216,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self._on_leader_config_changed(event)
         else:
             self._on_non_leader_config_changed(event)
-
-    def _on_leader_config_changed(self, event: ConfigChangedEvent) -> None:
-        """Triggered on config changed for leader unit.
-
-        If the 'domain' config changed, new root certificates will be requested and new
-        application certificates will be generated.
-
-        Args:
-            event: Juju event
-
-        Returns:
-            None
-        """
-        if not self._domain_config_is_valid:
-            self.unit.status = BlockedStatus("Config 'domain' is not valid")
-            event.defer()
-            return
-        if not self._root_private_key_is_stored:
-            self.unit.status = WaitingStatus("Waiting for root private key to be generated")
-            event.defer()
-            return
-        if not self._application_private_keys_are_stored:
-            self.unit.status = WaitingStatus(
-                "Waiting for application private keys to be generated"
-            )
-            event.defer()
-            return
-        if not self._root_csr_is_stored:
-            self._generate_root_csr()
-            if self._certificates_relation_created:
-                self._request_certificate_based_on_stored_csr()
-                self.unit.status = WaitingStatus(
-                    "Waiting to receive new certificate from provider"
-                )
-            else:
-                self.unit.status = BlockedStatus(
-                    "Waiting for tls-certificates relation to be created"
-                )
-        if not self._stored_root_csr_matches_config:
-            old_csr = self._root_csr
-            self._generate_root_csr()
-            if self._certificates_relation_created:
-                self.tls_certificates_requirer.request_certificate_renewal(
-                    old_certificate_signing_request=old_csr.encode(),  # type: ignore[union-attr]  # noqa: E501
-                    new_certificate_signing_request=self._root_csr.encode(),  # type: ignore[union-attr]  # noqa: E501
-                )
-                self.unit.status = WaitingStatus(
-                    "Waiting to receive new certificate from provider"
-                )
-            else:
-                self.unit.status = BlockedStatus(
-                    "Waiting for tls-certificates relation to be created"
-                )
-        if (
-            not self._application_certificates_are_stored
-            or not self._stored_application_certificate_matches_config  # noqa: W503
-        ):
-            self._generate_application_certificates()
-            self._push_application_certificates()
-
-    def _on_non_leader_config_changed(self, event: ConfigChangedEvent):
-        """Triggered on config changed for non-leader unit.
-
-        Pushes application certificates to workload.
-
-        Args:
-            event: Juju event
-
-        Returns:
-            None
-        """
-        if not self._root_csr_is_stored or not self._stored_root_csr_matches_config:
-            self.unit.status = WaitingStatus("Waiting for leader to generate a root csr")
-            event.defer()
-            return
-        if not self._application_certificates_are_stored:
-            self.unit.status = WaitingStatus(
-                "Waiting for leader to generate application certificates"
-            )
-            event.defer()
-            return
-        if not self._stored_application_certificate_matches_config:
-            self.unit.status = WaitingStatus(
-                "Waiting for leader to generate new application certificates"
-            )
-            event.defer()
-            return
-        self._push_application_certificates()
 
     def _on_magma_orc8r_certifier_pebble_ready(
         self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
@@ -548,22 +262,23 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             return
         self._configure_magma_orc8r_certifier(event)
 
-    def _generate_root_csr(self) -> None:
-        """Generates a CSR with the domain name in the Juju config.
+    def _on_database_relation_joined(self, event: RelationJoinedEvent) -> None:
+        """Event handler for database relation change.
+
+        - Sets the event.database field on the database joined event.
+        - Required because setting the database name is only possible
+          from inside the event handler per https://github.com/canonical/ops-lib-pgsql/issues/2
+        - Sets our database parameters based on what was provided
+          in the relation event.
+
+        Args:
+            event (RelationJoinedEvent): Juju relation joined event
 
         Returns:
             None
         """
-        peer_relation = self.model.get_relation("replicas")
-        if not self._domain_config_is_valid:
-            raise ValueError("Domain config is not valid")
-        if not peer_relation:
-            raise RuntimeError("No peer relation")
-        csr = generate_csr(
-            private_key=self._root_private_key.encode(), subject=f"*.{self._domain_config}"  # type: ignore[union-attr]  # noqa: E501
-        )
-        self._store_root_csr(csr.decode())
-        logger.info("Generated CSR for root certificate")
+        if self.unit.is_leader():
+            event.database = self.DB_NAME  # type: ignore[attr-defined]
 
     def _on_certificates_relation_created(self, event: RelationJoinedEvent) -> None:
         """Juju event triggered when the certificates relation is created.
@@ -586,110 +301,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             return
         self._request_certificate_based_on_stored_csr()
 
-    def _request_certificate_based_on_stored_csr(self) -> None:
-        """Makes a certificate request using the tls-certificates interface."""
-        csr = self._root_csr
-        if not csr:
-            raise RuntimeError("No stored root CSR.")
-        self.tls_certificates_requirer.request_certificate_creation(
-            certificate_signing_request=csr.encode()
-        )
-
-    def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
-        """Runs whenever the certificates available event is triggered.
-
-        Pushes the certificates retrieved from the relation data to the workload container.
-
-        Args:
-            event (CertificateAvailableEvent): Custom Juju event for certificate available.
-
-        Returns:
-            None
-        """
-        if event.certificate_signing_request != self._root_csr:
-            logger.warning("Certificate's CSR doesn't match stored root CSR")
-            return
-        peer_relation = self.model.get_relation("replicas")
-        if not peer_relation:
-            logger.info("No peer relation created")
-            event.defer()
-            return
-        if not self._container.can_connect():
-            self.unit.status = WaitingStatus("Waiting for container to be ready")
-            event.defer()
-            return
-        if self.unit.is_leader():
-            self._store_root_ca_certificate(event.ca)
-            self._store_root_certificate(event.certificate)
-        else:
-            if (
-                not self._root_certificates_are_stored
-                or not self._stored_root_certificate_matches_certificate(  # noqa: W503
-                    event.certificate
-                )
-            ):
-                self.unit.status = WaitingStatus("Waiting for leader to store root certificates")
-                event.defer()
-                return
-        self._push_root_certificates()
-        self._on_magma_orc8r_certifier_pebble_ready(event)
-
-    def _on_database_relation_joined(self, event: RelationJoinedEvent) -> None:
-        """Event handler for database relation change.
-
-        - Sets the event.database field on the database joined event.
-        - Required because setting the database name is only possible
-          from inside the event handler per https://github.com/canonical/ops-lib-pgsql/issues/2
-        - Sets our database parameters based on what was provided
-          in the relation event.
-
-        Args:
-            event (RelationJoinedEvent): Juju relation joined event
-
-        Returns:
-            None
-        """
-        if self.unit.is_leader():
-            event.database = self.DB_NAME  # type: ignore[attr-defined]
-
-    def _push_metricsd_config_file(self) -> None:
-        """Writes the config file for metricsd in the workload container.
-
-        Returns:
-            None
-        """
-        metricsd_config = (
-            f'prometheusQueryAddress: "{self.PROMETHEUS_URL}"\n'
-            f'alertmanagerApiURL: "{self.ALERTMANAGER_URL}/api/v2"\n'
-            '"profile": "prometheus"\n'
-        )
-        self._container.push(path=f"{self.BASE_CONFIG_PATH}/metricsd.yml", source=metricsd_config)
-
-    def _configure_magma_orc8r_certifier(
-        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
-    ) -> None:
-        """Adds layer to pebble config if the proposed config is different from the current one.
-
-        Args:
-            event (PebbleReadyEvent): Juju Pebble ready event
-
-        Returns:
-            None
-        """
-        if self._container.can_connect():
-            plan = self._container.get_plan()
-            layer = self._pebble_layer
-            if plan.services != layer.services:
-                self.unit.status = MaintenanceStatus("Configuring pod")
-                self._container.add_layer(self._container_name, layer, combine=True)
-                self._container.restart(self._service_name)
-                logger.info(f"Restarted container {self._service_name}")
-                self._update_relations()
-                self.unit.status = ActiveStatus()
-        else:
-            self.unit.status = WaitingStatus("Waiting for container to be ready")
-            event.defer()
-
     def _on_magma_orc8r_certifier_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Triggered when charms join the orc8r-certifier relation.
 
@@ -703,400 +314,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         if not self._service_is_running:
             event.defer()
             return
-
-    def _update_relations(self) -> None:
-        """Updates all the "provided" relation with the workload service status.
-
-        Returns:
-            None
-        """
-        if not self.unit.is_leader():
-            return
-        relations = self.model.relations[self.provided_relation_name]
-        for relation in relations:
-            self._update_relation_active_status(
-                relation=relation, is_active=self._service_is_running
-            )
-
-    def _generate_application_certificates(self) -> None:
-        """Generates application certificates."""
-        if not self._application_private_key:
-            raise RuntimeError("Application private key not available")
-        if not self._admin_operator_private_key:
-            raise RuntimeError("Admin Operator private key not available")
-        application_ca_certificate = generate_ca(
-            private_key=self._application_private_key.encode(),
-            subject=f"certifier.{self._domain_config}",
-        )
-        admin_operator_csr = generate_csr(
-            private_key=self._admin_operator_private_key.encode(),
-            subject="admin_operator",
-        )
-        admin_operator_certificate = generate_certificate(
-            csr=admin_operator_csr,
-            ca=application_ca_certificate,
-            ca_key=self._application_private_key.encode(),
-        )
-        password = self._generate_password()
-        admin_operator_pfx = generate_pfx_package(
-            private_key=self._admin_operator_private_key.encode(),
-            certificate=admin_operator_certificate,
-            package_password=password,
-        )
-        self._store_application_ca_certificate(application_ca_certificate.decode())
-        self._store_admin_operator_certificate(admin_operator_certificate.decode())
-        self._store_admin_operator_pfx(base64.b64encode(admin_operator_pfx).decode())
-        self._store_admin_operator_pfx_password(password)
-        logger.info("Generated Application Certificates")
-
-    def _generate_application_private_keys(self) -> None:
-        """Generates application private keys."""
-        application_private_key = generate_private_key()
-        admin_operator_private_key = generate_private_key()
-        self._store_application_private_key(application_private_key.decode())
-        self._store_admin_operator_private_key(admin_operator_private_key.decode())
-        logger.info("Generated application private keys")
-
-    def _generate_root_private_key(self) -> None:
-        """Generates the root private key and stores it in peer relation data."""
-        root_private_key = generate_private_key()
-        self._store_root_private_key(root_private_key.decode())
-        logger.info("Generated root private key")
-
-    def _push_application_certificates(self) -> None:
-        """Pushes application certificates to the workload container."""
-        if not self._application_certificate:
-            raise RuntimeError("Application certificate is not available")
-        if not self._admin_operator_certificate:
-            raise RuntimeError("Admin Operator certificate is not available")
-        if not self._admin_operator_pfx:
-            raise RuntimeError("Admin Operator PFX package is not available")
-        self._container.push(
-            path=f"{self.BASE_CERTIFICATES_PATH}/certifier.pem",
-            source=self._application_certificate,
-        )
-        self._container.push(
-            path=f"{self.BASE_CERTIFICATES_PATH}/admin_operator.pem",
-            source=self._admin_operator_certificate,
-        )
-        self._container.push(
-            path=f"{self.BASE_CERTIFICATES_PATH}/admin_operator.pfx",
-            source=base64.b64decode(self._admin_operator_pfx),
-        )
-        logger.info("Pushed application certificates")
-
-    def _push_application_private_keys(self) -> None:
-        """Pushes application private keys to the workload container."""
-        if not self._application_private_key:
-            raise RuntimeError("Application private key is not available")
-        if not self._admin_operator_private_key:
-            raise RuntimeError("Admin Operator private key is not available")
-        self._container.push(
-            path=f"{self.BASE_CERTIFICATES_PATH}/certifier.key",
-            source=self._application_private_key,
-        )
-        self._container.push(
-            path=f"{self.BASE_CERTIFICATES_PATH}/admin_operator.key.pem",
-            source=self._admin_operator_private_key,
-        )
-        logger.info("Pushed application private keys")
-
-    def _push_root_certificates(self) -> None:
-        """Pushes root certificates to workload container."""
-        if not self._root_ca_certificate:
-            raise RuntimeError("Root CA certificate is not available")
-        if not self._root_certificate:
-            raise RuntimeError("Root certificate is not available")
-        self._container.push(
-            path=f"{self.BASE_CERTIFICATES_PATH}/rootCA.pem", source=self._root_ca_certificate
-        )
-        self._container.push(
-            path=f"{self.BASE_CERTIFICATES_PATH}/controller.crt", source=self._root_certificate
-        )
-        logger.info("Pushed root certificates")
-
-    def _push_root_private_key(self) -> None:
-        """Pushes root private key to workload container."""
-        if not self._root_private_key:
-            raise RuntimeError("Root Private key not available.")
-        self._container.push(
-            path=f"{self.BASE_CERTIFICATES_PATH}/controller.key", source=self._root_private_key
-        )
-        logger.info("Pushed root private key")
-
-    @property
-    def _application_certificates_are_stored(self) -> bool:
-        """Returns whether application certificates are stored in relation data."""
-        if not self._application_certificate:
-            logger.info("Application certificate is not stored")
-            return False
-        if not self._admin_operator_certificate:
-            logger.info("Admin Operator certificate is not stored")
-            return False
-        if not self._admin_operator_pfx_password:
-            logger.info("Admin Operator PFX password is not stored")
-            return False
-        if not self._admin_operator_pfx:
-            logger.info("Admin Operator PFX package is not stored")
-            return False
-        return True
-
-    @property
-    def _stored_application_certificate_matches_config(self) -> bool:
-        """Returns whether application certificate content matches juju config."""
-        if not self._application_certificate:
-            raise RuntimeError("Application certificates not stored")
-        application_certificate = x509.load_pem_x509_certificate(
-            data=self._application_certificate.encode()
-        )
-        for subject in application_certificate.subject:
-            if subject.value == f"certifier.{self._domain_config}":
-                return True
-        logger.info("Stored application certificates does not match config")
-        return False
-
-    @property
-    def _application_private_keys_are_stored(self) -> bool:
-        """Returns whether certificates are stored in relation data."""
-        if not self._application_private_key:
-            logger.info("Application private key not stored")
-            return False
-        if not self._admin_operator_private_key:
-            logger.info("Admin operator private key not stored")
-            return False
-        return True
-
-    @property
-    def _application_private_key(self) -> Optional[str]:
-        """Returns application private key."""
-        return self._get_value_from_relation_data("application_private_key")
-
-    @property
-    def _application_certificate(self) -> Optional[str]:
-        """Returns application certificate."""
-        return self._get_value_from_relation_data("application_certificate")
-
-    @property
-    def _admin_operator_private_key(self) -> Optional[str]:
-        """Returns admin operator private key."""
-        return self._get_value_from_relation_data("admin_operator_private_key")
-
-    @property
-    def _admin_operator_certificate(self) -> Optional[str]:
-        """Returns admin operator certificate."""
-        return self._get_value_from_relation_data("admin_operator_certificate")
-
-    @property
-    def _admin_operator_pfx_password(self) -> Optional[str]:
-        """Returns admin operator pfx password."""
-        return self._get_value_from_relation_data("admin_operator_pfx_password")
-
-    @property
-    def _admin_operator_pfx(self) -> Optional[str]:
-        """Returns admin operator pfx package."""
-        return self._get_value_from_relation_data("admin_operator_pfx")
-
-    @property
-    def _root_private_key(self) -> Optional[str]:
-        """Returns root private key."""
-        return self._get_value_from_relation_data("root_private_key")
-
-    @property
-    def _root_csr(self) -> Optional[str]:
-        """Returns root CSR."""
-        return self._get_value_from_relation_data("root_csr")
-
-    @property
-    def _root_certificate(self) -> Optional[str]:
-        """Returns root certificate."""
-        return self._get_value_from_relation_data("root_certificate")
-
-    @property
-    def _root_ca_certificate(self) -> Optional[str]:
-        """Returns root ca certificate."""
-        return self._get_value_from_relation_data("root_ca_certificate")
-
-    @property
-    def _root_private_key_is_stored(self) -> bool:
-        """Returns whether private key is stored in peer relation data."""
-        if self._root_private_key:
-            return True
-        else:
-            return False
-
-    @property
-    def _root_csr_is_stored(self) -> bool:
-        """Returns whether root CSR is stored in peer relation data."""
-        if not self._root_csr:
-            logger.info("Root CSR not stored")
-            return False
-        return True
-
-    @property
-    def _stored_root_csr_matches_config(self) -> bool:
-        """Returns whether the stored root CSR matches the config."""
-        if not self._root_csr:
-            raise RuntimeError("No stored root CSR")
-        csr_object = x509.load_pem_x509_csr(data=self._root_csr.encode())
-        if f"*.{self._domain_config}" == list(csr_object.subject)[0].value:
-            return True
-        else:
-            logger.info("Root CSR subject doesn't match with config")
-            return False
-
-    @property
-    def _root_certificates_are_stored(self) -> bool:
-        """Returns whether root certificates are stored."""
-        if not self._root_certificate:
-            logger.info("Root certificate not stored")
-            return False
-        if not self._root_ca_certificate:
-            logger.info("Root CA certificate not stored")
-            return False
-        return True
-
-    def _stored_root_certificate_matches_certificate(self, certificate: str) -> bool:
-        """Returns whether root certificate matches provided certificate.
-
-        Args:
-            certificate: TLS Certificate.
-
-        Returns:
-            bool: Whether root certificate matches provided certificate.
-        """
-        if not self._root_certificate:
-            raise RuntimeError("Root certificate not stored")
-        return certificate == self._root_certificate
-
-    def _store_application_private_key(self, private_key: str) -> None:
-        """Stores application private key in peer relation data."""
-        self._store_item_in_peer_relation_data(key="application_private_key", value=private_key)
-
-    def _store_application_ca_certificate(self, certificate: str) -> None:
-        """Stores application certificate in peer relation data."""
-        self._store_item_in_peer_relation_data(key="application_certificate", value=certificate)
-
-    def _store_admin_operator_private_key(self, private_key: str) -> None:
-        """Stores admin operator private key in peer relation data."""
-        self._store_item_in_peer_relation_data(key="admin_operator_private_key", value=private_key)
-
-    def _store_admin_operator_certificate(self, certificate: str) -> None:
-        """Stores admin operator certificate in peer relation data."""
-        self._store_item_in_peer_relation_data(key="admin_operator_certificate", value=certificate)
-
-    def _store_admin_operator_pfx(self, pfx: str) -> None:
-        """Stores admin operator pfx package in peer relation data."""
-        self._store_item_in_peer_relation_data(key="admin_operator_pfx", value=pfx)
-
-    def _store_admin_operator_pfx_password(self, password: str) -> None:
-        """Stores admin operator pfx password in peer relation data."""
-        self._store_item_in_peer_relation_data(key="admin_operator_pfx_password", value=password)
-
-    def _store_root_private_key(self, private_key: str) -> None:
-        """Stores root private key in peer relation data."""
-        self._store_item_in_peer_relation_data(key="root_private_key", value=private_key)
-
-    def _store_root_csr(self, csr: str) -> None:
-        """Stores root CSR in peer relation data."""
-        self._store_item_in_peer_relation_data(key="root_csr", value=csr)
-
-    def _store_root_ca_certificate(self, ca_certificate: str) -> None:
-        """Stores root CA certificate in peer relation data."""
-        self._store_item_in_peer_relation_data(key="root_ca_certificate", value=ca_certificate)
-
-    def _store_root_certificate(self, certificate: str) -> None:
-        """Stores root certificate in peer relation data."""
-        self._store_item_in_peer_relation_data(key="root_certificate", value=certificate)
-
-    def _get_value_from_relation_data(self, key: str) -> Optional[str]:
-        """Returns value from relation data.
-
-        Args:
-            key (str): Relation data key
-
-        Returns:
-            str: Relation data value
-        """
-        replicas = self.model.get_relation("replicas")
-        if not replicas:
-            return None
-        relation_data = replicas.data[self.app].get(key, None)
-        if relation_data:
-            return relation_data.strip()
-        else:
-            return None
-
-    def _store_item_in_peer_relation_data(self, key: str, value: str) -> None:
-        """Stores key/value in peer relation data.
-
-        Args:
-            key (str): Relation data key
-            value (str): Relation data value
-
-        Returns:
-            None
-        """
-        peer_relation = self.model.get_relation("replicas")
-        if not peer_relation:
-            raise RuntimeError("No peer relation")
-        peer_relation.data[self.app].update({key: value.strip()})
-
-    def _update_relation_active_status(self, relation: Relation, is_active: bool) -> None:
-        """Updates the relation data content.
-
-        Args:
-            relation (Relation): Juju relation object
-            is_active (bool): Whether the service is active or not
-
-        Returns:
-            None
-        """
-        relation.data[self.unit].update(
-            {
-                "active": str(is_active),
-            }
-        )
-
-    def _relation_created(self, relation_name: str) -> bool:
-        """Returns whether a given Juju relation was crated.
-
-        Args:
-            relation_name (str): Relation name
-
-        Returns:
-            str: Whether the relation was created.
-        """
-        if not self.model.get_relation(relation_name):
-            return False
-        return True
-
-    @staticmethod
-    def _generate_password() -> str:
-        """Generates a random 12 character password.
-
-        Returns:
-            str: Password
-        """
-        chars = string.ascii_letters + string.digits
-        return "".join(secrets.choice(chars) for _ in range(12))
-
-    def _on_get_pfx_package_password(self, event: ActionEvent) -> None:
-        """Sets the action result as the admin operator PFX package password.
-
-        Args:
-            event (ActionEvent): Juju event
-
-        Returns:
-            None
-        """
-        if not self._admin_operator_pfx:
-            event.fail("Admin Operator PFX package is not available")
-            return
-        event.set_results(
-            {
-                "password": self._admin_operator_pfx_password,
-            }
-        )
 
     def _on_admin_operator_certificate_request(
         self, event: AdminOperatorCertificateRequestEvent
@@ -1189,6 +406,45 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             private_key=str(private_key_string),
         )
 
+    def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
+        """Runs whenever the certificates available event is triggered.
+
+        Pushes the certificates retrieved from the relation data to the workload container.
+
+        Args:
+            event (CertificateAvailableEvent): Custom Juju event for certificate available.
+
+        Returns:
+            None
+        """
+        if event.certificate_signing_request != self._root_csr:
+            logger.warning("Certificate's CSR doesn't match stored root CSR")
+            return
+        peer_relation = self.model.get_relation("replicas")
+        if not peer_relation:
+            logger.info("No peer relation created")
+            event.defer()
+            return
+        if not self._container.can_connect():
+            self.unit.status = WaitingStatus("Waiting for container to be ready")
+            event.defer()
+            return
+        if self.unit.is_leader():
+            self._store_root_ca_certificate(event.ca)
+            self._store_root_certificate(event.certificate)
+        else:
+            if (
+                    not self._root_certificates_are_stored
+                    or not self._stored_root_certificate_matches_certificate(  # noqa: W503
+                event.certificate
+            )
+            ):
+                self.unit.status = WaitingStatus("Waiting for leader to store root certificates")
+                event.defer()
+                return
+        self._push_root_certificates()
+        self._on_magma_orc8r_certifier_pebble_ready(event)
+
     def _on_certificate_expiring(
         self,
         event: Union[CertificateExpiringEvent, CertificateExpiredEvent],
@@ -1228,6 +484,763 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             new_certificate_signing_request=self._root_csr.encode(),  # type: ignore[union-attr]
         )
         self.unit.status = WaitingStatus("Waiting to receive new certificate from provider")
+
+    def _on_get_pfx_package_password(self, event: ActionEvent) -> None:
+        """Sets the action result as the admin operator PFX package password.
+
+        Args:
+            event (ActionEvent): Juju event
+
+        Returns:
+            None
+        """
+        if not self._admin_operator_pfx:
+            event.fail("Admin Operator PFX package is not available")
+            return
+        event.set_results(
+            {
+                "password": self._admin_operator_pfx_password,
+            }
+        )
+
+    def _generate_root_private_key(self) -> None:
+        """Generates the root private key and stores it in peer relation data."""
+        root_private_key = generate_private_key()
+        self._store_root_private_key(root_private_key.decode())
+        logger.info("Generated root private key")
+
+    def _generate_application_private_keys(self) -> None:
+        """Generates application private keys."""
+        application_private_key = generate_private_key()
+        admin_operator_private_key = generate_private_key()
+        self._store_application_private_key(application_private_key.decode())
+        self._store_admin_operator_private_key(admin_operator_private_key.decode())
+        logger.info("Generated application private keys")
+
+    def _push_root_certificates(self) -> None:
+        """Pushes root certificates to workload container."""
+        if not self._root_ca_certificate:
+            raise RuntimeError("Root CA certificate is not available")
+        if not self._root_certificate:
+            raise RuntimeError("Root certificate is not available")
+        self._container.push(
+            path=f"{self.BASE_CERTIFICATES_PATH}/rootCA.pem", source=self._root_ca_certificate
+        )
+        self._container.push(
+            path=f"{self.BASE_CERTIFICATES_PATH}/controller.crt", source=self._root_certificate
+        )
+        logger.info("Pushed root certificates")
+
+    def _push_application_certificates(self) -> None:
+        """Pushes application certificates to the workload container."""
+        if not self._application_certificate:
+            raise RuntimeError("Application certificate is not available")
+        if not self._admin_operator_certificate:
+            raise RuntimeError("Admin Operator certificate is not available")
+        if not self._admin_operator_pfx:
+            raise RuntimeError("Admin Operator PFX package is not available")
+        self._container.push(
+            path=f"{self.BASE_CERTIFICATES_PATH}/certifier.pem",
+            source=self._application_certificate,
+        )
+        self._container.push(
+            path=f"{self.BASE_CERTIFICATES_PATH}/admin_operator.pem",
+            source=self._admin_operator_certificate,
+        )
+        self._container.push(
+            path=f"{self.BASE_CERTIFICATES_PATH}/admin_operator.pfx",
+            source=base64.b64decode(self._admin_operator_pfx),
+        )
+        logger.info("Pushed application certificates")
+
+    def _push_metricsd_config_file(self) -> None:
+        """Writes the config file for metricsd in the workload container.
+
+        Returns:
+            None
+        """
+        metricsd_config = (
+            f'prometheusQueryAddress: "{self.PROMETHEUS_URL}"\n'
+            f'alertmanagerApiURL: "{self.ALERTMANAGER_URL}/api/v2"\n'
+            '"profile": "prometheus"\n'
+        )
+        self._container.push(path=f"{self.BASE_CONFIG_PATH}/metricsd.yml", source=metricsd_config)
+
+    def _push_application_private_keys(self) -> None:
+        """Pushes application private keys to the workload container."""
+        if not self._application_private_key:
+            raise RuntimeError("Application private key is not available")
+        if not self._admin_operator_private_key:
+            raise RuntimeError("Admin Operator private key is not available")
+        self._container.push(
+            path=f"{self.BASE_CERTIFICATES_PATH}/certifier.key",
+            source=self._application_private_key,
+        )
+        self._container.push(
+            path=f"{self.BASE_CERTIFICATES_PATH}/admin_operator.key.pem",
+            source=self._admin_operator_private_key,
+        )
+        logger.info("Pushed application private keys")
+
+    def _push_root_private_key(self) -> None:
+        """Pushes root private key to workload container."""
+        if not self._root_private_key:
+            raise RuntimeError("Root Private key not available.")
+        self._container.push(
+            path=f"{self.BASE_CERTIFICATES_PATH}/controller.key", source=self._root_private_key
+        )
+        logger.info("Pushed root private key")
+
+    def _on_leader_config_changed(self, event: ConfigChangedEvent) -> None:
+        """Triggered on config changed for leader unit.
+
+        If the 'domain' config changed, new root certificates will be requested and new
+        application certificates will be generated.
+
+        Args:
+            event: Juju event
+
+        Returns:
+            None
+        """
+        if not self._domain_config_is_valid:
+            self.unit.status = BlockedStatus("Config 'domain' is not valid")
+            event.defer()
+            return
+        if not self._root_private_key_is_stored:
+            self.unit.status = WaitingStatus("Waiting for root private key to be generated")
+            event.defer()
+            return
+        if not self._application_private_keys_are_stored:
+            self.unit.status = WaitingStatus(
+                "Waiting for application private keys to be generated"
+            )
+            event.defer()
+            return
+        if not self._root_csr_is_stored:
+            self._generate_root_csr()
+            if self._certificates_relation_created:
+                self._request_certificate_based_on_stored_csr()
+                self.unit.status = WaitingStatus(
+                    "Waiting to receive new certificate from provider"
+                )
+            else:
+                self.unit.status = BlockedStatus(
+                    "Waiting for tls-certificates relation to be created"
+                )
+        if not self._stored_root_csr_matches_config:
+            old_csr = self._root_csr
+            self._generate_root_csr()
+            if self._certificates_relation_created:
+                self.tls_certificates_requirer.request_certificate_renewal(
+                    old_certificate_signing_request=old_csr.encode(),  # type: ignore[union-attr]  # noqa: E501
+                    new_certificate_signing_request=self._root_csr.encode(),  # type: ignore[union-attr]  # noqa: E501
+                )
+                self.unit.status = WaitingStatus(
+                    "Waiting to receive new certificate from provider"
+                )
+            else:
+                self.unit.status = BlockedStatus(
+                    "Waiting for tls-certificates relation to be created"
+                )
+        if (
+                not self._application_certificates_are_stored
+                or not self._stored_application_certificate_matches_config  # noqa: W503
+        ):
+            self._generate_application_certificates()
+            self._push_application_certificates()
+
+    def _on_non_leader_config_changed(self, event: ConfigChangedEvent) -> None:
+        """Triggered on config changed for non-leader unit.
+
+        Pushes application certificates to workload.
+
+        Args:
+            event: Juju event
+
+        Returns:
+            None
+        """
+        if not self._root_csr_is_stored or not self._stored_root_csr_matches_config:
+            self.unit.status = WaitingStatus("Waiting for leader to generate a root csr")
+            event.defer()
+            return
+        if not self._application_certificates_are_stored:
+            self.unit.status = WaitingStatus(
+                "Waiting for leader to generate application certificates"
+            )
+            event.defer()
+            return
+        if not self._stored_application_certificate_matches_config:
+            self.unit.status = WaitingStatus(
+                "Waiting for leader to generate new application certificates"
+            )
+            event.defer()
+            return
+        self._push_application_certificates()
+
+    def _configure_magma_orc8r_certifier(
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
+    ) -> None:
+        """Adds layer to pebble config if the proposed config is different from the current one.
+
+        Args:
+            event (PebbleReadyEvent): Juju Pebble ready event
+
+        Returns:
+            None
+        """
+        if self._container.can_connect():
+            plan = self._container.get_plan()
+            layer = self._pebble_layer
+            if plan.services != layer.services:
+                self.unit.status = MaintenanceStatus("Configuring pod")
+                self._container.add_layer(self._container_name, layer, combine=True)
+                self._container.restart(self._service_name)
+                logger.info(f"Restarted container {self._service_name}")
+                self._update_relations()
+                self.unit.status = ActiveStatus()
+        else:
+            self.unit.status = WaitingStatus("Waiting for container to be ready")
+            event.defer()
+
+    def _request_certificate_based_on_stored_csr(self) -> None:
+        """Makes a certificate request using the tls-certificates interface."""
+        csr = self._root_csr
+        if not csr:
+            raise RuntimeError("No stored root CSR.")
+        self.tls_certificates_requirer.request_certificate_creation(
+            certificate_signing_request=csr.encode()
+        )
+
+    def _update_relations(self) -> None:
+        """Updates all the "provided" relation with the workload service status.
+
+        Returns:
+            None
+        """
+        if not self.unit.is_leader():
+            return
+        relations = self.model.relations[self.provided_relation_name]
+        for relation in relations:
+            self._update_relation_active_status(
+                relation=relation, is_active=self._service_is_running
+            )
+
+    def _update_relation_active_status(self, relation: Relation, is_active: bool) -> None:
+        """Updates the relation data content.
+
+        Args:
+            relation (Relation): Juju relation object
+            is_active (bool): Whether the service is active or not
+
+        Returns:
+            None
+        """
+        relation.data[self.unit].update(
+            {
+                "active": str(is_active),
+            }
+        )
+
+    def _store_root_ca_certificate(self, ca_certificate: str) -> None:
+        """Stores root CA certificate in peer relation data."""
+        self._store_item_in_peer_relation_data(key="root_ca_certificate", value=ca_certificate)
+
+    def _store_root_certificate(self, certificate: str) -> None:
+        """Stores root certificate in peer relation data."""
+        self._store_item_in_peer_relation_data(key="root_certificate", value=certificate)
+
+    def _store_root_private_key(self, private_key: str) -> None:
+        """Stores root private key in peer relation data."""
+        self._store_item_in_peer_relation_data(key="root_private_key", value=private_key)
+
+    def _store_application_private_key(self, private_key: str) -> None:
+        """Stores application private key in peer relation data."""
+        self._store_item_in_peer_relation_data(key="application_private_key", value=private_key)
+
+    def _store_admin_operator_private_key(self, private_key: str) -> None:
+        """Stores admin operator private key in peer relation data."""
+        self._store_item_in_peer_relation_data(key="admin_operator_private_key", value=private_key)
+
+    def _store_application_ca_certificate(self, certificate: str) -> None:
+        """Stores application certificate in peer relation data."""
+        self._store_item_in_peer_relation_data(key="application_certificate", value=certificate)
+
+    def _store_admin_operator_certificate(self, certificate: str) -> None:
+        """Stores admin operator certificate in peer relation data."""
+        self._store_item_in_peer_relation_data(key="admin_operator_certificate", value=certificate)
+
+    def _store_admin_operator_pfx(self, pfx: str) -> None:
+        """Stores admin operator pfx package in peer relation data."""
+        self._store_item_in_peer_relation_data(key="admin_operator_pfx", value=pfx)
+
+    def _store_admin_operator_pfx_password(self, password: str) -> None:
+        """Stores admin operator pfx password in peer relation data."""
+        self._store_item_in_peer_relation_data(key="admin_operator_pfx_password", value=password)
+
+    def _store_root_csr(self, csr: str) -> None:
+        """Stores root CSR in peer relation data."""
+        self._store_item_in_peer_relation_data(key="root_csr", value=csr)
+
+    def _store_item_in_peer_relation_data(self, key: str, value: str) -> None:
+        """Stores key/value in peer relation data.
+
+        Args:
+            key (str): Relation data key
+            value (str): Relation data value
+
+        Returns:
+            None
+        """
+        peer_relation = self.model.get_relation("replicas")
+        if not peer_relation:
+            raise RuntimeError("No peer relation")
+        peer_relation.data[self.app].update({key: value.strip()})
+
+    def _stored_root_certificate_matches_certificate(self, certificate: str) -> bool:
+        """Returns whether root certificate matches provided certificate.
+
+        Args:
+            certificate: TLS Certificate.
+
+        Returns:
+            bool: Whether root certificate matches provided certificate.
+        """
+        if not self._root_certificate:
+            raise RuntimeError("Root certificate not stored")
+        return certificate == self._root_certificate
+
+    def _generate_root_csr(self) -> None:
+        """Generates a CSR with the domain name in the Juju config.
+
+        Returns:
+            None
+        """
+        peer_relation = self.model.get_relation("replicas")
+        if not self._domain_config_is_valid:
+            raise ValueError("Domain config is not valid")
+        if not peer_relation:
+            raise RuntimeError("No peer relation")
+        csr = generate_csr(
+            private_key=self._root_private_key.encode(), subject=f"*.{self._domain_config}"  # type: ignore[union-attr]  # noqa: E501
+        )
+        self._store_root_csr(csr.decode())
+        logger.info("Generated CSR for root certificate")
+
+    def _generate_application_certificates(self) -> None:
+        """Generates application certificates."""
+        if not self._application_private_key:
+            raise RuntimeError("Application private key not available")
+        if not self._admin_operator_private_key:
+            raise RuntimeError("Admin Operator private key not available")
+        application_ca_certificate = generate_ca(
+            private_key=self._application_private_key.encode(),
+            subject=f"certifier.{self._domain_config}",
+        )
+        admin_operator_csr = generate_csr(
+            private_key=self._admin_operator_private_key.encode(),
+            subject="admin_operator",
+        )
+        admin_operator_certificate = generate_certificate(
+            csr=admin_operator_csr,
+            ca=application_ca_certificate,
+            ca_key=self._application_private_key.encode(),
+        )
+        password = self._generate_password()
+        admin_operator_pfx = generate_pfx_package(
+            private_key=self._admin_operator_private_key.encode(),
+            certificate=admin_operator_certificate,
+            package_password=password,
+        )
+        self._store_application_ca_certificate(application_ca_certificate.decode())
+        self._store_admin_operator_certificate(admin_operator_certificate.decode())
+        self._store_admin_operator_pfx(base64.b64encode(admin_operator_pfx).decode())
+        self._store_admin_operator_pfx_password(password)
+        logger.info("Generated Application Certificates")
+
+    def _get_value_from_relation_data(self, key: str) -> Optional[str]:
+        """Returns value from relation data.
+
+        Args:
+            key (str): Relation data key
+
+        Returns:
+            str: Relation data value
+        """
+        replicas = self.model.get_relation("replicas")
+        if not replicas:
+            return None
+        relation_data = replicas.data[self.app].get(key, None)
+        if relation_data:
+            return relation_data.strip()
+        else:
+            return None
+
+    def _relation_created(self, relation_name: str) -> bool:
+        """Returns whether a given Juju relation was crated.
+
+        Args:
+            relation_name (str): Relation name
+
+        Returns:
+            str: Whether the relation was created.
+        """
+        if not self.model.get_relation(relation_name):
+            return False
+        return True
+
+    @staticmethod
+    def _generate_password() -> str:
+        """Generates a random 12 character password.
+
+        Returns:
+            str: Password
+        """
+        chars = string.ascii_letters + string.digits
+        return "".join(secrets.choice(chars) for _ in range(12))
+
+    @property
+    def _replicas_relation_created(self) -> bool:
+        """Returns whether the replicas relation is created.
+
+        Returns:
+            bool: Whether the certificates relation is created.
+        """
+        return self._relation_created("replicas")
+
+    @property
+    def _application_private_keys_are_stored(self) -> bool:
+        """Returns whether certificates are stored in relation data."""
+        if not self._application_private_key:
+            logger.info("Application private key not stored")
+            return False
+        if not self._admin_operator_private_key:
+            logger.info("Admin operator private key not stored")
+            return False
+        return True
+
+    @property
+    def _root_private_key_is_stored(self) -> bool:
+        """Returns whether private key is stored in peer relation data."""
+        if self._root_private_key:
+            return True
+        else:
+            return False
+
+    @property
+    def _application_certificates_are_stored(self) -> bool:
+        """Returns whether application certificates are stored in relation data."""
+        if not self._application_certificate:
+            logger.info("Application certificate is not stored")
+            return False
+        if not self._admin_operator_certificate:
+            logger.info("Admin Operator certificate is not stored")
+            return False
+        if not self._admin_operator_pfx_password:
+            logger.info("Admin Operator PFX password is not stored")
+            return False
+        if not self._admin_operator_pfx:
+            logger.info("Admin Operator PFX package is not stored")
+            return False
+        return True
+
+    @property
+    def _root_certificates_are_stored(self) -> bool:
+        """Returns whether root certificates are stored."""
+        if not self._root_certificate:
+            logger.info("Root certificate not stored")
+            return False
+        if not self._root_ca_certificate:
+            logger.info("Root CA certificate not stored")
+            return False
+        return True
+
+    @property
+    def _root_csr_is_stored(self) -> bool:
+        """Returns whether root CSR is stored in peer relation data."""
+        if not self._root_csr:
+            logger.info("Root CSR not stored")
+            return False
+        return True
+
+    @property
+    def _domain_config_is_valid(self) -> bool:
+        """Returns whether the "domain" config is valid.
+
+        Returns:
+            bool: Whether the domain is a valid one.
+        """
+        if not self._domain_config:
+            return False
+        pattern = re.compile(
+            r"^(?:[a-zA-Z0-9]"  # First character of the domain
+            r"(?:[a-zA-Z0-9-_]{0,61}[A-Za-z0-9])?\.)"  # Sub domain + hostname
+            r"+[A-Za-z0-9][A-Za-z0-9-_]{0,61}"  # First 61 characters of the gTLD
+            r"[A-Za-z]$"  # Last character of the gTLD
+        )
+        if pattern.match(self._domain_config):
+            return True
+        return False
+
+    @property
+    def _db_relation_created(self) -> bool:
+        """Checks whether db relation is created.
+
+        Returns:
+            bool: Whether required relation
+        """
+        return self._relation_created("db")
+
+    @property
+    def _certificates_relation_created(self) -> bool:
+        """Returns whether the certificates relation is created.
+
+        Returns:
+            bool: Whether the certificates relation is created.
+        """
+        return self._relation_created("certificates")
+
+    @property
+    def _db_relation_established(self) -> bool:
+        """Validates that database relation is established.
+
+        Checks that there is a relation and that credentials have been passed.
+
+        Returns:
+            bool: Whether the database relation is established.
+        """
+        db_connection_string = self._get_db_connection_string
+        if not db_connection_string:
+            return False
+        try:
+            psycopg2.connect(
+                f"dbname='{self.DB_NAME}' "
+                f"user='{db_connection_string.user}' "
+                f"host='{db_connection_string.host}' "
+                f"password='{db_connection_string.password}'"
+            ).close()
+            return True
+        except psycopg2.OperationalError:
+            return False
+
+    @property
+    def _root_private_key_is_pushed(self) -> bool:
+        """Returns whether root private key is pushed to workload.
+
+        Returns:
+            bool: True/False
+        """
+        if not self._container.exists(f"{self.BASE_CERTIFICATES_PATH}/controller.key"):
+            logger.info("Root private key is not pushed")
+            return False
+        return True
+
+    @property
+    def _application_private_keys_are_pushed(self) -> bool:
+        """Returns whether application private keys are pushed.
+
+        Returns:
+            bool: Whether application private keys are pushed.
+        """
+        if not self._container.exists(f"{self.BASE_CERTIFICATES_PATH}/certifier.key"):
+            logger.info("Application private key is not pushed")
+            return False
+        if not self._container.exists(f"{self.BASE_CERTIFICATES_PATH}/admin_operator.key.pem"):
+            logger.info("Admin operator private key is not pushed")
+            return False
+        return True
+
+    @property
+    def _application_certificates_are_pushed(self) -> bool:
+        """Returns whether application certificate are stored.
+
+        Returns:
+            bool: Whether application certificate are stored.
+        """
+        if not self._container.exists(f"{self.BASE_CERTIFICATES_PATH}/admin_operator.pem"):
+            logger.info("Admin Operator certificate is not pushed")
+            return False
+        if not self._container.exists(f"{self.BASE_CERTIFICATES_PATH}/admin_operator.pfx"):
+            logger.info("Admin operator PFX package is not pushed")
+            return False
+        if not self._container.exists(f"{self.BASE_CERTIFICATES_PATH}/certifier.pem"):
+            logger.info("Application certificate is not pushed")
+            return False
+        return True
+
+    @property
+    def _root_certificates_are_pushed(self) -> bool:
+        """Returns whether root certificate are pushed to workload.
+
+        Returns:
+            bool: Whether root certificate are pushed to workload.
+        """
+        if not self._container.exists(f"{self.BASE_CERTIFICATES_PATH}/controller.crt"):
+            logger.info("Root certificate is not pushed")
+            return False
+        if not self._container.exists(f"{self.BASE_CERTIFICATES_PATH}/rootCA.pem"):
+            logger.info("Root CA Certificate is not pushed")
+            return False
+        return True
+
+    @property
+    def _root_csr(self) -> Optional[str]:
+        """Returns root CSR."""
+        return self._get_value_from_relation_data("root_csr")
+
+    @property
+    def _admin_operator_pfx(self) -> Optional[str]:
+        """Returns admin operator pfx package."""
+        return self._get_value_from_relation_data("admin_operator_pfx")
+
+    @property
+    def _admin_operator_pfx_password(self) -> Optional[str]:
+        """Returns admin operator pfx password."""
+        return self._get_value_from_relation_data("admin_operator_pfx_password")
+
+    @property
+    def _root_ca_certificate(self) -> Optional[str]:
+        """Returns root ca certificate."""
+        return self._get_value_from_relation_data("root_ca_certificate")
+
+    @property
+    def _root_certificate(self) -> Optional[str]:
+        """Returns root certificate."""
+        return self._get_value_from_relation_data("root_certificate")
+
+    @property
+    def _application_certificate(self) -> Optional[str]:
+        """Returns application certificate."""
+        return self._get_value_from_relation_data("application_certificate")
+
+    @property
+    def _admin_operator_certificate(self) -> Optional[str]:
+        """Returns admin operator certificate."""
+        return self._get_value_from_relation_data("admin_operator_certificate")
+
+    @property
+    def _application_private_key(self) -> Optional[str]:
+        """Returns application private key."""
+        return self._get_value_from_relation_data("application_private_key")
+
+    @property
+    def _admin_operator_private_key(self) -> Optional[str]:
+        """Returns admin operator private key."""
+        return self._get_value_from_relation_data("admin_operator_private_key")
+
+    @property
+    def _root_private_key(self) -> Optional[str]:
+        """Returns root private key."""
+        return self._get_value_from_relation_data("root_private_key")
+
+    @property
+    def _stored_root_csr_matches_config(self) -> bool:
+        """Returns whether the stored root CSR matches the config."""
+        if not self._root_csr:
+            raise RuntimeError("No stored root CSR")
+        csr_object = x509.load_pem_x509_csr(data=self._root_csr.encode())
+        if f"*.{self._domain_config}" == list(csr_object.subject)[0].value:
+            return True
+        else:
+            logger.info("Root CSR subject doesn't match with config")
+            return False
+
+    @property
+    def _stored_application_certificate_matches_config(self) -> bool:
+        """Returns whether application certificate content matches juju config."""
+        if not self._application_certificate:
+            raise RuntimeError("Application certificates not stored")
+        application_certificate = x509.load_pem_x509_certificate(
+            data=self._application_certificate.encode()
+        )
+        for subject in application_certificate.subject:
+            if subject.value == f"certifier.{self._domain_config}":
+                return True
+        logger.info("Stored application certificates does not match config")
+        return False
+
+    @property
+    def _pebble_layer(self) -> Layer:
+        """Returns Pebble layer object containing the workload startup service.
+
+        Returns:
+            Layer: Pebble layer
+        """
+        return Layer(
+            {
+                "summary": f"{self._service_name} pebble layer",
+                "services": {
+                    self._service_name: {
+                        "override": "replace",
+                        "startup": "enabled",
+                        "command": "/usr/bin/envdir "
+                        "/var/opt/magma/envdir "
+                        "/var/opt/magma/bin/certifier "
+                        f"-cac={self.BASE_CERTIFICATES_PATH}/certifier.pem "
+                        f"-cak={self.BASE_CERTIFICATES_PATH}/certifier.key "
+                        f"-vpnc={self.BASE_CERTIFICATES_PATH}/vpn_ca.crt "
+                        f"-vpnk={self.BASE_CERTIFICATES_PATH}/vpn_ca.key "
+                        "-logtostderr=true "
+                        "-v=0",
+                        "environment": {
+                            "DATABASE_SOURCE": f"dbname={self.DB_NAME} "  # type: ignore[union-attr]  # noqa: E501
+                            f"user={self._get_db_connection_string.user} "
+                            f"password={self._get_db_connection_string.password} "
+                            f"host={self._get_db_connection_string.host} "
+                            f"sslmode=disable",
+                            "SQL_DRIVER": "postgres",
+                            "SQL_DIALECT": "psql",
+                            "SERVICE_HOSTNAME": "magma-orc8r-certifier",
+                            "SERVICE_REGISTRY_MODE": "k8s",
+                            "SERVICE_REGISTRY_NAMESPACE": self._namespace,
+                        },
+                    }
+                },
+            }
+        )
+
+    @property
+    def _domain_config(self) -> Optional[str]:
+        """Returns domain config."""
+        return self.model.config.get("domain")
+
+    @property
+    def _service_is_running(self) -> bool:
+        """Returns whether workload service is running.
+
+        Returns:
+            bool: Whether workload service is running.
+        """
+        if self._container.can_connect():
+            try:
+                self._container.get_service(self._service_name)
+                return True
+            except ModelError:
+                pass
+        return False
+
+    @property
+    def _get_db_connection_string(self) -> Optional[ConnectionString]:
+        """Returns DB connection string provided by the DB relation.
+
+        Returns:
+            ConnectionString: Database connection object.
+        """
+        try:
+            db_relation = self.model.get_relation("db")
+            return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[union-attr, index]  # noqa: E501
+        except (AttributeError, KeyError):
+            return None
+
+    @property
+    def _namespace(self) -> str:
+        """Kubernetes namespace.
+
+        Returns:
+            str: Namespace
+        """
+        return self.model.name
 
 
 if __name__ == "__main__":
