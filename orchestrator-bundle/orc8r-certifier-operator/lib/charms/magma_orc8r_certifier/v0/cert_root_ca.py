@@ -21,7 +21,7 @@ from ops.charm import CharmBase, CharmEvents, RelationChangedEvent, RelationJoin
 from ops.framework import EventBase, EventSource, Object
 
 # The unique Charmhub library identifier, never change it
-LIBID = "lib needs to be registered"
+LIBID = "1f83c3c6b47845f8b0e2357362f57ccf"
 
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
