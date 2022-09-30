@@ -146,7 +146,7 @@ class TestCharm(unittest.TestCase):
 
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
 
-    def test_given_db_relation_not_created_when_configure_orc8r_then_status_is_blocked(
+    def test_given_db_relation_not_created_when_pebble_ready_then_status_is_blocked(
         self,
     ):
         self.harness.container_pebble_ready(container_name="magma-orc8r-dummy")
@@ -155,13 +155,39 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._db_relation_created")
-    def test_given_db_relation_not_ready_when_configure_orc8r_then_status_is_blocked(
+    def test_given_db_relation_not_ready_when_pebble_ready_then_status_is_blocked(
         self, db_relation_created
     ):
         db_relation_created.return_value = True
         self.harness.container_pebble_ready(container_name="magma-orc8r-dummy")
         assert self.harness.charm.unit.status == WaitingStatus(
             "Waiting for db relation to be ready"
+        )
+
+    @patch(
+        "charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase.namespace",
+        PropertyMock(return_value="qwerty"),
+    )
+    @patch(
+        "charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._db_relation_ready",
+        PropertyMock(return_value=True),
+    )
+    @patch(
+        "charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._get_db_connection_string",
+        new_callable=PropertyMock,
+    )
+    def test_given_pebble_ready_when_db_relation_broken_then_status_is_blocked(
+        self, mock_get_db_connection_string
+    ):
+        mock_get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
+        self.harness.set_can_connect("magma-orc8r-dummy", True)
+        container = self.harness.model.unit.get_container("magma-orc8r-dummy")
+        self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        self.harness.charm.on.magma_orc8r_dummy_pebble_ready.emit(container)
+        assert self.harness.charm.unit.status == ActiveStatus()
+        self.harness.charm.on.db_relation_broken.emit(self.harness.model.get_relation("db"))
+        assert self.harness.charm.unit.status == BlockedStatus(
+            "Waiting for db relation to be created"
         )
 
     @patch(
