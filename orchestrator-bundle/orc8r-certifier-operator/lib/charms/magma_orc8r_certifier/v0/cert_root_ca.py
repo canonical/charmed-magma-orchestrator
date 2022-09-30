@@ -1,7 +1,7 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Cert Root Library.
+"""Cert RootCA Library.
 
 This library offers ways of providing and consuming a rootCA certificate.
 
@@ -9,7 +9,7 @@ To get started using the library, you just need to fetch the library using `char
 
 ```shell
 cd some-charm
-charmcraft fetch-lib charms.magma_orc8r_certifier.v0.cert_root
+charmcraft fetch-lib charms.magma_orc8r_certifier.v0.cert_root_ca
 ```
 
 Charms providing rootCA certificate should use `CertRootCAProvides`.
@@ -50,7 +50,7 @@ class CertificateRequestEvent(EventBase):
         self.relation_id = snapshot["relation_id"]
 
 
-class CertRootProviderCharmEvents(CharmEvents):
+class CertRootCAProviderCharmEvents(CharmEvents):
     """All custom events for the CertRootProvider."""
 
     certificate_request = EventSource(CertificateRequestEvent)
@@ -63,22 +63,22 @@ class CertRootCAProvides(Object):
 
     ```python
     ...
-    from charms.magma_orc8r_certifier.v0.cert_root import CertRootCAProvides
+    from charms.magma_orc8r_certifier.v0.cert_root_ca import CertRootCAProvides
     ...
 
     class SomeProviderCharm(CharmBase):
 
         def __init__(self, *args):
             ...
-            self.cert_root = CertRootCAProvides(charm=self, relationship_name="cert-root")
+            self.cert_root_ca = CertRootCAProvides(charm=self, relationship_name="cert-root-ca")
             ...
             self.framework.observe(
-                self.cert_root.on.certificate_request, self._on_certificate_request
+                self.cert_root_ca.on.certificate_request, self._on_certificate_request
             )
 
         def _on_certificate_request(self, event):
             ...
-            self.cert_root.set_certificate(
+            self.cert_root_ca.set_certificate(
                 relation_id=event.relation_id,
                 certificate=certificate,
             )
@@ -87,12 +87,12 @@ class CertRootCAProvides(Object):
     And a corresponding section in charm's `metadata.yaml`:
     ```
     provides:
-        cert-root:  # Relation name
-            interface: cert-root  # Relation interface
+        cert-root-ca:  # Relation name
+            interface: cert-root-ca  # Relation interface
     ```
     """
 
-    on = CertRootProviderCharmEvents()
+    on = CertRootCAProviderCharmEvents()
 
     def __init__(self, charm: CharmBase, relationship_name: str):
         """Observes relation joined event.
@@ -152,7 +152,7 @@ class CertificateAvailableEvent(EventBase):
         self.certificate = snapshot["certificate"]
 
 
-class CertRootRequirerCharmEvents(CharmEvents):
+class CertRootCARequirerCharmEvents(CharmEvents):
     """All custom events for the CertRootRequirer."""
 
     certificate_available = EventSource(CertificateAvailableEvent)
@@ -165,17 +165,17 @@ class CertRootCARequires(Object):
 
     ```python
     ...
-    from charms.magma_orc8r_certifier.v0.cert_root import CertRootCARequires
+    from charms.magma_orc8r_certifier.v0.cert_root_ca import CertRootCARequires
     ...
 
     class SomeRequirerCharm(CharmBase):
 
         def __init__(self, *args):
             ...
-            self.cert_root = CertRootCARequires(charm=self, relationship_name="cert-root")
+            self.cert_root_ca = CertRootCARequires(charm=self, relationship_name="cert-root-ca")
             ...
             self.framework.observe(
-                self.cert_root.on.certificate_available, self._on_certificate_available
+                self.cert_root_ca.on.certificate_available, self._on_certificate_available
             )
 
         def _on_certificate_available(self, event):
@@ -186,12 +186,12 @@ class CertRootCARequires(Object):
     And a corresponding section in charm's `metadata.yaml`:
     ```
     requires:
-        cert-root:  # Relation name
-            interface: cert-root  # Relation interface
+        cert-root-ca:  # Relation name
+            interface: cert-root-ca  # Relation interface
     ```
     """
 
-    on = CertRootRequirerCharmEvents()
+    on = CertRootCARequirerCharmEvents()
 
     def __init__(self, charm: CharmBase, relationship_name: str):
         """Observes relation joined and relation changed events.

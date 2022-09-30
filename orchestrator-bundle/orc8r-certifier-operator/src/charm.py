@@ -27,10 +27,10 @@ from charms.magma_orc8r_certifier.v0.cert_controller import CertControllerProvid
 from charms.magma_orc8r_certifier.v0.cert_controller import (
     CertificateRequestEvent as ControllerCertificateRequestEvent,
 )
-from charms.magma_orc8r_certifier.v0.cert_root import CertRootCAProvides
-from charms.magma_orc8r_certifier.v0.cert_root import (
+from charms.magma_orc8r_certifier.v0.cert_root_ca import (
     CertificateRequestEvent as RootCACertificateRequestEvent,
 )
+from charms.magma_orc8r_certifier.v0.cert_root_ca import CertRootCAProvides
 from charms.observability_libs.v1.kubernetes_service_patch import (
     KubernetesServicePatch,
     ServicePort,
@@ -91,7 +91,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         )
         self.certificates_certifier_provider = CertCertifierProvides(self, "cert-certifier")
         self.certificates_controller_provider = CertControllerProvides(self, "cert-controller")
-        self.certificates_root_ca_provider = CertRootCAProvides(self, "cert-root")
+        self.certificates_root_ca_provider = CertRootCAProvides(self, "cert-root-ca")
         self._container_name = self._service_name = "magma-orc8r-certifier"
         self.provided_relation_name = "magma-orc8r-certifier"
         self._container = self.unit.get_container(self._container_name)
@@ -136,6 +136,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self.framework.observe(
             self.certificates_controller_provider.on.certificate_request,
             self._on_controller_certificate_request,
+        )
+        self.framework.observe(
+            self.certificates_root_ca_provider.on.certificate_request,
+            self._on_root_ca_certificate_request,
         )
         self.framework.observe(
             self.tls_certificates_requirer.on.certificate_available, self._on_certificate_available
@@ -406,6 +410,31 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             private_key=str(private_key_string),
         )
 
+    def _on_root_ca_certificate_request(self, event: RootCACertificateRequestEvent) -> None:
+        """Triggered when a certificate request is made on the cert-root-ca relation.
+
+        Args:
+            event (RootCACertificateRequestEvent): Juju event
+
+        Returns:
+            None
+        """
+        if not self._container.can_connect():
+            logger.info("Container not yet available")
+            event.defer()
+            return
+        try:
+            certificate = self._container.pull(path=f"{self.BASE_CERTIFICATES_PATH}/rootCA.pem")
+        except ops.pebble.PathError:
+            logger.info("Certificate 'rootCA' not yet available")
+            event.defer()
+            return
+        certificate_string = certificate.read()
+        self.certificates_root_ca_provider.set_certificate(
+            relation_id=event.relation_id,
+            certificate=str(certificate_string),
+        )
+
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Runs whenever the certificates available event is triggered.
 
@@ -434,10 +463,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self._store_root_certificate(event.certificate)
         else:
             if (
-                    not self._root_certificates_are_stored
-                    or not self._stored_root_certificate_matches_certificate(  # noqa: W503
-                event.certificate
-            )
+                not self._root_certificates_are_stored
+                or not self._stored_root_certificate_matches_certificate(  # noqa: W503
+                    event.certificate
+                )
             ):
                 self.unit.status = WaitingStatus("Waiting for leader to store root certificates")
                 event.defer()
@@ -644,8 +673,8 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                     "Waiting for tls-certificates relation to be created"
                 )
         if (
-                not self._application_certificates_are_stored
-                or not self._stored_application_certificate_matches_config  # noqa: W503
+            not self._application_certificates_are_stored
+            or not self._stored_application_certificate_matches_config  # noqa: W503
         ):
             self._generate_application_certificates()
             self._push_application_certificates()

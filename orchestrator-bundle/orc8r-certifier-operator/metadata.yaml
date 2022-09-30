@@ -51,5 +51,7 @@ provides:
     interface: cert-controller
   cert-certifier:
     interface: cert-certifier
+  cert-root-ca:
+    interface: cert-root-ca
   magma-orc8r-certifier:
     interface: magma-orc8r-certifier
