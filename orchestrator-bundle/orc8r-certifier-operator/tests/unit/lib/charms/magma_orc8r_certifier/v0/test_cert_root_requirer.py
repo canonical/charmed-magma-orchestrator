@@ -36,7 +36,7 @@ class TestCertRootRequires(unittest.TestCase):
         self.harness.update_relation_data(
             relation_id=relation_id,
             app_or_unit="whatever-app/0",
-            key_values={"certificate": TEST_CERTIFICATE}
+            key_values={"certificate": TEST_CERTIFICATE},
         )
 
         patched_pushed.assert_called_once_with(TEST_CERT_PATH, TEST_CERTIFICATE)
