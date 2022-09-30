@@ -24,7 +24,6 @@ class WhateverCharm(CharmBase):
         )
 
     def _on_certificate_request(self, event):
-        logger.error("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
         self.root_cert_provider.set_certificate(
             relation_id=event.relation_id,
             certificate=self.TEST_CERTIFICATE,
