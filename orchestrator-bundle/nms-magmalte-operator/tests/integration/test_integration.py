@@ -119,7 +119,7 @@ class TestNmsMagmaLTE:
         )
 
     async def test_remove_db_application(self, ops_test, setup, build_and_deploy_charm):
-        await ops_test.model.applications[DB_APPLICATION_NAME].remove()
+        await ops_test.model.remove_relation(DB_APPLICATION_NAME, force=True)
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
         await self._deploy_postgresql(ops_test)
         await ops_test.model.add_relation(

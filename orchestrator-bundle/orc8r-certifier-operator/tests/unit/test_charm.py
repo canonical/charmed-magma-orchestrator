@@ -18,7 +18,7 @@ from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.serialization import pkcs12
 from ops import testing
-from ops.model import BlockedStatus, WaitingStatus
+from ops.model import BlockedStatus, WaitingStatus, ActiveStatus
 from pgconnstr import ConnectionString  # type: ignore[import]
 
 from charm import MagmaOrc8rCertifierCharm
@@ -662,6 +662,33 @@ class TestCharm(unittest.TestCase):
         assert self.harness.charm.unit.status == BlockedStatus(
             "Waiting for tls-certificates relation to be created"
         )
+    @patch("psycopg2.connect", new=Mock())
+    @patch("ops.model.Container.exists")
+    @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined")
+    def test_given_pebble_ready_when_db_relation_broken_then_status_is_blocked(  # noqa: E501
+        self, _, patch_file_exists
+    ):
+        patch_file_exists.return_value = True
+        self.harness.update_config(key_values={"domain": "whatever.com"})
+        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        certificates_relation_id = self.harness.add_relation(
+            relation_name="certificates", remote_app="vault-k8s"
+        )
+        self.harness.add_relation_unit(
+            relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
+        )
+        self.harness.add_relation_unit(
+            relation_id=certificates_relation_id, remote_unit_name="vault-k8s/0"
+        )
+        key_values = {"master": self.TEST_DB_CONNECTION_STRING.__str__()}
+        self.harness.update_relation_data(
+            relation_id=db_relation_id, app_or_unit="postgresql-k8s", key_values=key_values
+        )
+
+        self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
+        assert self.harness.charm.unit.status == ActiveStatus()
+        self.harness.charm.on.db_relation_broken.emit(self.harness.model.get_relation("db"))
+        self.assertEqual(self.harness.charm.unit.status, BlockedStatus("Waiting for database relation to be created"))
 
     def test_given_db_relation_not_established_when_on_configure_certifier_then_status_is_waiting(
         self,

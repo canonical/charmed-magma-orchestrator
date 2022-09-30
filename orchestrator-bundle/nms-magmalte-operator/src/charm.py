@@ -74,12 +74,12 @@ class MagmaNmsMagmalteCharm(CharmBase):
             },
         )
         self.framework.observe(
-            self.on.magma_nms_magmalte_pebble_ready, self._configure_nms_magmalte
+            self.on.magma_nms_magmalte_pebble_ready, self._on_magma_nms_magmalte_pebble_ready
         )
         self.framework.observe(
             self._db.on.database_relation_joined, self._on_database_relation_joined
         )
-        self.framework.observe(self._db.on.database_relation_broken, self._configure_nms_magmalte)
+        self.framework.observe(self.on.db_relation_broken, self._on_database_relation_broken)
         self.framework.observe(
             self.on.magma_nms_magmalte_relation_joined,
             self._on_magma_nms_magmalte_relation_joined,
@@ -271,10 +271,10 @@ class MagmaNmsMagmalteCharm(CharmBase):
         self._container.push(
             path=f"{self.BASE_CERTS_PATH}/admin_operator.key.pem", source=event.private_key
         )
-        self._configure_nms_magmalte(event)
+        self._on_magma_nms_magmalte_pebble_ready(event)
 
-    def _configure_nms_magmalte(
-        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationBrokenEvent]
+    def _on_magma_nms_magmalte_pebble_ready(
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationJoinedEvent]
     ) -> None:
         """Configures pebble layer and creates adming user of nms-magmalte.
 
@@ -352,8 +352,18 @@ class MagmaNmsMagmalteCharm(CharmBase):
         """
         if self.unit.is_leader():
             event.database = self.DB_NAME  # type: ignore[attr-defined]
+            self._on_magma_nms_magmalte_pebble_ready(event)
         else:
             event.defer()
+
+    def _on_database_relation_broken(self, event: RelationBrokenEvent):
+        """Event handler for database relation broken.
+        Args:
+            event (RelationJoinedEvent): Juju event
+        Returns:
+            None
+        """
+        self.unit.status = BlockedStatus("Waiting for db relation to be created")
 
     def _on_magma_nms_magmalte_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Triggered when requirers join the nms_magmalte relation.

@@ -119,13 +119,13 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         )
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(
-            self.on.magma_orc8r_certifier_pebble_ready, self._configure_magma_orc8r_certifier
+            self.on.magma_orc8r_certifier_pebble_ready, self._on_magma_orc8r_certifier_pebble_ready
         )
         self.framework.observe(
             self._db.on.database_relation_joined, self._on_database_relation_joined
         )
         self.framework.observe(
-            self._db.on.database_relation_broken, self._configure_magma_orc8r_certifier
+            self._db.on.database_relation_broken, self._on_database_relation_broken
         )
         self.framework.observe(
             self.on.get_pfx_package_password_action, self._on_get_pfx_package_password
@@ -507,7 +507,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             return
         self._push_application_certificates()
 
-    def _configure_magma_orc8r_certifier(
+    def _on_magma_orc8r_certifier_pebble_ready(
         self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationBrokenEvent]
     ) -> None:
         """Juju event triggered when pebble is ready.
@@ -636,7 +636,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                 event.defer()
                 return
         self._push_root_certificates()
-        self._configure_magma_orc8r_certifier(event)
+        self._on_magma_orc8r_certifier_pebble_ready(event)
 
     def _on_database_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Event handler for database relation change.
@@ -655,6 +655,18 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         """
         if self.unit.is_leader():
             event.database = self.DB_NAME  # type: ignore[attr-defined]
+            self._on_magma_orc8r_certifier_pebble_ready(event)
+        else:
+            event.defer()
+
+    def _on_database_relation_broken(self, event: RelationBrokenEvent):
+        """Event handler for database relation broken.
+        Args:
+            event (RelationJoinedEvent): Juju event
+        Returns:
+            None
+        """
+        self.unit.status = BlockedStatus("Waiting for database relation to be created")
 
     def _push_metricsd_config_file(self) -> None:
         """Writes the config file for metricsd in the workload container.

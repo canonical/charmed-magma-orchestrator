@@ -209,6 +209,37 @@ class TestCharm(unittest.TestCase):
 
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
 
+    @patch("ops.model.Container.exec", new=Mock())
+    @patch("ops.model.Container.exists")
+    @patch("psycopg2.connect", new=Mock())
+    @patch("charm.ConnectionString")
+    def test_given_pebble_ready_when_db_relation_broken_then_status_is_blocked(  # noqa: E501
+        self, patch_connection_string, patch_exists
+    ):
+        patch_exists.return_value = True
+        patch_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
+        self.harness.add_relation(
+            relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
+        )
+        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        key_values = {
+            "master": "dbname=test_db_name "
+            "fallback_application_name=whatever "
+            "host=123.456.789.012 "
+            "password=aaaBBBcccDDDeee "
+            "port=1234 "
+            "user=test_db_user"
+        }
+        self.harness.update_relation_data(
+            relation_id=db_relation_id, key_values=key_values, app_or_unit="postgresql-k8s"
+        )
+        self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
+
+        self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
+
+        self.harness.charm.on.db_relation_broken.emit(self.harness.model.get_relation("db"))
+        self.assertEqual(self.harness.charm.unit.status, BlockedStatus("Waiting for db relation to be created"))
+
     @patch("ops.model.Container.exec")
     @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
     def test_given_username_email_and_password_are_provided_and_unit_is_leader_when_create_nms_admin_user_juju_action_then_pebble_command_is_executed(  # noqa: E501
