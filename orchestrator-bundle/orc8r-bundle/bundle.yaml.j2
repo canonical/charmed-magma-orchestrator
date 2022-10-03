@@ -20,7 +20,7 @@ applications:
     {%- if local == true %}
     charm: ./magma-nms-nginx-proxy_ubuntu-20.04-amd64.charm
     resources:
-      magma-nms-magmalte-image: docker.artifactory.magmacore.org/magmalte:1.6.0
+      magma-nms-nginx-proxy-image: docker.artifactory.magmacore.org/magmalte:1.6.0
     {%- else %}
     charm: magma-nms-nginx-proxy
     channel: {{ channel|default("edge") }}
