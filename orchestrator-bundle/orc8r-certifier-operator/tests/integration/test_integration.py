@@ -65,6 +65,15 @@ class TestOrc8rCertifier:
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
 
+    async def test_remove_db_application(self, ops_test, setup, build_and_deploy):
+        await ops_test.model.applications[DB_APPLICATION_NAME].remove(force=True)
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
+        await ops_test.model.deploy("postgresql-k8s", application_name=DB_APPLICATION_NAME)
+        await ops_test.model.add_relation(
+            relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
+        )
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
+
     async def test_build_and_deploy_and_scale_up(self, ops_test, setup, build_and_deploy):
         await ops_test.model.applications[APPLICATION_NAME].scale(2)
 
@@ -79,12 +88,3 @@ class TestOrc8rCertifier:
         await ops_test.model.wait_for_idle(
             apps=[APPLICATION_NAME], status="active", timeout=1000, wait_for_exact_units=1
         )
-
-    async def test_remove_db_application(self, ops_test, setup, build_and_deploy):
-        await ops_test.model.remove_relation(DB_APPLICATION_NAME, force=True)
-        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
-        await ops_test.model.deploy("postgresql-k8s", application_name=DB_APPLICATION_NAME)
-        await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
-        )
-        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
