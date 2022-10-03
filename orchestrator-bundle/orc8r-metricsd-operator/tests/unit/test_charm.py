@@ -56,6 +56,51 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.push")
+    def test_given_pebble_ready_when_required_relation_broken_then_status_is_blocked(
+        self, patch_push
+    ):
+        self._create_relations(activate=True)
+
+        self.harness.charm.on.magma_orc8r_metricsd_pebble_ready.emit(self.container)
+        self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
+
+        self.harness.charm.on.alertmanager_k8s_relation_broken.emit(
+            self.harness.model.get_relation("alertmanager-k8s")
+        )
+        self.assertEqual(
+            self.harness.charm.unit.status,
+            BlockedStatus("Waiting for relation(s) to be created: alertmanager-k8s"),
+        )
+        self.harness.charm.on.alertmanager_configurer_k8s_relation_broken.emit(
+            self.harness.model.get_relation("alertmanager-configurer-k8s")
+        )
+        self.assertEqual(
+            self.harness.charm.unit.status,
+            BlockedStatus("Waiting for relation(s) to be created: alertmanager-configurer-k8s"),
+        )
+        self.harness.charm.on.prometheus_k8s_relation_broken.emit(
+            self.harness.model.get_relation("prometheus-k8s")
+        )
+        self.assertEqual(
+            self.harness.charm.unit.status,
+            BlockedStatus("Waiting for relation(s) to be created: prometheus-k8s"),
+        )
+        self.harness.charm.on.prometheus_configurer_k8s_relation_broken.emit(
+            self.harness.model.get_relation("prometheus-configurer-k8s")
+        )
+        self.assertEqual(
+            self.harness.charm.unit.status,
+            BlockedStatus("Waiting for relation(s) to be created: prometheus-configurer-k8s"),
+        )
+        self.harness.charm.on.magma_orc8r_orchestrator_relation_broken.emit(
+            self.harness.model.get_relation("magma-orc8r-orchestrator")
+        )
+        self.assertEqual(
+            self.harness.charm.unit.status,
+            BlockedStatus("Waiting for relation(s) to be created: magma-orc8r-orchestrator"),
+        )
+
+    @patch("ops.model.Container.push")
     def test_given_all_relations_created_when_pebble_ready_then_config_file_is_created(
         self, patch_push
     ):

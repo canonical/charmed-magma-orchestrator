@@ -26,6 +26,8 @@ from ops.charm import (
     ConfigChangedEvent,
     InstallEvent,
     PebbleReadyEvent,
+    RelationBrokenEvent,
+    RelationJoinedEvent,
     RemoveEvent,
 )
 from ops.main import main
@@ -44,7 +46,6 @@ class MagmaOrc8rNginxCharm(CharmBase):
         "cert-certifier",
     ]
     REQUIRED_ORC8R_RELATIONS = ["magma-orc8r-obsidian", "magma-orc8r-bootstrapper"]
-    RELATIONS_TO_HANDLE_WHEN_BROKEN = REQUIRED_ORC8R_RELATIONS
 
     def __init__(self, *args):
         """Initializes all event that need to be observed."""
@@ -80,9 +81,14 @@ class MagmaOrc8rNginxCharm(CharmBase):
         )
         self.framework.observe(self.on.config_changed, self._configure_magma_orc8r_nginx)
 
-        for required_rel in self.RELATIONS_TO_HANDLE_WHEN_BROKEN:
+        for required_rel in self.REQUIRED_ORC8R_RELATIONS:
             self.framework.observe(
-                self.on[required_rel].relation_broken, self._configure_magma_orc8r_nginx
+                self.on[required_rel].relation_broken, self._on_required_relation_broken
+            )
+
+        for required_rel in self.REQUIRED_ORC8R_RELATIONS:
+            self.framework.observe(
+                self.on[required_rel].relation_joined, self._configure_magma_orc8r_nginx
             )
 
     @property
@@ -295,6 +301,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
             CertifierCertificateAvailableEvent,
             ControllerCertificateAvailableEvent,
             ConfigChangedEvent,
+            RelationJoinedEvent,
         ],
     ) -> None:
         """Triggerred when pebble ready.
@@ -327,6 +334,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
             CertifierCertificateAvailableEvent,
             ControllerCertificateAvailableEvent,
             ConfigChangedEvent,
+            RelationJoinedEvent,
         ],
     ) -> None:
         """Adds service to workload and restarts it.
@@ -467,6 +475,11 @@ class MagmaOrc8rNginxCharm(CharmBase):
             path=f"{self.BASE_CERTS_PATH}/certifier.pem", source=event.certificate
         )
         self._configure_magma_orc8r_nginx(event)
+
+    def _on_required_relation_broken(self, event: RelationBrokenEvent):
+        self.unit.status = BlockedStatus(
+            f"Waiting for relation(s) to be created: {event.relation.name}"
+        )
 
 
 if __name__ == "__main__":

@@ -42,7 +42,6 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
         "prometheus-configurer-k8s",
     ]
     REQUIRED_ORC8R_RELATIONS = ["magma-orc8r-orchestrator"]
-    RELATIONS_TO_HANDLE_WHEN_BROKEN = REQUIRED_EXTERNAL_RELATIONS + REQUIRED_ORC8R_RELATIONS
 
     def __init__(self, *args):
         """Uses the Orc8rBase library to manage events."""
@@ -75,13 +74,18 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
         self.framework.observe(
             self.on.magma_orc8r_metricsd_pebble_ready, self._configure_magma_orc8r_metricsd
         )
-        for required_rel in self.RELATIONS_TO_HANDLE_WHEN_BROKEN:
+        for required_rel in self.REQUIRED_EXTERNAL_RELATIONS + self.REQUIRED_ORC8R_RELATIONS:
             self.framework.observe(
-                self.on[required_rel].relation_broken, self._configure_magma_orc8r_metricsd
+                self.on[required_rel].relation_broken, self._on_required_relation_broken
+            )
+
+        for required_rel in self.REQUIRED_EXTERNAL_RELATIONS + self.REQUIRED_ORC8R_RELATIONS:
+            self.framework.observe(
+                self.on[required_rel].relation_joined, self._configure_magma_orc8r_metricsd
             )
 
     def _configure_magma_orc8r_metricsd(
-        self, event: Union[PebbleReadyEvent, RelationBrokenEvent]
+        self, event: Union[PebbleReadyEvent, RelationJoinedEvent]
     ) -> None:
         """Charm's main callback function, which, after ensuring all conditions are met, handles
         charm setup.
@@ -169,6 +173,11 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
         if not self._service_is_running:
             event.defer()
             return
+
+    def _on_required_relation_broken(self, event: RelationBrokenEvent):
+        self.unit.status = BlockedStatus(
+            f"Waiting for relation(s) to be created: {event.relation.name}"
+        )
 
     @property
     def _pebble_layer(self) -> Layer:

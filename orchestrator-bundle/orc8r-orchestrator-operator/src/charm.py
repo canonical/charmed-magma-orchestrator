@@ -25,7 +25,9 @@ from ops.charm import (
     ConfigChangedEvent,
     InstallEvent,
     PebbleReadyEvent,
+    RelationBrokenEvent,
     RelationEvent,
+    RelationJoinedEvent,
 )
 from ops.main import main
 from ops.model import (
@@ -117,7 +119,11 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         )
         for required_rel in self.RELATIONS_TO_HANDLE_WHEN_BROKEN:
             self.framework.observe(
-                self.on[required_rel].relation_broken, self._configure_magma_orc8r_orchestrator
+                self.on[required_rel].relation_broken, self._on_required_relation_broken
+            )
+        for required_rel in self.RELATIONS_TO_HANDLE_WHEN_BROKEN:
+            self.framework.observe(
+                self.on[required_rel].relation_joined, self._configure_magma_orc8r_orchestrator
             )
 
     @property
@@ -474,12 +480,12 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                 logger.error("    %s", line)
 
     def _configure_magma_orc8r_orchestrator(  # noqa: C901
-        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationJoinedEvent]
     ) -> None:
         """Configures pebble layer and creates the admin user.
 
         Args:
-            event (PebbleReadyEvent): Juju event
+            event: Juju event
 
         Returns:
             None
@@ -503,7 +509,9 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             self._create_orchestrator_admin_user()  # TODO: New user shouldn't be created at every pebble ready (just the first one).  # noqa: E501
         self.unit.status = ActiveStatus()
 
-    def _configure_pebble(self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]) -> None:
+    def _configure_pebble(
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationJoinedEvent]
+    ) -> None:
         """Adds layer to pebble config if the proposed config is different from the current one.
 
         Args:
@@ -554,6 +562,11 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         if not self._service_is_running:
             event.defer()
             return
+
+    def _on_required_relation_broken(self, event: RelationBrokenEvent):
+        self.unit.status = BlockedStatus(
+            f"Waiting for relation(s) to be created: {event.relation.name}"
+        )
 
     def _update_relation_active_status(self, relation: Relation, is_active: bool) -> None:
         """Updates orc8r-orchestrator relation data content with workload service status.
