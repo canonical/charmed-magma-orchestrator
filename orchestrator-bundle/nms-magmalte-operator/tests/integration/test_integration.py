@@ -86,6 +86,19 @@ class TestNmsMagmaLTE:
             "grafana-k8s",
             application_name="grafana-k8s",
             channel="edge",
+            trust=True,
+        )
+
+    @staticmethod
+    async def _deploy_prometheus_k8s_operator(ops_test):
+        await ops_test.model.deploy(
+            "prometheus-k8s",
+            application_name="prometheus-k8s",
+            channel="edge",
+            trust=True
+        )
+        await ops_test.model.add_relation(
+            relation1="prometheus-k8s:grafana-source", relation2="grafana-k8s"
         )
 
     @pytest.fixture(scope="module")

@@ -29,7 +29,13 @@ from charms.observability_libs.v1.kubernetes_service_patch import (
     KubernetesServicePatch,
     ServicePort,
 )
-from ops.charm import ActionEvent, CharmBase, PebbleReadyEvent, RelationJoinedEvent
+from ops.charm import (
+    ActionEvent,
+    CharmBase,
+    PebbleReadyEvent,
+    RelationBrokenEvent,
+    RelationJoinedEvent,
+)
 from ops.main import main
 from ops.model import (
     ActiveStatus,
@@ -95,6 +101,9 @@ class MagmaNmsMagmalteCharm(CharmBase):
         )
         self.framework.observe(
             self._grafana_auth_provider.on.urls_available, self._on_grafana_urls_available
+        )
+        self.framework.observe(
+            self.on[self.GRAFANA_AUTH_RELATION].relation_broken, self._on_grafana_relation_broken
         )
 
     @property
@@ -553,6 +562,9 @@ class MagmaNmsMagmalteCharm(CharmBase):
         app_data = self.model.get_relation("replicas").data[self.app]  # type: ignore[union-attr]  # noqa: E501
         app_data.update({"grafana_url": event.urls[0]})
         self._on_magma_nms_magmalte_pebble_ready(event)
+
+    def _on_grafana_relation_broken(self, event: RelationBrokenEvent):
+        self.unit.status = BlockedStatus("Waiting for grafana relation to be created")
 
     @property
     def _grafana_url(self) -> Optional[str]:
