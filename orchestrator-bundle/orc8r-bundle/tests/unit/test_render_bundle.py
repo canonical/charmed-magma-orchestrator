@@ -1,7 +1,46 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import pytest
+
 from render_bundle import render_bundle
+
+
+def test_given_channel_is_not_provided_and_local_not_set_when_render_bundle_then_valueerror_is_raised():  # noqa: E501
+
+    with pytest.raises(ValueError) as e:
+        render_bundle(
+            template="bundle.yaml.j2",
+            output="tests/unit/rendered_bundle_charmhub_edge.yaml",
+        )
+
+    assert "Either channel must be specified or local set to True" == str(e.value)
+
+
+def test_given_channel_is_provided_and_local_set_to_true_when_render_bundle_then_valueerror_is_raised():  # noqa: E501
+
+    with pytest.raises(ValueError) as e:
+        render_bundle(
+            channel="edge",
+            local=True,
+            local_dir="whatever/dir",
+            template="bundle.yaml.j2",
+            output="tests/unit/rendered_bundle_charmhub_edge.yaml",
+        )
+
+    assert "If local is true, channel must not be set" == str(e.value)
+
+
+def test_given_local_set_to_true_and_local_dir_not_provided_when_render_bundle_then_valueerror_is_raised():  # noqa: E501
+
+    with pytest.raises(ValueError) as e:
+        render_bundle(
+            local=True,
+            template="bundle.yaml.j2",
+            output="tests/unit/rendered_bundle_charmhub_edge.yaml",
+        )
+
+    assert "local_dir must be provided when `local` is True" == str(e.value)
 
 
 def test_given_channel_is_edge_when_render_bundle_then_bundle_is_rendered_correctly():

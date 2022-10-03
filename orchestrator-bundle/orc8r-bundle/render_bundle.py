@@ -82,7 +82,11 @@ def render_bundle(
 
 
 if __name__ == "__main__":
-    template, output, local, local_dir, channel = parse_args()
+    arg_template, arg_output, arg_local, arg_local_dir, arg_channel = parse_args()
     render_bundle(
-        template=template, output=output, local=local, local_dir=local_dir, channel=channel
+        template=arg_template,
+        output=arg_output,
+        local=arg_local,
+        local_dir=arg_local_dir,
+        channel=arg_channel,
     )

@@ -10,7 +10,7 @@ from typing import Tuple
 
 import jinja2
 import pytest
-import requests
+import requests  # type: ignore[import]
 from pytest_operator.plugin import OpsTest
 from python_hosts import Hosts, HostsEntry  # type: ignore[import]
 
@@ -185,7 +185,7 @@ class TestOrc8rBundle:
         retcode, stdout, stderr = await ops_test.run(*run_args)
         if retcode != 0:
             raise RuntimeError(f"Error: {stderr}")
-        await ops_test.model.wait_for_idle(  # type: ignore[union-attr]
+        await ops_test.model.wait_for_idle(
             apps=ORCHESTRATOR_CHARMS,
             status="active",
             timeout=2000,
