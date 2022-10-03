@@ -1,0 +1,266 @@
+bundle: kubernetes
+name: magma-orc8r
+description: |
+  Orchestrator is a Magma service that provides a simple and consistent way to
+  configure and monitor the wireless network securely. The metrics acquired through the platform
+  allows you to see the analytics and traffic flows of the wireless users through the Magma web UI.
+applications:
+  nms-magmalte:
+    charm: magma-nms-magmalte
+    channel: edge
+    scale: 1
+    trust: true
+  nms-nginx-proxy:
+    charm: magma-nms-nginx-proxy
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-accessd:
+    charm: magma-orc8r-accessd
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-alertmanager:
+    charm: alertmanager-k8s
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-alertmanager-configurer:
+    charm: alertmanager-configurer-k8s
+    channel: edge
+    scale: 1
+    trust: true
+    options:
+      multitenant_label: "networkID"
+  orc8r-analytics:
+    charm: magma-orc8r-analytics
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-bootstrapper:
+    charm: magma-orc8r-bootstrapper
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-certifier:
+    charm: magma-orc8r-certifier
+    channel: edge
+    scale: 1
+    trust: true
+    options:
+      domain: example.com
+  orc8r-configurator:
+    charm: magma-orc8r-configurator
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-ctraced:
+    charm: magma-orc8r-ctraced
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-device:
+    charm: magma-orc8r-device
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-directoryd:
+    charm: magma-orc8r-directoryd
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-dispatcher:
+    charm: magma-orc8r-dispatcher
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-eventd:
+    charm: magma-orc8r-eventd
+    channel: edge
+    scale: 1
+    trust: true
+    options:
+      elasticsearch-url: "orc8r-elasticsearch:1234"
+  orc8r-ha:
+    charm: magma-orc8r-ha
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-lte:
+    charm: magma-orc8r-lte
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-metricsd:
+    charm: magma-orc8r-metricsd
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-nginx:
+    charm: magma-orc8r-nginx
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-obsidian:
+    charm: magma-orc8r-obsidian
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-orchestrator:
+    charm: magma-orc8r-orchestrator
+    channel: edge
+    scale: 1
+    trust: true
+    options:
+      elasticsearch-url: "orc8r-elasticsearch:1234"
+  orc8r-policydb:
+    charm: magma-orc8r-policydb
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-prometheus:
+    charm: prometheus-k8s
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-prometheus-cache:
+    charm: prometheus-edge-hub
+    channel: edge
+    scale: 1
+    trust: true
+    options:
+      metrics_count_limit: 500000
+  orc8r-prometheus-configurer:
+    charm: prometheus-configurer-k8s
+    channel: edge
+    scale: 1
+    trust: true
+    options:
+      multitenant_label: "networkID"
+  orc8r-service-registry:
+    charm: magma-orc8r-service-registry
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-smsd:
+    charm: magma-orc8r-smsd
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-state:
+    charm: magma-orc8r-state
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-streamer:
+    charm: magma-orc8r-streamer
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-subscriberdb:
+    charm: magma-orc8r-subscriberdb
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-subscriberdb-cache:
+    charm: magma-orc8r-subscriberdb-cache
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-tenants:
+    charm: magma-orc8r-tenants
+    channel: edge
+    scale: 1
+    trust: true
+  orc8r-user-grafana:
+    charm: grafana-k8s
+    channel: edge
+    options:
+      web_external_url: "/grafana"
+    scale: 1
+    trust: true
+  postgresql-k8s:
+    charm: postgresql-k8s
+    series: kubernetes
+    channel: stable
+    scale: 1
+    trust: true
+  tls-certificates-operator:
+    charm: tls-certificates-operator
+    channel: edge
+    scale: 1
+relations:
+- - nms-magmalte
+  - orc8r-certifier
+- - nms-magmalte:db
+  - postgresql-k8s:db
+- - nms-nginx-proxy
+  - orc8r-certifier
+- - nms-nginx-proxy:magma-nms-magmalte
+  - nms-magmalte:magma-nms-magmalte
+- - orc8r-accessd:db
+  - postgresql-k8s:db
+- - orc8r-alertmanager:remote-configuration
+  - orc8r-alertmanager-configurer:alertmanager
+- - orc8r-certifier
+  - tls-certificates-operator
+- - orc8r-certifier:db
+  - postgresql-k8s:db
+- - orc8r-configurator:db
+  - postgresql-k8s:db
+- - orc8r-ctraced:db
+  - postgresql-k8s:db
+- - orc8r-device:db
+  - postgresql-k8s:db
+- - orc8r-directoryd:db
+  - postgresql-k8s:db
+- - orc8r-lte:db
+  - postgresql-k8s:db
+- - orc8r-metricsd:alertmanager-k8s
+  - orc8r-alertmanager:alerting
+- - orc8r-metricsd:alertmanager-configurer-k8s
+  - orc8r-alertmanager-configurer:alertmanager-configurer
+- - orc8r-metricsd:magma-orc8r-orchestrator
+  - orc8r-orchestrator:magma-orc8r-orchestrator
+- - orc8r-metricsd:prometheus-k8s
+  - orc8r-prometheus:self-metrics-endpoint
+- - orc8r-metricsd:prometheus-configurer-k8s
+  - orc8r-prometheus-configurer:prometheus-configurer
+- - orc8r-nginx:magma-orc8r-bootstrapper
+  - orc8r-bootstrapper:magma-orc8r-bootstrapper
+- - orc8r-nginx:cert-certifier
+  - orc8r-certifier:cert-certifier
+- - orc8r-nginx:cert-controller
+  - orc8r-certifier:cert-controller
+- - orc8r-nginx:magma-orc8r-obsidian
+  - orc8r-obsidian:magma-orc8r-obsidian
+- - orc8r-orchestrator:cert-admin-operator
+  - orc8r-certifier:cert-admin-operator
+- - orc8r-orchestrator:magma-orc8r-certifier
+  - orc8r-certifier:magma-orc8r-certifier
+- - orc8r-orchestrator:magma-orc8r-accessd
+  - orc8r-accessd:magma-orc8r-accessd
+- - orc8r-orchestrator:magma-orc8r-service-registry
+  - orc8r-service-registry:magma-orc8r-service-registry
+- - orc8r-orchestrator:metrics-endpoint
+  - orc8r-prometheus-cache:metrics-endpoint
+- - orc8r-policydb:db
+  - postgresql-k8s:db
+- - orc8r-prometheus:alertmanager
+  - orc8r-alertmanager:alerting
+- - orc8r-prometheus:metrics-endpoint
+  - orc8r-prometheus-cache:metrics-endpoint
+- - orc8r-prometheus-configurer:prometheus
+  - orc8r-prometheus:receive-remote-write
+- - orc8r-smsd:db
+  - postgresql-k8s:db
+- - orc8r-state:db
+  - postgresql-k8s:db
+- - orc8r-subscriberdb-cache:db
+  - postgresql-k8s:db
+- - orc8r-subscriberdb:db
+  - postgresql-k8s:db
+- - orc8r-tenants:db
+  - postgresql-k8s:db
+- - orc8r-user-grafana:grafana-source
+  - orc8r-prometheus:grafana-source

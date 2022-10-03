@@ -6,36 +6,21 @@ description: |
   allows you to see the analytics and traffic flows of the wireless users through the Magma web UI.
 applications:
   nms-magmalte:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-nms-magmalte_ubuntu-20.04-amd64.charm
+    charm: ./magma-nms-magmalte_ubuntu-20.04-amd64.charm
     resources:
       magma-nms-magmalte-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-nms-magmalte
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
   nms-nginx-proxy:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-nms-nginx-proxy_ubuntu-20.04-amd64.charm
+    charm: ./magma-nms-nginx-proxy_ubuntu-20.04-amd64.charm
     resources:
       magma-nms-magmalte-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-nms-nginx-proxy
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
   orc8r-accessd:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-orc8r-accessd_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-accessd_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-accessd-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-orc8r-accessd
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
   orc8r-alertmanager:
@@ -51,185 +36,105 @@ applications:
     options:
       multitenant_label: "networkID"
   orc8r-analytics:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-orc8r-analytics_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-analytics_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-analytics-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-orc8r-analytics
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
   orc8r-bootstrapper:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-orc8r-bootstrapper_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-bootstrapper_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-bootstrapper-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-orc8r-bootstrapper
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
   orc8r-certifier:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-orc8r-certifier_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-certifier_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-certifier-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-orc8r-certifier
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
     options:
       domain: example.com
   orc8r-configurator:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-orc8r-configurator_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-configurator_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-configurator-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-orc8r-configurator
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
   orc8r-ctraced:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-orc8r-ctraced_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-ctraced_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-ctraced-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-orc8r-ctraced
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
   orc8r-device:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-orc8r-device_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-device_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-device-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-orc8r-device
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
   orc8r-directoryd:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-orc8r-directoryd_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-directoryd_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-directoryd-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-orc8r-directoryd
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
   orc8r-dispatcher:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-orc8r-dispatcher_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-dispatcher_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-dispatcher-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-orc8r-dispatcher
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
   orc8r-eventd:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-orc8r-eventd_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-eventd_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-eventd-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-orc8r-eventd
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
     options:
       elasticsearch-url: "orc8r-elasticsearch:1234"
   orc8r-ha:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-orc8r-ha_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-ha_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-ha-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-orc8r-ha
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
   orc8r-lte:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-orc8r-lte_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-lte_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-lte-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-orc8r-lte
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
   orc8r-metricsd:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-orc8r-metricsd_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-metricsd_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-metricsd-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-orc8r-metricsd
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
   orc8r-nginx:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-orc8r-nginx_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-nginx_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-nginx-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-orc8r-nginx
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
   orc8r-obsidian:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-orc8r-obsidian_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-obsidian_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-obsidian-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-orc8r-obsidian
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
   orc8r-orchestrator:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-orc8r-orchestrator_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-orchestrator_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-orchestrator-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-orc8r-orchestrator
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
     options:
       elasticsearch-url: "orc8r-elasticsearch:1234"
   orc8r-policydb:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-orc8r-policydb_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-policydb_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-policydb-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-orc8r-policydb
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
   orc8r-prometheus:
@@ -252,80 +157,45 @@ applications:
     options:
       multitenant_label: "networkID"
   orc8r-service-registry:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-orc8r-service-registry_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-service-registry_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-service-registry-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-orc8r-service-registry
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
   orc8r-smsd:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-orc8r-smsd_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-smsd_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-smsd-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-orc8r-smsd
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
   orc8r-state:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-orc8r-state_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-state_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-state-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-orc8r-state
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
   orc8r-streamer:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-orc8r-streamer_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-streamer_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-streamer-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-orc8r-streamer
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
   orc8r-subscriberdb:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-orc8r-subscriberdb_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-subscriberdb_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-subscriberdb-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-orc8r-subscriberdb
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
   orc8r-subscriberdb-cache:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-orc8r-subscriberdb-cache_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-subscriberdb-cache_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-subscriberdb-cache-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-orc8r-subscriberdb-cache
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
   orc8r-tenants:
-    {%- if local == true %}
-    charm: {{ local_dir }}magma-orc8r-tenants_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-tenants_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-tenants-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-    {%- else %}
-    charm: magma-orc8r-tenants
-    channel: {{ channel|default("edge") }}
-    {%- endif %}
     scale: 1
     trust: true
   orc8r-user-grafana:
@@ -333,7 +203,6 @@ applications:
     channel: edge
     options:
       web_external_url: "/grafana"
-      enable_auto_assign_org: false
     scale: 1
     trust: true
   postgresql-k8s:
@@ -423,5 +292,3 @@ relations:
   - postgresql-k8s:db
 - - orc8r-user-grafana:grafana-source
   - orc8r-prometheus:grafana-source
-- - orc8r-user-grafana:grafana-auth
-  - nms-magmalte:grafana-auth

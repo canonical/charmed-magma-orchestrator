@@ -4,6 +4,7 @@
 
 
 import logging
+import shutil
 import time
 from typing import Tuple
 
@@ -13,10 +14,41 @@ import requests
 from pytest_operator.plugin import OpsTest
 from python_hosts import Hosts, HostsEntry  # type: ignore[import]
 
+from render_bundle import render_bundle
 from tests.integration.orchestrator import Orc8r
 
 logger = logging.getLogger(__name__)
 DOMAIN = "pizza.com"
+INTEGRATION_TESTS_DIR = "tests/integration"
+
+ORCHESTRATOR_CHARMS = [
+    "nms-magmalte",
+    "nms-nginx-proxy",
+    "orc8r-accessd",
+    "orc8r-analytics",
+    "orc8r-bootstrapper",
+    "orc8r-certifier",
+    "orc8r-configurator",
+    "orc8r-ctraced",
+    "orc8r-device",
+    "orc8r-directoryd",
+    "orc8r-dispatcher",
+    "orc8r-eventd",
+    "orc8r-ha",
+    "orc8r-lte",
+    "orc8r-metricsd",
+    "orc8r-nginx",
+    "orc8r-obsidian",
+    "orc8r-orchestrator",
+    "orc8r-policydb",
+    "orc8r-service-registry",
+    "orc8r-smsd",
+    "orc8r-state",
+    "orc8r-streamer",
+    "orc8r-subscriberdb",
+    "orc8r-subscriberdb-cache",
+    "orc8r-tenants",
+]
 
 
 def update_etc_host(
@@ -125,60 +157,42 @@ async def get_pfx_package(ops_test: OpsTest) -> str:
 class TestOrc8rBundle:
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail
-    async def deploy_bundle_and_wait_for_idle(self, ops_test: OpsTest):
-        overlay_file_path = "tests/integration/overlay.yaml"
-        orc8r_applications = [
-            "nms-magmalte",
-            "nms-nginx-proxy",
-            "orc8r-accessd",
-            "orc8r-analytics",
-            "orc8r-bootstrapper",
-            "orc8r-certifier",
-            "orc8r-configurator",
-            "orc8r-ctraced",
-            "orc8r-device",
-            "orc8r-directoryd",
-            "orc8r-dispatcher",
-            "orc8r-eventd",
-            "orc8r-ha",
-            "orc8r-lte",
-            "orc8r-metricsd",
-            "orc8r-nginx",
-            "orc8r-obsidian",
-            "orc8r-orchestrator",
-            "orc8r-policydb",
-            "orc8r-service-registry",
-            "orc8r-smsd",
-            "orc8r-state",
-            "orc8r-streamer",
-            "orc8r-subscriberdb",
-            "orc8r-subscriberdb-cache",
-            "orc8r-tenants",
-            "tls-certificates-operator",
-        ]
-        with open("tests/integration/overlay.yaml.j2", "r") as t:
+    async def pack_all_charms(self, ops_test):
+        overlay_file_path = f"{INTEGRATION_TESTS_DIR}/overlay.yaml"
+        for app_name in ORCHESTRATOR_CHARMS:
+            charm = await ops_test.build_charm(f"../{app_name}-operator")
+            shutil.copy(charm, f"{INTEGRATION_TESTS_DIR}/")
+
+        render_bundle(
+            template="bundle.yaml.j2",
+            output=f"{INTEGRATION_TESTS_DIR}/bundle.yaml",
+            local=True,
+            local_dir=f"{INTEGRATION_TESTS_DIR}/",
+        )
+
+        with open(f"{INTEGRATION_TESTS_DIR}/overlay.yaml.j2", "r") as t:
             jinja_template = jinja2.Template(t.read(), autoescape=True)
         with open(overlay_file_path, "wt") as o:
             jinja_template.stream(domain=DOMAIN).dump(o)
+
         run_args = [
             "juju",
             "deploy",
-            "magma-orc8r",
+            "tests/integration/bundle.yaml",
             "--trust",
-            "--channel=edge",
             f"--overlay={overlay_file_path}",
         ]
         retcode, stdout, stderr = await ops_test.run(*run_args)
         if retcode != 0:
             raise RuntimeError(f"Error: {stderr}")
         await ops_test.model.wait_for_idle(  # type: ignore[union-attr]
-            apps=orc8r_applications,
+            apps=ORCHESTRATOR_CHARMS,
             status="active",
-            timeout=1000,
+            timeout=2000,
         )
 
     async def test_given_bundle_deployed_when_set_api_client_then_magma_returns_200(
-        self, ops_test: OpsTest, deploy_bundle_and_wait_for_idle
+        self, ops_test: OpsTest, pack_all_charms
     ):
         (
             orc8r_bootstrap_nginx_ip,
