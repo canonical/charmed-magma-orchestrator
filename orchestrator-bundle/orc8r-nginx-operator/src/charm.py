@@ -182,9 +182,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
             event.defer()
             return
         if not self._cert_is_stored(f"{self.BASE_CERTS_PATH}/rootCA.pem"):
-            self.unit.status = WaitingStatus(
-                "Waiting for rootCA certificate to be available"
-            )
+            self.unit.status = WaitingStatus("Waiting for rootCA certificate to be available")
             event.defer()
             return
         try:
