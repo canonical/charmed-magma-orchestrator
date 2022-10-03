@@ -1,3 +1,4 @@
+jsonschema
 ops
 lightkube
 lightkube-models
