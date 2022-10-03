@@ -167,7 +167,6 @@ class TestOrc8rBundle:
             template="bundle.yaml.j2",
             output=f"{INTEGRATION_TESTS_DIR}/bundle.yaml",
             local=True,
-            local_dir=f"{INTEGRATION_TESTS_DIR}/",
         )
 
         with open(f"{INTEGRATION_TESTS_DIR}/overlay.yaml.j2", "r") as t:
@@ -178,7 +177,7 @@ class TestOrc8rBundle:
         run_args = [
             "juju",
             "deploy",
-            "tests/integration/bundle.yaml",
+            "./tests/integration/bundle.yaml",
             "--trust",
             f"--overlay={overlay_file_path}",
         ]
