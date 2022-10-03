@@ -13,8 +13,67 @@ charmcraft fetch-lib charms.magma_orc8r_certifier.v0.cert_root_ca
 ```
 
 Charms providing rootCA certificate should use `CertRootCAProvides`.
-Charms that require rootCA certificate should use `CertRootCARequires`
+Typical usage of this class would look something like:
 
+    ```python
+    ...
+    from charms.magma_orc8r_certifier.v0.cert_root_ca import CertRootCAProvides
+    ...
+
+    class SomeProviderCharm(CharmBase):
+
+        def __init__(self, *args):
+            ...
+            self.cert_root_ca = CertRootCAProvides(charm=self, relationship_name="cert-root-ca")
+            ...
+            self.framework.observe(
+                self.cert_root_ca.on.certificate_request, self._on_certificate_request
+            )
+
+        def _on_certificate_request(self, event):
+            ...
+            self.cert_root_ca.set_certificate(
+                relation_id=event.relation_id,
+                certificate=certificate,
+            )
+    ```
+
+    And a corresponding section in charm's `metadata.yaml`:
+    ```
+    provides:
+        cert-root-ca:  # Relation name
+            interface: cert-root-ca  # Relation interface
+    ```
+
+Charms that require rootCA certificate should use `CertRootCARequires`.
+Typical usage of this class would look something like:
+
+    ```python
+    ...
+    from charms.magma_orc8r_certifier.v0.cert_root_ca import CertRootCARequires
+    ...
+
+    class SomeRequirerCharm(CharmBase):
+
+        def __init__(self, *args):
+            ...
+            self.cert_root_ca = CertRootCARequires(charm=self, relationship_name="cert-root-ca")
+            ...
+            self.framework.observe(
+                self.cert_root_ca.on.certificate_available, self._on_certificate_available
+            )
+
+        def _on_certificate_available(self, event):
+            certificate = event.certificate
+            # Do something with the certificate
+    ```
+
+    And a corresponding section in charm's `metadata.yaml`:
+    ```
+    requires:
+        cert-root-ca:  # Relation name
+            interface: cert-root-ca  # Relation interface
+    ```
 """
 
 from ops.charm import CharmBase, CharmEvents, RelationChangedEvent, RelationJoinedEvent
@@ -57,40 +116,7 @@ class CertRootCAProviderCharmEvents(CharmEvents):
 
 
 class CertRootCAProvides(Object):
-    """Class to be instantiated by provider of root certificate.
-
-    Typical usage of this class would look something like:
-
-    ```python
-    ...
-    from charms.magma_orc8r_certifier.v0.cert_root_ca import CertRootCAProvides
-    ...
-
-    class SomeProviderCharm(CharmBase):
-
-        def __init__(self, *args):
-            ...
-            self.cert_root_ca = CertRootCAProvides(charm=self, relationship_name="cert-root-ca")
-            ...
-            self.framework.observe(
-                self.cert_root_ca.on.certificate_request, self._on_certificate_request
-            )
-
-        def _on_certificate_request(self, event):
-            ...
-            self.cert_root_ca.set_certificate(
-                relation_id=event.relation_id,
-                certificate=certificate,
-            )
-    ```
-
-    And a corresponding section in charm's `metadata.yaml`:
-    ```
-    provides:
-        cert-root-ca:  # Relation name
-            interface: cert-root-ca  # Relation interface
-    ```
-    """
+    """Class to be instantiated by provider of root certificate."""
 
     on = CertRootCAProviderCharmEvents()
 
@@ -159,37 +185,7 @@ class CertRootCARequirerCharmEvents(CharmEvents):
 
 
 class CertRootCARequires(Object):
-    """Class to be instantiated by requirer of rootCA certificate.
-
-    Typical usage of this class would look something like:
-
-    ```python
-    ...
-    from charms.magma_orc8r_certifier.v0.cert_root_ca import CertRootCARequires
-    ...
-
-    class SomeRequirerCharm(CharmBase):
-
-        def __init__(self, *args):
-            ...
-            self.cert_root_ca = CertRootCARequires(charm=self, relationship_name="cert-root-ca")
-            ...
-            self.framework.observe(
-                self.cert_root_ca.on.certificate_available, self._on_certificate_available
-            )
-
-        def _on_certificate_available(self, event):
-            certificate = event.certificate
-            # Do something with the certificate
-    ```
-
-    And a corresponding section in charm's `metadata.yaml`:
-    ```
-    requires:
-        cert-root-ca:  # Relation name
-            interface: cert-root-ca  # Relation interface
-    ```
-    """
+    """Class to be instantiated by requirer of rootCA certificate."""
 
     on = CertRootCARequirerCharmEvents()
 
