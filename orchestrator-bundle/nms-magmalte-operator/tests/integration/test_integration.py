@@ -30,6 +30,7 @@ class TestNmsMagmaLTE:
         await self._deploy_tls_certificates_operator(ops_test)
         await self._deploy_orc8r_certifier(ops_test)
         await self._deploy_grafana_k8s_operator(ops_test)
+        await self._deploy_prometheus_k8s_operator(ops_test)
 
     @staticmethod
     def _find_charm(charm_dir: str, charm_file_name: str) -> Optional[str]:
@@ -92,10 +93,7 @@ class TestNmsMagmaLTE:
     @staticmethod
     async def _deploy_prometheus_k8s_operator(ops_test):
         await ops_test.model.deploy(
-            "prometheus-k8s",
-            application_name="prometheus-k8s",
-            channel="edge",
-            trust=True
+            "prometheus-k8s", application_name="prometheus-k8s", channel="edge", trust=True
         )
         await ops_test.model.add_relation(
             relation1="prometheus-k8s:grafana-source", relation2="grafana-k8s"
@@ -123,7 +121,7 @@ class TestNmsMagmaLTE:
             relation1=APPLICATION_NAME, relation2="orc8r-certifier:cert-admin-operator"
         )
         await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="grafana-k8s:grafana_auth"
+            relation1=f"{APPLICATION_NAME}:grafana-auth", relation2="grafana-k8s"
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
 
