@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 
+import asyncio
 import logging
 import shutil
 import time
@@ -117,44 +118,88 @@ async def get_pfx_package(ops_test: OpsTest) -> str:
     return export_path
 
 
+async def deploy_bundle(ops_test: OpsTest, bundle_path: str, overlay_file_path: str):
+    run_args = [
+        "juju",
+        "deploy",
+        f"./{bundle_path}",
+        "--trust",
+        f"--overlay={overlay_file_path}",
+    ]
+    retcode, stdout, stderr = await ops_test.run(*run_args)
+    if retcode != 0:
+        raise RuntimeError(f"Error: {stderr}")
+    await ops_test.model.wait_for_idle(
+        apps=ORCHESTRATOR_CHARMS,
+        status="active",
+        timeout=2000,
+    )
+
+
+async def pack_charm(ops_test: OpsTest, charm_directory: str, export_path: str) -> None:
+    """Packs a charm based on provided directory
+
+    Args:
+        ops_test:
+        charm_directory: Charm directory
+        export_path: Directory to export built charm
+
+    Returns:
+        None
+    """
+    charm = await ops_test.build_charm(charm_directory)
+    shutil.copy(charm, export_path)
+    return
+
+
+def render_overlay_file(jinja_template_path: str, destination_file_path: str) -> None:
+    """Renders overlay file based on jinja template.
+
+    Args:
+        jinja_template_path: Destination to Jinja template path
+        destination_file_path: Destination file path
+
+    Returns:
+        None
+    """
+    with open(jinja_template_path, "r") as template_file:
+        jinja_template = jinja2.Template(template_file.read(), autoescape=True)
+    with open(destination_file_path, "wt") as output_file:
+        jinja_template.stream(domain=DOMAIN).dump(output_file)
+
+
 class TestOrc8rBundle:
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail
-    async def pack_all_charms(self, ops_test):
+    async def pack_charms_and_deploy_bundle(self, ops_test: OpsTest):
+        overlay_jinja_template_path = f"{INTEGRATION_TESTS_DIR}/overlay.yaml.j2"
+        bundle_jinja_template_path = "bundle.yaml.j2"
         overlay_file_path = f"{INTEGRATION_TESTS_DIR}/overlay.yaml"
-        for app_name in ORCHESTRATOR_CHARMS:
-            charm = await ops_test.build_charm(f"../{app_name}-operator")
-            shutil.copy(charm, f"{INTEGRATION_TESTS_DIR}/")
-
+        bundle_file_path = f"{INTEGRATION_TESTS_DIR}/bundle.yaml"
+        tasks = [
+            pack_charm(
+                ops_test=ops_test,
+                charm_directory=f"../{app_name}-operator",
+                export_path=f"{INTEGRATION_TESTS_DIR}/",
+            )
+            for app_name in ORCHESTRATOR_CHARMS
+        ]
+        await asyncio.gather(*tasks)
         render_bundle(
-            template="bundle.yaml.j2",
-            output=f"{INTEGRATION_TESTS_DIR}/bundle.yaml",
+            template=bundle_jinja_template_path,
+            output=bundle_file_path,
             local=True,
         )
-
-        with open(f"{INTEGRATION_TESTS_DIR}/overlay.yaml.j2", "r") as t:
-            jinja_template = jinja2.Template(t.read(), autoescape=True)
-        with open(overlay_file_path, "wt") as o:
-            jinja_template.stream(domain=DOMAIN).dump(o)
-
-        run_args = [
-            "juju",
-            "deploy",
-            "./tests/integration/bundle.yaml",
-            "--trust",
-            f"--overlay={overlay_file_path}",
-        ]
-        retcode, stdout, stderr = await ops_test.run(*run_args)
-        if retcode != 0:
-            raise RuntimeError(f"Error: {stderr}")
-        await ops_test.model.wait_for_idle(
-            apps=ORCHESTRATOR_CHARMS,
-            status="active",
-            timeout=2000,
+        render_overlay_file(
+            jinja_template_path=overlay_jinja_template_path,
+            destination_file_path=overlay_file_path,
+        )
+        await deploy_bundle(
+            ops_test=ops_test, bundle_path=bundle_file_path, overlay_file_path=overlay_file_path
         )
 
     async def test_given_bundle_deployed_when_set_api_client_then_magma_returns_200(
-        self, ops_test: OpsTest, pack_all_charms
+        self, ops_test: OpsTest, pack_charms_and_deploy_bundle
     ):
         (
             orc8r_bootstrap_nginx_ip,
