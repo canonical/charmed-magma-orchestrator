@@ -48,4 +48,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: charmcraft-upload-logs
-          path: /home/runner/snap/charmcraft/common/cache/charmcraft/log/*.log
+          path: /root/snap/charmcraft/common/cache/charmcraft/log/*.log
