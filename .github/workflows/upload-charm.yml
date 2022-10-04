@@ -42,3 +42,10 @@ jobs:
           channel: "${{ steps.channel.outputs.name }}"
           charm-path: ./orchestrator-bundle/${{ inputs.charm }}-operator
           tag-prefix: magma-${{ inputs.charm }}
+
+      - name: Archive charmcraft logs
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: charmcraft-upload-logs
+          path: /root/snap/charmcraft/common/cache/charmcraft/log/*.log
