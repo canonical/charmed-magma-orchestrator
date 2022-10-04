@@ -38,7 +38,7 @@ jobs:
     uses: ./.github/workflows/upload-libs.yml
     secrets: inherit
     with:
-      charm: orc8r-certifier
+      charm: orc8r-certifier-operator
       libs: "charms.magma_orc8r_certifier.v0.cert_admin_operator
       charms.magma_orc8r_certifier.v0.cert_certifier 
       charms.magma_orc8r_certifier.v0.cert_controller 
