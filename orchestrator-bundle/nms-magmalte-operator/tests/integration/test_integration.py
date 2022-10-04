@@ -110,6 +110,9 @@ class TestNmsMagmaLTE:
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
         )
+        await ops_test.model.add_relation(
+            relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
+        )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
 
     async def test_scale_up(self, ops_test, setup, build_and_deploy_charm):
