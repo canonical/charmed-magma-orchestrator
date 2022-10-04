@@ -79,7 +79,7 @@ class TestOrchestratorRelation(unittest.TestCase):
     @patch("ops.model.Container.pull")
     @patch("ops.model.Container.exists")
     @patch("ops.model.Container.get_service", new=Mock())
-    def test_given_all_checks_passed_but_theres_a_problem_with_rootca_path_when_orchestrator_relation_joined_then_pulling_rootca_from_container_fails_and_relevant_message_is_logged(  # noqa: E501
+    def test_given_a_problem_with_rootca_path_when_orchestrator_relation_joined_then_pulling_rootca_from_container_fails_and_charm_goes_to_blocked_status(  # noqa: E501
         self, patched_exists, patched_pull
     ):
         self.harness.set_leader(is_leader=True)
