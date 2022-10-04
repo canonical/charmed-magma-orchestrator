@@ -1,0 +1,42 @@
+name: Upload Libraries
+
+on:
+  workflow_call:
+    inputs:
+      charm:
+        required: true
+        type: string
+      libs:
+        required: true
+        type: string
+
+jobs:
+  libs-charmhub-upload:
+    runs-on: ubuntu-20.04
+    name: Upload ${{ inputs.charm }} libs to charmhub
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Wait for integration tests to succeed
+        uses: lewagon/wait-on-check-action@v1.1.2
+        with:
+          ref: main
+          check-name: "Integration tests"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 20
+
+      - uses: canonical/charmhub-upload-action@0.2.1
+        with:
+          credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
+          charm-path: ./orchestrator-bundle/${{ inputs.charm }}
+          upload-image: "false"
+
+      - name: Publish libs
+        env:
+          CHARMCRAFT_AUTH: "${{ secrets.CHARMCRAFT_AUTH }}"
+        run: |
+          set -eux
+          for lib in ${{ inputs.libs }}; do
+            echo "Publishing ${lib}"
+            (cd ./orchestrator-bundle/${{ inputs.charm }} && charmcraft publish-lib ${lib})
+          done
