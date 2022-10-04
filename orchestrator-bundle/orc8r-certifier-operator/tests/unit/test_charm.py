@@ -688,7 +688,7 @@ class TestCharm(unittest.TestCase):
 
         self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
         assert self.harness.charm.unit.status == ActiveStatus()
-        self.harness.charm.on.db_relation_broken.emit(self.harness.model.get_relation("db"))
+        self.harness.remove_relation(db_relation_id)
         self.assertEqual(
             self.harness.charm.unit.status,
             BlockedStatus("Waiting for database relation to be created"),

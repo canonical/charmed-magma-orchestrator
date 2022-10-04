@@ -276,10 +276,10 @@ class MagmaNmsMagmalteCharm(CharmBase):
     def _on_magma_nms_magmalte_pebble_ready(
         self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationJoinedEvent]
     ) -> None:
-        """Configures pebble layer and creates adming user of nms-magmalte.
+        """Configures pebble layer and creates admin user of nms-magmalte.
 
         Args:
-            event (PebbleReadyEvent, CertificateAvailableEvent, RelationBrokenEvent): Juju event
+            event (PebbleReadyEvent, CertificateAvailableEvent, RelationJoinedEvent): Juju event
 
         Returns:
             None
@@ -360,7 +360,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         """Event handler for database relation broken.
 
         Args:
-            event (RelationJoinedEvent): Juju event
+            event (RelationBrokenEvent): Juju event
         Returns:
             None
         """
