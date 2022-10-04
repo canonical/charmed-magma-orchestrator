@@ -12,7 +12,6 @@ import jinja2
 import pytest
 import requests  # type: ignore[import]
 from pytest_operator.plugin import OpsTest
-from python_hosts import Hosts, HostsEntry  # type: ignore[import]
 
 from render_bundle import render_bundle
 from tests.integration.orchestrator import Orc8r
@@ -51,42 +50,6 @@ ORCHESTRATOR_CHARMS = [
 ]
 
 
-def update_etc_host(
-    orc8r_bootstrap_nginx_ip: str,
-    orc8r_nginx_proxy_ip: str,
-    orc8r_clientcert_nginx_ip: str,
-    nginx_proxy_ip: str,
-) -> None:
-
-    hosts = Hosts(path="/etc/hosts")
-    bootstrapper_controller_entry = HostsEntry(
-        entry_type="ipv4",
-        address=orc8r_bootstrap_nginx_ip,
-        names=[f"bootstrapper-controller.{DOMAIN}"],
-    )
-    orc8r_nginx_entry = HostsEntry(
-        entry_type="ipv4", address=orc8r_nginx_proxy_ip, names=[f"api.{DOMAIN}"]
-    )
-    orc8r_clientcert_entry = HostsEntry(
-        entry_type="ipv4", address=orc8r_clientcert_nginx_ip, names=[f"controller.{DOMAIN}"]
-    )
-    nginx_proxy_entry = HostsEntry(
-        entry_type="ipv4",
-        address=nginx_proxy_ip,
-        names=[f"master.nms.{DOMAIN}", f"magma-test.nms.{DOMAIN}"],
-    )
-
-    hosts.add(
-        [
-            bootstrapper_controller_entry,
-            orc8r_nginx_entry,
-            orc8r_clientcert_entry,
-            nginx_proxy_entry,
-        ]
-    )
-    hosts.write()
-
-
 async def run_get_load_balancer_services_action(ops_test: OpsTest) -> Tuple[str, str, str, str]:
     """Runs `get-load-balancer-services` on the `orc8r-orchestrator/0` unit.
 
@@ -107,7 +70,7 @@ async def run_get_load_balancer_services_action(ops_test: OpsTest) -> Tuple[str,
     return (
         load_balancer_action_output["orc8r-bootstrap-nginx"],
         load_balancer_action_output["orc8r-clientcert-nginx"],
-        load_balancer_action_output["orc8r-clientcert-nginx"],
+        load_balancer_action_output["orc8r-nginx-proxy"],
         load_balancer_action_output["nginx-proxy"],
     )
 
@@ -200,16 +163,9 @@ class TestOrc8rBundle:
             nginx_proxy_ip,
         ) = await run_get_load_balancer_services_action(ops_test)
         pfx_password = await run_get_pfx_password_action(ops_test)
-        update_etc_host(
-            orc8r_bootstrap_nginx_ip=orc8r_bootstrap_nginx_ip,
-            orc8r_clientcert_nginx_ip=orc8r_clientcert_nginx_ip,
-            orc8r_nginx_proxy_ip=orc8r_nginx_proxy_ip,
-            nginx_proxy_ip=nginx_proxy_ip,
-        )
         pfx_package_path = await get_pfx_package(ops_test)
-
         orc8r = Orc8r(
-            url=f"https://api.{DOMAIN}/magma/v1/",
+            url=f"https://{orc8r_nginx_proxy_ip}/magma/v1/",
             admin_operator_pfx_path=pfx_package_path,
             admin_operator_pfx_password=pfx_password,
         )
@@ -220,7 +176,7 @@ class TestOrc8rBundle:
                 response = orc8r.get(endpoint="lte")
                 assert response.status_code == 200
                 return
-            except requests.exceptions.HTTPError as e:
+            except (requests.exceptions.HTTPError, requests.exceptions.ConnectTimeout) as e:
                 logger.error(e)
                 time.sleep(5)
         raise TimeoutError("Could not connect to Orc8r API")
