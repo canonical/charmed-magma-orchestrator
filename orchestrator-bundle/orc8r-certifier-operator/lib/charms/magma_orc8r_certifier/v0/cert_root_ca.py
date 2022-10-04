@@ -13,53 +13,7 @@ charmcraft fetch-lib charms.magma_orc8r_certifier.v0.cert_root_ca
 ```
 
 Charms providing rootCA certificate should use `CertRootCAProvides`.
-Charms that require rootCA certificate should use `CertRootCARequires`
-
-"""
-
-from ops.charm import CharmBase, CharmEvents, RelationChangedEvent, RelationJoinedEvent
-from ops.framework import EventBase, EventSource, Object
-
-# The unique Charmhub library identifier, never change it
-LIBID = "1f83c3c6b47845f8b0e2357362f57ccf"
-
-# Increment this major API version when introducing breaking changes
-LIBAPI = 0
-
-# Increment this PATCH version before using `charmcraft publish-lib` or reset
-# to 0 if you are raising the major API version
-LIBPATCH = 1
-
-
-class CertificateRequestEvent(EventBase):
-    """Dataclass for Certificate request events."""
-
-    def __init__(self, handle, relation_id: int):
-        """Sets relation id."""
-        super().__init__(handle)
-        self.relation_id = relation_id
-
-    def snapshot(self) -> dict:
-        """Returns event data."""
-        return {
-            "relation_id": self.relation_id,
-        }
-
-    def restore(self, snapshot):
-        """Restores event data."""
-        self.relation_id = snapshot["relation_id"]
-
-
-class CertRootCAProviderCharmEvents(CharmEvents):
-    """All custom events for the CertRootProvider."""
-
-    certificate_request = EventSource(CertificateRequestEvent)
-
-
-class CertRootCAProvides(Object):
-    """Class to be instantiated by provider of root certificate.
-
-    Typical usage of this class would look something like:
+Typical usage of this class would look something like:
 
     ```python
     ...
@@ -90,7 +44,79 @@ class CertRootCAProvides(Object):
         cert-root-ca:  # Relation name
             interface: cert-root-ca  # Relation interface
     ```
-    """
+
+Charms that require rootCA certificate should use `CertRootCARequires`.
+Typical usage of this class would look something like:
+
+    ```python
+    ...
+    from charms.magma_orc8r_certifier.v0.cert_root_ca import CertRootCARequires
+    ...
+
+    class SomeRequirerCharm(CharmBase):
+
+        def __init__(self, *args):
+            ...
+            self.cert_root_ca = CertRootCARequires(charm=self, relationship_name="cert-root-ca")
+            ...
+            self.framework.observe(
+                self.cert_root_ca.on.certificate_available, self._on_certificate_available
+            )
+
+        def _on_certificate_available(self, event):
+            certificate = event.certificate
+            # Do something with the certificate
+    ```
+
+    And a corresponding section in charm's `metadata.yaml`:
+    ```
+    requires:
+        cert-root-ca:  # Relation name
+            interface: cert-root-ca  # Relation interface
+    ```
+"""
+
+from ops.charm import CharmBase, CharmEvents, RelationChangedEvent, RelationJoinedEvent
+from ops.framework import EventBase, EventSource, Object
+
+# The unique Charmhub library identifier, never change it
+LIBID = "1f83c3c6b47845f8b0e2357362f57ccf"
+
+# Increment this major API version when introducing breaking changes
+LIBAPI = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 2
+
+
+class CertificateRequestEvent(EventBase):
+    """Dataclass for Certificate request events."""
+
+    def __init__(self, handle, relation_id: int):
+        """Sets relation id."""
+        super().__init__(handle)
+        self.relation_id = relation_id
+
+    def snapshot(self) -> dict:
+        """Returns event data."""
+        return {
+            "relation_id": self.relation_id,
+        }
+
+    def restore(self, snapshot):
+        """Restores event data."""
+        self.relation_id = snapshot["relation_id"]
+
+
+class CertRootCAProviderCharmEvents(CharmEvents):
+    """All custom events for the CertRootProvider."""
+
+    certificate_request = EventSource(CertificateRequestEvent)
+
+
+class CertRootCAProvides(Object):
+    """Class to be instantiated by provider of root certificate."""
 
     on = CertRootCAProviderCharmEvents()
 
@@ -159,37 +185,7 @@ class CertRootCARequirerCharmEvents(CharmEvents):
 
 
 class CertRootCARequires(Object):
-    """Class to be instantiated by requirer of rootCA certificate.
-
-    Typical usage of this class would look something like:
-
-    ```python
-    ...
-    from charms.magma_orc8r_certifier.v0.cert_root_ca import CertRootCARequires
-    ...
-
-    class SomeRequirerCharm(CharmBase):
-
-        def __init__(self, *args):
-            ...
-            self.cert_root_ca = CertRootCARequires(charm=self, relationship_name="cert-root-ca")
-            ...
-            self.framework.observe(
-                self.cert_root_ca.on.certificate_available, self._on_certificate_available
-            )
-
-        def _on_certificate_available(self, event):
-            certificate = event.certificate
-            # Do something with the certificate
-    ```
-
-    And a corresponding section in charm's `metadata.yaml`:
-    ```
-    requires:
-        cert-root-ca:  # Relation name
-            interface: cert-root-ca  # Relation interface
-    ```
-    """
+    """Class to be instantiated by requirer of rootCA certificate."""
 
     on = CertRootCARequirerCharmEvents()
 
