@@ -147,6 +147,7 @@ async def pack_charm(ops_test: OpsTest, charm_directory: str, export_path: str) 
     Returns:
         None
     """
+    ops_test.destructive_mode = True
     charm = await ops_test.build_charm(charm_directory)
     shutil.copy(charm, export_path)
     return

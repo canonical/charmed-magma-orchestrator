@@ -69,8 +69,5 @@ jobs:
       - name: Enable metallb
         run: sudo microk8s enable metallb:10.1.1.1-10.1.1.10
 
-      - name: Change /etc/hosts permissions
-        run: sudo chmod a=rw /etc/hosts
-
       - name: Run integration tests
         run: cd orchestrator-bundle/orc8r-bundle && tox -e integration
