@@ -50,7 +50,7 @@ class TestOrchestratorRelation(unittest.TestCase):
 
         assert self.harness.charm.unit.status == BlockedStatus("Domain config is not valid")
 
-    def test_given_magma_orc8r_nginx_service_not_running_when_orchestrator_relation_joined_then_charm_goes_to_blocked_status(  # noqa: E501
+    def test_given_magma_orc8r_nginx_service_not_running_when_orchestrator_relation_joined_then_charm_goes_to_waiting_status(  # noqa: E501
         self,
     ):
         self.harness.set_leader(is_leader=True)
