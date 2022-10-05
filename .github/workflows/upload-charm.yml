@@ -43,6 +43,11 @@ jobs:
           charm-path: ./orchestrator-bundle/${{ inputs.charm }}-operator
           tag-prefix: magma-${{ inputs.charm }}
 
+      - name: Chmod charmcraft logs
+        if: failure()
+        run: |
+          sudo chmod -R 777 /root/snap/charmcraft/common/cache/charmcraft/log/ 
+
       - name: Archive charmcraft logs
         if: failure()
         uses: actions/upload-artifact@v3

@@ -21,6 +21,13 @@ jobs:
     with:
       charm_dir: orc8r-libs
 
+  orc8r-libs-charms-charmhub-upload:
+    if: github.ref_name == 'main'
+    uses: ./.github/workflows/upload-charm.yml
+    secrets: inherit
+    with:
+      charm: orc8r-libs
+
   orc8r-libs-charmhub-upload:
     if: github.ref_name == 'main'
     uses: ./.github/workflows/upload-libs.yml
