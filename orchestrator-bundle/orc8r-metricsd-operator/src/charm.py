@@ -190,7 +190,7 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
         """Returns the set of environment variables required by the magma-orc8r-metricsd service.
 
         Returns:
-            dict: Environment variables required by the magma-orc8r-metricsd
+            dict: Environment variables
         """
         return {
             "SERVICE_HOSTNAME": self._container_name,
