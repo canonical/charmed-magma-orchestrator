@@ -25,6 +25,13 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 20
 
+      - name: Check libraries
+        uses: canonical/charming-actions/check-libraries@2.0.0-rc
+        with:
+          credentials: ${{ secrets.CHARMCRAFT_AUTH }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          charm-path: ./orchestrator-bundle/${{ inputs.charm }}
+
       - name: Publish libs
         env:
           CHARMCRAFT_AUTH: "${{ secrets.CHARMCRAFT_AUTH }}"
