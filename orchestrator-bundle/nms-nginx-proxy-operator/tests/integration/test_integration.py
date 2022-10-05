@@ -124,8 +124,8 @@ class TestNmsNginxProxy:
             relation2="orc8r-certifier:cert-admin-operator",
         )
         await ops_test.model.add_relation(
-            relation1=NMS_MAGMALTE_APPLICATION_NAME,
-            relation2="grafana-k8s:grafana_auth",
+            relation1=f"{NMS_MAGMALTE_APPLICATION_NAME}:grafana-auth",
+            relation2="grafana-k8s",
         )
 
     @pytest.fixture(scope="module")
