@@ -48,6 +48,7 @@ The pfx package can now be loaded in your browser.
 - **cert-bootstrapper**: Relation that provides the bootstrapper private key.
 - **cert-controller**: Relation that provides the controller certificates.
 - **cert-certifier**: Relation that provides the certifier certificates.
+- **cert-root-ca**: Relation that provides the rootCA certificates.
 
 ### Requires
 

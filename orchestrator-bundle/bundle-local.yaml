@@ -190,6 +190,13 @@ applications:
     channel: edge
     scale: 1
     trust: true
+  orc8r-alertmanager-configurer:
+    charm: alertmanager-configurer-k8s
+    channel: edge
+    scale: 1
+    trust: true
+    options:
+      multitenant_label: "networkID"
   orc8r-prometheus-cache:
     charm: prometheus-edge-hub
     channel: edge
@@ -202,6 +209,8 @@ applications:
     channel: edge
     scale: 1
     trust: true
+    options:
+      multitenant_label: "networkID"
   tls-certificates-operator:
     charm: tls-certificates-operator
     channel: edge
@@ -218,6 +227,8 @@ relations:
   - nms-magmalte:magma-nms-magmalte
 - - orc8r-accessd:db
   - postgresql-k8s:db
+- - orc8r-alertmanager:remote-configuration
+  - orc8r-alertmanager-configurer:alertmanager
 - - orc8r-certifier:db
   - postgresql-k8s:db
 - - orc8r-configurator:db
