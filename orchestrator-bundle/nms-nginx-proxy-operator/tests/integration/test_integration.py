@@ -32,6 +32,7 @@ class TestNmsNginxProxy:
         await self._deploy_tls_certificates_operator(ops_test)
         await self._deploy_orc8r_certifier(ops_test)
         await self._deploy_grafana_k8s_operator(ops_test)
+        await self._deploy_prometheus_k8s_operator(ops_test)
         await self._deploy_nms_magmalte(ops_test)
 
     @staticmethod
@@ -89,6 +90,15 @@ class TestNmsNginxProxy:
             "grafana-k8s",
             application_name="grafana-k8s",
             channel="edge",
+        )
+
+    @staticmethod
+    async def _deploy_prometheus_k8s_operator(ops_test):
+        await ops_test.model.deploy(
+            "prometheus-k8s", application_name="prometheus-k8s", channel="edge", trust=True
+        )
+        await ops_test.model.add_relation(
+            relation1="prometheus-k8s:grafana-source", relation2="grafana-k8s"
         )
 
     async def _deploy_nms_magmalte(self, ops_test):
