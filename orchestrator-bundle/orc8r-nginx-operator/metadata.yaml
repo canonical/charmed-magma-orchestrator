@@ -36,6 +36,8 @@ storage:
 provides:
   magma-orc8r-nginx:
     interface: magma-orc8r-nginx
+  orchestrator:
+    interface: magma-orchestrator
 
 requires:
   magma-orc8r-bootstrapper:
@@ -49,4 +51,7 @@ requires:
     limit: 1
   cert-certifier:
     interface: cert-certifier
+    limit: 1
+  cert-root-ca:
+    interface: cert-root-ca
     limit: 1

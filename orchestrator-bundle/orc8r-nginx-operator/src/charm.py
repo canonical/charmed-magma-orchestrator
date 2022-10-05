@@ -6,7 +6,7 @@
 
 import logging
 import re
-from typing import List, Union
+from typing import List, Optional, Union
 
 from charms.magma_orc8r_certifier.v0.cert_certifier import CertCertifierRequires
 from charms.magma_orc8r_certifier.v0.cert_certifier import (
@@ -15,6 +15,13 @@ from charms.magma_orc8r_certifier.v0.cert_certifier import (
 from charms.magma_orc8r_certifier.v0.cert_controller import CertControllerRequires
 from charms.magma_orc8r_certifier.v0.cert_controller import (
     CertificateAvailableEvent as ControllerCertificateAvailableEvent,
+)
+from charms.magma_orc8r_certifier.v0.cert_root_ca import (
+    CertificateAvailableEvent as RootCACertificateAvailableEvent,
+)
+from charms.magma_orc8r_certifier.v0.cert_root_ca import CertRootCARequires
+from charms.magma_orchestrator_interface.v0.magma_orchestrator_interface import (
+    OrchestratorProvides,
 )
 from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServicePatch
 from httpx import HTTPStatusError
@@ -38,7 +45,7 @@ from ops.model import (
     Relation,
     WaitingStatus,
 )
-from ops.pebble import ExecError, Layer
+from ops.pebble import ExecError, Layer, PathError, ProtocolError
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +64,8 @@ class MagmaOrc8rNginxCharm(CharmBase):
         self._container = self.unit.get_container(self._container_name)
         self._cert_certifier = CertCertifierRequires(self, "cert-certifier")
         self._cert_controller = CertControllerRequires(self, "cert-controller")
+        self._cert_root_ca = CertRootCARequires(self, "cert-root-ca")
+        self.orchestrator_provider = OrchestratorProvides(self, "orchestrator")
         self.service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[
@@ -79,6 +88,9 @@ class MagmaOrc8rNginxCharm(CharmBase):
         self.framework.observe(
             self.on.magma_orc8r_nginx_relation_joined, self._on_magma_orc8r_nginx_relation_joined
         )
+        self.framework.observe(
+            self.on.orchestrator_relation_joined, self._on_orchestrator_relation_joined
+        )
         self.framework.observe(self.on.remove, self._on_remove)
 
         self.framework.observe(
@@ -87,6 +99,9 @@ class MagmaOrc8rNginxCharm(CharmBase):
         self.framework.observe(
             self._cert_controller.on.certificate_available,
             self._on_controller_certificate_available,
+        )
+        self.framework.observe(
+            self._cert_root_ca.on.certificate_available, self._on_root_ca_certificate_available
         )
 
     def _on_install(self, event: InstallEvent) -> None:
@@ -112,6 +127,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
             CertifierCertificateAvailableEvent,
             ControllerCertificateAvailableEvent,
             ConfigChangedEvent,
+            RootCACertificateAvailableEvent,
         ],
     ) -> None:
         """Triggerred when pebble ready.
@@ -151,6 +167,39 @@ class MagmaOrc8rNginxCharm(CharmBase):
         if not self._service_is_running:
             event.defer()
             return
+
+    def _on_orchestrator_relation_joined(self, event: RelationJoinedEvent):
+        if not self.unit.is_leader():
+            return
+        if not self._domain_config_is_valid:
+            self.unit.status = BlockedStatus("Domain config is not valid")
+            event.defer()
+            return
+        if not self._service_is_running:
+            self.unit.status = WaitingStatus(
+                f"Waiting for {self._service_name} service to become active"
+            )
+            event.defer()
+            return
+        if not self._cert_is_stored(f"{self.BASE_CERTS_PATH}/rootCA.pem"):
+            self.unit.status = WaitingStatus("Waiting for rootCA certificate to be available")
+            event.defer()
+            return
+        try:
+            rootca_cert = self._container.pull(f"{self.BASE_CERTS_PATH}/rootCA.pem")
+        except (PathError, ProtocolError):
+            self.unit.status = BlockedStatus("Failed to pull rootCA.pem from the container")
+            event.defer()
+            return
+        self.orchestrator_provider.set_orchestrator_information(
+            root_ca_certificate=rootca_cert.read(),  # type: ignore[arg-type]
+            orchestrator_address=f"controller.{self._domain_config}",
+            orchestrator_port=443,
+            bootstrapper_address=f"bootstrapper-controller.{self._domain_config}",
+            bootstrapper_port=443,
+            fluentd_address=f"fluentd.{self._domain_config}",
+            fluentd_port=24224,
+        )
 
     def _on_remove(self, _) -> None:
         """Remove additional magma-orc8r-nginx services.
@@ -207,6 +256,22 @@ class MagmaOrc8rNginxCharm(CharmBase):
         )
         self._on_magma_orc8r_nginx_pebble_ready(event)
 
+    def _on_root_ca_certificate_available(self, event: RootCACertificateAvailableEvent) -> None:
+        """Triggered when rootCA certificate is available.
+
+        Stores the rootCA certificate in the workload container's storage.
+
+        Args:
+            event (RootCACertificateAvailableEvent): Juju event
+        """
+        logger.info("rootCA certificate available")
+        if not self._container.can_connect():
+            logger.info("Can't connect to container - Deferring")
+            event.defer()
+            return
+        self._container.push(path=f"{self.BASE_CERTS_PATH}/rootCA.pem", source=event.certificate)
+        self._on_magma_orc8r_nginx_pebble_ready(event)
+
     def _generate_nginx_config(self) -> None:
         """Generates nginx config to /etc/nginx/nginx.conf.
 
@@ -255,6 +320,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
             CertifierCertificateAvailableEvent,
             ControllerCertificateAvailableEvent,
             ConfigChangedEvent,
+            RootCACertificateAvailableEvent,
         ],
     ) -> None:
         """Adds service to workload and restarts it.
@@ -477,13 +543,32 @@ class MagmaOrc8rNginxCharm(CharmBase):
 
     @property
     def _certs_are_stored(self) -> bool:
+        """Checks whether the required certs are stored in the container.
+
+        Returns:
+            bool: True/False
+        """
         if not self._container.can_connect():
             return False
-        return (
-            self._container.exists(f"{self.BASE_CERTS_PATH}/controller.crt")
-            and self._container.exists(f"{self.BASE_CERTS_PATH}/controller.key")  # noqa: W503
-            and self._container.exists(f"{self.BASE_CERTS_PATH}/certifier.pem")  # noqa: W503
+        return all(
+            [
+                self._cert_is_stored(f"{self.BASE_CERTS_PATH}/controller.key"),
+                self._cert_is_stored(f"{self.BASE_CERTS_PATH}/controller.crt"),
+                self._cert_is_stored(f"{self.BASE_CERTS_PATH}/certifier.pem"),
+                self._cert_is_stored(f"{self.BASE_CERTS_PATH}/rootCA.pem"),
+            ]
         )
+
+    def _cert_is_stored(self, cert_path: str) -> bool:
+        """Checks whether given cert is stored in the container.
+
+        Args:
+            cert_path (str): Certificate path
+
+        Returns:
+            bool: True/False
+        """
+        return self._container.exists(cert_path)
 
     @property
     def _service_is_running(self) -> bool:
@@ -518,6 +603,11 @@ class MagmaOrc8rNginxCharm(CharmBase):
                 },
             }
         )
+
+    @property
+    def _domain_config(self) -> Optional[str]:
+        """Returns domain config."""
+        return self.model.config.get("domain")
 
     @property
     def _namespace(self) -> str:
