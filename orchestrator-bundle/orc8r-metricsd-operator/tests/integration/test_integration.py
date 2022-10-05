@@ -34,7 +34,7 @@ SERVICE_REGISTRY_APPLICATION_NAME = "orc8r-service-registry"
 SERVICE_REGISTRY_CHARM_NAME = "magma-orc8r-service-registry"
 SERVICE_REGISTRY_CHARM_FILE_NAME = "magma-orc8r-service-registry_ubuntu-20.04-amd64.charm"
 DOMAIN = "whatever.com"
-WAIT_FOR_STATUS_TIMEOUT = 10 * 60
+WAIT_FOR_STATUS_TIMEOUT = 5 * 60
 
 
 class TestOrc8rMetricsd:
