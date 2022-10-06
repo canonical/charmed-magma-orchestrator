@@ -41,6 +41,7 @@ class TestCharm(unittest.TestCase):
         "user=test_db_user"
     )
     TEST_DOMAIN_NAME = "test.domain.com"
+    GRAFANA_URLS = ["auth-requirer:3000"]
 
     @patch(
         "charm.KubernetesServicePatch", lambda charm, ports, service_name, additional_labels: None
@@ -52,6 +53,7 @@ class TestCharm(unittest.TestCase):
         self.harness.set_model_name(name=self.namespace)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
+        self.grafana_auth_rel_id = self.harness.add_relation("grafana-auth", "auth-requirer")
         self.harness.set_leader(True)
         self.peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
         self.harness.add_relation_unit(self.peer_relation_id, self.harness.charm.unit.name)
@@ -79,7 +81,6 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
         )
-
         self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
 
         self.assertEqual(
@@ -97,6 +98,22 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(
             self.harness.charm.unit.status,
             BlockedStatus("Waiting for cert-admin-operator relation to be created"),
+        )
+
+    def test_given_grafana_auth_relation_not_created_when_pebble_ready_then_unit_is_in_blocked_state(  # noqa: E501
+        self,
+    ):
+        self.harness.add_relation(
+            relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
+        )
+        self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        self.harness.remove_relation(self.grafana_auth_rel_id)
+
+        self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
+
+        self.assertEqual(
+            self.harness.charm.unit.status,
+            BlockedStatus("Waiting for grafana-auth relation to be created"),
         )
 
     @patch("charm.MagmaNmsMagmalteCharm.DB_NAME", new_callable=PropertyMock)
@@ -126,9 +143,11 @@ class TestCharm(unittest.TestCase):
     @patch("ops.model.Container.exists")
     @patch("psycopg2.connect", new=Mock())
     @patch("charm.ConnectionString")
-    def test_given_relations_are_created_and_certs_are_stored_when_pebble_ready_then_pebble_plan_is_filled_with_magma_nms_magmalte_service_content(  # noqa: E501
-        self, patch_connection_string, patch_file_exists
+    @patch("charm.MagmaNmsMagmalteCharm._grafana_url", new_callable=PropertyMock)
+    def test_given_relations_are_created_and_certs_are_stored_and_grafana_urls_are_available_when_pebble_ready_then_pebble_plan_is_filled_with_magma_nms_magmalte_service_content(  # noqa: E501
+        self, grafana_url_mock, patch_connection_string, patch_file_exists
     ):
+        grafana_url_mock.return_value = self.GRAFANA_URLS[0]
         patch_file_exists.return_value = True
         db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
         self.harness.add_relation(
@@ -171,7 +190,7 @@ class TestCharm(unittest.TestCase):
                         "MAPBOX_ACCESS_TOKEN": "",
                         "MYSQL_DIALECT": "postgres",
                         "PUPPETEER_SKIP_DOWNLOAD": "true",
-                        "USER_GRAFANA_ADDRESS": "orc8r-user-grafana:3000",
+                        "USER_GRAFANA_ADDRESS": self.GRAFANA_URLS[0],
                     },
                 },
             },
@@ -184,9 +203,14 @@ class TestCharm(unittest.TestCase):
     @patch("ops.model.Container.exists")
     @patch("psycopg2.connect", new=Mock())
     @patch("charm.ConnectionString")
-    def test_given_relations_are_created_and_certs_are_stored_when_pebble_ready_then_charm_goes_to_active_state(  # noqa: E501
-        self, patch_connection_string, patch_exists
+    @patch("charm.MagmaNmsMagmalteCharm._grafana_url", new_callable=PropertyMock)
+    def test_given_relations_are_created_and_certs_are_stored_and_grafana_urls_are_available_when_pebble_ready_then_charm_goes_to_active_state(  # noqa: E501
+        self,
+        grafana_url_mock,
+        patch_connection_string,
+        patch_exists,
     ):
+        grafana_url_mock.return_value = self.GRAFANA_URLS[0]
         patch_exists.return_value = True
         patch_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
         self.harness.add_relation(
@@ -343,7 +367,9 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.push")
-    def test_given_pebble_ready_when_certificate_available_then(self, patch_push):
+    def test_given_pebble_ready_when_certificate_available_then_certs_are_pushed_to_container(
+        self, patch_push
+    ):
         certificate = "whatever certificate"
         private_key = "whatever private key"
         event = Mock()
@@ -361,3 +387,14 @@ class TestCharm(unittest.TestCase):
                 call(path="/run/secrets/admin_operator.key.pem", source=private_key),
             ]
         )
+
+    def test_given_grafana_auth_relation_when_urls_available_event_then_grafana_urls_are_stored_in_peer_data(  # noqa: E501
+        self,
+    ):
+        event = Mock()
+        event.urls = self.GRAFANA_URLS
+        self.harness.charm._on_grafana_urls_available(event=event)
+        url = self.harness.get_relation_data(
+            self.peer_relation_id, self.harness.charm.app.name
+        ).get("grafana_url")
+        self.assertEqual("auth-requirer:3000", url)
