@@ -478,8 +478,8 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready("magma-orc8r-orchestrator")
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
 
-        self.harness.charm.on.metrics_endpoint_relation_broken.emit(
-            self.harness.model.get_relation("metrics-endpoint")
+        self.harness.remove_relation(
+            self.harness.model.get_relation("metrics-endpoint").id  # type: ignore[union-attr]
         )
 
         self.assertEqual(
@@ -487,8 +487,8 @@ class TestCharm(unittest.TestCase):
             BlockedStatus("Waiting for relation(s) to be created: metrics-endpoint"),
         )
 
-        self.harness.charm.on.magma_orc8r_accessd_relation_broken.emit(
-            self.harness.model.get_relation("magma-orc8r-accessd")
+        self.harness.remove_relation(
+            self.harness.model.get_relation("magma-orc8r-accessd").id  # type: ignore[union-attr]
         )
 
         self.assertEqual(
@@ -496,8 +496,10 @@ class TestCharm(unittest.TestCase):
             BlockedStatus("Waiting for relation(s) to be created: magma-orc8r-accessd"),
         )
 
-        self.harness.charm.on.magma_orc8r_service_registry_relation_broken.emit(
-            self.harness.model.get_relation("magma-orc8r-service-registry")
+        self.harness.remove_relation(
+            self.harness.model.get_relation(
+                "magma-orc8r-service-registry"
+            ).id  # type: ignore[union-attr]
         )
 
         self.assertEqual(

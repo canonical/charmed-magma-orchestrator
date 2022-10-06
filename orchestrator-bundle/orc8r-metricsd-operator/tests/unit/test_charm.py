@@ -64,36 +64,42 @@ class TestCharm(unittest.TestCase):
         self.harness.charm.on.magma_orc8r_metricsd_pebble_ready.emit(self.container)
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
 
-        self.harness.charm.on.alertmanager_k8s_relation_broken.emit(
-            self.harness.model.get_relation("alertmanager-k8s")
+        self.harness.remove_relation(
+            self.harness.model.get_relation("alertmanager-k8s").id  # type: ignore[union-attr]
         )
         self.assertEqual(
             self.harness.charm.unit.status,
             BlockedStatus("Waiting for relation(s) to be created: alertmanager-k8s"),
         )
-        self.harness.charm.on.alertmanager_configurer_k8s_relation_broken.emit(
-            self.harness.model.get_relation("alertmanager-configurer-k8s")
+        self.harness.remove_relation(
+            self.harness.model.get_relation(
+                "alertmanager-configurer-k8s"
+            ).id  # type: ignore[union-attr]
         )
         self.assertEqual(
             self.harness.charm.unit.status,
             BlockedStatus("Waiting for relation(s) to be created: alertmanager-configurer-k8s"),
         )
-        self.harness.charm.on.prometheus_k8s_relation_broken.emit(
-            self.harness.model.get_relation("prometheus-k8s")
+        self.harness.remove_relation(
+            self.harness.model.get_relation("prometheus-k8s").id  # type: ignore[union-attr]
         )
         self.assertEqual(
             self.harness.charm.unit.status,
             BlockedStatus("Waiting for relation(s) to be created: prometheus-k8s"),
         )
-        self.harness.charm.on.prometheus_configurer_k8s_relation_broken.emit(
-            self.harness.model.get_relation("prometheus-configurer-k8s")
+        self.harness.remove_relation(
+            self.harness.model.get_relation(
+                "prometheus-configurer-k8s"
+            ).id  # type: ignore[union-attr]
         )
         self.assertEqual(
             self.harness.charm.unit.status,
             BlockedStatus("Waiting for relation(s) to be created: prometheus-configurer-k8s"),
         )
-        self.harness.charm.on.magma_orc8r_orchestrator_relation_broken.emit(
-            self.harness.model.get_relation("magma-orc8r-orchestrator")
+        self.harness.remove_relation(
+            self.harness.model.get_relation(
+                "magma-orc8r-orchestrator"
+            ).id  # type: ignore[union-attr]
         )
         self.assertEqual(
             self.harness.charm.unit.status,

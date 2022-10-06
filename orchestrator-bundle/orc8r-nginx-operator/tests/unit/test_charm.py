@@ -265,16 +265,14 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
 
-        self.harness.charm.on.magma_orc8r_obsidian_relation_broken.emit(
-            self.harness.model.get_relation("magma-orc8r-obsidian")
-        )
+        self.harness.remove_relation(self.harness.model.get_relation("magma-orc8r-obsidian").id)  # type: ignore[union-attr]
         self.assertEqual(
             self.harness.charm.unit.status,
             BlockedStatus("Waiting for relation(s) to be created: magma-orc8r-obsidian"),
         )
 
-        self.harness.charm.on.magma_orc8r_obsidian_relation_broken.emit(
-            self.harness.model.get_relation("magma-orc8r-bootstrapper")
+        self.harness.remove_relation(
+            self.harness.model.get_relation("magma-orc8r-bootstrapper").id  # type: ignore[union-attr]
         )
         self.assertEqual(
             self.harness.charm.unit.status,
