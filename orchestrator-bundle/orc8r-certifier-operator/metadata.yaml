@@ -1,4 +1,4 @@
-# Copyright 2021 Canonical Ltd.
+# Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 name: magma-orc8r-certifier
@@ -51,5 +51,7 @@ provides:
     interface: cert-controller
   cert-certifier:
     interface: cert-certifier
+  cert-root-ca:
+    interface: cert-root-ca
   magma-orc8r-certifier:
     interface: magma-orc8r-certifier
