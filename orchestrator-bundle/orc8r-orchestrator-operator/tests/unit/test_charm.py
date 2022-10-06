@@ -481,20 +481,25 @@ class TestCharm(unittest.TestCase):
         self.harness.charm.on.metrics_endpoint_relation_broken.emit(
             self.harness.model.get_relation("metrics-endpoint")
         )
+
         self.assertEqual(
             self.harness.charm.unit.status,
             BlockedStatus("Waiting for relation(s) to be created: metrics-endpoint"),
         )
+
         self.harness.charm.on.magma_orc8r_accessd_relation_broken.emit(
             self.harness.model.get_relation("magma-orc8r-accessd")
         )
+
         self.assertEqual(
             self.harness.charm.unit.status,
             BlockedStatus("Waiting for relation(s) to be created: magma-orc8r-accessd"),
         )
+
         self.harness.charm.on.magma_orc8r_service_registry_relation_broken.emit(
             self.harness.model.get_relation("magma-orc8r-service-registry")
         )
+
         self.assertEqual(
             self.harness.charm.unit.status,
             BlockedStatus("Waiting for relation(s) to be created: magma-orc8r-service-registry"),
