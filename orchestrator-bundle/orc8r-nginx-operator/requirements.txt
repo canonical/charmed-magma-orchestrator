@@ -1,3 +1,4 @@
-ops
+jsonschema
+ops==1.5.2
 lightkube
 lightkube-models

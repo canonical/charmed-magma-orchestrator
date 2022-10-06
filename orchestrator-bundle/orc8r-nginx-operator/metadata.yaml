@@ -14,6 +14,8 @@ containers:
     mounts:
       - storage: certs
         location: /var/opt/magma/certs
+      - storage: config
+        location: /etc/nginx
 
 resources:
   magma-orc8r-nginx-image:
@@ -26,6 +28,16 @@ storage:
     type: filesystem
     description: Certs storage
     minimum-size: 1M
+  config:
+    type: filesystem
+    description: Nginx config storage
+    minimum-size: 1M
+
+provides:
+  magma-orc8r-nginx:
+    interface: magma-orc8r-nginx
+  orchestrator:
+    interface: magma-orchestrator
 
 requires:
   magma-orc8r-bootstrapper:
@@ -39,4 +51,7 @@ requires:
     limit: 1
   cert-certifier:
     interface: cert-certifier
+    limit: 1
+  cert-root-ca:
+    interface: cert-root-ca
     limit: 1

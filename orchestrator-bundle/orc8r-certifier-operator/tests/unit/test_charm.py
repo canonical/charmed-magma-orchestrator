@@ -19,6 +19,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.serialization import pkcs12
 from ops import testing
 from ops.model import BlockedStatus, WaitingStatus
+from ops.pebble import PathError
 from pgconnstr import ConnectionString  # type: ignore[import]
 
 from charm import MagmaOrc8rCertifierCharm
@@ -891,6 +892,44 @@ class TestCharm(unittest.TestCase):
 
         patch_set_private_key.assert_called_with(
             private_key=private_key_string, certificate=certificate_string, relation_id=relation_id
+        )
+
+    @patch("ops.model.Container.pull")
+    @patch("charms.magma_orc8r_certifier.v0.cert_root_ca.CertRootCAProvides.set_certificate")
+    def test_given_certificate_is_stored_when_cert_root_ca_certificate_request_then_certificate_is_set_in_controller_lib(  # noqa: E501
+        self, patch_set_private_key, patch_pull
+    ):
+        certificate_string = "whatever certificate"
+        event = Mock()
+        relation_id = 3
+        event.relation_id = relation_id
+        certificate = io.StringIO(certificate_string)
+        patch_pull.side_effect = [certificate]
+        container = self.harness.model.unit.get_container("magma-orc8r-certifier")
+        self.harness.set_can_connect(container=container, val=True)
+
+        self.harness.charm._on_root_ca_certificate_request(event=event)
+
+        patch_set_private_key.assert_called_with(
+            certificate=certificate_string, relation_id=relation_id
+        )
+
+    @patch("ops.model.Container.pull")
+    def test_given_certificate_is_not_stored_when_cert_root_ca_certificate_request_then_relevant_message_is_logged(  # noqa: E501
+        self, patch_pull
+    ):
+        event = Mock()
+        relation_id = 3
+        event.relation_id = relation_id
+        patch_pull.side_effect = PathError("what", "ever")
+        container = self.harness.model.unit.get_container("magma-orc8r-certifier")
+        self.harness.set_can_connect(container=container, val=True)
+
+        with self.assertLogs() as captured:
+            self.harness.charm._on_root_ca_certificate_request(event=event)
+
+        self.assertEqual(
+            "Certificate 'rootCA' not yet available", captured.records[0].getMessage()
         )
 
     @patch("charm.generate_csr")
