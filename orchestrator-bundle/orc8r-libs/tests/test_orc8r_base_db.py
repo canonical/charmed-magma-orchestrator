@@ -169,7 +169,9 @@ class TestCharm(unittest.TestCase):
         )
         self.harness.charm.on.magma_orc8r_dummy_pebble_ready.emit(container)
         assert self.harness.charm.unit.status == ActiveStatus()
+
         self.harness.remove_relation(db_relation_id)
+
         assert self.harness.charm.unit.status == BlockedStatus(
             "Waiting for db relation to be created"
         )
