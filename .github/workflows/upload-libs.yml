@@ -33,6 +33,7 @@ jobs:
           charm-path: ./orchestrator-bundle/${{ inputs.charm }}
 
       - name: Publish libs
+        id: publish
         env:
           CHARMCRAFT_AUTH: "${{ secrets.CHARMCRAFT_AUTH }}"
         run: |
@@ -43,12 +44,12 @@ jobs:
           done
 
       - name: Chmod charmcraft logs
-        if: failure()
+        if: steps.publish.conclusion == 'failure'
         run: |
           sudo chmod -R 777 /root/snap/charmcraft/common/cache/charmcraft/log/ 
 
       - name: Archive charmcraft logs
-        if: failure()
+        if: steps.publish.conclusion == 'failure'
         uses: actions/upload-artifact@v3
         with:
           name: charmcraft-libs-upload-logs
