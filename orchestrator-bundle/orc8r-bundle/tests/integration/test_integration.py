@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 
 
-import asyncio
 import logging
 import shutil
 import time
@@ -176,17 +175,12 @@ class TestOrc8rBundle:
         bundle_jinja_template_path = "bundle.yaml.j2"
         overlay_file_path = f"{INTEGRATION_TESTS_DIR}/overlay.yaml"
         bundle_file_path = f"{INTEGRATION_TESTS_DIR}/bundle.yaml"
-        await asyncio.gather(
-            *[
-                pack_charm(
-                    ops_test=ops_test,
-                    charm_directory=f"../{app_name}-operator",
-                    export_path=f"{INTEGRATION_TESTS_DIR}/",
-                )
-                for app_name in ORCHESTRATOR_CHARMS
-            ]
-        )
-
+        for app_name in ORCHESTRATOR_CHARMS:
+            await pack_charm(
+                ops_test=ops_test,
+                charm_directory=f"../{app_name}-operator",
+                export_path=f"{INTEGRATION_TESTS_DIR}/",
+            )
         render_bundle(
             template=bundle_jinja_template_path,
             output=bundle_file_path,
