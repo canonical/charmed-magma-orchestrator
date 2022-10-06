@@ -109,15 +109,11 @@ jobs:
           /usr/bin/sg microk8s -c "microk8s enable storage rbac dns:10.130.64.38,10.130.64.39"
           /usr/bin/sg microk8s -c "microk8s kubectl -n kube-system rollout status deployment/coredns"
           /usr/bin/sg microk8s -c "microk8s kubectl -n kube-system rollout status deployment/hostpath-provisioner"
+          /usr/bin/sg microk8s -c "microk8s enable metallb:10.1.1.1-10.1.1.254"
 
           echo "# Bootstrap controller"
           sleep 180  # Microk8s needs time to initialize properly
           /usr/bin/sg microk8s -c "juju bootstrap --debug --verbose microk8s integration-tests --model-default test-mode=true --model-default automatically-retry-hooks=true --model-default logging-config='<root>=DEBUG'  --bootstrap-constraints=''"
-
-      - name: Build charms
-        run: |
-          set -eux
-          ./orchestrator-bundle/build.sh
 
       - name: Run bundle integration tests
         run: |
