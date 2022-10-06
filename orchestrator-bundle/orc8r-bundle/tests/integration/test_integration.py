@@ -149,6 +149,7 @@ async def pack_charm(ops_test: OpsTest, charm_directory: str, export_path: str) 
     """
     charm = await ops_test.build_charm(charm_directory)
     shutil.copy(charm, export_path)
+    return
 
 
 def render_overlay_file(jinja_template_path: str, destination_file_path: str) -> None:
