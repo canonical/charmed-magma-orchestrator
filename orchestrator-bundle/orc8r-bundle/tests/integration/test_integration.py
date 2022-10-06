@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 
 
-import asyncio
 import logging
 import shutil
 import time
@@ -129,7 +128,7 @@ async def deploy_bundle(ops_test: OpsTest, bundle_path: str, overlay_file_path: 
     retcode, stdout, stderr = await ops_test.run(*run_args)
     if retcode != 0:
         raise RuntimeError(f"Error: {stderr}")
-    await ops_test.model.wait_for_idle(
+    await ops_test.model.wait_for_idle(  # type: ignore[union-attr]
         apps=ORCHESTRATOR_CHARMS,
         status="active",
         timeout=2000,
@@ -147,10 +146,8 @@ async def pack_charm(ops_test: OpsTest, charm_directory: str, export_path: str) 
     Returns:
         None
     """
-    ops_test.destructive_mode = True
     charm = await ops_test.build_charm(charm_directory)
     shutil.copy(charm, export_path)
-    return
 
 
 def render_overlay_file(jinja_template_path: str, destination_file_path: str) -> None:
@@ -177,15 +174,12 @@ class TestOrc8rBundle:
         bundle_jinja_template_path = "bundle.yaml.j2"
         overlay_file_path = f"{INTEGRATION_TESTS_DIR}/overlay.yaml"
         bundle_file_path = f"{INTEGRATION_TESTS_DIR}/bundle.yaml"
-        tasks = [
-            pack_charm(
+        for app_name in ORCHESTRATOR_CHARMS:
+            await pack_charm(
                 ops_test=ops_test,
                 charm_directory=f"../{app_name}-operator",
                 export_path=f"{INTEGRATION_TESTS_DIR}/",
             )
-            for app_name in ORCHESTRATOR_CHARMS
-        ]
-        await asyncio.gather(*tasks)
         render_bundle(
             template=bundle_jinja_template_path,
             output=bundle_file_path,

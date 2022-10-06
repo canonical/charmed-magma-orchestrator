@@ -22,7 +22,7 @@ urllib3.disable_warnings()
 
 @contextmanager
 def pfx_to_pem(pfx_path: str, pfx_password: str) -> Iterator[str]:
-    """Decrypts the .pfx file to be used with requests.
+    """Decrypts the .pfx file to be used with HTTP requests.
 
     Args:
         pfx_path: PFX file path
