@@ -9,7 +9,7 @@ from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Service
 from ops import testing
-from ops.model import BlockedStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 
 from charm import MagmaOrc8rNginxCharm
 
@@ -148,6 +148,181 @@ class TestCharm(unittest.TestCase):
 
         patch_create.assert_has_calls(calls=calls)
 
+    def test_given_no_relations_created_when_pebble_ready_event_emitted_then_status_is_blocked(
+        self,
+    ):
+        self.harness.update_config(key_values={"domain": "whatever.com"})
+
+        self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
+
+        self.assertEqual(
+            BlockedStatus(
+                "Waiting for relation(s) to be created: cert-certifier, cert-controller, "
+                "magma-orc8r-bootstrapper, magma-orc8r-obsidian"
+            ),
+            self.harness.charm.unit.status,
+        )
+
+    @patch("ops.model.Container.exists")
+    def test_given_cert_certifier_relation_not_created_when_pebble_ready_event_emitted_then_status_is_blocked(  # noqa: E501
+        self, patch_file_exists
+    ):
+        patch_file_exists.return_value = True
+        self.harness.update_config(key_values={"domain": "whatever.com"})
+        self.harness.add_relation(
+            relation_name="magma-orc8r-bootstrapper", remote_app="magma-orc8r-bootstrapper"
+        )
+        self.harness.add_relation(
+            relation_name="magma-orc8r-obsidian", remote_app="magma-orc8r-obsidian"
+        )
+        self.harness.add_relation(
+            relation_name="cert-controller", remote_app="magma-orc8r-certifier"
+        )
+
+        self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
+
+        self.assertEqual(
+            BlockedStatus("Waiting for relation(s) to be created: cert-certifier"),
+            self.harness.charm.unit.status,
+        )
+
+    @patch("ops.model.Container.exists")
+    def test_given_cert_controller_relation_not_created_when_pebble_ready_event_emitted_then_status_is_blocked(  # noqa: E501
+        self, patch_file_exists
+    ):
+        patch_file_exists.return_value = True
+        self.harness.update_config(key_values={"domain": "whatever.com"})
+        self.harness.add_relation(
+            relation_name="magma-orc8r-bootstrapper", remote_app="magma-orc8r-bootstrapper"
+        )
+        self.harness.add_relation(
+            relation_name="magma-orc8r-obsidian", remote_app="magma-orc8r-obsidian"
+        )
+        self.harness.add_relation(
+            relation_name="cert-certifier", remote_app="magma-orc8r-certifier"
+        )
+
+        self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
+
+        self.assertEqual(
+            BlockedStatus("Waiting for relation(s) to be created: cert-controller"),
+            self.harness.charm.unit.status,
+        )
+
+    @patch("ops.model.Container.exists")
+    def test_given_magma_orc8r_bootstrapper_relation_not_created_when_pebble_ready_event_emitted_then_status_is_blocked(  # noqa: E501
+        self, patch_file_exists
+    ):
+        patch_file_exists.return_value = True
+        self.harness.update_config(key_values={"domain": "whatever.com"})
+        self.harness.add_relation(
+            relation_name="magma-orc8r-obsidian", remote_app="magma-orc8r-obsidian"
+        )
+        self.harness.add_relation(
+            relation_name="cert-certifier", remote_app="magma-orc8r-certifier"
+        )
+        self.harness.add_relation(
+            relation_name="cert-controller", remote_app="magma-orc8r-certifier"
+        )
+
+        self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
+
+        self.assertEqual(
+            BlockedStatus("Waiting for relation(s) to be created: magma-orc8r-bootstrapper"),
+            self.harness.charm.unit.status,
+        )
+
+    @patch("ops.model.Container.exists")
+    def test_given_magma_orc8r_obsidian_relation_not_created_when_pebble_ready_event_emitted_then_status_is_blocked(  # noqa: E501
+        self, patch_file_exists
+    ):
+        patch_file_exists.return_value = True
+        self.harness.update_config(key_values={"domain": "whatever.com"})
+        self.harness.add_relation(
+            relation_name="magma-orc8r-bootstrapper", remote_app="magma-orc8r-bootstrapper"
+        )
+        self.harness.add_relation(
+            relation_name="cert-certifier", remote_app="magma-orc8r-certifier"
+        )
+        self.harness.add_relation(
+            relation_name="cert-controller", remote_app="magma-orc8r-certifier"
+        )
+
+        self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
+
+        self.assertEqual(
+            BlockedStatus("Waiting for relation(s) to be created: magma-orc8r-obsidian"),
+            self.harness.charm.unit.status,
+        )
+
+    @patch("ops.model.Container.exists")
+    def test_given_magma_orc8r_obsidian_relation_not_ready_when_pebble_ready_event_emitted_then_status_is_waiting(  # noqa: E501
+        self, patch_file_exists
+    ):
+        patch_file_exists.return_value = True
+        self.harness.update_config(key_values={"domain": "whatever.com"})
+        bootstrapper_relation = self.harness.add_relation(
+            relation_name="magma-orc8r-bootstrapper", remote_app="magma-orc8r-bootstrapper"
+        )
+        self.harness.add_relation_unit(
+            relation_id=bootstrapper_relation, remote_unit_name="orc8r-bootstrapper/0"
+        )
+        self.harness.update_relation_data(
+            relation_id=bootstrapper_relation,
+            app_or_unit="orc8r-bootstrapper/0",
+            key_values={"active": "True"},
+        )
+        self.harness.add_relation(
+            relation_name="magma-orc8r-obsidian", remote_app="magma-orc8r-obsidian"
+        )
+        self.harness.add_relation(
+            relation_name="cert-certifier", remote_app="magma-orc8r-certifier"
+        )
+        self.harness.add_relation(
+            relation_name="cert-controller", remote_app="magma-orc8r-certifier"
+        )
+
+        self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
+
+        self.assertEqual(
+            WaitingStatus("Waiting for relation(s) to be ready: magma-orc8r-obsidian"),
+            self.harness.charm.unit.status,
+        )
+
+    @patch("ops.model.Container.exists")
+    def test_given_magma_orc8r_bootstrapper_relation_not_ready_when_pebble_ready_event_emitted_then_status_is_waiting(  # noqa: E501
+        self, patch_file_exists
+    ):
+        patch_file_exists.return_value = True
+        self.harness.update_config(key_values={"domain": "whatever.com"})
+        obsidian_relation = self.harness.add_relation(
+            relation_name="magma-orc8r-obsidian", remote_app="magma-orc8r-obsidian"
+        )
+        self.harness.add_relation_unit(
+            relation_id=obsidian_relation, remote_unit_name="orc8r-obsidian/0"
+        )
+        self.harness.update_relation_data(
+            relation_id=obsidian_relation,
+            app_or_unit="orc8r-obsidian/0",
+            key_values={"active": "True"},
+        )
+        self.harness.add_relation(
+            relation_name="magma-orc8r-bootstrapper", remote_app="magma-orc8r-bootstrapper"
+        )
+        self.harness.add_relation(
+            relation_name="cert-certifier", remote_app="magma-orc8r-certifier"
+        )
+        self.harness.add_relation(
+            relation_name="cert-controller", remote_app="magma-orc8r-certifier"
+        )
+
+        self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
+
+        self.assertEqual(
+            WaitingStatus("Waiting for relation(s) to be ready: magma-orc8r-bootstrapper"),
+            self.harness.charm.unit.status,
+        )
+
     @patch("ops.model.Container.exists")
     def test_given_all_relations_created_and_ready_and_nginx_services_are_created_when_pebble_ready_event_emitted_then_pebble_layer_is_configured(  # noqa: E501
         self, patch_file_exists
@@ -204,99 +379,7 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(expected_plan, updated_plan)
 
     @patch("ops.model.Container.exists")
-    def test_given_cert_certifier_relation_not_created_when_pebble_ready_event_emitted_then_status_is_blocked(  # noqa: E501
-        self, patch_file_exists
-    ):
-        patch_file_exists.return_value = True
-        self.harness.update_config(key_values={"domain": "whatever.com"})
-        self.harness.add_relation(
-            relation_name="magma-orc8r-bootstrapper", remote_app="magma-orc8r-bootstrapper"
-        )
-        self.harness.add_relation(
-            relation_name="magma-orc8r-obsidian", remote_app="magma-orc8r-obsidian"
-        )
-        self.harness.add_relation(
-            relation_name="cert-controller", remote_app="magma-orc8r-certifier"
-        )
-
-        self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
-
-        self.assertEqual(
-            BlockedStatus("Waiting for 'cert-certifier' relation to be created"),
-            self.harness.charm.unit.status,
-        )
-
-    @patch("ops.model.Container.exists")
-    def test_given_cert_controller_relation_not_created_when_pebble_ready_event_emitted_then_status_is_blocked(  # noqa: E501
-        self, patch_file_exists
-    ):
-        patch_file_exists.return_value = True
-        self.harness.update_config(key_values={"domain": "whatever.com"})
-        self.harness.add_relation(
-            relation_name="magma-orc8r-bootstrapper", remote_app="magma-orc8r-bootstrapper"
-        )
-        self.harness.add_relation(
-            relation_name="magma-orc8r-obsidian", remote_app="magma-orc8r-obsidian"
-        )
-        self.harness.add_relation(
-            relation_name="cert-certifier", remote_app="magma-orc8r-certifier"
-        )
-
-        self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
-
-        self.assertEqual(
-            BlockedStatus("Waiting for 'cert-controller' relation to be created"),
-            self.harness.charm.unit.status,
-        )
-
-    @patch("ops.model.Container.exists")
-    def test_given_magma_orc8r_bootstrapper_relation_not_created_when_pebble_ready_event_emitted_then_status_is_blocked(  # noqa: E501
-        self, patch_file_exists
-    ):
-        patch_file_exists.return_value = True
-        self.harness.update_config(key_values={"domain": "whatever.com"})
-        self.harness.add_relation(
-            relation_name="magma-orc8r-obsidian", remote_app="magma-orc8r-obsidian"
-        )
-        self.harness.add_relation(
-            relation_name="cert-certifier", remote_app="magma-orc8r-certifier"
-        )
-        self.harness.add_relation(
-            relation_name="cert-controller", remote_app="magma-orc8r-certifier"
-        )
-
-        self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
-
-        self.assertEqual(
-            BlockedStatus("Waiting for 'magma-orc8r-bootstrapper' relation to be created"),
-            self.harness.charm.unit.status,
-        )
-
-    @patch("ops.model.Container.exists")
-    def test_given_magma_orc8r_obsidian_relation_not_created_when_pebble_ready_event_emitted_then_status_is_blocked(  # noqa: E501
-        self, patch_file_exists
-    ):
-        patch_file_exists.return_value = True
-        self.harness.update_config(key_values={"domain": "whatever.com"})
-        self.harness.add_relation(
-            relation_name="magma-orc8r-bootstrapper", remote_app="magma-orc8r-bootstrapper"
-        )
-        self.harness.add_relation(
-            relation_name="cert-certifier", remote_app="magma-orc8r-certifier"
-        )
-        self.harness.add_relation(
-            relation_name="cert-controller", remote_app="magma-orc8r-certifier"
-        )
-
-        self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
-
-        self.assertEqual(
-            BlockedStatus("Waiting for 'magma-orc8r-obsidian' relation to be created"),
-            self.harness.charm.unit.status,
-        )
-
-    @patch("ops.model.Container.exists")
-    def test_given_magma_orc8r_obsidian_relation_not_ready_when_pebble_ready_event_emitted_then_status_is_blocked(  # noqa: E501
+    def test_given_all_relations_created_and_ready_and_nginx_services_are_created_when_pebble_ready_event_emitted_then_status_is_active(  # noqa: E501
         self, patch_file_exists
     ):
         patch_file_exists.return_value = True
@@ -304,50 +387,62 @@ class TestCharm(unittest.TestCase):
         bootstrapper_relation = self.harness.add_relation(
             relation_name="magma-orc8r-bootstrapper", remote_app="magma-orc8r-bootstrapper"
         )
-        self.harness.add_relation_unit(
-            relation_id=bootstrapper_relation, remote_unit_name="orc8r-bootstrapper/0"
-        )
-        self.harness.update_relation_data(
-            relation_id=bootstrapper_relation,
-            app_or_unit="orc8r-bootstrapper/0",
-            key_values={"active": "True"},
-        )
-        self.harness.add_relation(
-            relation_name="magma-orc8r-obsidian", remote_app="magma-orc8r-obsidian"
-        )
-        self.harness.add_relation(
-            relation_name="cert-certifier", remote_app="magma-orc8r-certifier"
-        )
-        self.harness.add_relation(
-            relation_name="cert-controller", remote_app="magma-orc8r-certifier"
-        )
-
-        self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
-
-        self.assertEqual(
-            WaitingStatus("Waiting for 'magma-orc8r-obsidian' relation to be ready"),
-            self.harness.charm.unit.status,
-        )
-
-    @patch("ops.model.Container.exists")
-    def test_given_magma_orc8r_bootstrapper_relation_not_ready_when_pebble_ready_event_emitted_then_status_is_blocked(  # noqa: E501
-        self, patch_file_exists
-    ):
-        patch_file_exists.return_value = True
-        self.harness.update_config(key_values={"domain": "whatever.com"})
         obsidian_relation = self.harness.add_relation(
             relation_name="magma-orc8r-obsidian", remote_app="magma-orc8r-obsidian"
         )
+        self.harness.add_relation(
+            relation_name="cert-certifier", remote_app="magma-orc8r-certifier"
+        )
+        self.harness.add_relation(
+            relation_name="cert-controller", remote_app="magma-orc8r-certifier"
+        )
         self.harness.add_relation_unit(
-            relation_id=obsidian_relation, remote_unit_name="orc8r-obsidian/0"
+            relation_id=bootstrapper_relation, remote_unit_name="magma-orc8r-bootstrapper/0"
+        )
+
+        self.harness.update_relation_data(
+            relation_id=bootstrapper_relation,
+            app_or_unit="magma-orc8r-bootstrapper/0",
+            key_values={"active": "True"},
+        )
+        self.harness.add_relation_unit(
+            relation_id=obsidian_relation, remote_unit_name="magma-orc8r-obsidian/0"
         )
         self.harness.update_relation_data(
             relation_id=obsidian_relation,
-            app_or_unit="orc8r-obsidian/0",
+            app_or_unit="magma-orc8r-obsidian/0",
             key_values={"active": "True"},
         )
-        self.harness.add_relation(
+
+        self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
+
+        self.assertEqual(ActiveStatus(), self.harness.charm.unit.status)
+
+    def test_given_orc8r_nginx_service_not_running_when_orc8r_nginx_relation_joined_then_service_active_status_in_the_relation_data_bag_is_false(  # noqa: E501
+        self,
+    ):
+        self.harness.set_leader(True)
+        relation_id = self.harness.add_relation("magma-orc8r-nginx", "orc8r-nginx")
+        self.harness.add_relation_unit(relation_id, "magma-orc8r-nginx/0")
+
+        self.assertEqual(
+            self.harness.get_relation_data(relation_id, "magma-orc8r-nginx/0"),
+            {"active": "False"},
+        )
+
+    @patch("ops.model.Container.exists")
+    @patch("ops.model.Container.push", Mock())
+    def test_given_metricsd_service_running_when_metricsd_relation_joined_then_service_active_status_in_the_relation_data_bag_is_true(  # noqa: E501
+        self, patch_file_exists
+    ):
+        self.harness.set_leader(True)
+        patch_file_exists.return_value = True
+        self.harness.update_config(key_values={"domain": "whatever.com"})
+        bootstrapper_relation = self.harness.add_relation(
             relation_name="magma-orc8r-bootstrapper", remote_app="magma-orc8r-bootstrapper"
+        )
+        obsidian_relation = self.harness.add_relation(
+            relation_name="magma-orc8r-obsidian", remote_app="magma-orc8r-obsidian"
         )
         self.harness.add_relation(
             relation_name="cert-certifier", remote_app="magma-orc8r-certifier"
@@ -355,12 +450,32 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation(
             relation_name="cert-controller", remote_app="magma-orc8r-certifier"
         )
+        self.harness.add_relation_unit(
+            relation_id=bootstrapper_relation, remote_unit_name="magma-orc8r-bootstrapper/0"
+        )
+
+        self.harness.update_relation_data(
+            relation_id=bootstrapper_relation,
+            app_or_unit="magma-orc8r-bootstrapper/0",
+            key_values={"active": "True"},
+        )
+        self.harness.add_relation_unit(
+            relation_id=obsidian_relation, remote_unit_name="magma-orc8r-obsidian/0"
+        )
+        self.harness.update_relation_data(
+            relation_id=obsidian_relation,
+            app_or_unit="magma-orc8r-obsidian/0",
+            key_values={"active": "True"},
+        )
 
         self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
 
+        relation_id = self.harness.add_relation("magma-orc8r-nginx", "orc8r-nginx")
+        self.harness.add_relation_unit(relation_id, "magma-orc8r-nginx/0")
+
         self.assertEqual(
-            WaitingStatus("Waiting for 'magma-orc8r-bootstrapper' relation to be ready"),
-            self.harness.charm.unit.status,
+            self.harness.get_relation_data(relation_id, "magma-orc8r-nginx/0"),
+            {"active": "True"},
         )
 
 

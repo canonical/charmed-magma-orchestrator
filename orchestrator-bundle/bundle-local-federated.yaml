@@ -283,6 +283,8 @@ relations:
   - orc8r-certifier:cert-certifier
 - - orc8r-nginx:cert-controller
   - orc8r-certifier:cert-controller
+- - orc8r-nginx:cert-root-ca
+  - orc8r-certifier:cert-root-ca
 - - orc8r-nginx:magma-orc8r-obsidian
   - orc8r-obsidian:magma-orc8r-obsidian
 - - orc8r-orchestrator:cert-admin-operator
