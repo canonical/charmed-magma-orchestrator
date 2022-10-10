@@ -165,6 +165,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
         Args:
             event: Juju event
+
         Returns:
             None
         """
@@ -211,6 +212,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
         Args:
             event (ConfigChangedEvent): Juju event
+
         Returns:
             None
         """
@@ -230,6 +232,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
         Args:
             event: Juju event
+
         Returns:
             None
         """
@@ -278,6 +281,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
         Args:
             event (RelationJoinedEvent): Juju relation joined event
+
         Returns:
             None
         """
@@ -292,6 +296,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
         Args:
             event (RelationBrokenEvent): Juju event
+
         Returns:
             None
         """
@@ -302,6 +307,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
         Args:
             event: Juju event
+
         Returns:
             None
         """
@@ -370,6 +376,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
         Args:
             event (CertifierCertificateRequestEvent): Juju event
+
         Returns:
             None
         """
@@ -394,6 +401,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
         Args:
             event (ControllerCertificateRequestEvent): Juju event
+
         Returns:
             None
         """
@@ -425,6 +433,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
         Args:
             event (RootCACertificateRequestEvent): Juju event
+
         Returns:
             None
         """
@@ -493,6 +502,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
         Args:
             event: Juju event
+
         Returns:
             None
         """
@@ -527,6 +537,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
         Args:
             event (ActionEvent): Juju event
+
         Returns:
             None
         """
@@ -635,6 +646,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
         Args:
             event: Juju event
+
         Returns:
             None
         """
@@ -692,6 +704,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
         Args:
             event: Juju event
+
         Returns:
             None
         """
