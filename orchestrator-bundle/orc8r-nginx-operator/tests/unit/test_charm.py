@@ -266,8 +266,8 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
 
         self.harness.remove_relation(
-            self.harness.model.get_relation("magma-orc8r-obsidian").id
-        )  # type: ignore[union-attr]
+            self.harness.model.get_relation("magma-orc8r-obsidian").id  # type: ignore[union-attr]
+        )
 
         self.assertEqual(
             self.harness.charm.unit.status,
