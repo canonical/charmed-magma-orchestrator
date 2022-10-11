@@ -1,29 +1,78 @@
-# Contributing / Hacking
+# Contributing/Hacking
 
-## Intended use case
+## Developing and testing
 
-The charms and bundles in this repository are specifically developed for the 
-[magma](https://www.magmacore.org/) usecase.
+Testing for each charm is done the same way. First `cd` into the charm directory and then use 
+`tox` like so:
+```shell
+tox -e lint      # code style
+tox -e static    # static analysis
+tox -e unit      # unit tests
+```
 
-## Code contributions
+**NOTE:** If you don't have `tox` installed yet, just run: `pip3 install tox`.
 
-If you want to propose a new feature, a bug fix or a documentation improvement:
-- Create a new branch from main.
-- Commit and push your changes to this branch.
-- Validate that all Github actions pass.
-- Create a pull request in [github](https://github.com/canonical/charmed-magma/pulls).
-- Your pull request will be reviewed by one of the repository maintainers.
+Tox creates virtual environment for every tox environment defined in
+[tox.ini](tox.ini). Create and activate a virtualenv with the development requirements:
 
-Note that each component has its own `CONTRIBURING.md` file that will detail how you can test, 
-deploy and publish this specific component. Please refer to that file.
+```bash
+source .tox/unit/bin/activate
+```
 
-## Continuous Integration
+## Integration tests
+To run the integration tests suite, run the following commands:
+```bash
+tox -e integration
+```
 
-On each code push and pull request made in Github, a series of validations are triggered through 
-Github actions:
-- Linting validation
-- Static analysis
-- Unit tests
-- Integration tests
+## Build
+Building and publishing charms is done using charmcraft (official documentation
+[here](https://juju.is/docs/sdk/publishing)). You can install charmcraft using `snap`:
 
-All of them must pass for a change to be reviewed.
+```bash
+sudo snap install charmcraft --channel=classic
+```
+
+Initialize LXD:
+
+```bash
+lxd init --auto
+```
+
+### Specific Charm
+
+Go to the charm directory you want to build and run:
+
+```bash
+charmcraft pack
+```
+
+
+### Bundle
+
+
+Since multiple charms are bundled here, the process is streamlined using a simple bash script:
+```bash
+./build.sh
+```
+
+## Deploy
+
+### Specific Charm
+
+Specific charm deployment steps are documented in each of their README.md files.
+
+
+### Bundle
+
+After the packages have been built you can deploy orchestrator using juju:
+
+```bash
+juju deploy ./bundle-local.yaml --trust
+```
+
+Or you can also run the `deploy.sh` bash script (which does the exact same Juju command):
+
+```bash
+./deploy.sh
+```

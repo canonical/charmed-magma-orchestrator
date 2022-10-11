@@ -65,11 +65,6 @@ class TestOrc8rMetricsd:
     @staticmethod
     async def _deploy_postgresql(ops_test):
         await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
-        await ops_test.model.wait_for_idle(
-            apps=["postgresql-k8s"],
-            status="active",
-            timeout=WAIT_FOR_STATUS_TIMEOUT,
-        )
 
     @staticmethod
     async def _deploy_alertmanager(ops_test):
@@ -147,11 +142,6 @@ class TestOrc8rMetricsd:
             application_name=SERVICE_REGISTRY_APPLICATION_NAME,
             trust=True,
         )
-        await ops_test.model.wait_for_idle(
-            apps=[SERVICE_REGISTRY_APPLICATION_NAME],
-            status="active",
-            timeout=WAIT_FOR_STATUS_TIMEOUT,
-        )
 
     async def _deploy_orc8r_certifier(self, ops_test):
         certifier_charm = self._find_charm(
@@ -176,9 +166,6 @@ class TestOrc8rMetricsd:
         )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="tls-certificates-operator"
-        )
-        await ops_test.model.wait_for_idle(
-            apps=[CERTIFIER_APPLICATION_NAME], status="active", timeout=WAIT_FOR_STATUS_TIMEOUT
         )
 
     @staticmethod
@@ -207,9 +194,6 @@ class TestOrc8rMetricsd:
         )
         await ops_test.model.add_relation(
             relation1=ACCESSD_APPLICATION_NAME, relation2="postgresql-k8s:db"
-        )
-        await ops_test.model.wait_for_idle(
-            apps=[ACCESSD_APPLICATION_NAME], status="active", timeout=WAIT_FOR_STATUS_TIMEOUT
         )
 
     async def _deploy_orc8r_orchestrator(self, ops_test):
@@ -248,9 +232,6 @@ class TestOrc8rMetricsd:
         await ops_test.model.add_relation(
             relation1=f"{ORCHESTRATOR_APPLICATION_NAME}:magma-orc8r-service-registry",
             relation2="orc8r-service-registry:magma-orc8r-service-registry",
-        )
-        await ops_test.model.wait_for_idle(
-            apps=[ORCHESTRATOR_APPLICATION_NAME], status="active", timeout=WAIT_FOR_STATUS_TIMEOUT
         )
 
     @pytest.fixture(scope="module")
