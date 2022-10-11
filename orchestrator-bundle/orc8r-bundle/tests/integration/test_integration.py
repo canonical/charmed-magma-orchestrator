@@ -57,8 +57,11 @@ async def run_get_load_balancer_services_action(ops_test: OpsTest) -> Tuple[str,
         ops_test (OpsTest): opstest object
 
     Returns:
-        (str, str, str, str): External loadbalancer IP's
-
+        (str, str, str, str): External loadbalancer IP's in the following order:
+            - orc8r-bootstrap-nginx
+            - orc8r-clientcert-nginx
+            - orc8r-nginx-proxy
+            - nginx-proxy
     """
     orc8r_orchestrator_unit = ops_test.model.units["orc8r-orchestrator/0"]  # type: ignore[union-attr]  # noqa: E501
     load_balancer_action = await orc8r_orchestrator_unit.run_action(
