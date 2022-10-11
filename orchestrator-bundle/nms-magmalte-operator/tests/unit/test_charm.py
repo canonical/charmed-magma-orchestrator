@@ -242,11 +242,14 @@ class TestCharm(unittest.TestCase):
             self.harness.charm.unit.status, BlockedStatus("Waiting for db relation to be created")
         )
 
+    @patch("ops.model.Container.get_service", new=Mock())
     @patch("ops.model.Container.exec")
     @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
-    def test_given_username_email_and_password_are_provided_and_unit_is_leader_when_create_nms_admin_user_juju_action_then_pebble_command_is_executed(  # noqa: E501
+    def test_given_username_email_and_password_are_provided_and_service_is_running_and_unit_is_leader_when_create_nms_admin_user_juju_action_then_pebble_command_is_executed(  # noqa: E501
         self, _, mock_exec
     ):
+        container = self.harness.model.unit.get_container("magma-nms-magmalte")
+        self.harness.set_can_connect(container=container, val=True)
         action_event = Mock(
             params={
                 "email": "test@test.test",
@@ -295,9 +298,21 @@ class TestCharm(unittest.TestCase):
     @patch("ops.model.Container.exec")
     @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
     @patch("ops.charm.ActionEvent")
+    def test_given_juju_action_when_workload_service_not_running_then_user_is_not_created(
+        self, action_event, _, mock_exec
+    ):
+        self.harness.charm._create_nms_admin_user_action(action_event)
+        mock_exec.assert_not_called()
+
+    @patch("ops.model.Container.get_service", new=Mock())
+    @patch("ops.model.Container.exec")
+    @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
+    @patch("ops.charm.ActionEvent")
     def test_given_juju_action_when_user_creation_fails_then_action_raises_an_error(
         self, action_event, _, mock_exec
     ):
+        container = self.harness.model.unit.get_container("magma-nms-magmalte")
+        self.harness.set_can_connect(container=container, val=True)
         mock_exec.side_effect = ExecError(["drop"], 1, "exec error", "mock exec error")
         with self.assertRaises(ExecError):
             self.harness.charm._create_nms_admin_user_action(action_event)
