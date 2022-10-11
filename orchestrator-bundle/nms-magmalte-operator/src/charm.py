@@ -481,8 +481,9 @@ class MagmaNmsMagmalteCharm(CharmBase):
             None
         """
         if not self._service_is_running:
-            logger.warning("Service should be running for the user to be created")
-            return
+            message = "Service should be running for the user to be created"
+            logger.error(message)
+            raise Exception(message)
 
         logger.info("Creating admin user for NMS")
         process = self._container.exec(

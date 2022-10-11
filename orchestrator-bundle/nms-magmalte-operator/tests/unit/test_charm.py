@@ -298,11 +298,13 @@ class TestCharm(unittest.TestCase):
     @patch("ops.model.Container.exec")
     @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
     @patch("ops.charm.ActionEvent")
-    def test_given_juju_action_when_workload_service_not_running_then_user_is_not_created(
+    def test_given_juju_action_when_workload_service_not_running_then_user_is_not_created_and_raises_exception(  # noqa: E501
         self, action_event, _, mock_exec
     ):
-        self.harness.charm._create_nms_admin_user_action(action_event)
         mock_exec.assert_not_called()
+        mock_exec.side_effect = Exception("Service should be running for the user to be created")
+        with self.assertRaises(Exception):
+            self.harness.charm._create_nms_admin_user_action(action_event)
 
     @patch("ops.model.Container.get_service", new=Mock())
     @patch("ops.model.Container.exec")
