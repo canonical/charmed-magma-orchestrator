@@ -48,6 +48,12 @@ logger = logging.getLogger(__name__)
 pgsql = ops.lib.use("pgsql", 1, "postgresql-charmers@lists.launchpad.net")
 
 
+class ServiceNotRunningError(Exception):
+    """Custom error that can be raised if container service is not running."""
+
+    pass
+
+
 class MagmaNmsMagmalteCharm(CharmBase):
     """Main class that is instantiated everytime an event occurs."""
 
@@ -328,7 +334,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
                         "Admin password not present after creating it. This should never happen."
                     )
                 return
-            except ExecError:
+            except (ExecError, ServiceNotRunningError):
                 logger.info("Failed to create admin user - Will retry in 5 seconds")
                 time.sleep(5)
         message = "Timed out trying to create admin user for NMS"
@@ -483,7 +489,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         if not self._service_is_running:
             message = "Service should be running for the user to be created"
             logger.error(message)
-            raise Exception(message)
+            raise ServiceNotRunningError(message)
 
         logger.info("Creating admin user for NMS")
         process = self._container.exec(

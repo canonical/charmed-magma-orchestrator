@@ -9,7 +9,7 @@ from ops.model import ActiveStatus, BlockedStatus
 from ops.pebble import ExecError
 from pgconnstr import ConnectionString  # type: ignore[import]
 
-from charm import MagmaNmsMagmalteCharm
+from charm import MagmaNmsMagmalteCharm, ServiceNotRunningError
 
 testing.SIMULATE_CAN_CONNECT = True
 
@@ -302,8 +302,10 @@ class TestCharm(unittest.TestCase):
         self, action_event, _, mock_exec
     ):
         mock_exec.assert_not_called()
-        mock_exec.side_effect = Exception("Service should be running for the user to be created")
-        with self.assertRaises(Exception):
+        mock_exec.side_effect = ServiceNotRunningError(
+            "Service should be running for the user to be created"
+        )
+        with self.assertRaises(ServiceNotRunningError):
             self.harness.charm._create_nms_admin_user_action(action_event)
 
     @patch("ops.model.Container.get_service", new=Mock())
