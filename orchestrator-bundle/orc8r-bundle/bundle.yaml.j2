@@ -177,6 +177,7 @@ applications:
     channel: edge
     options:
       web_external_url: "/grafana"
+      enable_auto_assign_org: false
     scale: 1
     trust: true
   postgresql-k8s:
@@ -266,3 +267,5 @@ relations:
   - postgresql-k8s:db
 - - orc8r-user-grafana:grafana-source
   - orc8r-prometheus:grafana-source
+- - orc8r-user-grafana:grafana-auth
+  - nms-magmalte:grafana-auth
