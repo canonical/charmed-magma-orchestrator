@@ -129,4 +129,4 @@ jobs:
       - name: Clean up
         if: always()
         run: |
-          yes | juju kill-controller integration-tests
+          yes | juju kill-controller integration-tests-$GITHUB_RUN_ID

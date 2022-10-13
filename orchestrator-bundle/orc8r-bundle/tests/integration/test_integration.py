@@ -54,7 +54,7 @@ async def run_get_load_balancer_services_action(ops_test: OpsTest) -> Tuple[str,
     """Runs `get-load-balancer-services` on the `orc8r-orchestrator/0` unit.
 
     Args:
-        ops_test (OpsTest): opstest object
+        ops_test (OpsTest): OpsTest
 
     Returns:
         (str, str, str, str): External loadbalancer IP's in the following order:
@@ -82,7 +82,7 @@ async def run_get_pfx_password_action(ops_test: OpsTest) -> str:
     """Runs `get-pfx-package-password` action on the `orc8r-certifier/0` unit.
 
     Args:
-        ops_test (OpsTest): opstest object
+        ops_test (OpsTest): OpsTest
 
     Returns:
         str: PFX package password
@@ -101,7 +101,7 @@ async def get_pfx_package(ops_test: OpsTest) -> str:
     """SCP's admin_operator.pfx package from certifier container to locally.
 
     Args:
-        ops_test (OpsTest): opstest object
+        ops_test (OpsTest): OpsTest
 
     Returns:
         str: pfx package path
