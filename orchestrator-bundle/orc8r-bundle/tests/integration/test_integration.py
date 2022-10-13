@@ -142,7 +142,7 @@ async def pack_charm(ops_test: OpsTest, charm_directory: str, export_path: str) 
     """Packs a charm based on provided directory
 
     Args:
-        ops_test:
+        ops_test: OpsTest
         charm_directory: Charm directory
         export_path: Directory to export built charm
 
