@@ -37,6 +37,8 @@ peers:
 provides:
   magma-nms-magmalte:
     interface: magma-nms-magmalte
+  grafana-auth:
+    interface: grafana_auth
 
 requires:
   db:

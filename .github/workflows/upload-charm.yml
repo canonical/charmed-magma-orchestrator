@@ -34,6 +34,7 @@ jobs:
         id: channel
 
       - name: Upload charm to charmhub
+        id: upload
         uses: canonical/charming-actions/upload-charm@2.0.0-rc
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
@@ -44,12 +45,12 @@ jobs:
           tag-prefix: magma-${{ inputs.charm }}
 
       - name: Chmod charmcraft logs
-        if: failure()
+        if: steps.upload.conclusion == 'failure'
         run: |
           sudo chmod -R 777 /root/snap/charmcraft/common/cache/charmcraft/log/ 
 
       - name: Archive charmcraft logs
-        if: failure()
+        if: steps.upload.conclusion == 'failure'
         uses: actions/upload-artifact@v3
         with:
           name: charmcraft-upload-logs
