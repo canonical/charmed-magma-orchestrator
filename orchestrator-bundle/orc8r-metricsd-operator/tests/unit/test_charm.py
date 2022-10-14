@@ -67,40 +67,49 @@ class TestCharm(unittest.TestCase):
         self.harness.remove_relation(
             self.harness.model.get_relation("alertmanager-k8s").id  # type: ignore[union-attr]
         )
+
         self.assertEqual(
             self.harness.charm.unit.status,
             BlockedStatus("Waiting for relation(s) to be created: alertmanager-k8s"),
         )
+
         self.harness.remove_relation(
             self.harness.model.get_relation(
                 "alertmanager-configurer-k8s"
             ).id  # type: ignore[union-attr]
         )
+
         self.assertEqual(
             self.harness.charm.unit.status,
             BlockedStatus("Waiting for relation(s) to be created: alertmanager-configurer-k8s"),
         )
+
         self.harness.remove_relation(
             self.harness.model.get_relation("prometheus-k8s").id  # type: ignore[union-attr]
         )
+
         self.assertEqual(
             self.harness.charm.unit.status,
             BlockedStatus("Waiting for relation(s) to be created: prometheus-k8s"),
         )
+
         self.harness.remove_relation(
             self.harness.model.get_relation(
                 "prometheus-configurer-k8s"
             ).id  # type: ignore[union-attr]
         )
+
         self.assertEqual(
             self.harness.charm.unit.status,
             BlockedStatus("Waiting for relation(s) to be created: prometheus-configurer-k8s"),
         )
+
         self.harness.remove_relation(
             self.harness.model.get_relation(
                 "magma-orc8r-orchestrator"
             ).id  # type: ignore[union-attr]
         )
+
         self.assertEqual(
             self.harness.charm.unit.status,
             BlockedStatus("Waiting for relation(s) to be created: magma-orc8r-orchestrator"),

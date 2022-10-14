@@ -279,6 +279,7 @@ class TestCharm(unittest.TestCase):
                 "magma-orc8r-bootstrapper"
             ).id  # type: ignore[union-attr]
         )
+
         self.assertEqual(
             self.harness.charm.unit.status,
             BlockedStatus("Waiting for relation(s) to be created: magma-orc8r-bootstrapper"),
