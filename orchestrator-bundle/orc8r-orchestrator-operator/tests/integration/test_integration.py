@@ -91,6 +91,7 @@ class TestOrchestrator:
             resources=resources,
             application_name=SERVICE_REGISTRY_APPLICATION_NAME,
             trust=True,
+            series="focal",
         )
 
     async def _deploy_orc8r_accessd(self, ops_test):
@@ -107,6 +108,7 @@ class TestOrchestrator:
             resources=resources,
             application_name=ACCESSD_APPLICATION_NAME,
             trust=True,
+            series="focal",
         )
         await ops_test.model.add_relation(
             relation1=ACCESSD_APPLICATION_NAME, relation2="postgresql-k8s:db"
