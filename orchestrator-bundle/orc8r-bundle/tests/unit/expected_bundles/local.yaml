@@ -6,183 +6,21 @@ description: |
   allows you to see the analytics and traffic flows of the wireless users through the Magma web UI.
 applications:
   nms-magmalte:
-    charm: ./nms-magmalte-operator/nms-magmalte.charm
-    scale: 1
-    trust: true
+    charm: ./magma-nms-magmalte_ubuntu-20.04-amd64.charm
     resources:
       magma-nms-magmalte-image: docker.artifactory.magmacore.org/magmalte:1.6.0
-  nms-nginx-proxy:
-    charm: ./nms-nginx-proxy-operator/nms-nginx-proxy.charm
     scale: 1
     trust: true
+  nms-nginx-proxy:
+    charm: ./magma-nms-nginx-proxy_ubuntu-20.04-amd64.charm
     resources:
       magma-nms-nginx-proxy-image: nginx:latest
-  orc8r-accessd:
-    charm: ./orc8r-accessd-operator/orc8r-accessd.charm
     scale: 1
     trust: true
+  orc8r-accessd:
+    charm: ./magma-orc8r-accessd_ubuntu-20.04-amd64.charm
     resources:
       magma-orc8r-accessd-image: docker.artifactory.magmacore.org/controller:1.6.0
-  orc8r-analytics:
-    charm: ./orc8r-analytics-operator/orc8r-analytics.charm
-    scale: 1
-    trust: true
-    resources:
-      magma-orc8r-analytics-image: docker.artifactory.magmacore.org/controller:1.6.0
-  orc8r-bootstrapper:
-    charm: ./orc8r-bootstrapper-operator/orc8r-bootstrapper.charm
-    scale: 1
-    trust: true
-    resources:
-      magma-orc8r-bootstrapper-image: docker.artifactory.magmacore.org/controller:1.6.0
-  orc8r-certifier:
-    charm: ./orc8r-certifier-operator/orc8r-certifier.charm
-    scale: 1
-    trust: true
-    options:
-      domain: example.com
-    resources:
-      magma-orc8r-certifier-image: docker.artifactory.magmacore.org/controller:1.6.0
-  orc8r-configurator:
-    charm: ./orc8r-configurator-operator/orc8r-configurator.charm
-    scale: 1
-    trust: true
-    resources:
-      magma-orc8r-configurator-image: docker.artifactory.magmacore.org/controller:1.6.0
-  orc8r-ctraced:
-    charm: ./orc8r-ctraced-operator/orc8r-ctraced.charm
-    scale: 1
-    trust: true
-    resources:
-      magma-orc8r-ctraced-image: docker.artifactory.magmacore.org/controller:1.6.0
-  orc8r-device:
-    charm: ./orc8r-device-operator/orc8r-device.charm
-    scale: 1
-    trust: true
-    resources:
-      magma-orc8r-device-image: docker.artifactory.magmacore.org/controller:1.6.0
-  orc8r-directoryd:
-    charm: ./orc8r-directoryd-operator/orc8r-directoryd.charm
-    scale: 1
-    trust: true
-    resources:
-      magma-orc8r-directoryd-image: docker.artifactory.magmacore.org/controller:1.6.0
-  orc8r-dispatcher:
-    charm: ./orc8r-dispatcher-operator/orc8r-dispatcher.charm
-    scale: 1
-    trust: true
-    resources:
-      magma-orc8r-dispatcher-image: docker.artifactory.magmacore.org/controller:1.6.0
-  orc8r-eventd:
-    charm: ./orc8r-eventd-operator/orc8r-eventd.charm
-    scale: 1
-    trust: true
-    options:
-      elasticsearch-url: "orc8r-elasticsearch:1234"
-    resources:
-      magma-orc8r-eventd-image: docker.artifactory.magmacore.org/controller:1.6.0
-  orc8r-ha:
-    charm: ./orc8r-ha-operator/orc8r-ha.charm
-    scale: 1
-    trust: true
-    resources:
-      magma-orc8r-ha-image: docker.artifactory.magmacore.org/controller:1.6.0
-  orc8r-lte:
-    charm: ./orc8r-lte-operator/orc8r-lte.charm
-    scale: 1
-    trust: true
-    resources:
-      magma-orc8r-lte-image: docker.artifactory.magmacore.org/controller:1.6.0
-  orc8r-metricsd:
-    charm: ./orc8r-metricsd-operator/orc8r-metricsd.charm
-    scale: 1
-    trust: true
-    resources:
-      magma-orc8r-metricsd-image: docker.artifactory.magmacore.org/controller:1.6.0
-  orc8r-nginx:
-    charm: ./orc8r-nginx-operator/orc8r-nginx.charm
-    scale: 1
-    trust: true
-    resources:
-      magma-orc8r-nginx-image: docker.artifactory.magmacore.org/nginx:1.6.0
-  orc8r-obsidian:
-    charm: ./orc8r-obsidian-operator/orc8r-obsidian.charm
-    scale: 1
-    trust: true
-    resources:
-      magma-orc8r-obsidian-image: docker.artifactory.magmacore.org/controller:1.6.0
-  orc8r-orchestrator:
-    charm: ./orc8r-orchestrator-operator/orc8r-orchestrator.charm
-    scale: 1
-    trust: true
-    options:
-      elasticsearch-url: "orc8r-elasticsearch:1234"
-    resources:
-      magma-orc8r-orchestrator-image: docker.artifactory.magmacore.org/controller:1.6.0
-  orc8r-policydb:
-    charm: ./orc8r-policydb-operator/orc8r-policydb.charm
-    scale: 1
-    trust: true
-    resources:
-      magma-orc8r-policydb-image: docker.artifactory.magmacore.org/controller:1.6.0
-  orc8r-service-registry:
-    charm: ./orc8r-service-registry-operator/orc8r-service-registry.charm
-    scale: 1
-    trust: true
-    resources:
-      magma-orc8r-service-registry-image: docker.artifactory.magmacore.org/controller:1.6.0
-  orc8r-smsd:
-    charm: ./orc8r-smsd-operator/orc8r-smsd.charm
-    scale: 1
-    trust: true
-    resources:
-      magma-orc8r-smsd-image: docker.artifactory.magmacore.org/controller:1.6.0
-  orc8r-state:
-    charm: ./orc8r-state-operator/orc8r-state.charm
-    scale: 1
-    trust: true
-    resources:
-      magma-orc8r-state-image: docker.artifactory.magmacore.org/controller:1.6.0
-  orc8r-streamer:
-    charm: ./orc8r-streamer-operator/orc8r-streamer.charm
-    scale: 1
-    trust: true
-    resources:
-      magma-orc8r-streamer-image: docker.artifactory.magmacore.org/controller:1.6.0
-  orc8r-subscriberdb:
-    charm: ./orc8r-subscriberdb-operator/orc8r-subscriberdb.charm
-    scale: 1
-    trust: true
-    resources:
-      magma-orc8r-subscriberdb-image: docker.artifactory.magmacore.org/controller:1.6.0
-  orc8r-subscriberdb-cache:
-    charm: ./orc8r-subscriberdb-cache-operator/orc8r-subscriberdb-cache.charm
-    scale: 1
-    trust: true
-    resources:
-      magma-orc8r-subscriberdb-cache-image: docker.artifactory.magmacore.org/controller:1.6.0
-  orc8r-tenants:
-    charm: ./orc8r-tenants-operator/orc8r-tenants.charm
-    scale: 1
-    trust: true
-    resources:
-      magma-orc8r-tenants-image: docker.artifactory.magmacore.org/controller:1.6.0
-  postgresql-k8s:
-    charm: postgresql-k8s
-    series: kubernetes
-    channel: stable
-    scale: 1
-    trust: true
-  orc8r-prometheus:
-    charm: prometheus-k8s
-    channel: edge
-    scale: 1
-    trust: true
-  orc8r-user-grafana:
-    charm: grafana-k8s
-    options:
-      web_external_url: "/grafana"
-    channel: edge
     scale: 1
     trust: true
   orc8r-alertmanager:
@@ -197,6 +35,113 @@ applications:
     trust: true
     options:
       multitenant_label: "networkID"
+  orc8r-analytics:
+    charm: ./magma-orc8r-analytics_ubuntu-20.04-amd64.charm
+    resources:
+      magma-orc8r-analytics-image: docker.artifactory.magmacore.org/controller:1.6.0
+    scale: 1
+    trust: true
+  orc8r-bootstrapper:
+    charm: ./magma-orc8r-bootstrapper_ubuntu-20.04-amd64.charm
+    resources:
+      magma-orc8r-bootstrapper-image: docker.artifactory.magmacore.org/controller:1.6.0
+    scale: 1
+    trust: true
+  orc8r-certifier:
+    charm: ./magma-orc8r-certifier_ubuntu-20.04-amd64.charm
+    resources:
+      magma-orc8r-certifier-image: docker.artifactory.magmacore.org/controller:1.6.0
+    scale: 1
+    trust: true
+    options:
+      domain: example.com
+  orc8r-configurator:
+    charm: ./magma-orc8r-configurator_ubuntu-20.04-amd64.charm
+    resources:
+      magma-orc8r-configurator-image: docker.artifactory.magmacore.org/controller:1.6.0
+    scale: 1
+    trust: true
+  orc8r-ctraced:
+    charm: ./magma-orc8r-ctraced_ubuntu-20.04-amd64.charm
+    resources:
+      magma-orc8r-ctraced-image: docker.artifactory.magmacore.org/controller:1.6.0
+    scale: 1
+    trust: true
+  orc8r-device:
+    charm: ./magma-orc8r-device_ubuntu-20.04-amd64.charm
+    resources:
+      magma-orc8r-device-image: docker.artifactory.magmacore.org/controller:1.6.0
+    scale: 1
+    trust: true
+  orc8r-directoryd:
+    charm: ./magma-orc8r-directoryd_ubuntu-20.04-amd64.charm
+    resources:
+      magma-orc8r-directoryd-image: docker.artifactory.magmacore.org/controller:1.6.0
+    scale: 1
+    trust: true
+  orc8r-dispatcher:
+    charm: ./magma-orc8r-dispatcher_ubuntu-20.04-amd64.charm
+    resources:
+      magma-orc8r-dispatcher-image: docker.artifactory.magmacore.org/controller:1.6.0
+    scale: 1
+    trust: true
+  orc8r-eventd:
+    charm: ./magma-orc8r-eventd_ubuntu-20.04-amd64.charm
+    resources:
+      magma-orc8r-eventd-image: docker.artifactory.magmacore.org/controller:1.6.0
+    scale: 1
+    trust: true
+    options:
+      elasticsearch-url: "orc8r-elasticsearch:1234"
+  orc8r-ha:
+    charm: ./magma-orc8r-ha_ubuntu-20.04-amd64.charm
+    resources:
+      magma-orc8r-ha-image: docker.artifactory.magmacore.org/controller:1.6.0
+    scale: 1
+    trust: true
+  orc8r-lte:
+    charm: ./magma-orc8r-lte_ubuntu-20.04-amd64.charm
+    resources:
+      magma-orc8r-lte-image: docker.artifactory.magmacore.org/controller:1.6.0
+    scale: 1
+    trust: true
+  orc8r-metricsd:
+    charm: ./magma-orc8r-metricsd_ubuntu-20.04-amd64.charm
+    resources:
+      magma-orc8r-metricsd-image: docker.artifactory.magmacore.org/controller:1.6.0
+    scale: 1
+    trust: true
+  orc8r-nginx:
+    charm: ./magma-orc8r-nginx_ubuntu-20.04-amd64.charm
+    resources:
+      magma-orc8r-nginx-image: docker.artifactory.magmacore.org/nginx:1.6.0
+    scale: 1
+    trust: true
+  orc8r-obsidian:
+    charm: ./magma-orc8r-obsidian_ubuntu-20.04-amd64.charm
+    resources:
+      magma-orc8r-obsidian-image: docker.artifactory.magmacore.org/controller:1.6.0
+    scale: 1
+    trust: true
+  orc8r-orchestrator:
+    charm: ./magma-orc8r-orchestrator_ubuntu-20.04-amd64.charm
+    resources:
+      magma-orc8r-orchestrator-image: docker.artifactory.magmacore.org/controller:1.6.0
+    scale: 1
+    trust: true
+    options:
+      elasticsearch-url: "orc8r-elasticsearch:1234"
+  orc8r-policydb:
+    charm: ./magma-orc8r-policydb_ubuntu-20.04-amd64.charm
+    resources:
+      magma-orc8r-policydb-image: docker.artifactory.magmacore.org/controller:1.6.0
+    scale: 1
+    trust: true
+  orc8r-prometheus:
+    charm: prometheus-k8s
+    channel: edge
+    scale: 1
+    trust: true
   orc8r-prometheus-cache:
     charm: prometheus-edge-hub
     channel: edge
@@ -211,11 +156,66 @@ applications:
     trust: true
     options:
       multitenant_label: "networkID"
+  orc8r-service-registry:
+    charm: ./magma-orc8r-service-registry_ubuntu-20.04-amd64.charm
+    resources:
+      magma-orc8r-service-registry-image: docker.artifactory.magmacore.org/controller:1.6.0
+    scale: 1
+    trust: true
+  orc8r-smsd:
+    charm: ./magma-orc8r-smsd_ubuntu-20.04-amd64.charm
+    resources:
+      magma-orc8r-smsd-image: docker.artifactory.magmacore.org/controller:1.6.0
+    scale: 1
+    trust: true
+  orc8r-state:
+    charm: ./magma-orc8r-state_ubuntu-20.04-amd64.charm
+    resources:
+      magma-orc8r-state-image: docker.artifactory.magmacore.org/controller:1.6.0
+    scale: 1
+    trust: true
+  orc8r-streamer:
+    charm: ./magma-orc8r-streamer_ubuntu-20.04-amd64.charm
+    resources:
+      magma-orc8r-streamer-image: docker.artifactory.magmacore.org/controller:1.6.0
+    scale: 1
+    trust: true
+  orc8r-subscriberdb:
+    charm: ./magma-orc8r-subscriberdb_ubuntu-20.04-amd64.charm
+    resources:
+      magma-orc8r-subscriberdb-image: docker.artifactory.magmacore.org/controller:1.6.0
+    scale: 1
+    trust: true
+  orc8r-subscriberdb-cache:
+    charm: ./magma-orc8r-subscriberdb-cache_ubuntu-20.04-amd64.charm
+    resources:
+      magma-orc8r-subscriberdb-cache-image: docker.artifactory.magmacore.org/controller:1.6.0
+    scale: 1
+    trust: true
+  orc8r-tenants:
+    charm: ./magma-orc8r-tenants_ubuntu-20.04-amd64.charm
+    resources:
+      magma-orc8r-tenants-image: docker.artifactory.magmacore.org/controller:1.6.0
+    scale: 1
+    trust: true
+  orc8r-user-grafana:
+    charm: grafana-k8s
+    channel: edge
+    options:
+      web_external_url: "/grafana"
+      enable_auto_assign_org: false
+    scale: 1
+    trust: true
+  postgresql-k8s:
+    charm: postgresql-k8s
+    series: kubernetes
+    channel: stable
+    scale: 1
+    trust: true
   tls-certificates-operator:
     charm: tls-certificates-operator
     channel: edge
     scale: 1
-    trust: true
 relations:
 - - nms-magmalte
   - orc8r-certifier
@@ -229,6 +229,8 @@ relations:
   - postgresql-k8s:db
 - - orc8r-alertmanager:remote-configuration
   - orc8r-alertmanager-configurer:alertmanager
+- - orc8r-certifier
+  - tls-certificates-operator
 - - orc8r-certifier:db
   - postgresql-k8s:db
 - - orc8r-configurator:db
@@ -243,6 +245,8 @@ relations:
   - postgresql-k8s:db
 - - orc8r-metricsd:alertmanager-k8s
   - orc8r-alertmanager:alerting
+- - orc8r-metricsd:alertmanager-configurer-k8s
+  - orc8r-alertmanager-configurer:alertmanager-configurer
 - - orc8r-metricsd:magma-orc8r-orchestrator
   - orc8r-orchestrator:magma-orc8r-orchestrator
 - - orc8r-metricsd:prometheus-k8s
@@ -289,5 +293,5 @@ relations:
   - postgresql-k8s:db
 - - orc8r-user-grafana:grafana-source
   - orc8r-prometheus:grafana-source
-- - orc8r-certifier
-  - tls-certificates-operator
+- - orc8r-user-grafana:grafana-auth
+  - nms-magmalte:grafana-auth
