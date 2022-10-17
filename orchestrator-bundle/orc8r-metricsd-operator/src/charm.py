@@ -138,7 +138,7 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
             self._container.restart(self._service_name)
             logger.info(f"Restarted container {self._service_name}")
             self._update_relations()
-            self.unit.status = ActiveStatus()
+        self.unit.status = ActiveStatus()
 
     def _update_relations(self) -> None:
         """Updates metricsd service status in relation data bags. This way, charms that
