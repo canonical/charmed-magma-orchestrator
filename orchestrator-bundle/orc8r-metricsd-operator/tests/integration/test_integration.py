@@ -82,6 +82,7 @@ class TestOrc8rMetricsd:
             application_name="orc8r-alertmanager-configurer",
             channel="edge",
             trust=True,
+            series="focal",
         )
         await ops_test.model.add_relation(
             relation1="orc8r-alertmanager-configurer:alertmanager",
