@@ -479,7 +479,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             for line in e.stderr.splitlines():
                 logger.error("    %s", line)
 
-    def _configure_magma_orc8r_orchestrator(  # noqa: C901
+    def _configure_magma_orc8r_orchestrator(
         self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationJoinedEvent]
     ) -> None:
         """Configures pebble layer and creates the admin user.

@@ -261,7 +261,7 @@ class TestCharm(unittest.TestCase):
     ):
         patch_file_exists.return_value = True
         self.harness.update_config(key_values={"domain": "whatever.com"})
-        self._create_relations()
+        self._create_all_relations()
         self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
 
@@ -291,17 +291,10 @@ class TestCharm(unittest.TestCase):
     ):
         patch_file_exists.return_value = True
         self.harness.update_config(key_values={"domain": "whatever.com"})
-        bootstrapper_relation = self.harness.add_relation(
+        self._create_active_relation(
             relation_name="magma-orc8r-bootstrapper", remote_app="magma-orc8r-bootstrapper"
         )
-        self.harness.add_relation_unit(
-            relation_id=bootstrapper_relation, remote_unit_name="orc8r-bootstrapper/0"
-        )
-        self.harness.update_relation_data(
-            relation_id=bootstrapper_relation,
-            app_or_unit="orc8r-bootstrapper/0",
-            key_values={"active": "True"},
-        )
+
         self.harness.add_relation(
             relation_name="magma-orc8r-obsidian", remote_app="magma-orc8r-obsidian"
         )
@@ -325,17 +318,10 @@ class TestCharm(unittest.TestCase):
     ):
         patch_file_exists.return_value = True
         self.harness.update_config(key_values={"domain": "whatever.com"})
-        obsidian_relation = self.harness.add_relation(
+        self._create_active_relation(
             relation_name="magma-orc8r-obsidian", remote_app="magma-orc8r-obsidian"
         )
-        self.harness.add_relation_unit(
-            relation_id=obsidian_relation, remote_unit_name="orc8r-obsidian/0"
-        )
-        self.harness.update_relation_data(
-            relation_id=obsidian_relation,
-            app_or_unit="orc8r-obsidian/0",
-            key_values={"active": "True"},
-        )
+
         self.harness.add_relation(
             relation_name="magma-orc8r-bootstrapper", remote_app="magma-orc8r-bootstrapper"
         )
@@ -359,7 +345,7 @@ class TestCharm(unittest.TestCase):
     ):
         patch_file_exists.return_value = True
         self.harness.update_config(key_values={"domain": "whatever.com"})
-        self._create_relations()
+        self._create_all_relations()
         expected_plan = {
             "services": {
                 "magma-orc8r-nginx": {
@@ -385,36 +371,7 @@ class TestCharm(unittest.TestCase):
     ):
         patch_file_exists.return_value = True
         self.harness.update_config(key_values={"domain": "whatever.com"})
-        bootstrapper_relation = self.harness.add_relation(
-            relation_name="magma-orc8r-bootstrapper", remote_app="magma-orc8r-bootstrapper"
-        )
-        obsidian_relation = self.harness.add_relation(
-            relation_name="magma-orc8r-obsidian", remote_app="magma-orc8r-obsidian"
-        )
-        self.harness.add_relation(
-            relation_name="cert-certifier", remote_app="magma-orc8r-certifier"
-        )
-        self.harness.add_relation(
-            relation_name="cert-controller", remote_app="magma-orc8r-certifier"
-        )
-        self.harness.add_relation_unit(
-            relation_id=bootstrapper_relation, remote_unit_name="magma-orc8r-bootstrapper/0"
-        )
-
-        self.harness.update_relation_data(
-            relation_id=bootstrapper_relation,
-            app_or_unit="magma-orc8r-bootstrapper/0",
-            key_values={"active": "True"},
-        )
-        self.harness.add_relation_unit(
-            relation_id=obsidian_relation, remote_unit_name="magma-orc8r-obsidian/0"
-        )
-        self.harness.update_relation_data(
-            relation_id=obsidian_relation,
-            app_or_unit="magma-orc8r-obsidian/0",
-            key_values={"active": "True"},
-        )
-
+        self._create_all_relations()
         self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
 
         self.assertEqual(ActiveStatus(), self.harness.charm.unit.status)
@@ -439,35 +396,7 @@ class TestCharm(unittest.TestCase):
         self.harness.set_leader(True)
         patch_file_exists.return_value = True
         self.harness.update_config(key_values={"domain": "whatever.com"})
-        bootstrapper_relation = self.harness.add_relation(
-            relation_name="magma-orc8r-bootstrapper", remote_app="magma-orc8r-bootstrapper"
-        )
-        obsidian_relation = self.harness.add_relation(
-            relation_name="magma-orc8r-obsidian", remote_app="magma-orc8r-obsidian"
-        )
-        self.harness.add_relation(
-            relation_name="cert-certifier", remote_app="magma-orc8r-certifier"
-        )
-        self.harness.add_relation(
-            relation_name="cert-controller", remote_app="magma-orc8r-certifier"
-        )
-        self.harness.add_relation_unit(
-            relation_id=bootstrapper_relation, remote_unit_name="magma-orc8r-bootstrapper/0"
-        )
-
-        self.harness.update_relation_data(
-            relation_id=bootstrapper_relation,
-            app_or_unit="magma-orc8r-bootstrapper/0",
-            key_values={"active": "True"},
-        )
-        self.harness.add_relation_unit(
-            relation_id=obsidian_relation, remote_unit_name="magma-orc8r-obsidian/0"
-        )
-        self.harness.update_relation_data(
-            relation_id=obsidian_relation,
-            app_or_unit="magma-orc8r-obsidian/0",
-            key_values={"active": "True"},
-        )
+        self._create_all_relations()
 
         self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
 
@@ -479,11 +408,26 @@ class TestCharm(unittest.TestCase):
             {"active": "True"},
         )
 
-    def _create_relations(self):
-        bootstrapper_relation = self.harness.add_relation(
+    def _create_active_relation(self, relation_name: str, remote_app: str):
+        """Creates a relation between orc8r-nginx and a remote app and activates it.
+
+        Args:
+            relation_name: str
+            remote_app: str
+        """
+        relation_id = self.harness.add_relation(relation_name=relation_name, remote_app=remote_app)
+        self.harness.add_relation_unit(relation_id=relation_id, remote_unit_name=f"{remote_app}/0")
+        self.harness.update_relation_data(
+            relation_id=relation_id,
+            app_or_unit=f"{remote_app}/0",
+            key_values={"active": "True"},
+        )
+
+    def _create_all_relations(self):
+        self._create_active_relation(
             relation_name="magma-orc8r-bootstrapper", remote_app="magma-orc8r-bootstrapper"
         )
-        obsidian_relation = self.harness.add_relation(
+        self._create_active_relation(
             relation_name="magma-orc8r-obsidian", remote_app="magma-orc8r-obsidian"
         )
         self.harness.add_relation(
@@ -491,23 +435,6 @@ class TestCharm(unittest.TestCase):
         )
         self.harness.add_relation(
             relation_name="cert-controller", remote_app="magma-orc8r-certifier"
-        )
-        self.harness.add_relation_unit(
-            relation_id=bootstrapper_relation, remote_unit_name="magma-orc8r-bootstrapper/0"
-        )
-
-        self.harness.update_relation_data(
-            relation_id=bootstrapper_relation,
-            app_or_unit="magma-orc8r-bootstrapper/0",
-            key_values={"active": "True"},
-        )
-        self.harness.add_relation_unit(
-            relation_id=obsidian_relation, remote_unit_name="magma-orc8r-obsidian/0"
-        )
-        self.harness.update_relation_data(
-            relation_id=obsidian_relation,
-            app_or_unit="magma-orc8r-obsidian/0",
-            key_values={"active": "True"},
         )
 
 

@@ -68,7 +68,7 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="orc8r-certifier"
         )
-        self._create_relations()
+        self._create_all_relations()
         expected_plan = {
             "services": {
                 "magma-orc8r-orchestrator": {
@@ -153,7 +153,7 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="orc8r-certifier"
         )
-        self._create_relations()
+        self._create_all_relations()
         self.harness.container_pebble_ready("magma-orc8r-orchestrator")
 
         args, _ = patch_exec.call_args
@@ -180,28 +180,11 @@ class TestCharm(unittest.TestCase):
             relation_name="cert-admin-operator", remote_app="orc8r-certifier"
         )
         self.harness.add_relation(relation_name="metrics-endpoint", remote_app="prometheus-k8s")
-        accessd_relation = self.harness.add_relation(
+        self._create_active_relation(
             relation_name="magma-orc8r-accessd", remote_app="orc8r-accessd"
         )
-        self.harness.add_relation_unit(
-            relation_id=accessd_relation, remote_unit_name="magma-orc8r-accessd/0"
-        )
-        self.harness.update_relation_data(
-            relation_id=accessd_relation,
-            app_or_unit="magma-orc8r-accessd/0",
-            key_values={"active": "True"},
-        )
-        service_registry_relation = self.harness.add_relation(
+        self._create_active_relation(
             relation_name="magma-orc8r-service-registry", remote_app="orc8r-service-registry"
-        )
-        self.harness.add_relation_unit(
-            relation_id=service_registry_relation,
-            remote_unit_name="magma-orc8r-service-registry/0",
-        )
-        self.harness.update_relation_data(
-            relation_id=service_registry_relation,
-            app_or_unit="magma-orc8r-service-registry/0",
-            key_values={"active": "True"},
         )
 
         self.harness.container_pebble_ready("magma-orc8r-orchestrator")
@@ -222,40 +205,16 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="orc8r-certifier"
         )
-        metricsd_relation = self.harness.add_relation(
-            relation_name="metrics-endpoint", remote_app="prometheus-k8s"
-        )
-        self.harness.add_relation_unit(
-            relation_id=metricsd_relation, remote_unit_name="prometheus-k8s/0"
-        )
-        self.harness.update_relation_data(
-            relation_id=metricsd_relation,
-            app_or_unit="prometheus-k8s/0",
-            key_values={"active": "True"},
-        )
-        accessd_relation = self.harness.add_relation(
+        self._create_active_relation(relation_name="metrics-endpoint", remote_app="prometheus-k8s")
+
+        self._create_active_relation(
             relation_name="magma-orc8r-accessd", remote_app="orc8r-accessd"
         )
-        self.harness.add_relation_unit(
-            relation_id=accessd_relation, remote_unit_name="magma-orc8r-accessd/0"
-        )
-        self.harness.update_relation_data(
-            relation_id=accessd_relation,
-            app_or_unit="magma-orc8r-accessd/0",
-            key_values={"active": "True"},
-        )
-        service_registry_relation = self.harness.add_relation(
+
+        self._create_active_relation(
             relation_name="magma-orc8r-service-registry", remote_app="orc8r-service-registry"
         )
-        self.harness.add_relation_unit(
-            relation_id=service_registry_relation,
-            remote_unit_name="magma-orc8r-service-registry/0",
-        )
-        self.harness.update_relation_data(
-            relation_id=service_registry_relation,
-            app_or_unit="magma-orc8r-service-registry/0",
-            key_values={"active": "True"},
-        )
+
         certifier_relation = self.harness.add_relation(
             relation_name="magma-orc8r-certifier", remote_app="orc8r-certifier"
         )
@@ -284,19 +243,10 @@ class TestCharm(unittest.TestCase):
             relation_name="cert-admin-operator", remote_app="orc8r-certifier"
         )
         self.harness.add_relation(relation_name="metrics-endpoint", remote_app="prometheus-k8s")
-        accessd_relation = self.harness.add_relation(
+        self._create_active_relation(
             relation_name="magma-orc8r-accessd", remote_app="orc8r-accessd"
         )
 
-        self.harness.add_relation_unit(
-            relation_id=accessd_relation, remote_unit_name="magma-orc8r-accessd/0"
-        )
-
-        self.harness.update_relation_data(
-            relation_id=accessd_relation,
-            app_or_unit="magma-orc8r-accessd/0",
-            key_values={"active": "True"},
-        )
         self.harness.container_pebble_ready("magma-orc8r-orchestrator")
 
         patch_exec.assert_not_called()
@@ -321,19 +271,10 @@ class TestCharm(unittest.TestCase):
             relation_name="cert-admin-operator", remote_app="orc8r-certifier"
         )
         self.harness.add_relation(relation_name="metrics-endpoint", remote_app="prometheus-k8s")
-        accessd_relation = self.harness.add_relation(
+        self._create_active_relation(
             relation_name="magma-orc8r-accessd", remote_app="orc8r-accessd"
         )
 
-        self.harness.add_relation_unit(
-            relation_id=accessd_relation, remote_unit_name="magma-orc8r-accessd/0"
-        )
-
-        self.harness.update_relation_data(
-            relation_id=accessd_relation,
-            app_or_unit="magma-orc8r-accessd/0",
-            key_values={"active": "True"},
-        )
         container = self.harness.model.unit.get_container("magma-orc8r-orchestrator")
         self.harness.set_can_connect(container, False)
         self.harness.charm.on.magma_orc8r_orchestrator_pebble_ready.emit(container)
@@ -474,7 +415,7 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="orc8r-certifier"
         )
-        self._create_relations()
+        self._create_all_relations()
         self.harness.container_pebble_ready("magma-orc8r-orchestrator")
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
 
@@ -515,21 +456,11 @@ class TestCharm(unittest.TestCase):
             relation_name="magma-orc8r-certifier", remote_app="orc8r-certifier"
         )
 
-        accessd_relation = self.harness.add_relation(
+        self._create_active_relation(
             relation_name="magma-orc8r-accessd", remote_app="orc8r-accessd"
         )
         self.harness.add_relation(
             relation_name="magma-orc8r-service-registry", remote_app="orc8r-service-registry"
-        )
-
-        self.harness.add_relation_unit(
-            relation_id=accessd_relation, remote_unit_name="magma-orc8r-accessd/0"
-        )
-
-        self.harness.update_relation_data(
-            relation_id=accessd_relation,
-            app_or_unit="magma-orc8r-accessd/0",
-            key_values={"active": "True"},
         )
 
         self.harness.container_pebble_ready(container_name="magma-orc8r-orchestrator")
@@ -559,41 +490,33 @@ class TestCharm(unittest.TestCase):
             ]
         )
 
-    def _create_relations(self):
+    def _create_active_relation(self, relation_name: str, remote_app: str):
+        """Creates a relation between orc8r-orchestrator and a remote app and activates it.
 
+        Args:
+            relation_name: str
+            remote_app: str
+        """
+        relation_id = self.harness.add_relation(relation_name=relation_name, remote_app=remote_app)
+        self.harness.add_relation_unit(relation_id=relation_id, remote_unit_name=f"{remote_app}/0")
+        self.harness.update_relation_data(
+            relation_id=relation_id,
+            app_or_unit=f"{remote_app}/0",
+            key_values={"active": "True"},
+        )
+
+    def _create_all_relations(self):
+        """Creates all the relations that are needed for orc8r_orchestrator."""
         self.harness.add_relation(relation_name="metrics-endpoint", remote_app="prometheus-k8s")
-        accessd_relation = self.harness.add_relation(
+
+        self._create_active_relation(
             relation_name="magma-orc8r-accessd", remote_app="orc8r-accessd"
         )
-        self.harness.add_relation_unit(
-            relation_id=accessd_relation, remote_unit_name="magma-orc8r-accessd/0"
-        )
-        self.harness.update_relation_data(
-            relation_id=accessd_relation,
-            app_or_unit="magma-orc8r-accessd/0",
-            key_values={"active": "True"},
-        )
-        service_registry_relation = self.harness.add_relation(
+
+        self._create_active_relation(
             relation_name="magma-orc8r-service-registry", remote_app="orc8r-service-registry"
         )
-        self.harness.add_relation_unit(
-            relation_id=service_registry_relation,
-            remote_unit_name="magma-orc8r-service-registry/0",
-        )
-        self.harness.update_relation_data(
-            relation_id=service_registry_relation,
-            app_or_unit="magma-orc8r-service-registry/0",
-            key_values={"active": "True"},
-        )
-        certifier_relation = self.harness.add_relation(
+
+        self._create_active_relation(
             relation_name="magma-orc8r-certifier", remote_app="orc8r-certifier"
-        )
-        self.harness.add_relation_unit(
-            relation_id=certifier_relation,
-            remote_unit_name="magma-orc8r-certifier/0",
-        )
-        self.harness.update_relation_data(
-            relation_id=certifier_relation,
-            app_or_unit="magma-orc8r-certifier/0",
-            key_values={"active": "True"},
         )
