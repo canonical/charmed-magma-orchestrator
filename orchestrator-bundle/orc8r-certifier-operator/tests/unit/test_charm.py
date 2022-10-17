@@ -18,7 +18,7 @@ from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.serialization import pkcs12
 from ops import testing
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.model import BlockedStatus, WaitingStatus
 from ops.pebble import PathError
 from pgconnstr import ConnectionString  # type: ignore[import]
 
@@ -688,7 +688,7 @@ class TestCharm(unittest.TestCase):
         )
 
         self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
-        assert self.harness.charm.unit.status == ActiveStatus()
+
         self.harness.remove_relation(db_relation_id)
         self.assertEqual(
             self.harness.charm.unit.status,

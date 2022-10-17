@@ -262,8 +262,6 @@ class TestCharm(unittest.TestCase):
         )
         self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
 
-        self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
-
         self.harness.remove_relation(db_relation_id)
         self.assertEqual(
             self.harness.charm.unit.status, BlockedStatus("Waiting for db relation to be created")
