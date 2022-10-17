@@ -408,7 +408,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.exec", new_callable=Mock)
     @patch("ops.model.Container.exists", new=Mock())
-    def test_given_pebble_ready_when_required_relation_broken_then_status_is_blocked(  # noqa: E501
+    def test_given_pebble_ready_when_metrics_endpoint_relation_broken_then_status_is_blocked(  # noqa: E501
         self, patch_exec
     ):
         patch_exec.return_value = MockExec()
@@ -417,7 +417,6 @@ class TestCharm(unittest.TestCase):
         )
         self._create_all_relations()
         self.harness.container_pebble_ready("magma-orc8r-orchestrator")
-        self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
 
         self.harness.remove_relation(
             self.harness.model.get_relation("metrics-endpoint").id  # type: ignore[union-attr]
@@ -428,6 +427,18 @@ class TestCharm(unittest.TestCase):
             BlockedStatus("Waiting for relation(s) to be created: metrics-endpoint"),
         )
 
+    @patch("ops.model.Container.exec", new_callable=Mock)
+    @patch("ops.model.Container.exists", new=Mock())
+    def test_given_pebble_ready_when_accessd_relation_broken_then_status_is_blocked(  # noqa: E501
+        self, patch_exec
+    ):
+        patch_exec.return_value = MockExec()
+        self.harness.add_relation(
+            relation_name="cert-admin-operator", remote_app="orc8r-certifier"
+        )
+        self._create_all_relations()
+        self.harness.container_pebble_ready("magma-orc8r-orchestrator")
+
         self.harness.remove_relation(
             self.harness.model.get_relation("magma-orc8r-accessd").id  # type: ignore[union-attr]
         )
@@ -437,6 +448,17 @@ class TestCharm(unittest.TestCase):
             BlockedStatus("Waiting for relation(s) to be created: magma-orc8r-accessd"),
         )
 
+    @patch("ops.model.Container.exec", new_callable=Mock)
+    @patch("ops.model.Container.exists", new=Mock())
+    def test_given_pebble_ready_when_service_registry_relation_broken_then_status_is_blocked(  # noqa: E501
+        self, patch_exec
+    ):
+        patch_exec.return_value = MockExec()
+        self.harness.add_relation(
+            relation_name="cert-admin-operator", remote_app="orc8r-certifier"
+        )
+        self._create_all_relations()
+        self.harness.container_pebble_ready("magma-orc8r-orchestrator")
         self.harness.remove_relation(
             self.harness.model.get_relation(
                 "magma-orc8r-service-registry"
@@ -491,11 +513,13 @@ class TestCharm(unittest.TestCase):
         )
 
     def _create_active_relation(self, relation_name: str, remote_app: str):
-        """Creates a relation between orc8r-orchestrator and a remote app and activates it.
+        """Creates a relation between orc8r-nginx and a remote app.
+
+         Mocks service status of remote app workload.
 
         Args:
-            relation_name: str
-            remote_app: str
+            relation_name (str): Relation name
+            remote_app (str): Remote application
         """
         relation_id = self.harness.add_relation(relation_name=relation_name, remote_app=remote_app)
         self.harness.add_relation_unit(relation_id=relation_id, remote_unit_name=f"{remote_app}/0")

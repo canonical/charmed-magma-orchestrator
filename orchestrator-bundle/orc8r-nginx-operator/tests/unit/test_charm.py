@@ -256,14 +256,13 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.exists")
-    def test_given_pebble_ready_when_required_relation_broken_then_status_is_blocked(  # noqa: E501
+    def test_given_pebble_ready_when_obsidian_relation_broken_then_status_is_blocked(  # noqa: E501
         self, patch_file_exists
     ):
         patch_file_exists.return_value = True
         self.harness.update_config(key_values={"domain": "whatever.com"})
         self._create_all_relations()
         self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
-        self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
 
         self.harness.remove_relation(
             self.harness.model.get_relation("magma-orc8r-obsidian").id  # type: ignore[union-attr]
@@ -274,12 +273,19 @@ class TestCharm(unittest.TestCase):
             BlockedStatus("Waiting for relation(s) to be created: magma-orc8r-obsidian"),
         )
 
+    @patch("ops.model.Container.exists")
+    def test_given_pebble_ready_when_bootstrapper_relation_broken_then_status_is_blocked(  # noqa: E501
+        self, patch_file_exists
+    ):
+        patch_file_exists.return_value = True
+        self.harness.update_config(key_values={"domain": "whatever.com"})
+        self._create_all_relations()
+        self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
         self.harness.remove_relation(
             self.harness.model.get_relation(
                 "magma-orc8r-bootstrapper"
             ).id  # type: ignore[union-attr]
         )
-
         self.assertEqual(
             self.harness.charm.unit.status,
             BlockedStatus("Waiting for relation(s) to be created: magma-orc8r-bootstrapper"),
@@ -409,11 +415,13 @@ class TestCharm(unittest.TestCase):
         )
 
     def _create_active_relation(self, relation_name: str, remote_app: str):
-        """Creates a relation between orc8r-nginx and a remote app and activates it.
+        """Creates a relation between orc8r-nginx and a remote app.
+
+         Mocks service status of remote app workload.
 
         Args:
-            relation_name: str
-            remote_app: str
+            relation_name (str): Relation name
+            remote_app (str): Remote application
         """
         relation_id = self.harness.add_relation(relation_name=relation_name, remote_app=remote_app)
         self.harness.add_relation_unit(relation_id=relation_id, remote_unit_name=f"{remote_app}/0")

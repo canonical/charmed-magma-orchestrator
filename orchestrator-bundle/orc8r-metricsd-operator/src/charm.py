@@ -175,6 +175,11 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
             return
 
     def _on_required_relation_broken(self, event: RelationBrokenEvent):
+        """Triggered on relation broken events, sets the status of the charm to blocked.
+
+        Args:
+            event(RelationBrokenEvent): juju event
+        """
         self.unit.status = BlockedStatus(
             f"Waiting for relation(s) to be created: {event.relation.name}"
         )

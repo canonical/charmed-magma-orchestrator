@@ -56,13 +56,12 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.push")
-    def test_given_pebble_ready_when_required_relation_broken_then_status_is_blocked(
+    def test_given_pebble_ready_when_alertmanager_relation_broken_then_status_is_blocked(
         self, patch_push
     ):
         self._create_relations(activate=True)
 
         self.harness.charm.on.magma_orc8r_metricsd_pebble_ready.emit(self.container)
-        self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
 
         self.harness.remove_relation(
             self.harness.model.get_relation("alertmanager-k8s").id  # type: ignore[union-attr]
@@ -72,6 +71,14 @@ class TestCharm(unittest.TestCase):
             self.harness.charm.unit.status,
             BlockedStatus("Waiting for relation(s) to be created: alertmanager-k8s"),
         )
+
+    @patch("ops.model.Container.push")
+    def test_given_pebble_ready_when_alertmanager_configurer_relation_broken_then_status_is_blocked(  # noqa: E501
+        self, patch_push
+    ):
+        self._create_relations(activate=True)
+
+        self.harness.charm.on.magma_orc8r_metricsd_pebble_ready.emit(self.container)
 
         self.harness.remove_relation(
             self.harness.model.get_relation(
@@ -84,6 +91,14 @@ class TestCharm(unittest.TestCase):
             BlockedStatus("Waiting for relation(s) to be created: alertmanager-configurer-k8s"),
         )
 
+    @patch("ops.model.Container.push")
+    def test_given_pebble_ready_when_required_prometheus_broken_then_status_is_blocked(
+        self, patch_push
+    ):
+        self._create_relations(activate=True)
+
+        self.harness.charm.on.magma_orc8r_metricsd_pebble_ready.emit(self.container)
+
         self.harness.remove_relation(
             self.harness.model.get_relation("prometheus-k8s").id  # type: ignore[union-attr]
         )
@@ -92,6 +107,14 @@ class TestCharm(unittest.TestCase):
             self.harness.charm.unit.status,
             BlockedStatus("Waiting for relation(s) to be created: prometheus-k8s"),
         )
+
+    @patch("ops.model.Container.push")
+    def test_given_pebble_ready_when_prometheus_configurer_relation_broken_then_status_is_blocked(
+        self, patch_push
+    ):
+        self._create_relations(activate=True)
+
+        self.harness.charm.on.magma_orc8r_metricsd_pebble_ready.emit(self.container)
 
         self.harness.remove_relation(
             self.harness.model.get_relation(
@@ -103,6 +126,14 @@ class TestCharm(unittest.TestCase):
             self.harness.charm.unit.status,
             BlockedStatus("Waiting for relation(s) to be created: prometheus-configurer-k8s"),
         )
+
+    @patch("ops.model.Container.push")
+    def test_given_pebble_ready_when_required_orc8r_orchestrator_broken_then_status_is_blocked(
+        self, patch_push
+    ):
+        self._create_relations(activate=True)
+
+        self.harness.charm.on.magma_orc8r_metricsd_pebble_ready.emit(self.container)
 
         self.harness.remove_relation(
             self.harness.model.get_relation(
