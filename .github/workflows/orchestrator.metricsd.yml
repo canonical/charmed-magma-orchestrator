@@ -78,15 +78,22 @@ jobs:
 
           echo "# Bootstrap controller"
           sleep 180  # Microk8s needs time to initialize properly
-          /usr/bin/sg microk8s -c "juju bootstrap --debug --verbose microk8s integration-tests --model-default test-mode=true --model-default automatically-retry-hooks=true --model-default logging-config='<root>=DEBUG'  --bootstrap-constraints=''"
+          /usr/bin/sg microk8s -c "juju bootstrap --debug --verbose microk8s integration-tests-$GITHUB_RUN_ID --model-default test-mode=true --model-default automatically-retry-hooks=true --model-default logging-config='<root>=DEBUG'  --bootstrap-constraints=''"
+
       - name: Run integration tests
         run: cd orchestrator-bundle/orc8r-metricsd-operator && tox -e integration
+
       - name: Archive charmcraft logs
         if: failure()
         uses: actions/upload-artifact@v3
         with:
           name: charmcraft-logs
           path: /home/runner/snap/charmcraft/common/cache/charmcraft/log/*.log
+
+      - name: Clean up
+        if: always()
+        run: |
+          yes | juju kill-controller integration-tests-$GITHUB_RUN_ID
 
   orc8r-metricsd-charmhub-upload:
     if: github.ref_name == 'main'
