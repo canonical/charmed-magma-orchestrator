@@ -393,11 +393,10 @@ class MagmaNmsMagmalteCharm(CharmBase):
         Returns:
             None
         """
-        if self.unit.is_leader():
-            event.database = self.DB_NAME  # type: ignore[attr-defined]
-            self._on_magma_nms_magmalte_pebble_ready(event)
-        else:
-            event.defer()
+        if not self.unit.is_leader():
+            return
+        event.database = self.DB_NAME  # type: ignore[attr-defined]
+        self._on_magma_nms_magmalte_pebble_ready(event)
 
     def _on_database_relation_broken(self, event: RelationBrokenEvent):
         """Event handler for database relation broken.
