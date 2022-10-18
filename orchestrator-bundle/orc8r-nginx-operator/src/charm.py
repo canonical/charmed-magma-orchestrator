@@ -34,6 +34,7 @@ from ops.charm import (
     ConfigChangedEvent,
     InstallEvent,
     PebbleReadyEvent,
+    RelationBrokenEvent,
     RelationJoinedEvent,
 )
 from ops.main import main
@@ -81,9 +82,9 @@ class MagmaOrc8rNginxCharm(CharmBase):
         )
 
         self.framework.observe(self.on.install, self._on_install)
-        self.framework.observe(self.on.config_changed, self._on_magma_orc8r_nginx_pebble_ready)
+        self.framework.observe(self.on.config_changed, self._configure_magma_orc8r_nginx)
         self.framework.observe(
-            self.on.magma_orc8r_nginx_pebble_ready, self._on_magma_orc8r_nginx_pebble_ready
+            self.on.magma_orc8r_nginx_pebble_ready, self._configure_magma_orc8r_nginx
         )
         self.framework.observe(
             self.on.magma_orc8r_nginx_relation_joined, self._on_magma_orc8r_nginx_relation_joined
@@ -103,6 +104,15 @@ class MagmaOrc8rNginxCharm(CharmBase):
         self.framework.observe(
             self._cert_root_ca.on.certificate_available, self._on_root_ca_certificate_available
         )
+        for required_rel in self.REQUIRED_MAGMA_SERVICES_RELATIONS:
+            self.framework.observe(
+                self.on[required_rel].relation_broken, self._on_required_relation_broken
+            )
+
+        for required_rel in self.REQUIRED_MAGMA_SERVICES_RELATIONS:
+            self.framework.observe(
+                self.on[required_rel].relation_joined, self._configure_magma_orc8r_nginx
+            )
 
     def _on_install(self, event: InstallEvent) -> None:
         """Triggerred once when charm is installed.
@@ -120,7 +130,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
         self._generate_nginx_config()
         self._create_additional_orc8r_nginx_services()
 
-    def _on_magma_orc8r_nginx_pebble_ready(
+    def _configure_magma_orc8r_nginx(
         self,
         event: Union[
             PebbleReadyEvent,
@@ -230,7 +240,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
         self._container.push(
             path=f"{self.BASE_CERTS_PATH}/certifier.pem", source=event.certificate
         )
-        self._on_magma_orc8r_nginx_pebble_ready(event)
+        self._configure_magma_orc8r_nginx(event)
 
     def _on_controller_certificate_available(
         self, event: ControllerCertificateAvailableEvent
@@ -254,7 +264,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
         self._container.push(
             path=f"{self.BASE_CERTS_PATH}/controller.key", source=event.private_key
         )
-        self._on_magma_orc8r_nginx_pebble_ready(event)
+        self._configure_magma_orc8r_nginx(event)
 
     def _on_root_ca_certificate_available(self, event: RootCACertificateAvailableEvent) -> None:
         """Triggered when rootCA certificate is available.
@@ -270,7 +280,17 @@ class MagmaOrc8rNginxCharm(CharmBase):
             event.defer()
             return
         self._container.push(path=f"{self.BASE_CERTS_PATH}/rootCA.pem", source=event.certificate)
-        self._on_magma_orc8r_nginx_pebble_ready(event)
+        self._configure_magma_orc8r_nginx(event)
+
+    def _on_required_relation_broken(self, event: RelationBrokenEvent):
+        """Triggered on relation broken events, sets the status of the charm to blocked.
+
+        Args:
+            event(RelationBrokenEvent): juju event
+        """
+        self.unit.status = BlockedStatus(
+            f"Waiting for relation(s) to be created: {event.relation.name}"
+        )
 
     def _generate_nginx_config(self) -> None:
         """Generates nginx config to /etc/nginx/nginx.conf.

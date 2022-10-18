@@ -5,12 +5,18 @@
 """Collects runtime metrics from gateways and Orchestrator services."""
 
 import logging
+from typing import Union
 
 from charms.observability_libs.v1.kubernetes_service_patch import (
     KubernetesServicePatch,
     ServicePort,
 )
-from ops.charm import CharmBase, PebbleReadyEvent, RelationJoinedEvent
+from ops.charm import (
+    CharmBase,
+    PebbleReadyEvent,
+    RelationBrokenEvent,
+    RelationJoinedEvent,
+)
 from ops.main import main
 from ops.model import (
     ActiveStatus,
@@ -66,10 +72,21 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
             self._on_magma_orc8r_metricsd_relation_joined,
         )
         self.framework.observe(
-            self.on.magma_orc8r_metricsd_pebble_ready, self._on_magma_orc8r_metricsd_pebble_ready
+            self.on.magma_orc8r_metricsd_pebble_ready, self._configure_magma_orc8r_metricsd
         )
+        for required_rel in self.REQUIRED_EXTERNAL_RELATIONS + self.REQUIRED_ORC8R_RELATIONS:
+            self.framework.observe(
+                self.on[required_rel].relation_broken, self._on_required_relation_broken
+            )
 
-    def _on_magma_orc8r_metricsd_pebble_ready(self, event: PebbleReadyEvent) -> None:
+        for required_rel in self.REQUIRED_EXTERNAL_RELATIONS + self.REQUIRED_ORC8R_RELATIONS:
+            self.framework.observe(
+                self.on[required_rel].relation_joined, self._configure_magma_orc8r_metricsd
+            )
+
+    def _configure_magma_orc8r_metricsd(
+        self, event: Union[PebbleReadyEvent, RelationJoinedEvent]
+    ) -> None:
         """Charm's main callback function, which, after ensuring all conditions are met, handles
         charm setup.
 
@@ -121,7 +138,7 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
             self._container.restart(self._service_name)
             logger.info(f"Restarted container {self._service_name}")
             self._update_relations()
-            self.unit.status = ActiveStatus()
+        self.unit.status = ActiveStatus()
 
     def _update_relations(self) -> None:
         """Updates metricsd service status in relation data bags. This way, charms that
@@ -156,6 +173,16 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
         if not self._service_is_running:
             event.defer()
             return
+
+    def _on_required_relation_broken(self, event: RelationBrokenEvent):
+        """Triggered on relation broken events, sets the status of the charm to blocked.
+
+        Args:
+            event(RelationBrokenEvent): juju event
+        """
+        self.unit.status = BlockedStatus(
+            f"Waiting for relation(s) to be created: {event.relation.name}"
+        )
 
     @property
     def _pebble_layer(self) -> Layer:
