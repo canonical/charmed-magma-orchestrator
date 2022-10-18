@@ -197,8 +197,6 @@ class Orc8rBase(Object):
         """
         if self.charm.unit.is_leader():
             event.database = self.DB_NAME  # type: ignore[attr-defined]
-        else:
-            event.defer()
 
     def _on_database_relation_broken(self, event: RelationBrokenEvent):
         """Event handler for database relation broken.
