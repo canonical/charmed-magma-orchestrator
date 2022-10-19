@@ -31,4 +31,4 @@ jobs:
     uses: ./.github/workflows/upload-charm.yml
     secrets: inherit
     with:
-      charm: orc8r-tenants
+      charm: orc8r-tenants-operator
