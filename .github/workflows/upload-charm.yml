@@ -10,7 +10,7 @@ on:
 jobs:
   charmhub-upload:
     runs-on: ubuntu-20.04
-    name: Charmhub upload ${{ inputs.charm }}-operator
+    name: Charmhub upload ${{ inputs.charm }}
     steps:
       - uses: actions/checkout@v2
 
@@ -27,7 +27,7 @@ jobs:
         with:
           credentials: ${{ secrets.CHARMCRAFT_AUTH }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          charm-path: ./orchestrator-bundle/${{ inputs.charm }}-operator
+          charm-path: ./orchestrator-bundle/${{ inputs.charm }}
 
       - name: Select charmhub channel
         uses: canonical/charming-actions/channel@2.0.0-rc
@@ -41,7 +41,7 @@ jobs:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
           upload-image: "false"
           channel: "${{ steps.channel.outputs.name }}"
-          charm-path: ./orchestrator-bundle/${{ inputs.charm }}-operator
+          charm-path: ./orchestrator-bundle/${{ inputs.charm }}
           tag-prefix: magma-${{ inputs.charm }}
 
       - name: Chmod charmcraft logs

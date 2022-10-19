@@ -31,4 +31,4 @@ jobs:
     uses: ./.github/workflows/upload-charm.yml
     secrets: inherit
     with:
-      charm: nms-nginx-proxy
+      charm: nms-nginx-proxy-operator

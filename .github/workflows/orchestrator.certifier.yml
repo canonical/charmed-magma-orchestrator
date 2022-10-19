@@ -31,7 +31,7 @@ jobs:
     uses: ./.github/workflows/upload-charm.yml
     secrets: inherit
     with:
-      charm: orc8r-certifier
+      charm: orc8r-certifier-operator
 
   orc8r-certifier-libs-charmhub-upload:
     if: github.ref_name == 'main'
