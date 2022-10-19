@@ -6,7 +6,7 @@ from unittest.mock import Mock, PropertyMock, patch
 
 from charms.magma_orc8r_libs.v0.orc8r_base_db import Orc8rBase
 from ops import testing
-from ops.model import ActiveStatus
+from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from pgconnstr import ConnectionString  # type: ignore[import]
 from test_orc8r_base_db_charm.src.charm import (  # type: ignore[import]
     MagmaOrc8rDummyCharm,
@@ -76,27 +76,21 @@ class TestCharm(unittest.TestCase):
             self.harness.charm._orc8r_base._on_database_relation_joined(db_event)
         self.assertEqual(db_event.database, self.TEST_DB_NAME)
 
-    @patch(
-        "charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._get_db_connection_string",
-        new_callable=PropertyMock,
-    )
+    @patch("psycopg2.connect", new=Mock())
     @patch(
         "charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase.namespace", new_callable=PropertyMock
     )
-    @patch("charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._db_relation_created")
-    @patch("charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._db_relation_ready")
     def test_given_ready_when_get_plan_then_plan_is_filled_with_magma_orc8r_dummy_service_content(  # noqa: E501
         self,
-        db_relation_established,
-        db_relation_created,
         patch_namespace,
-        get_db_connection_string,
     ):
         namespace = "whatever"
-        db_relation_established.return_value = True
-        db_relation_created.return_value = True
+        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        key_values = {"master": self.TEST_DB_CONNECTION_STRING.__str__()}
+        self.harness.update_relation_data(
+            relation_id=db_relation_id, key_values=key_values, app_or_unit="postgresql-k8s"
+        )
         patch_namespace.return_value = namespace
-        get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
 
         self.harness.container_pebble_ready("magma-orc8r-dummy")
 
@@ -129,43 +123,72 @@ class TestCharm(unittest.TestCase):
         updated_plan = self.harness.get_container_pebble_plan("magma-orc8r-dummy").to_dict()
         self.assertEqual(expected_plan, updated_plan)
 
-    @patch(
-        "charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._get_db_connection_string",
-        new_callable=PropertyMock,
-    )
-    @patch("charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._db_relation_created")
-    @patch("charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._db_relation_ready")
+    @patch("psycopg2.connect", new=Mock())
     def test_db_relation_added_when_get_status_then_status_is_active(
-        self, db_relation_established, db_relation_created, get_db_connection_string
+        self,
     ):
-        db_relation_established.return_value = True
-        db_relation_created.return_value = True
-        get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
+        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        key_values = {"master": self.TEST_DB_CONNECTION_STRING.__str__()}
+        self.harness.update_relation_data(
+            relation_id=db_relation_id, key_values=key_values, app_or_unit="postgresql-k8s"
+        )
 
         self.harness.container_pebble_ready("magma-orc8r-dummy")
 
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
 
+    def test_given_db_relation_not_created_when_pebble_ready_then_status_is_blocked(
+        self,
+    ):
+        self.harness.container_pebble_ready(container_name="magma-orc8r-dummy")
+        assert self.harness.charm.unit.status == BlockedStatus(
+            "Waiting for db relation to be created"
+        )
+
+    def test_given_db_relation_not_ready_when_pebble_ready_then_status_is_blocked(self):
+        self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        self.harness.container_pebble_ready(container_name="magma-orc8r-dummy")
+        assert self.harness.charm.unit.status == WaitingStatus(
+            "Waiting for db relation to be ready"
+        )
+
+    @patch("psycopg2.connect", new=Mock())
     @patch(
         "charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase.namespace",
         PropertyMock(return_value="qwerty"),
     )
+    def test_given_pebble_ready_when_db_relation_broken_then_status_is_blocked(
+        self,
+    ):
+        self.harness.set_can_connect("magma-orc8r-dummy", True)
+        container = self.harness.model.unit.get_container("magma-orc8r-dummy")
+        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        key_values = {"master": self.TEST_DB_CONNECTION_STRING.__str__()}
+        self.harness.update_relation_data(
+            relation_id=db_relation_id, key_values=key_values, app_or_unit="postgresql-k8s"
+        )
+        self.harness.charm.on.magma_orc8r_dummy_pebble_ready.emit(container)
+        assert self.harness.charm.unit.status == ActiveStatus()
+
+        self.harness.remove_relation(db_relation_id)
+
+        assert self.harness.charm.unit.status == BlockedStatus(
+            "Waiting for db relation to be created"
+        )
+
+    @patch("psycopg2.connect", new=Mock())
     @patch(
-        "charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._db_relation_created",
-        PropertyMock(return_value=True),
-    )
-    @patch(
-        "charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._db_relation_ready",
-        PropertyMock(return_value=True),
-    )
-    @patch(
-        "charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase._get_db_connection_string",
-        new_callable=PropertyMock,
+        "charms.magma_orc8r_libs.v0.orc8r_base_db.Orc8rBase.namespace",
+        PropertyMock(return_value="qwerty"),
     )
     def test_given_magma_orc8r_dummy_service_running_when_metrics_magma_orc8r_dummy_relation_joined_event_emitted_then_active_key_in_relation_data_is_set_to_true(  # noqa: E501
-        self, mock_get_db_connection_string
+        self,
     ):
-        mock_get_db_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
+        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        key_values = {"master": self.TEST_DB_CONNECTION_STRING.__str__()}
+        self.harness.update_relation_data(
+            relation_id=db_relation_id, key_values=key_values, app_or_unit="postgresql-k8s"
+        )
         self.harness.set_can_connect("magma-orc8r-dummy", True)
         container = self.harness.model.unit.get_container("magma-orc8r-dummy")
         self.harness.charm.on.magma_orc8r_dummy_pebble_ready.emit(container)

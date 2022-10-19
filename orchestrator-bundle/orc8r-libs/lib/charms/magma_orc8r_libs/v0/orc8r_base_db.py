@@ -55,10 +55,16 @@ provides:
 """
 
 import logging
+from typing import Union
 
 import ops.lib
 import psycopg2  # type: ignore[import]
-from ops.charm import CharmBase, PebbleReadyEvent, RelationJoinedEvent
+from ops.charm import (
+    CharmBase,
+    PebbleReadyEvent,
+    RelationBrokenEvent,
+    RelationJoinedEvent,
+)
 from ops.framework import Object
 from ops.model import (
     ActiveStatus,
@@ -79,7 +85,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 12
+LIBPATCH = 13
 
 
 logger = logging.getLogger(__name__)
@@ -123,6 +129,9 @@ class Orc8rBase(Object):
         self.framework.observe(
             self.db.on.database_relation_joined, self._on_database_relation_joined
         )
+        self.framework.observe(
+            self.db.on.database_relation_broken, self._on_database_relation_broken
+        )
         self.framework.observe(relation_joined_event, self._on_relation_joined)
 
     @property
@@ -132,7 +141,7 @@ class Orc8rBase(Object):
             return False
         return True
 
-    def _on_magma_orc8r_pebble_ready(self, event: PebbleReadyEvent):
+    def _on_magma_orc8r_pebble_ready(self, event: Union[PebbleReadyEvent, RelationJoinedEvent]):
         if not self._db_relation_created:
             self.charm.unit.status = BlockedStatus("Waiting for db relation to be created")
             event.defer()
@@ -141,9 +150,9 @@ class Orc8rBase(Object):
             self.charm.unit.status = WaitingStatus("Waiting for db relation to be ready")
             event.defer()
             return
-        self._configure_orc8r(event)
+        self._configure_pebble(event)
 
-    def _configure_orc8r(self, event: PebbleReadyEvent):
+    def _configure_pebble(self, event: Union[PebbleReadyEvent, RelationJoinedEvent]):
         """Adds layer to pebble config if the proposed config is different from the current one."""
         if self.container.can_connect():
             self.charm.unit.status = MaintenanceStatus("Configuring pod")
@@ -188,8 +197,16 @@ class Orc8rBase(Object):
         """
         if self.charm.unit.is_leader():
             event.database = self.DB_NAME  # type: ignore[attr-defined]
-        else:
-            event.defer()
+
+    def _on_database_relation_broken(self, event: RelationBrokenEvent):
+        """Event handler for database relation broken.
+
+        Args:
+            event (RelationJoinedEvent): Juju event
+        Returns:
+            None
+        """
+        self.charm.unit.status = BlockedStatus("Waiting for db relation to be created")
 
     @property
     def _db_relation_ready(self) -> bool:
