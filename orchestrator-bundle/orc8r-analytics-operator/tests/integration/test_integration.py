@@ -24,7 +24,11 @@ class TestOrc8rAnalytics:
             f"{CHARM_NAME}-image": METADATA["resources"][f"{CHARM_NAME}-image"]["upstream-source"],
         }
         await ops_test.model.deploy(
-            charm, resources=resources, application_name=APPLICATION_NAME, trust=True
+            charm,
+            resources=resources,
+            application_name=APPLICATION_NAME,
+            trust=True,
+            series="focal",
         )
 
     async def test_wait_for_idle(self, ops_test, build_and_deploy):
