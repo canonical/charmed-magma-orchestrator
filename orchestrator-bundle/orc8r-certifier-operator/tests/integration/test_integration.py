@@ -14,13 +14,14 @@ METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 APPLICATION_NAME = "orc8r-certifier"
 CHARM_NAME = "magma-orc8r-certifier"
 DOMAIN = "whatever.com"
+DB_APPLICATION_NAME = "postgresql-k8s"
 
 
 class TestOrc8rCertifier:
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail
     async def setup(self, ops_test):
-        await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
+        await ops_test.model.deploy("postgresql-k8s", application_name=DB_APPLICATION_NAME)
         await ops_test.model.wait_for_idle(apps=["postgresql-k8s"], status="active", timeout=1000)
         await self._deploy_tls_certificates_operator(ops_test)
 
@@ -49,6 +50,7 @@ class TestOrc8rCertifier:
             application_name=APPLICATION_NAME,
             config={"domain": DOMAIN},
             trust=True,
+            series="focal",
         )
 
     @pytest.mark.abort_on_fail
@@ -70,6 +72,10 @@ class TestOrc8rCertifier:
         await ops_test.model.wait_for_idle(
             apps=[APPLICATION_NAME], status="active", timeout=1000, wait_for_exact_units=2
         )
+
+    async def test_remove_db_application(self, ops_test, setup, build_and_deploy):
+        await ops_test.model.applications[DB_APPLICATION_NAME].remove(force=True)
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
 
     @pytest.mark.xfail(reason="Bug in Juju: https://bugs.launchpad.net/juju/+bug/1977582")
     async def test_build_and_deploy_and_scale_down(self, ops_test, setup, build_and_deploy):

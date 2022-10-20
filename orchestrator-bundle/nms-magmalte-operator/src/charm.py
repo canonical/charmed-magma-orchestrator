@@ -52,6 +52,12 @@ logger = logging.getLogger(__name__)
 pgsql = ops.lib.use("pgsql", 1, "postgresql-charmers@lists.launchpad.net")
 
 
+class ServiceNotRunningError(Exception):
+    """Custom error that can be raised if container service is not running."""
+
+    pass
+
+
 class MagmaNmsMagmalteCharm(CharmBase):
     """Main class that is instantiated everytime an event occurs."""
 
@@ -86,6 +92,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         self.framework.observe(
             self._db.on.database_relation_joined, self._on_database_relation_joined
         )
+        self.framework.observe(self.on.db_relation_broken, self._on_database_relation_broken)
         self.framework.observe(
             self.on.magma_nms_magmalte_relation_joined,
             self._on_magma_nms_magmalte_relation_joined,
@@ -295,12 +302,17 @@ class MagmaNmsMagmalteCharm(CharmBase):
         self._on_magma_nms_magmalte_pebble_ready(event)
 
     def _on_magma_nms_magmalte_pebble_ready(
-        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, UrlsAvailableEvent]
+        self,
+        event: Union[
+            PebbleReadyEvent, CertificateAvailableEvent, UrlsAvailableEvent, RelationJoinedEvent
+        ],
     ) -> None:
-        """Triggered when pebble is ready.
+        """Configures pebble layer and creates admin user of nms-magmalte.
 
         Args:
-            event (PebbleReadyEvent, CertificateAvailableEvent): Juju event
+            event (
+            PebbleReadyEvent, CertificateAvailableEvent, UrlsAvailableEvent, RelationJoinedEvent
+            ): Juju event
 
         Returns:
             None
@@ -359,7 +371,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
                         "Admin password not present after creating it. This should never happen."
                     )
                 return
-            except ExecError:
+            except (ExecError, ServiceNotRunningError):
                 logger.info("Failed to create admin user - Will retry in 5 seconds")
                 time.sleep(5)
         message = "Timed out trying to create admin user for NMS"
@@ -381,10 +393,20 @@ class MagmaNmsMagmalteCharm(CharmBase):
         Returns:
             None
         """
-        if self.unit.is_leader():
-            event.database = self.DB_NAME  # type: ignore[attr-defined]
-        else:
-            event.defer()
+        if not self.unit.is_leader():
+            return
+        event.database = self.DB_NAME  # type: ignore[attr-defined]
+        self._on_magma_nms_magmalte_pebble_ready(event)
+
+    def _on_database_relation_broken(self, event: RelationBrokenEvent):
+        """Event handler for database relation broken.
+
+        Args:
+            event (RelationBrokenEvent): Juju event
+        Returns:
+            None
+        """
+        self.unit.status = BlockedStatus("Waiting for db relation to be created")
 
     def _on_magma_nms_magmalte_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Triggered when requirers join the nms_magmalte relation.
@@ -417,7 +439,10 @@ class MagmaNmsMagmalteCharm(CharmBase):
         )
 
     def _configure_pebble(
-        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, UrlsAvailableEvent]
+        self,
+        event: Union[
+            PebbleReadyEvent, CertificateAvailableEvent, UrlsAvailableEvent, RelationJoinedEvent
+        ],
     ) -> None:
         """Configures pebble layer.
 
@@ -500,6 +525,11 @@ class MagmaNmsMagmalteCharm(CharmBase):
         Returns:
             None
         """
+        if not self._service_is_running:
+            message = "Service should be running for the user to be created"
+            logger.error(message)
+            raise ServiceNotRunningError(message)
+
         logger.info("Creating admin user for NMS")
         process = self._container.exec(
             [

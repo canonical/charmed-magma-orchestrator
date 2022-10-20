@@ -20,6 +20,7 @@ CERTIFIER_APPLICATION_NAME = "orc8r-certifier"
 CERTIFIER_CHARM_NAME = "magma-orc8r-certifier"
 CERTIFIER_CHARM_FILE_NAME = "magma-orc8r-certifier_ubuntu-20.04-amd64.charm"
 DOMAIN = "whatever.com"
+DB_APPLICATION_NAME = "postgresql-k8s"
 
 
 class TestNmsMagmaLTE:
@@ -42,7 +43,7 @@ class TestNmsMagmaLTE:
 
     @staticmethod
     async def _deploy_postgresql(ops_test):
-        await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
+        await ops_test.model.deploy("postgresql-k8s", application_name=DB_APPLICATION_NAME)
 
     @staticmethod
     async def _deploy_tls_certificates_operator(ops_test):
@@ -73,6 +74,7 @@ class TestNmsMagmaLTE:
             application_name=CERTIFIER_APPLICATION_NAME,
             config={"domain": DOMAIN},
             trust=True,
+            series="focal",
         )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
@@ -107,7 +109,11 @@ class TestNmsMagmaLTE:
             f"{CHARM_NAME}-image": METADATA["resources"][f"{CHARM_NAME}-image"]["upstream-source"],
         }
         await ops_test.model.deploy(
-            charm, resources=resources, application_name=APPLICATION_NAME, trust=True
+            charm,
+            resources=resources,
+            application_name=APPLICATION_NAME,
+            trust=True,
+            series="focal",
         )
 
     async def test_wait_for_blocked_status(self, ops_test, setup, build_and_deploy_charm):
@@ -122,6 +128,22 @@ class TestNmsMagmaLTE:
         )
         await ops_test.model.add_relation(
             relation1=f"{APPLICATION_NAME}:grafana-auth", relation2="grafana-k8s"
+        )
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
+
+    async def test_remove_db_application(self, ops_test, setup, build_and_deploy_charm):
+        await ops_test.model.remove_application(
+            DB_APPLICATION_NAME, block_until_done=True, force=True
+        )
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
+
+    async def test_redeploy_db(self, ops_test, setup, build_and_deploy_charm):
+        await self._deploy_postgresql(ops_test)
+        await ops_test.model.add_relation(
+            relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
+        )
+        await ops_test.model.add_relation(
+            relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
 

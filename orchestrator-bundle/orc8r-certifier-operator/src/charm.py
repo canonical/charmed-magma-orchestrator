@@ -53,6 +53,7 @@ from ops.charm import (
     ConfigChangedEvent,
     InstallEvent,
     PebbleReadyEvent,
+    RelationBrokenEvent,
     RelationJoinedEvent,
 )
 from ops.main import main
@@ -115,6 +116,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         # Relation events
         self.framework.observe(
             self._db.on.database_relation_joined, self._on_database_relation_joined
+        )
+        self.framework.observe(
+            self._db.on.database_relation_broken, self._on_database_relation_broken
         )
         self.framework.observe(
             self.on.certificates_relation_created, self._on_certificates_relation_created
@@ -222,7 +226,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self._on_non_leader_config_changed(event)
 
     def _on_magma_orc8r_certifier_pebble_ready(
-        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationJoinedEvent]
     ) -> None:
         """Juju event triggered when pebble is ready.
 
@@ -281,8 +285,21 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         Returns:
             None
         """
-        if self.unit.is_leader():
-            event.database = self.DB_NAME  # type: ignore[attr-defined]
+        if not self.unit.is_leader():
+            return
+        event.database = self.DB_NAME  # type: ignore[attr-defined]
+        self._on_magma_orc8r_certifier_pebble_ready(event)
+
+    def _on_database_relation_broken(self, event: RelationBrokenEvent):
+        """Event handler for database relation broken.
+
+        Args:
+            event (RelationBrokenEvent): Juju event
+
+        Returns:
+            None
+        """
+        self.unit.status = BlockedStatus("Waiting for database relation to be created")
 
     def _on_certificates_relation_created(self, event: RelationJoinedEvent) -> None:
         """Juju event triggered when the certificates relation is created.
@@ -709,7 +726,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._push_application_certificates()
 
     def _configure_magma_orc8r_certifier(
-        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationJoinedEvent]
     ) -> None:
         """Adds layer to pebble config if the proposed config is different from the current one.
 

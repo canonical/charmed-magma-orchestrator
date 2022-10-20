@@ -9,7 +9,7 @@ from ops.model import ActiveStatus, BlockedStatus
 from ops.pebble import ExecError
 from pgconnstr import ConnectionString  # type: ignore[import]
 
-from charm import MagmaNmsMagmalteCharm
+from charm import MagmaNmsMagmalteCharm, ServiceNotRunningError
 
 testing.SIMULATE_CAN_CONNECT = True
 
@@ -75,7 +75,7 @@ class TestCharm(unittest.TestCase):
         db_event.master.port = postgres_port
         return db_event
 
-    def test_given_db_relation_not_created_when_pebble_ready_then_unit_is_in_blocked_state(
+    def test_given_db_relation_not_created_when_pebble_ready_then_unit_is_in_blocked_state(  # noqa: E501
         self,
     ):
         self.harness.add_relation(
@@ -233,11 +233,48 @@ class TestCharm(unittest.TestCase):
 
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
 
+    @patch("ops.model.Container.exec", new=Mock())
+    @patch("ops.model.Container.exists")
+    @patch("psycopg2.connect", new=Mock())
+    @patch("charm.ConnectionString")
+    def test_given_pebble_ready_when_db_relation_broken_then_status_is_blocked(  # noqa: E501
+        self, patch_connection_string, patch_exists
+    ):
+        event = Mock()
+        event.urls = self.GRAFANA_URLS
+        self.harness.charm._on_grafana_urls_available(event=event)
+        patch_exists.return_value = True
+        patch_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
+        self.harness.add_relation(
+            relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
+        )
+        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        key_values = {
+            "master": "dbname=test_db_name "
+            "fallback_application_name=whatever "
+            "host=123.456.789.012 "
+            "password=aaaBBBcccDDDeee "
+            "port=1234 "
+            "user=test_db_user"
+        }
+        self.harness.update_relation_data(
+            relation_id=db_relation_id, key_values=key_values, app_or_unit="postgresql-k8s"
+        )
+        self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
+
+        self.harness.remove_relation(db_relation_id)
+        self.assertEqual(
+            self.harness.charm.unit.status, BlockedStatus("Waiting for db relation to be created")
+        )
+
+    @patch("ops.model.Container.get_service", new=Mock())
     @patch("ops.model.Container.exec")
     @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
-    def test_given_username_email_and_password_are_provided_and_unit_is_leader_when_create_nms_admin_user_juju_action_then_pebble_command_is_executed(  # noqa: E501
+    def test_given_username_email_and_password_are_provided_and_service_is_running_and_unit_is_leader_when_create_nms_admin_user_juju_action_then_pebble_command_is_executed(  # noqa: E501
         self, _, mock_exec
     ):
+        container = self.harness.model.unit.get_container("magma-nms-magmalte")
+        self.harness.set_can_connect(container=container, val=True)
         action_event = Mock(
             params={
                 "email": "test@test.test",
@@ -286,9 +323,25 @@ class TestCharm(unittest.TestCase):
     @patch("ops.model.Container.exec")
     @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
     @patch("ops.charm.ActionEvent")
+    def test_given_juju_action_when_workload_service_not_running_then_user_is_not_created_and_raises_exception(  # noqa: E501
+        self, action_event, _, mock_exec
+    ):
+        mock_exec.assert_not_called()
+        mock_exec.side_effect = ServiceNotRunningError(
+            "Service should be running for the user to be created"
+        )
+        with self.assertRaises(ServiceNotRunningError):
+            self.harness.charm._create_nms_admin_user_action(action_event)
+
+    @patch("ops.model.Container.get_service", new=Mock())
+    @patch("ops.model.Container.exec")
+    @patch("charm.MagmaNmsMagmalteCharm._get_db_connection_string", new_callable=PropertyMock)
+    @patch("ops.charm.ActionEvent")
     def test_given_juju_action_when_user_creation_fails_then_action_raises_an_error(
         self, action_event, _, mock_exec
     ):
+        container = self.harness.model.unit.get_container("magma-nms-magmalte")
+        self.harness.set_can_connect(container=container, val=True)
         mock_exec.side_effect = ExecError(["drop"], 1, "exec error", "mock exec error")
         with self.assertRaises(ExecError):
             self.harness.charm._create_nms_admin_user_action(action_event)
