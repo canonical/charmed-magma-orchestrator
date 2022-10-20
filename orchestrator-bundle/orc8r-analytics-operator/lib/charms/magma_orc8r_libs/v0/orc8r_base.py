@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """# Orc8rBase Library.
+
 This library is designed to enable developers to easily create new charms for Magma orc8r. This
 library contains all the logic necessary to wait for necessary relations and be deployed.
 When initialised, this library binds a handler to the parent charm's `pebble_ready`
@@ -66,13 +67,15 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 12
+LIBPATCH = 13
 
 
 logger = logging.getLogger(__name__)
 
 
 class Orc8rBase(Object):
+    """Instantiated by Orchestrator charms."""
+
     def __init__(
         self,
         charm: CharmBase,
@@ -80,6 +83,7 @@ class Orc8rBase(Object):
         required_relations: list = None,
         additional_environment_variables: dict = None,
     ):
+        """Observes common events for all Orchestrator charms."""
         super().__init__(charm, "orc8r-base")
         self.charm = charm
         self.startup_command = startup_command
@@ -117,9 +121,7 @@ class Orc8rBase(Object):
         self._configure_orc8r(event)
 
     def _configure_orc8r(self, event):
-        """
-        Adds layer to pebble config if the proposed config is different from the current one
-        """
+        """Adds layer to pebble config if the proposed config is different from the current one."""
         if self.container.can_connect():
             self.charm.unit.status = MaintenanceStatus("Configuring pod")
             pebble_layer = self._pebble_layer()
@@ -166,6 +168,7 @@ class Orc8rBase(Object):
 
     @property
     def namespace(self) -> str:
+        """Returns Kubernetes namespace."""
         return self.charm.model.name
 
     def _update_relations(self):

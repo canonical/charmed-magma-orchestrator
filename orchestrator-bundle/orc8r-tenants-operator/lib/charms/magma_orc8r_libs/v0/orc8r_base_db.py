@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """# Orc8rBaseDB Library.
+
 This library is designed to enable developers to easily create new charms for Magma orc8r that
 require a relationship to a database. This library contains all the logic necessary to wait for
 necessary relations and be deployed. When initialised, this library binds a handler to the parent
@@ -54,10 +55,16 @@ provides:
 """
 
 import logging
+from typing import Union
 
 import ops.lib
 import psycopg2  # type: ignore[import]
-from ops.charm import CharmBase, PebbleReadyEvent, RelationJoinedEvent
+from ops.charm import (
+    CharmBase,
+    PebbleReadyEvent,
+    RelationBrokenEvent,
+    RelationJoinedEvent,
+)
 from ops.framework import Object
 from ops.model import (
     ActiveStatus,
@@ -78,7 +85,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 11
+LIBPATCH = 13
 
 
 logger = logging.getLogger(__name__)
@@ -86,6 +93,8 @@ pgsql = ops.lib.use("pgsql", 1, "postgresql-charmers@lists.launchpad.net")
 
 
 class Orc8rBase(Object):
+    """Instantiated by Orchestrator charms that require connection with a DB."""
+
     DB_NAME = "magma_dev"
 
     def __init__(
@@ -94,6 +103,7 @@ class Orc8rBase(Object):
         startup_command: str,
         additional_environment_variables: dict = None,
     ):
+        """Observes common events for all Orchestrator charms."""
         super().__init__(charm, "orc8r-base")
         self.charm = charm
         self.startup_command = startup_command
@@ -119,6 +129,9 @@ class Orc8rBase(Object):
         self.framework.observe(
             self.db.on.database_relation_joined, self._on_database_relation_joined
         )
+        self.framework.observe(
+            self.db.on.database_relation_broken, self._on_database_relation_broken
+        )
         self.framework.observe(relation_joined_event, self._on_relation_joined)
 
     @property
@@ -128,7 +141,7 @@ class Orc8rBase(Object):
             return False
         return True
 
-    def _on_magma_orc8r_pebble_ready(self, event: PebbleReadyEvent):
+    def _on_magma_orc8r_pebble_ready(self, event: Union[PebbleReadyEvent, RelationJoinedEvent]):
         if not self._db_relation_created:
             self.charm.unit.status = BlockedStatus("Waiting for db relation to be created")
             event.defer()
@@ -137,12 +150,10 @@ class Orc8rBase(Object):
             self.charm.unit.status = WaitingStatus("Waiting for db relation to be ready")
             event.defer()
             return
-        self._configure_orc8r(event)
+        self._configure_pebble(event)
 
-    def _configure_orc8r(self, event: PebbleReadyEvent):
-        """
-        Adds layer to pebble config if the proposed config is different from the current one
-        """
+    def _configure_pebble(self, event: Union[PebbleReadyEvent, RelationJoinedEvent]):
+        """Adds layer to pebble config if the proposed config is different from the current one."""
         if self.container.can_connect():
             self.charm.unit.status = MaintenanceStatus("Configuring pod")
             pebble_layer = self._pebble_layer()
@@ -176,8 +187,8 @@ class Orc8rBase(Object):
         )
 
     def _on_database_relation_joined(self, event: RelationJoinedEvent):
-        """
-        Event handler for database relation change.
+        """Event handler for database relation change.
+
         - Sets the event.database field on the database joined event.
         - Required because setting the database name is only possible
           from inside the event handler per https://github.com/canonical/ops-lib-pgsql/issues/2
@@ -186,13 +197,24 @@ class Orc8rBase(Object):
         """
         if self.charm.unit.is_leader():
             event.database = self.DB_NAME  # type: ignore[attr-defined]
-        else:
-            event.defer()
+
+    def _on_database_relation_broken(self, event: RelationBrokenEvent):
+        """Event handler for database relation broken.
+
+        Args:
+            event (RelationJoinedEvent): Juju event
+        Returns:
+            None
+        """
+        self.charm.unit.status = BlockedStatus("Waiting for db relation to be created")
 
     @property
     def _db_relation_ready(self) -> bool:
-        """Validates that database relation is ready (that there is a relation, credentials have
-        been passed and the database can be connected to)."""
+        """Validates that database relation is ready.
+
+        Validates that there is a relation, credentials have been passed and the database can be
+         connected to.
+        """
         db_connection_string = self._get_db_connection_string
         if not db_connection_string:
             return False
@@ -241,6 +263,7 @@ class Orc8rBase(Object):
 
     @property
     def namespace(self) -> str:
+        """Returns Kubernetes namespace."""
         return self.charm.model.name
 
     def _update_relations(self):
