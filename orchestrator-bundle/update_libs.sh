@@ -18,13 +18,12 @@ function fetch_orc8r_base_db_lib() {
 
 charms_using_orc8r_base_lib="
 orc8r-analytics
-orc8r-base-acct-operator
+orc8r-base-acct
 orc8r-dispatcher
 orc8r-eventd
-orc8r-feg-operator
-orc8r-feg-relay-operator
+orc8r-feg
+orc8r-feg-relay
 orc8r-ha
-orc8r-metricsd
 orc8r-obsidian
 orc8r-service-registry
 orc8r-streamer
@@ -37,7 +36,7 @@ orc8r-configurator
 orc8r-ctraced
 orc8r-device
 orc8r-directoryd
-orc8r-health-operator
+orc8r-health
 orc8r-lte
 orc8r-policydb
 orc8r-smsd
