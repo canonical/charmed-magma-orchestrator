@@ -1,0 +1,34 @@
+name: nms-nginx-proxy
+
+on:
+  push:
+    paths:
+      - "nms-nginx-proxy-operator/**"
+
+jobs:
+  nms-nginx-proxy-lint-report:
+    uses: ./.github/workflows/lint-report.yml
+    with:
+      charm_dir: nms-nginx-proxy-operator
+
+  nms-nginx-proxy-static-analysis:
+    uses: ./.github/workflows/static-analysis.yml
+    with:
+      charm_dir: nms-nginx-proxy-operator
+
+  nms-nginx-proxy-unit-tests-with-coverage:
+    uses: ./.github/workflows/unit-tests.yml
+    with:
+      charm_dir: nms-nginx-proxy-operator
+
+  nms-nginx-proxy-integration-test:
+    uses: ./.github/workflows/integration-tests.yml
+    with:
+      charm_dir: nms-nginx-proxy-operator
+
+  nms-nginx-proxy-charmhub-upload:
+    if: github.ref_name == 'main'
+    uses: ./.github/workflows/upload-charm.yml
+    secrets: inherit
+    with:
+      charm: nms-nginx-proxy-operator

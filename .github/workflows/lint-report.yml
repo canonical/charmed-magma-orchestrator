@@ -16,4 +16,4 @@ jobs:
       - name: Install tox
         run: pip install tox
       - name: Run tests using tox
-        run: cd orchestrator-bundle/${{ inputs.charm_dir }} && tox -e lint
+        run: cd ${{ inputs.charm_dir }} && tox -e lint

@@ -1,0 +1,34 @@
+name: orc8r-service-registry
+
+on:
+  push:
+    paths:
+      - "orc8r-service-registry-operator/**"
+
+jobs:
+  orc8r-service-registry-lint-report:
+    uses: ./.github/workflows/lint-report.yml
+    with:
+      charm_dir: orc8r-service-registry-operator
+
+  orc8r-service-registry-static-analysis:
+    uses: ./.github/workflows/static-analysis.yml
+    with:
+      charm_dir: orc8r-service-registry-operator
+
+  orc8r-service-registry-unit-tests-with-coverage:
+    uses: ./.github/workflows/unit-tests.yml
+    with:
+      charm_dir: orc8r-service-registry-operator
+
+  orc8r-service-registry-integration-test:
+    uses: ./.github/workflows/integration-tests.yml
+    with:
+      charm_dir: orc8r-service-registry-operator
+
+  orc8r-service-registry-charmhub-upload:
+    if: github.ref_name == 'main'
+    uses: ./.github/workflows/upload-charm.yml
+    secrets: inherit
+    with:
+      charm: orc8r-service-registry-operator

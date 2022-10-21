@@ -19,7 +19,7 @@ jobs:
         with:
           provider: microk8s
       - name: Run integration tests
-        run: cd orchestrator-bundle/${{ inputs.charm_dir }} && tox -e integration
+        run: cd ${{ inputs.charm_dir }} && tox -e integration
       - name: Archive charmcraft logs
         if: failure()
         uses: actions/upload-artifact@v3
