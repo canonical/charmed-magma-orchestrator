@@ -1,0 +1,34 @@
+name: orc8r-smsd
+
+on:
+  push:
+    paths:
+      - "orc8r-smsd-operator/**"
+
+jobs:
+  orc8r-smsd-lint-report:
+    uses: ./.github/workflows/lint-report.yml
+    with:
+      charm_dir: orc8r-smsd-operator
+
+  orc8r-smsd-static-analysis:
+    uses: ./.github/workflows/static-analysis.yml
+    with:
+      charm_dir: orc8r-smsd-operator
+
+  orc8r-smsd-unit-tests-with-coverage:
+    uses: ./.github/workflows/unit-tests.yml
+    with:
+      charm_dir: orc8r-smsd-operator
+
+  orc8r-smsd-integration-test:
+    uses: ./.github/workflows/integration-tests.yml
+    with:
+      charm_dir: orc8r-smsd-operator
+
+  orc8r-smsd-charmhub-upload:
+    if: github.ref_name == 'main'
+    uses: ./.github/workflows/upload-charm.yml
+    secrets: inherit
+    with:
+      charm: orc8r-smsd-operator

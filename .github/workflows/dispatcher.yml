@@ -1,0 +1,34 @@
+name: orc8r-dispatcher
+
+on:
+  push:
+    paths:
+      - "orc8r-dispatcher-operator/**"
+
+jobs:
+  orc8r-dispatcher-lint-report:
+    uses: ./.github/workflows/lint-report.yml
+    with:
+      charm_dir: orc8r-dispatcher-operator
+
+  orc8r-dispatcher-static-analysis:
+    uses: ./.github/workflows/static-analysis.yml
+    with:
+      charm_dir: orc8r-dispatcher-operator
+
+  orc8r-dispatcher-unit-tests-with-coverage:
+    uses: ./.github/workflows/unit-tests.yml
+    with:
+      charm_dir: orc8r-dispatcher-operator
+
+  orc8r-dispatcher-integration-test:
+    uses: ./.github/workflows/integration-tests.yml
+    with:
+      charm_dir: orc8r-dispatcher-operator
+
+  orc8r-dispatcher-charmhub-upload:
+    if: github.ref_name == 'main'
+    uses: ./.github/workflows/upload-charm.yml
+    secrets: inherit
+    with:
+      charm: orc8r-dispatcher-operator

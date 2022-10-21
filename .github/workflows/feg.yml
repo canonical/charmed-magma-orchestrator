@@ -1,0 +1,34 @@
+name: orc8r-feg
+
+on:
+  push:
+    paths:
+      - "orc8r-feg-operator/**"
+
+jobs:
+  orc8r-feg-lint-report:
+    uses: ./.github/workflows/lint-report.yml
+    with:
+      charm_dir: orc8r-feg-operator
+
+  orc8r-feg-static-analysis:
+    uses: ./.github/workflows/static-analysis.yml
+    with:
+      charm_dir: orc8r-feg-operator
+
+  orc8r-feg-unit-tests-with-coverage:
+    uses: ./.github/workflows/unit-tests.yml
+    with:
+      charm_dir: orc8r-feg-operator
+
+  orc8r-feg-integration-test:
+    uses: ./.github/workflows/integration-tests.yml
+    with:
+      charm_dir: orc8r-feg-operator
+
+  orc8r-feg-charmhub-upload:
+    if: github.ref_name == 'main'
+    uses: ./.github/workflows/upload-charm.yml
+    secrets: inherit
+    with:
+      charm: orc8r-feg-operator

@@ -1,0 +1,45 @@
+name: orc8r-certifier
+
+on:
+  push:
+    paths:
+      - "orc8r-certifier-operator/**"
+
+jobs:
+  orc8r-certifier-lint-report:
+    uses: ./.github/workflows/lint-report.yml
+    with:
+      charm_dir: orc8r-certifier-operator
+
+  orc8r-certifier-static-analysis:
+    uses: ./.github/workflows/static-analysis.yml
+    with:
+      charm_dir: orc8r-certifier-operator
+
+  orc8r-certifier-unit-tests-with-coverage:
+    uses: ./.github/workflows/unit-tests.yml
+    with:
+      charm_dir: orc8r-certifier-operator
+
+  orc8r-certifier-integration-test:
+    uses: ./.github/workflows/integration-tests.yml
+    with:
+      charm_dir: orc8r-certifier-operator
+
+  orc8r-certifier-charmhub-upload:
+    if: github.ref_name == 'main'
+    uses: ./.github/workflows/upload-charm.yml
+    secrets: inherit
+    with:
+      charm: orc8r-certifier-operator
+
+  orc8r-certifier-libs-charmhub-upload:
+    if: github.ref_name == 'main'
+    uses: ./.github/workflows/upload-libs.yml
+    secrets: inherit
+    with:
+      charm: orc8r-certifier-operator
+      libs: "charms.magma_orc8r_certifier.v0.cert_admin_operator
+      charms.magma_orc8r_certifier.v0.cert_certifier 
+      charms.magma_orc8r_certifier.v0.cert_controller 
+      charms.magma_orc8r_certifier.v0.cert_root_ca"

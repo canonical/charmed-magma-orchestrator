@@ -30,7 +30,7 @@ jobs:
         with:
           credentials: ${{ secrets.CHARMCRAFT_AUTH }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          charm-path: ./orchestrator-bundle/${{ inputs.charm }}
+          charm-path: ./${{ inputs.charm }}
 
       - name: Publish libs
         id: publish
@@ -40,7 +40,7 @@ jobs:
           set -eux
           for lib in ${{ inputs.libs }}; do
             echo "Publishing ${lib}"
-            (cd ./orchestrator-bundle/${{ inputs.charm }} && charmcraft publish-lib ${lib})
+            (cd ./${{ inputs.charm }} && charmcraft publish-lib ${lib})
           done
 
       - name: Chmod charmcraft logs

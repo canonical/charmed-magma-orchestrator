@@ -1,0 +1,34 @@
+name: orc8r-policydb
+
+on:
+  push:
+    paths:
+      - "orc8r-policydb-operator/**"
+
+jobs:
+  orc8r-policydb-lint-report:
+    uses: ./.github/workflows/lint-report.yml
+    with:
+      charm_dir: orc8r-policydb-operator
+
+  orc8r-policydb-static-analysis:
+    uses: ./.github/workflows/static-analysis.yml
+    with:
+      charm_dir: orc8r-policydb-operator
+
+  orc8r-policydb-unit-tests-with-coverage:
+    uses: ./.github/workflows/unit-tests.yml
+    with:
+      charm_dir: orc8r-policydb-operator
+
+  orc8r-policydb-integration-test:
+    uses: ./.github/workflows/integration-tests.yml
+    with:
+      charm_dir: orc8r-policydb-operator
+
+  orc8r-policydb-charmhub-upload:
+    if: github.ref_name == 'main'
+    uses: ./.github/workflows/upload-charm.yml
+    secrets: inherit
+    with:
+      charm: orc8r-policydb-operator
