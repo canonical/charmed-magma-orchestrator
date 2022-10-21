@@ -1,7 +1,6 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-
 name: magma-orc8r-streamer
 description: |
   magma-orc8r-streamer fetches updates for various data streams (e.g. mconfig, subscribers, etc.) from
@@ -9,6 +8,7 @@ description: |
 summary: |
   magma-orc8r-streamer fetches updates for various data streams from the appropriate Orchestrator
   service, returning these to the gateways.
+website: https://github.com/canonical/charmed-magma-orchestrator
 
 containers:
   magma-orc8r-streamer:

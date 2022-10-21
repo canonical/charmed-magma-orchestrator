@@ -9,6 +9,7 @@ description: |
 summary: |
   magma-orc8r-orchestrator provides data for configure of core gateway service configuration, metrics
   and CRUD API.
+website: https://github.com/canonical/charmed-magma-orchestrator
 
 containers:
   magma-orc8r-orchestrator:

@@ -6,6 +6,7 @@ description: |
   magma-orc8r-ctraced handles gateway call traces, exposing this functionality via a CRUD API.
 summary: |
   magma-orc8r-ctraced handles gateway call traces, exposing this functionality via a CRUD API.
+website: https://github.com/canonical/charmed-magma-orchestrator
 
 containers:
   magma-orc8r-ctraced:

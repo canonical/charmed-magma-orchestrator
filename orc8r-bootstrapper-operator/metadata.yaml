@@ -8,6 +8,7 @@ description: |
 summary: |
   bootstrapper manages the certificate bootstrapping process for newly registered gateways and
   gateways whose cert has expired
+website: https://github.com/canonical/charmed-magma-orchestrator
 
 containers:
   magma-orc8r-bootstrapper:

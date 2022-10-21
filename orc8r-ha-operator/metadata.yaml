@@ -8,6 +8,7 @@ description: |
 summary: |
   magma-orc8r-ha provides interface for secondary gateways in an HA deployment to find offload status
   for UEs
+website: https://github.com/canonical/charmed-magma-orchestrator
 
 containers:
   magma-orc8r-ha:

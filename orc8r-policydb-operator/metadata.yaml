@@ -1,5 +1,6 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
+
 name: magma-orc8r-policydb
 description: |
   policydb is an Orchestrator's service which manages subscriber policies via a northbound CRUD API
@@ -7,6 +8,7 @@ description: |
 summary: |
   policydb is an Orchestrator's service which manages subscriber policies via a northbound CRUD API
       and a southbound policy stream
+website: https://github.com/canonical/charmed-magma-orchestrator
 
 containers:
   magma-orc8r-policydb:

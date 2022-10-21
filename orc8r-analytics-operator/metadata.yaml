@@ -8,6 +8,7 @@ description: |
   magma-orc8r-analytics is one of the building blocks of of magma orchestrator service
 summary: |
   magma-orc8r-analytics is one of the building blocks of of magma orchestrator service
+website: https://github.com/canonical/charmed-magma-orchestrator
 
 containers:
   magma-orc8r-analytics:

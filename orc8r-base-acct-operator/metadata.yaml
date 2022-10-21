@@ -4,9 +4,9 @@
 name: magma-orc8r-base-acct
 description: |
   Basic Accounting Services used when deploying Federation Gateway.
-
 summary: |
   Basic Accounting Services used when deploying Federation Gateway.
+website: https://github.com/canonical/charmed-magma-orchestrator
 
 containers:
   magma-orc8r-base-acct:

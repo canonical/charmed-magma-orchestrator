@@ -8,6 +8,8 @@ description: |
 summary: |
   magma-orc8r-certifier maintains and verifies signed client certificates and their associated
   identities.
+website: https://github.com/canonical/charmed-magma-orchestrator
+
 containers:
   magma-orc8r-certifier:
     resource: magma-orc8r-certifier-image

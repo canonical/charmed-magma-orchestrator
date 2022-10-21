@@ -6,6 +6,7 @@ description: |
   magma-orc8r-smsd provides CRUD support for SMS messages to be fetched by LTE gateways
 summary: |
   magma-orc8r-smsd provides CRUD support for SMS messages to be fetched by LTE gateways
+website: https://github.com/canonical/charmed-magma-orchestrator
 
 containers:
   magma-orc8r-smsd:

@@ -12,6 +12,7 @@ summary: |
   interface, it will receive and push the generated registered events to the td-agent-bit service
   on the gateway, so these can be then later sent to Orchestrator. These events will be sent
   to ElasticSearch where they can be queried.
+website: https://github.com/canonical/charmed-magma-orchestrator
 
 containers:
   magma-orc8r-eventd:

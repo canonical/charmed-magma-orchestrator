@@ -1,13 +1,13 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-
 name: magma-orc8r-service-registry
 description: |
   service_registry provides service discovery for all services in the Orchestrator by querying
   Kubernetes's API server
 summary: |
   service_registry provides service discovery for all services in the Orchestrator
+website: https://github.com/canonical/charmed-magma-orchestrator
 
 containers:
   magma-orc8r-service-registry:
