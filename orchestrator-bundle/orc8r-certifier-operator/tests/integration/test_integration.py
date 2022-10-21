@@ -22,7 +22,6 @@ class TestOrc8rCertifier:
     @pytest.mark.abort_on_fail
     async def setup(self, ops_test):
         await ops_test.model.deploy("postgresql-k8s", application_name=DB_APPLICATION_NAME)
-        await ops_test.model.wait_for_idle(apps=["postgresql-k8s"], status="active", timeout=1000)
         await self._deploy_tls_certificates_operator(ops_test)
 
     @staticmethod
