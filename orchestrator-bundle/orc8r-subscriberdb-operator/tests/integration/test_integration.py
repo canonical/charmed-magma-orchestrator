@@ -29,7 +29,11 @@ class TestOrc8rSubscriberDB:
             f"{CHARM_NAME}-image": METADATA["resources"][f"{CHARM_NAME}-image"]["upstream-source"],
         }
         await ops_test.model.deploy(
-            charm, resources=resources, application_name=APPLICATION_NAME, trust=True
+            charm,
+            resources=resources,
+            application_name=APPLICATION_NAME,
+            trust=True,
+            series="focal",
         )
 
     @pytest.mark.abort_on_fail
