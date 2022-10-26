@@ -49,8 +49,9 @@ on:
           - orc8r-tenants
 
 jobs:
-  promote:
-    name: Promote Charm
+  promote-all:
+    if: github.event.inputs.charm-name == 'all'
+    name: Promote All Charms
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -103,18 +104,7 @@ jobs:
             echo "promote-from=candidate" >> ${GITHUB_ENV}
             echo "promote-to=stable" >> ${GITHUB_ENV}
           fi
-      - name: Promote Charm
-        if: github.event.inputs.charm-name != 'all'
-        uses: canonical/charming-actions/release-charm@1.0.3
-        with:
-          credentials: ${{ secrets.CHARMCRAFT_AUTH }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          destination-channel: latest/${{ env.promote-to }}
-          origin-channel: latest/${{ env.promote-from }}
-          tag-prefix: magma-${{ github.event.inputs.charm-name }}
-          charm-path: ./${{ github.event.inputs.charm-name }}-operator
-      - name: Promote All Charms
-        if: github.event.inputs.charm-name == 'all'
+      - name: Promote all Charms
         uses: canonical/charming-actions/release-charm@1.0.3
         with:
           credentials: ${{ secrets.CHARMCRAFT_AUTH }}
@@ -123,3 +113,33 @@ jobs:
           origin-channel: latest/${{ env.promote-from }}
           tag-prefix: magma-${{ matrix.charms }}
           charm-path: ./${{ matrix.charms }}-operator
+  promote:
+    if: github.event.inputs.charm-name != 'all'
+    name: Promote Charm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set target channel
+        env:
+          PROMOTE_FROM: ${{ github.event.inputs.promotion }}
+        run: |
+          if [ "${PROMOTE_FROM}" == "edge -> beta" ]; then
+            echo "promote-from=edge" >> ${GITHUB_ENV}
+            echo "promote-to=beta" >> ${GITHUB_ENV}
+          elif [ "${PROMOTE_FROM}" == "beta -> candidate" ]; then
+            echo "promote-from=beta" >> ${GITHUB_ENV}
+            echo "promote-to=candidate" >> ${GITHUB_ENV}
+          elif [ "${PROMOTE_FROM}" == "candidate -> stable" ]; then
+            echo "promote-from=candidate" >> ${GITHUB_ENV}
+            echo "promote-to=stable" >> ${GITHUB_ENV}
+          fi
+      - name: Promote Charm
+        uses: canonical/charming-actions/release-charm@1.0.3
+        with:
+          credentials: ${{ secrets.CHARMCRAFT_AUTH }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          destination-channel: latest/${{ env.promote-to }}
+          origin-channel: latest/${{ env.promote-from }}
+          tag-prefix: magma-${{ github.event.inputs.charm-name }}
+          charm-path: ./${{ github.event.inputs.charm-name }}-operator
