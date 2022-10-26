@@ -104,9 +104,9 @@ jobs:
             echo "promote-to=stable" >> ${GITHUB_ENV}
           fi
       - name: Promote Charm
+        if: github.event.inputs.charm-name != 'all'
         uses: canonical/charming-actions/release-charm@1.0.3
         with:
-          if: github.event.inputs.charm-name != 'all'
           credentials: ${{ secrets.CHARMCRAFT_AUTH }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           destination-channel: latest/${{ env.promote-to }}
