@@ -35,6 +35,14 @@ applications:
     trust: true
     resources:
       magma-orc8r-bootstrapper-image: docker.artifactory.magmacore.org/controller:1.6.0
+  orc8r-certifier:
+    charm: ./orc8r-certifier-operator/orc8r-certifier.charm
+    scale: 1
+    trust: true
+    options:
+      domain: example.com
+    resources:
+      magma-orc8r-certifier-image: docker.artifactory.magmacore.org/controller:1.6.0
   orc8r-configurator:
     charm: ./orc8r-configurator-operator/orc8r-configurator.charm
     scale: 1
@@ -79,14 +87,6 @@ applications:
     trust: true
     resources:
       magma-orc8r-ha-image: docker.artifactory.magmacore.org/controller:1.6.0
-  orc8r-certifier:
-    charm: ./orc8r-certifier-operator/orc8r-certifier.charm
-    scale: 1
-    trust: true
-    options:
-      domain: example.com
-    resources:
-      magma-orc8r-certifier-image: docker.artifactory.magmacore.org/controller:1.6.0
   orc8r-lte:
     charm: ./orc8r-lte-operator/orc8r-lte.charm
     scale: 1
@@ -103,6 +103,8 @@ applications:
     charm: ./orc8r-nginx-operator/orc8r-nginx.charm
     scale: 1
     trust: true
+    options:
+      domain: example.com
     resources:
       magma-orc8r-nginx-image: docker.artifactory.magmacore.org/nginx:1.6.0
   orc8r-obsidian:
@@ -216,6 +218,9 @@ applications:
     channel: edge
     scale: 1
     trust: true
+    options:
+      generate-self-signed-certificates: true
+      ca-common-name: rootca.example.com
 relations:
 - - nms-magmalte
   - orc8r-certifier
