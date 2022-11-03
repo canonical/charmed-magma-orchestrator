@@ -29,19 +29,8 @@ jobs:
         uses: actions/checkout@v2
       - name: Setup operator environment
         run: |
-          echo "# Install core snap"
-          /usr/bin/sudo snap install core
-
-          echo "# Install LXD"
-          /usr/bin/sudo apt-get remove -qy lxd lxd-client || true
-          /usr/bin/sudo snap install lxd
-
           echo "# Initialize LXD"
-          /usr/bin/sudo lxd waitready
           /usr/bin/sudo lxd init --auto
-          /usr/bin/sudo chmod a+wr /var/snap/lxd/common/lxd/unix.socket
-          /snap/bin/lxc network set lxdbr0 ipv6.address none
-          /usr/bin/sudo usermod -a -G lxd $USER
 
           echo "# Configure LXD"
           /usr/bin/sudo lxc --project charmcraft project create local:charmcraft || true
@@ -53,18 +42,15 @@ jobs:
           /usr/bin/sudo lxc --project charmcraft profile set default environment.HTTPS_PROXY http://squid.internal:3128/
 
           echo "# Install tox"
-          /usr/bin/sudo apt-get update -yqq
-          /usr/bin/sudo apt-get install -yqq python3-pip
+          /usr/bin/sudo apt update -yqq
+          /usr/bin/sudo apt install -yqq python3-pip
           /usr/bin/sudo --preserve-env=http_proxy,https_proxy,no_proxy pip3 install tox
 
           echo "# Install Juju"
           /usr/bin/sudo snap install juju --classic --channel=latest/stable
 
-          echo "# Install tools"
-          /usr/bin/sudo snap install jq
-          /usr/bin/sudo snap install charm --classic --channel=latest/stable
+          echo "# Install charmcraft"
           /usr/bin/sudo snap install charmcraft --classic --channel=latest/stable
-          /usr/bin/sudo snap install juju-bundle --classic --channel=latest/stable
 
           echo "# Install microk8s"
           /usr/bin/sudo snap install microk8s --classic
@@ -72,9 +58,7 @@ jobs:
           echo "# Initialize microk8s"
           /usr/bin/bash -c "sudo usermod -a -G microk8s $USER"
           /usr/bin/sg microk8s -c "microk8s status --wait-ready"
-          /usr/bin/sg microk8s -c "microk8s enable storage rbac dns:10.130.64.38,10.130.64.39"
-          /usr/bin/sg microk8s -c "microk8s kubectl -n kube-system rollout status deployment/coredns"
-          /usr/bin/sg microk8s -c "microk8s kubectl -n kube-system rollout status deployment/hostpath-provisioner"
+          /usr/bin/sg microk8s -c "microk8s enable hostpath-storage dns:10.130.64.38,10.130.64.39"
 
           echo "# Bootstrap controller"
           sleep 180  # Microk8s needs time to initialize properly
