@@ -6,10 +6,10 @@ description: |
   magma-orc8r-lte provides Mconfigs for configuration of LTE-related gateway service configurations
   (e.g. mme, pipelined, policydb) and CRUD API for LTE network entities
   (LTE networks, LTE gateways, eNodeBs, etc.)
-
 summary: |
   magma-orc8r-lte provides Mconfigs for configuration of LTE-related gateway service configurations
   and CRUD API for LTE network entities.
+website: https://github.com/canonical/charmed-magma-orchestrator
 
 containers:
   magma-orc8r-lte:

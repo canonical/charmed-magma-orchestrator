@@ -6,6 +6,7 @@ description: |
   magma-orc8r-state maintains reported state from devices in the network.
 summary: |
   magma-orc8r-state maintains reported state from devices in the network.
+website: https://github.com/canonical/charmed-magma-orchestrator
 
 containers:
   magma-orc8r-state:

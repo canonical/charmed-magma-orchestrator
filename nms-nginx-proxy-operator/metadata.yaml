@@ -1,10 +1,12 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
+
 name: magma-nms-nginx-proxy
 description: |
   This charm is an nginx web server that proxies communication between NMS UI and MagmaLTE.
 summary: |
   This charm is an nginx web server that proxies communication between NMS UI and MagmaLTE.
+website: https://github.com/canonical/charmed-magma-orchestrator
 
 containers:
   magma-nms-nginx-proxy:

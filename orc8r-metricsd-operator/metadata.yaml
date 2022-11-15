@@ -6,6 +6,7 @@ description: |
   magma-orc8r-metricsd collects runtime metrics from gateways and Orchestrator services.
 summary: |
   magma-orc8r-metricsd collects runtime metrics from gateways and Orchestrator services.
+website: https://github.com/canonical/charmed-magma-orchestrator
 
 containers:
   magma-orc8r-metricsd:

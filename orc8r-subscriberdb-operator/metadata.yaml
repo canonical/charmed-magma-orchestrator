@@ -6,6 +6,7 @@ description: |
   magma-orc8r-subscriberdb manages subscribers via a northbound CRUD API and a southbound subscriber stream.
 summary: |
   magma-orc8r-subscriberdb manages subscribers via a northbound CRUD API and a southbound subscriber stream.
+website: https://github.com/canonical/charmed-magma-orchestrator
 
 containers:
   magma-orc8r-subscriberdb:

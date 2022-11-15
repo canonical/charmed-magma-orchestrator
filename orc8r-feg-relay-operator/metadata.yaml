@@ -4,9 +4,9 @@
 name: magma-orc8r-feg-relay
 description: |
   Feg relay relays requests between access gateways and federated gateways.
-
 summary: |
   Feg relay relays requests between access gateways and federated gateways.
+website: https://github.com/canonical/charmed-magma-orchestrator
 
 containers:
   magma-orc8r-feg-relay:

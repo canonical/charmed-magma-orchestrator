@@ -5,10 +5,10 @@ name: magma-orc8r-obsidian
 description: |
   obsidian verifies API request access control and reverse proxies requests to Orchestrator 
   services with the appropriate API handlers
-
 summary: |
   obsidian verifies API request access control and reverse proxies requests to Orchestrator 
   services with the appropriate API handlers
+website: https://github.com/canonical/charmed-magma-orchestrator
 
 containers:
   magma-orc8r-obsidian:

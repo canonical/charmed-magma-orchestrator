@@ -4,9 +4,9 @@
 name: magma-orc8r-health
 description: |
   Health manages active/standby clusters of federated gateways.
-
 summary: |
   Health manages active/standby clusters of federated gateways.
+website: https://github.com/canonical/charmed-magma-orchestrator
 
 containers:
   magma-orc8r-health:

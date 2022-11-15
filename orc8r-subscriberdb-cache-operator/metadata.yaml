@@ -6,6 +6,7 @@ description: |
   magma-orc8r-subscriberdb-cache is a cache for the subscriberdb service.
 summary: |
   magma-orc8r-subscriberdb-cache is a cache for the subscriberdb service.
+website: https://github.com/canonical/charmed-magma-orchestrator
 
 containers:
   magma-orc8r-subscriberdb-cache:

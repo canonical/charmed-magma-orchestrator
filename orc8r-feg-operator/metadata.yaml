@@ -6,11 +6,11 @@ description: |
   Feg provides Mconfigs for configuration of FeG-related gateway service configurations 
   (e.g. s6a_proxy, session_proxy) and CRUD API for LTE network entities 
   (FeG networks, federated gateways, etc.)
-
 summary: |
   Feg provides Mconfigs for configuration of FeG-related gateway service configurations 
   (e.g. s6a_proxy, session_proxy) and CRUD API for LTE network entities 
   (FeG networks, federated gateways, etc.)
+website: https://github.com/canonical/charmed-magma-orchestrator
 
 containers:
   magma-orc8r-feg:

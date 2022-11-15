@@ -6,6 +6,7 @@ description: |
   magma-orc8r-tenants provides CRUD interface for managing NMS tenants.
 summary: |
   magma-orc8r-tenants provides CRUD interface for managing NMS tenants.
+website: https://github.com/canonical/charmed-magma-orchestrator
 
 containers:
   magma-orc8r-tenants:

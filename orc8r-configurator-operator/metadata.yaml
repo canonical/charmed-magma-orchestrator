@@ -8,6 +8,7 @@ description: |
 summary: |
   magma-orc8r-configurator maintains configurations and metadata for networks and network entity
     structures
+website: https://github.com/canonical/charmed-magma-orchestrator
 
 containers:
   magma-orc8r-configurator:
