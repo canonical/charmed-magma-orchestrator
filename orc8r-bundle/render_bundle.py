@@ -58,7 +58,7 @@ def parse_args() -> Tuple[str, str, bool, str]:
 def render_bundle(
     template: str,
     output: str,
-    channel: str = None,
+    channel: str = "",
     local: bool = False,
 ) -> None:
     if not channel and not local:
