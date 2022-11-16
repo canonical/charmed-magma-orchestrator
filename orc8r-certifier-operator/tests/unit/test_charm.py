@@ -42,7 +42,7 @@ class TestCharm(unittest.TestCase):
 
     def create_peer_relation_with_certificates(  # noqa: C901
         self,
-        domain_config: str = None,
+        domain_config: str = "",
         root_private_key: bool = False,
         admin_operator_private_key: bool = False,
         application_private_key: bool = False,
