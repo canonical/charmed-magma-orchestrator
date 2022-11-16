@@ -80,8 +80,8 @@ class Orc8rBase(Object):
         self,
         charm: CharmBase,
         startup_command: str,
-        required_relations: list = [],
-        additional_environment_variables: dict = {},
+        required_relations: list = None,  # type: ignore[assignment]
+        additional_environment_variables: dict = None,  # type: ignore[assignment]
     ):
         """Observes common events for all Orchestrator charms."""
         super().__init__(charm, "orc8r-base")
