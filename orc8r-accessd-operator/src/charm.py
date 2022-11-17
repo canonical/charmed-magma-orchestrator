@@ -17,7 +17,7 @@ class MagmaOrc8rAccessdCharm(CharmBase):
     """Creates a new instance of this object for each event."""
 
     def __init__(self, *args):
-        """Uses the Orc8rBase library to manage events."""
+        """Uses the Orc8rBase library to manage its events."""
         super().__init__(*args)
         self._service_patcher = KubernetesServicePatch(
             charm=self,

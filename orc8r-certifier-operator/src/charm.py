@@ -208,7 +208,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._push_root_private_key()
 
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:
-        """Triggered on config changes.
+        """Juju event triggered on config changes.
 
         Args:
             event (ConfigChangedEvent): Juju event
