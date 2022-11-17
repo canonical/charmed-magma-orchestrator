@@ -33,7 +33,7 @@ class MagmaNmsNginxProxyCharm(CharmBase):
     NGINX_CONFIG_FILE_NAME = "nginx_proxy_ssl.conf"
 
     def __init__(self, *args):
-        """Initializes all event that need to be observed."""
+        """Initializes all events that need to be observed."""
         super().__init__(*args)
         self._container_name = self._service_name = "magma-nms-nginx-proxy"
         self._container = self.unit.get_container(self._container_name)
