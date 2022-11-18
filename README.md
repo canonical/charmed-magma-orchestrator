@@ -1,4 +1,4 @@
-# magma-orc8r
+# charmed-magma-orchestrator
 
 ## Overview
 
