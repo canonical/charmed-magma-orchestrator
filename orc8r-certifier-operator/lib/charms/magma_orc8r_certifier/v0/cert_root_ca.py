@@ -5,7 +5,7 @@
 
 This library offers ways of providing and consuming a rootCA certificate.
 
-To get started using the library, you just need to fetch the library using `charmcraft`.
+To get started using the library, you need to fetch the library using `charmcraft`.
 
 ```shell
 cd some-charm
@@ -87,7 +87,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 3
 
 
 class CertificateRequestEvent(EventBase):

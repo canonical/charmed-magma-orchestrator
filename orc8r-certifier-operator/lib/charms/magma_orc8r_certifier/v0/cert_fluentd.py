@@ -5,7 +5,7 @@
 
 This library offers ways of providing and consuming a fluentd certificate.
 
-To get started using the library, you just need to fetch the library using `charmcraft`.
+To get started using the library, you need to fetch the library using `charmcraft`.
 
 ```shell
 cd some-charm
@@ -77,6 +77,8 @@ Typical usage of this class would look something like:
             interface: cert-fluentd  # Relation interface
     ```
 """
+
+from typing import Union
 
 from ops.charm import CharmBase, CharmEvents, RelationChangedEvent, RelationJoinedEvent
 from ops.framework import EventBase, EventSource, Object
@@ -206,17 +208,19 @@ class CertFluentdRequires(Object):
         self.charm = charm
         super().__init__(charm, relationship_name)
         self.framework.observe(
-            charm.on[relationship_name].relation_joined, self._on_relation_changed
+            charm.on[relationship_name].relation_joined, self._emit_certificate_available
         )
         self.framework.observe(
-            charm.on[relationship_name].relation_changed, self._on_relation_changed
+            charm.on[relationship_name].relation_changed, self._emit_certificate_available
         )
 
-    def _on_relation_changed(self, event: RelationChangedEvent) -> None:
+    def _emit_certificate_available(
+        self, event: Union[RelationChangedEvent, RelationJoinedEvent]
+    ) -> None:
         """Triggered everytime there's a change in relation data.
 
         Args:
-            event (RelationChangedEvent): Juju event
+            event: Juju event (RelationChangedEvent or RelationJoinedEvent)
 
         Returns:
             None
@@ -224,5 +228,5 @@ class CertFluentdRequires(Object):
         relation_data = event.relation.data
         certificate = relation_data[event.unit].get("certificate")
         private_key = relation_data[event.unit].get("private_key")
-        if certificate:
+        if certificate and private_key:
             self.on.certificate_available.emit(certificate=certificate, private_key=private_key)
