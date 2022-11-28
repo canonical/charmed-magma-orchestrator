@@ -27,6 +27,10 @@ from charms.magma_orc8r_certifier.v0.cert_controller import CertControllerProvid
 from charms.magma_orc8r_certifier.v0.cert_controller import (
     CertificateRequestEvent as ControllerCertificateRequestEvent,
 )
+from charms.magma_orc8r_certifier.v0.cert_fluentd import CertFluentdProvides
+from charms.magma_orc8r_certifier.v0.cert_fluentd import (
+    CertificateRequestEvent as FluentdCertificateRequestEvent,
+)
 from charms.magma_orc8r_certifier.v0.cert_root_ca import (
     CertificateRequestEvent as RootCACertificateRequestEvent,
 )
@@ -92,6 +96,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         )
         self.certificates_certifier_provider = CertCertifierProvides(self, "cert-certifier")
         self.certificates_controller_provider = CertControllerProvides(self, "cert-controller")
+        self.certificates_fluentd_provider = CertFluentdProvides(self, "cert-fluentd")
         self.certificates_root_ca_provider = CertRootCAProvides(self, "cert-root-ca")
         self._container_name = self._service_name = "magma-orc8r-certifier"
         self.provided_relation_name = "magma-orc8r-certifier"
@@ -140,6 +145,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self.framework.observe(
             self.certificates_controller_provider.on.certificate_request,
             self._on_controller_certificate_request,
+        )
+        self.framework.observe(
+            self.certificates_fluentd_provider.on.certificate_request,
+            self._on_fluentd_certificate_request,
         )
         self.framework.observe(
             self.certificates_root_ca_provider.on.certificate_request,
@@ -427,6 +436,34 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             private_key=str(private_key_string),
         )
 
+    def _on_fluentd_certificate_request(self, event: FluentdCertificateRequestEvent) -> None:
+        """Triggered when a certificate request is made on the cert-fluentd relation.
+
+        Args:
+            event (FluentdCertificateRequestEvent): Juju event
+
+        Returns:
+            None
+        """
+        if not self._container.can_connect():
+            logger.info("Container not yet available")
+            event.defer()
+            return
+        try:
+            certificate = self._container.pull(path=f"{self.BASE_CERTIFICATES_PATH}/fluentd.pem")
+            private_key = self._container.pull(path=f"{self.BASE_CERTIFICATES_PATH}/fluentd.key")
+        except ops.pebble.PathError:
+            logger.info("Certificate 'fluentd' not yet available")
+            event.defer()
+            return
+        certificate_string = certificate.read()
+        private_key_string = private_key.read()
+        self.certificates_fluentd_provider.set_certificate(
+            relation_id=event.relation_id,
+            certificate=str(certificate_string),
+            private_key=str(private_key_string),
+        )
+
     def _on_root_ca_certificate_request(self, event: RootCACertificateRequestEvent) -> None:
         """Triggered when a certificate request is made on the cert-root-ca relation.
 
@@ -559,8 +596,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         """Generates application private keys."""
         application_private_key = generate_private_key()
         admin_operator_private_key = generate_private_key()
+        fluentd_private_key = generate_private_key()
         self._store_application_private_key(application_private_key.decode())
         self._store_admin_operator_private_key(admin_operator_private_key.decode())
+        self._store_fluentd_private_key(fluentd_private_key.decode())
         logger.info("Generated application private keys")
 
     def _push_root_certificates(self) -> None:
@@ -583,6 +622,8 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             raise RuntimeError("Application certificate is not available")
         if not self._admin_operator_certificate:
             raise RuntimeError("Admin Operator certificate is not available")
+        if not self._fluentd_certificate:
+            raise RuntimeError("Fluentd certificate is not available")
         if not self._admin_operator_pfx:
             raise RuntimeError("Admin Operator PFX package is not available")
         self._container.push(
@@ -592,6 +633,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._container.push(
             path=f"{self.BASE_CERTIFICATES_PATH}/admin_operator.pem",
             source=self._admin_operator_certificate,
+        )
+        self._container.push(
+            path=f"{self.BASE_CERTIFICATES_PATH}/fluentd.pem",
+            source=self._fluentd_certificate,
         )
         self._container.push(
             path=f"{self.BASE_CERTIFICATES_PATH}/admin_operator.pfx",
@@ -618,6 +663,8 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             raise RuntimeError("Application private key is not available")
         if not self._admin_operator_private_key:
             raise RuntimeError("Admin Operator private key is not available")
+        if not self._fluentd_private_key:
+            raise RuntimeError("Fluentd private key is not available")
         self._container.push(
             path=f"{self.BASE_CERTIFICATES_PATH}/certifier.key",
             source=self._application_private_key,
@@ -625,6 +672,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._container.push(
             path=f"{self.BASE_CERTIFICATES_PATH}/admin_operator.key.pem",
             source=self._admin_operator_private_key,
+        )
+        self._container.push(
+            path=f"{self.BASE_CERTIFICATES_PATH}/fluentd.key",
+            source=self._fluentd_private_key,
         )
         logger.info("Pushed application private keys")
 
@@ -809,6 +860,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         """Stores admin operator private key in peer relation data."""
         self._store_item_in_peer_relation_data(key="admin_operator_private_key", value=private_key)
 
+    def _store_fluentd_private_key(self, private_key: str) -> None:
+        """Stores fluentd private key in peer relation data."""
+        self._store_item_in_peer_relation_data(key="fluentd_private_key", value=private_key)
+
     def _store_application_ca_certificate(self, certificate: str) -> None:
         """Stores application certificate in peer relation data."""
         self._store_item_in_peer_relation_data(key="application_certificate", value=certificate)
@@ -816,6 +871,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     def _store_admin_operator_certificate(self, certificate: str) -> None:
         """Stores admin operator certificate in peer relation data."""
         self._store_item_in_peer_relation_data(key="admin_operator_certificate", value=certificate)
+
+    def _store_fluentd_certificate(self, certificate: str) -> None:
+        """Stores fluentd certificate in peer relation data."""
+        self._store_item_in_peer_relation_data(key="fluentd_certificate", value=certificate)
 
     def _store_admin_operator_pfx(self, pfx: str) -> None:
         """Stores admin operator pfx package in peer relation data."""
@@ -880,6 +939,8 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             raise RuntimeError("Application private key not available")
         if not self._admin_operator_private_key:
             raise RuntimeError("Admin Operator private key not available")
+        if not self._fluentd_private_key:
+            raise RuntimeError("Fluentd private key not available")
         application_ca_certificate = generate_ca(
             private_key=self._application_private_key.encode(),
             subject=f"certifier.{self._domain_config}",
@@ -893,6 +954,15 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             ca=application_ca_certificate,
             ca_key=self._application_private_key.encode(),
         )
+        fluentd_csr = generate_csr(
+            private_key=self._fluentd_private_key.encode(),
+            subject="fluentd",
+        )
+        fluentd_certificate = generate_certificate(
+            csr=fluentd_csr,
+            ca=application_ca_certificate,
+            ca_key=self._application_private_key.encode(),
+        )
         password = self._generate_password()
         admin_operator_pfx = generate_pfx_package(
             private_key=self._admin_operator_private_key.encode(),
@@ -901,6 +971,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         )
         self._store_application_ca_certificate(application_ca_certificate.decode())
         self._store_admin_operator_certificate(admin_operator_certificate.decode())
+        self._store_fluentd_certificate(fluentd_certificate.decode())
         self._store_admin_operator_pfx(base64.b64encode(admin_operator_pfx).decode())
         self._store_admin_operator_pfx_password(password)
         logger.info("Generated Application Certificates")
@@ -964,6 +1035,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         if not self._admin_operator_private_key:
             logger.info("Admin operator private key not stored")
             return False
+        if not self._fluentd_private_key:
+            logger.info("Fluentd private key not stored")
+            return False
         return True
 
     @property
@@ -982,6 +1056,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             return False
         if not self._admin_operator_certificate:
             logger.info("Admin Operator certificate is not stored")
+            return False
+        if not self._fluentd_certificate:
+            logger.info("Fluentd certificate is not stored")
             return False
         if not self._admin_operator_pfx_password:
             logger.info("Admin Operator PFX password is not stored")
@@ -1095,6 +1172,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         if not self._container.exists(f"{self.BASE_CERTIFICATES_PATH}/admin_operator.key.pem"):
             logger.info("Admin operator private key is not pushed")
             return False
+        if not self._container.exists(f"{self.BASE_CERTIFICATES_PATH}/fluentd.key"):
+            logger.info("Fluentd private key is not pushed")
+            return False
         return True
 
     @property
@@ -1112,6 +1192,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             return False
         if not self._container.exists(f"{self.BASE_CERTIFICATES_PATH}/certifier.pem"):
             logger.info("Application certificate is not pushed")
+            return False
+        if not self._container.exists(f"{self.BASE_CERTIFICATES_PATH}/fluentd.pem"):
+            logger.info("Fluentd certificate is not pushed")
             return False
         return True
 
@@ -1166,6 +1249,11 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         return self._get_value_from_relation_data("admin_operator_certificate")
 
     @property
+    def _fluentd_certificate(self) -> Optional[str]:
+        """Returns admin operator certificate."""
+        return self._get_value_from_relation_data("fluentd_certificate")
+
+    @property
     def _application_private_key(self) -> Optional[str]:
         """Returns application private key."""
         return self._get_value_from_relation_data("application_private_key")
@@ -1174,6 +1262,11 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     def _admin_operator_private_key(self) -> Optional[str]:
         """Returns admin operator private key."""
         return self._get_value_from_relation_data("admin_operator_private_key")
+
+    @property
+    def _fluentd_private_key(self) -> Optional[str]:
+        """Returns fluentd private key."""
+        return self._get_value_from_relation_data("fluentd_private_key")
 
     @property
     def _root_private_key(self) -> Optional[str]:

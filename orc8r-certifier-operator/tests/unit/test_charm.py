@@ -46,8 +46,10 @@ class TestCharm(unittest.TestCase):
         root_private_key: bool = False,
         admin_operator_private_key: bool = False,
         application_private_key: bool = False,
+        fluentd_private_key: bool = False,
         application_certificate: bool = False,
         admin_operator_certificate: bool = False,
+        fluentd_certificate: bool = False,
         root_csr: bool = False,
         root_certificate: bool = False,
     ) -> Tuple[int, dict]:
@@ -58,8 +60,10 @@ class TestCharm(unittest.TestCase):
             root_private_key: Set root private key
             admin_operator_private_key: Set admin operator private key
             application_private_key: Set application private key
+            fluentd_private_key: Set application private key
             application_certificate: Set Application certificate
             admin_operator_certificate: Set Admin Operator certificate
+            fluentd_certificate: Set Fluentd certificate
             root_csr: Set Root CSR
             root_certificate: Set Root certificate
 
@@ -72,6 +76,8 @@ class TestCharm(unittest.TestCase):
             key_values["root_private_key"] = generate_private_key().decode().strip()
         if application_private_key:
             key_values["application_private_key"] = generate_private_key().decode().strip()
+        if fluentd_private_key:
+            key_values["fluentd_private_key"] = generate_private_key().decode().strip()
         if admin_operator_private_key:
             key_values["admin_operator_private_key"] = generate_private_key().decode().strip()
         if root_csr:
@@ -108,6 +114,28 @@ class TestCharm(unittest.TestCase):
                 subject=f"certifier.{domain_config}",
             )
             key_values["application_certificate"] = application_ca_certificate.decode().strip()
+        if fluentd_certificate:
+            if not application_certificate:
+                raise ValueError(
+                    "application_certificate must be True if fluentd_certificate is True"
+                )
+            if not fluentd_private_key:
+                raise ValueError(
+                    "fluentd_private_key must be True if fluentd_certificate is True"
+                )
+            fluentd_csr = generate_csr(
+                private_key=key_values["fluentd_private_key"].encode(),
+                subject="fluentd",
+            )
+            key_values["fluentd_certificate"] = (
+                generate_certificate(
+                    csr=fluentd_csr,
+                    ca=key_values["application_certificate"].encode(),
+                    ca_key=key_values["application_private_key"].encode(),
+                )
+                .decode()
+                .strip()
+            )
         if admin_operator_certificate:
             if not application_certificate:
                 raise ValueError(
@@ -266,14 +294,16 @@ class TestCharm(unittest.TestCase):
         self.harness.charm.on.install.emit()
 
         call_list = patch_push.call_args_list
-        assert len(call_list) == 4
+        assert len(call_list) == 5
         # The first item is the metricsd config file
         assert call_list[1].kwargs["path"] == "/var/opt/magma/certs/certifier.key"
         assert call_list[2].kwargs["path"] == "/var/opt/magma/certs/admin_operator.key.pem"
-        assert call_list[3].kwargs["path"] == "/var/opt/magma/certs/controller.key"
+        assert call_list[3].kwargs["path"] == "/var/opt/magma/certs/fluentd.key"
+        assert call_list[4].kwargs["path"] == "/var/opt/magma/certs/controller.key"
         serialization.load_pem_private_key(call_list[1].kwargs["source"].encode(), password=None)
         serialization.load_pem_private_key(call_list[2].kwargs["source"].encode(), password=None)
         serialization.load_pem_private_key(call_list[3].kwargs["source"].encode(), password=None)
+        serialization.load_pem_private_key(call_list[4].kwargs["source"].encode(), password=None)
 
     def test_given_application_keys_are_not_stored_and_unit_is_not_leader_when_on_install_then_created_then_status_is_waiting(  # noqa: E501
         self,
@@ -297,6 +327,7 @@ class TestCharm(unittest.TestCase):
             domain_config="whatever.com",
             application_private_key=True,
             admin_operator_private_key=True,
+            fluentd_private_key=True,
         )
         self.harness.add_relation_unit(
             relation_id=relation_id, remote_unit_name="magma-orc8r-certifier/1"
@@ -320,38 +351,44 @@ class TestCharm(unittest.TestCase):
             root_private_key=True,
             application_private_key=True,
             admin_operator_private_key=True,
+            fluentd_private_key=True,
             application_certificate=True,
             admin_operator_certificate=True,
             root_certificate=True,
+            fluentd_certificate=True,
             root_csr=True,
         )
 
         self.harness.charm.on.install.emit()
 
         call_list = patch_push.call_args_list
-        assert len(call_list) == 9
+        assert len(call_list) == 11
         assert call_list[0].kwargs["path"] == "/var/opt/magma/certs/rootCA.pem"
         assert call_list[1].kwargs["path"] == "/var/opt/magma/certs/controller.crt"
         assert call_list[2].kwargs["path"] == "/var/opt/magma/certs/certifier.pem"
         assert call_list[3].kwargs["path"] == "/var/opt/magma/certs/admin_operator.pem"
-        assert call_list[4].kwargs["path"] == "/var/opt/magma/certs/admin_operator.pfx"
-        # Sixth item is metricsd config file.
-        assert call_list[6].kwargs["path"] == "/var/opt/magma/certs/certifier.key"
-        assert call_list[7].kwargs["path"] == "/var/opt/magma/certs/admin_operator.key.pem"
-        assert call_list[8].kwargs["path"] == "/var/opt/magma/certs/controller.key"
+        assert call_list[4].kwargs["path"] == "/var/opt/magma/certs/fluentd.pem"
+        assert call_list[5].kwargs["path"] == "/var/opt/magma/certs/admin_operator.pfx"
+        # Seventh item is metricsd config file.
+        assert call_list[7].kwargs["path"] == "/var/opt/magma/certs/certifier.key"
+        assert call_list[8].kwargs["path"] == "/var/opt/magma/certs/admin_operator.key.pem"
+        assert call_list[9].kwargs["path"] == "/var/opt/magma/certs/fluentd.key"
+        assert call_list[10].kwargs["path"] == "/var/opt/magma/certs/controller.key"
 
         x509.load_pem_x509_certificate(call_list[0].kwargs["source"].encode())
         x509.load_pem_x509_certificate(call_list[1].kwargs["source"].encode())
         x509.load_pem_x509_certificate(call_list[2].kwargs["source"].encode())
         x509.load_pem_x509_certificate(call_list[3].kwargs["source"].encode())
+        x509.load_pem_x509_certificate(call_list[4].kwargs["source"].encode())
         pkcs12.load_key_and_certificates(
-            data=call_list[4].kwargs["source"],
+            data=call_list[5].kwargs["source"],
             password=key_values["admin_operator_pfx_password"].encode(),
         )
-        # Sixth item is metricsd config file.
-        serialization.load_pem_private_key(call_list[6].kwargs["source"].encode(), password=None)
+        # Seventh item is metricsd config file.
         serialization.load_pem_private_key(call_list[7].kwargs["source"].encode(), password=None)
         serialization.load_pem_private_key(call_list[8].kwargs["source"].encode(), password=None)
+        serialization.load_pem_private_key(call_list[9].kwargs["source"].encode(), password=None)
+        serialization.load_pem_private_key(call_list[10].kwargs["source"].encode(), password=None)
 
     @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     def test_given_config_not_valid_when_on_config_changed_then_status_is_blocked(
@@ -421,8 +458,10 @@ class TestCharm(unittest.TestCase):
             root_private_key=True,
             application_private_key=True,
             admin_operator_private_key=True,
+            fluentd_private_key=True,
             admin_operator_certificate=True,
             application_certificate=True,
+            fluentd_certificate=True,
             root_certificate=True,
         )
         self.harness.set_leader(is_leader=True)
@@ -436,6 +475,10 @@ class TestCharm(unittest.TestCase):
         )
         patch_push.assert_any_call(
             path="/var/opt/magma/certs/admin_operator.pem",
+            source=new_application_certificate.decode(),
+        )
+        patch_push.assert_any_call(
+            path="/var/opt/magma/certs/fluentd.pem",
             source=new_application_certificate.decode(),
         )
         patch_push.assert_any_call(
@@ -464,8 +507,10 @@ class TestCharm(unittest.TestCase):
             root_private_key=True,
             application_private_key=True,
             admin_operator_private_key=True,
+            fluentd_private_key=True,
             application_certificate=True,
             admin_operator_certificate=True,
+            fluentd_certificate=True,
         )
         self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
 
@@ -524,6 +569,7 @@ class TestCharm(unittest.TestCase):
             root_private_key=True,
             application_private_key=True,
             admin_operator_private_key=True,
+            fluentd_private_key=True,
         )
         self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
 
@@ -535,6 +581,7 @@ class TestCharm(unittest.TestCase):
 
         x509.load_pem_x509_certificate(data=relation_data["admin_operator_certificate"].encode())
         x509.load_pem_x509_certificate(data=relation_data["application_certificate"].encode())
+        x509.load_pem_x509_certificate(data=relation_data["fluentd_certificate"].encode())
         pkcs12.load_key_and_certificates(
             data=base64.b64decode(relation_data["admin_operator_pfx"]),
             password=relation_data["admin_operator_pfx_password"].encode(),
