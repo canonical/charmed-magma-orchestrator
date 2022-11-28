@@ -120,9 +120,7 @@ class TestCharm(unittest.TestCase):
                     "application_certificate must be True if fluentd_certificate is True"
                 )
             if not fluentd_private_key:
-                raise ValueError(
-                    "fluentd_private_key must be True if fluentd_certificate is True"
-                )
+                raise ValueError("fluentd_private_key must be True if fluentd_certificate is True")
             fluentd_csr = generate_csr(
                 private_key=key_values["fluentd_private_key"].encode(),
                 subject="fluentd",
