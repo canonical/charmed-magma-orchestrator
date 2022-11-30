@@ -956,7 +956,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         )
         fluentd_csr = generate_csr(
             private_key=self._fluentd_private_key.encode(),
-            subject="fluentd",
+            subject=f"fluentd.{self._domain_config}",
         )
         fluentd_certificate = generate_certificate(
             csr=fluentd_csr,
