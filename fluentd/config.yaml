@@ -1,0 +1,31 @@
+options:
+  domain:
+    type: string
+    default:
+    description: Fluentd domain (same as Orc8r domain)
+  elasticsearch-url:
+    type: string
+    default:
+    description: |
+      ElasticSearch URL (example: orc8r-elasticsearch:9200)
+  elasticsearch-schema:
+    type: string
+    default: https
+    description: |
+      "http" or "https" depending on whether or not the ElasticSearch endpoint supports SSL
+  elasticsearch-ssl-version:
+    type: string
+    default: TLSv1
+    description: SSL version
+  fluentd-chunk-limit-size:
+    type: string
+    default: 2M
+    description: |
+      The size limit of the received chunk. If the chunk size is larger than this value, 
+      the received chunk is dropped.
+  fluentd-queue-limit-length:
+    type: int
+    default: 8
+    description: |
+      The limit of the chunk queue length. If the chunk queue length is larger than this value,
+      the received chunk is dropped.

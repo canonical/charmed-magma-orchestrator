@@ -1,0 +1,48 @@
+# Copyright 2022 Canonical
+# See LICENSE file for licensing details.
+
+name: fluentd
+description: |
+  Fluentd is an open-source data collector for a unified logging layer. Fluentd allows you to unify 
+  data collection and consumption for better use and understanding of data. This fluentd charm 
+  is specifically built to forward Magma logs to elasticsearch.
+summary: |
+  Fluentd is an open-source data collector for a unified logging layer. Fluentd allows you to unify 
+  data collection and consumption for better use and understanding of data. This fluentd charm 
+  is specifically built to forward Magma logs to elasticsearch.
+website: https://github.com/canonical/charmed-magma-orchestrator
+
+containers:
+  fluentd:
+    resource: fluentd-elasticsearch-image
+    mounts:
+      - storage: buffer
+        location: /var/log/fluentd-buffers
+      - storage: certs
+        location: /certs
+      - storage: config
+        location: /etc/fluent/config.d
+
+storage:
+  buffer:
+    type: filesystem
+    description: Fluentd buffer
+    minimum-size: 10M
+  certs:
+    type: filesystem
+    description: Certificates storage
+    minimum-size: 1M
+  config:
+    type: filesystem
+    description: Configs storage
+    minimum-size: 1M
+
+requires:
+  cert-certifier:
+    interface: cert-certifier
+
+resources:
+  fluentd-elasticsearch-image:
+    type: oci-image
+    description: OCI image for fluentd-elasticsearch
+    upstream-source: gcr.io/google-containers/fluentd-elasticsearch:v2.4.0
