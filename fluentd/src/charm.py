@@ -102,7 +102,8 @@ class FluentdElasticsearchCharm(CharmBase):
             f"{self.BASE_CERTS_PATH}/certifier.pem", event.certificate, permissions=0o420
         )
 
-    def _write_config_files(self):
+    def _write_config_files(self) -> None:
+        """Writes fluentd config files."""
         base_source_directory = os.path.join(
             os.path.abspath(os.path.dirname(__file__)),
             "config_files",
@@ -135,7 +136,13 @@ class FluentdElasticsearchCharm(CharmBase):
             self._container.restart(self._service_name)
             logger.info(f"Restarted container {self._service_name}")
 
-    def _write_to_file(self, destination_path: Path, content: str):
+    def _write_to_file(self, destination_path: Path, content: str) -> None:
+        """Writes given content to a file in a given path.
+
+        Args:
+            destination_path (Path): Path of the destination file
+            content (str): Content to put in the destination file
+        """
         logger.info(f"Writing config file to {destination_path}")
         self._container.push(destination_path, content, permissions=0o777)
 
@@ -162,6 +169,14 @@ class FluentdElasticsearchCharm(CharmBase):
 
     @staticmethod
     def _read_file(file: Path) -> str:
+        """Reads given file's content.
+
+        Args:
+            file (Path): Path of the file to read
+
+        Returns:
+            str: Content of the file
+        """
         with open(file, "r") as file:
             file_content = file.read()
         return file_content
@@ -169,6 +184,15 @@ class FluentdElasticsearchCharm(CharmBase):
     def _render_config_file_template(
         self, config_templates_dir: Path, template_file_name: str
     ) -> str:
+        """Renders fluetnd config file from a given Jinja template.
+
+        Args:
+            config_templates_dir (Path): Directory containing config templates
+            template_file_name (str): Template file name
+
+        Returns:
+            str: Rendered config file's content
+        """
         file_loader = FileSystemLoader(config_templates_dir)
         env = Environment(loader=file_loader)
         template = env.get_template(template_file_name)
@@ -185,6 +209,11 @@ class FluentdElasticsearchCharm(CharmBase):
         )
 
     def _get_elasticsearch_config(self) -> dict:
+        """Extracts ElasticSearch configuration from Juju config.
+
+        Returns:
+            dict: ElasticSearch configuration
+        """
         # TODO: Elasticsearch url and port should be passed through relationship
         elasticsearch_url = self.model.config.get("elasticsearch-url")
         elasticsearch_url_split = elasticsearch_url.split(":")  # type: ignore[union-attr]
@@ -196,6 +225,11 @@ class FluentdElasticsearchCharm(CharmBase):
         }
 
     def _get_fluentd_config(self) -> dict:
+        """Extracts Fluentd configuration from Juju config.
+
+        Returns:
+            dict: Fluentd configuration
+        """
         return {
             "chunk_limit_size": self.model.config.get("fluentd-chunk-limit-size"),
             "queue_limit_length": self.model.config.get("fluentd-queue-limit-length"),
@@ -270,7 +304,11 @@ class FluentdElasticsearchCharm(CharmBase):
 
     @property
     def _domain_config(self) -> Optional[str]:
-        """Returns domain config."""
+        """Returns domain config.
+
+        Returns:
+            str: Domain
+        """
         return self.model.config.get("domain")
 
     def _cert_is_stored(self, cert_path: str) -> bool:
