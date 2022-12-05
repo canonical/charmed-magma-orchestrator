@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import Mock, call, mock_open, patch
 
 from ops import testing
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus
 
 from charm import FluentdElasticsearchCharm
 
