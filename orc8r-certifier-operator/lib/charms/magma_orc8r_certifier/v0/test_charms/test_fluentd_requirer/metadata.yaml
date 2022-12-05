@@ -1,0 +1,18 @@
+# Copyright 2022 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+ name: dummy-requirer-charm
+ description: dummy-requirer-charm
+ summary: dummy-requirer-charm
+ containers:
+   dummy-container:
+     resource: dummy-image
+
+ resources:
+   dummy-image:
+     type: oci-image
+     description: dummy image
+
+ requires:
+   cert-fluentd:
+     interface: cert-fluentd
