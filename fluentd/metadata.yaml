@@ -37,10 +37,6 @@ storage:
     description: Configs storage
     minimum-size: 1M
 
-requires:
-  cert-certifier:
-    interface: cert-certifier
-
 resources:
   fluentd-elasticsearch-image:
     type: oci-image

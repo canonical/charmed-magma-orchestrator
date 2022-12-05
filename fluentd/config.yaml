@@ -4,15 +4,6 @@ options:
     default:
     description: |
       ElasticSearch URL (example: orc8r-elasticsearch:9200)
-  elasticsearch-schema:
-    type: string
-    default: https
-    description: |
-      "http" or "https" depending on whether or not the ElasticSearch endpoint supports SSL
-  elasticsearch-ssl-version:
-    type: string
-    default: TLSv1_2
-    description: SSL version
   fluentd-chunk-limit-size:
     type: string
     default: 2M

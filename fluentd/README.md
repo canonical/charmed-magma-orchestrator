@@ -18,9 +18,6 @@ juju deploy fluentd --trust --channel edge \
 ### Config options
 
 - **elasticsearch-url**: ElasticSearch URL (example: orc8r-elasticsearch:9200).
-- **elasticsearch-schema**: "http" or "https" depending on whether the ElasticSearch endpoint 
-supports SSL. Defaults to https.
-- **elasticsearch-ssl-version**: SSL version. Defaults to TLSv1.
 - **fluentd-chunk-limit-size**: The size limit of the received chunk. If the chunk size is larger 
 than this value, the received chunk is dropped. Defaults to 2M.
 - **fluentd-queue-limit-length**: The limit of the chunk queue length. If the chunk queue length 
@@ -32,12 +29,6 @@ juju config fluentd <CONFIG OPTION>=<VALUE>
 
 > The elasticsearch configuration will be modeled using juju relations once there is a kubernetes
 > charm for elasticsearch.
-
-## Relations
-
-### Requires
-
-- **cert-certifier**: Relation that provides the certifier CA certificate.
 
 ## OCI Images
 

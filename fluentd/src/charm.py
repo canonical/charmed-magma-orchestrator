@@ -6,12 +6,8 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Optional, Union
+from typing import Union
 
-from charms.magma_orc8r_certifier.v0.cert_certifier import CertCertifierRequires
-from charms.magma_orc8r_certifier.v0.cert_certifier import (
-    CertificateAvailableEvent as CertifierCertificateAvailableEvent,
-)
 from charms.observability_libs.v1.kubernetes_service_patch import (
     KubernetesServicePatch,
     ServicePort,
@@ -27,9 +23,7 @@ logger = logging.getLogger(__name__)
 
 class FluentdElasticsearchCharm(CharmBase):
 
-    BASE_CERTS_PATH = "/certs"
     CONFIG_DIRECTORY = "/etc/fluent/config.d"
-    REQUIRED_RELATIONS = ["cert-certifier"]
 
     def __init__(self, *args):
         """An instance of this object everytime an event occurs."""
@@ -43,14 +37,8 @@ class FluentdElasticsearchCharm(CharmBase):
             service_name="fluentd",
         )
 
-        self.cert_certifier = CertCertifierRequires(charm=self, relationship_name="cert-certifier")
-
         self.framework.observe(self.on.fluentd_pebble_ready, self._configure)
         self.framework.observe(self.on.config_changed, self._configure)
-
-        self.framework.observe(
-            self.cert_certifier.on.certificate_available, self._on_certifier_certificate_available
-        )
 
     def _configure(self, event: Union[ConfigChangedEvent, PebbleReadyEvent]) -> None:
         """Configures fluentd once all prerequisites are in place.
@@ -63,13 +51,6 @@ class FluentdElasticsearchCharm(CharmBase):
                 "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
             )
             return
-        if not self._relations_created:
-            event.defer()
-            return
-        if not self._certs_are_stored:
-            self.unit.status = WaitingStatus("Waiting for certificates to be available")
-            event.defer()
-            return
         if not self._container.can_connect():
             self.unit.status = WaitingStatus("Waiting for container to be ready")
             event.defer()
@@ -78,22 +59,6 @@ class FluentdElasticsearchCharm(CharmBase):
         self._write_config_files()
         self._configure_pebble_layer()
         self.unit.status = ActiveStatus()
-
-    def _on_certifier_certificate_available(
-        self, event: CertifierCertificateAvailableEvent
-    ) -> None:
-        """Saves certifier certificate to certs dir.
-
-        Args:
-            event: Juju event (CertifierCertificateAvailableEvent)
-        """
-        if not self._container.can_connect():
-            self.unit.status = WaitingStatus("Waiting for container to be ready...")
-            event.defer()
-            return
-        self._container.push(
-            f"{self.BASE_CERTS_PATH}/certifier.pem", event.certificate, permissions=0o420
-        )
 
     def _write_config_files(self) -> None:
         """Writes fluentd config files."""
@@ -194,8 +159,6 @@ class FluentdElasticsearchCharm(CharmBase):
         return template.render(
             elasticsearch_host=elasticsearch_config["host"],
             elasticsearch_port=elasticsearch_config["port"],
-            elasticsearch_schema=elasticsearch_config["schema"],
-            elasticsearch_ssl_version=elasticsearch_config["ssl_version"],
             fluentd_chunk_limit_size=fluentd_config["chunk_limit_size"],
             fluentd_queue_limit_length=fluentd_config["queue_limit_length"],
         )
@@ -212,8 +175,6 @@ class FluentdElasticsearchCharm(CharmBase):
         return {
             "host": elasticsearch_url_split[0],
             "port": elasticsearch_url_split[1],
-            "schema": self.model.config.get("elasticsearch-schema"),
-            "ssl_version": self.model.config.get("elasticsearch-ssl-version"),
         }
 
     def _get_fluentd_config(self) -> dict:
@@ -241,50 +202,6 @@ class FluentdElasticsearchCharm(CharmBase):
             return True
         else:
             return False
-
-    @property
-    def _relations_created(self) -> bool:
-        """Checks whether required relations are created.
-
-        Returns:
-            bool: True/False
-        """
-        if missing_relations := [
-            relation
-            for relation in self.REQUIRED_RELATIONS
-            if not self.model.get_relation(relation)
-        ]:
-            msg = f"Waiting for relation(s) to be created: {', '.join(missing_relations)}"
-            self.unit.status = BlockedStatus(msg)
-            return False
-        return True
-
-    @property
-    def _certs_are_stored(self) -> bool:
-        """Checks whether the required certs are stored in the container.
-
-        Returns:
-            bool: True/False
-        """
-        if not self._container.can_connect():
-            return False
-        return all(
-            [
-                self._file_is_stored(f"{self.BASE_CERTS_PATH}/certifier.pem"),
-                # TODO: Placeholder for fluentd certs
-            ]
-        )
-
-    def _file_is_stored(self, file_path: str) -> bool:
-        """Checks whether given file is stored in the container.
-
-        Args:
-            file_path (str): FIle path
-
-        Returns:
-            bool: True/False
-        """
-        return self._container.exists(file_path)
 
 
 if __name__ == "__main__":
