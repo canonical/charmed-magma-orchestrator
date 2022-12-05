@@ -3,6 +3,7 @@
 
 import unittest
 from pathlib import Path
+from typing import Mapping, Union
 from unittest.mock import Mock, call, mock_open, patch
 
 from ops import testing
@@ -15,7 +16,7 @@ testing.SIMULATE_CAN_CONNECT = True
 TEST_ES_URL = "testes:1234"
 TEST_FLUENTD_CHUNK_LIMIT = "size"
 TEST_FLUENTD_QUEUE_LIMIT = 4321
-VALID_TEST_CHARM_CONFIG = {
+VALID_TEST_CHARM_CONFIG: Mapping[str, Union[str, int]] = {
     "elasticsearch-url": TEST_ES_URL,
     "fluentd-chunk-limit-size": TEST_FLUENTD_CHUNK_LIMIT,
     "fluentd-queue-limit-length": TEST_FLUENTD_QUEUE_LIMIT,
