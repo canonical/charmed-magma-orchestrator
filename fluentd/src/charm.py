@@ -41,9 +41,6 @@ class FluentdElasticsearchCharm(CharmBase):
             ports=[ServicePort(name="forward", port=24224)],
             service_type="LoadBalancer",
             service_name="fluentd",
-            additional_annotations={
-                "external-dns.alpha.kubernetes.io/hostname": f"fluentd.{self._domain_config}"
-            },
         )
 
         self.cert_certifier = CertCertifierRequires(charm=self, relationship_name="cert-certifier")
@@ -61,10 +58,6 @@ class FluentdElasticsearchCharm(CharmBase):
         Args:
             event: Juju event (ConfigChangedEvent or PebbleReadyEvent)
         """
-        if not self._domain_config_is_valid:
-            self.unit.status = BlockedStatus("Config 'domain' is not valid")
-            event.defer()
-            return
         if not self._elasticsearch_url_is_valid:
             self.unit.status = BlockedStatus(
                 "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
@@ -199,7 +192,6 @@ class FluentdElasticsearchCharm(CharmBase):
         elasticsearch_config = self._get_elasticsearch_config()
         fluentd_config = self._get_fluentd_config()
         return template.render(
-            domain=self._domain_config,
             elasticsearch_host=elasticsearch_config["host"],
             elasticsearch_port=elasticsearch_config["port"],
             elasticsearch_schema=elasticsearch_config["schema"],
@@ -234,25 +226,6 @@ class FluentdElasticsearchCharm(CharmBase):
             "chunk_limit_size": self.model.config.get("fluentd-chunk-limit-size"),
             "queue_limit_length": self.model.config.get("fluentd-queue-limit-length"),
         }
-
-    @property
-    def _domain_config_is_valid(self) -> bool:
-        """Returns whether the "domain" config is valid.
-
-        Returns:
-            bool: Whether the domain is a valid one.
-        """
-        if not self._domain_config:
-            return False
-        pattern = re.compile(
-            r"^(?:[a-zA-Z0-9]"  # First character of the domain
-            r"(?:[a-zA-Z0-9-_]{0,61}[A-Za-z0-9])?\.)"  # Sub domain + hostname
-            r"+[A-Za-z0-9][A-Za-z0-9-_]{0,61}"  # First 61 characters of the gTLD
-            r"[A-Za-z]$"  # Last character of the gTLD
-        )
-        if pattern.match(self._domain_config):
-            return True
-        return False
 
     @property
     def _elasticsearch_url_is_valid(self) -> bool:
@@ -297,30 +270,21 @@ class FluentdElasticsearchCharm(CharmBase):
             return False
         return all(
             [
-                self._cert_is_stored(f"{self.BASE_CERTS_PATH}/certifier.pem"),
+                self._file_is_stored(f"{self.BASE_CERTS_PATH}/certifier.pem"),
                 # TODO: Placeholder for fluentd certs
             ]
         )
 
-    @property
-    def _domain_config(self) -> Optional[str]:
-        """Returns domain config.
-
-        Returns:
-            str: Domain
-        """
-        return self.model.config.get("domain")
-
-    def _cert_is_stored(self, cert_path: str) -> bool:
-        """Checks whether given cert is stored in the container.
+    def _file_is_stored(self, file_path: str) -> bool:
+        """Checks whether given file is stored in the container.
 
         Args:
-            cert_path (str): Certificate path
+            file_path (str): FIle path
 
         Returns:
             bool: True/False
         """
-        return self._container.exists(cert_path)
+        return self._container.exists(file_path)
 
 
 if __name__ == "__main__":

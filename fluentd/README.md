@@ -10,7 +10,6 @@ is specifically built to forward Magma logs to elasticsearch.
 
 ```bash
 juju deploy fluentd --trust --channel edge \
---config domain="example.com" \
 --config elasticsearch-url="yourelasticsearch:9200" 
 ```
 
@@ -18,7 +17,6 @@ juju deploy fluentd --trust --channel edge \
 
 ### Config options
 
-- **domain**: Fluentd domain (same as Orc8r domain).
 - **elasticsearch-url**: ElasticSearch URL (example: orc8r-elasticsearch:9200).
 - **elasticsearch-schema**: "http" or "https" depending on whether the ElasticSearch endpoint 
 supports SSL. Defaults to https.
