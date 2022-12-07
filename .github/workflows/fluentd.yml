@@ -1,0 +1,29 @@
+name: fluentd-elasticsearch
+
+on:
+  push:
+    paths:
+      - "fluentd-elasticsearch-operator/**"
+
+jobs:
+  fluentd-elasticsearch-lint-report:
+    uses: ./.github/workflows/lint-report.yml
+    with:
+      charm_dir: fluentd-elasticsearch-operator
+
+  fluentd-elasticsearch-static-analysis:
+    uses: ./.github/workflows/static-analysis.yml
+    with:
+      charm_dir: fluentd-elasticsearch-operator
+
+  fluentd-elasticsearch-unit-tests-with-coverage:
+    uses: ./.github/workflows/unit-tests.yml
+    with:
+      charm_dir: fluentd-elasticsearch-operator
+
+  fluentd-elasticsearch-charmhub-upload:
+    if: github.ref_name == 'main'
+    uses: ./.github/workflows/upload-charm.yml
+    secrets: inherit
+    with:
+      charm: fluentd-elasticsearch-operator
