@@ -5,6 +5,10 @@
   include_tag_key true
   host {{ elasticsearch_host }}
   port {{ elasticsearch_port }}
+  scheme {{ elasticsearch_scheme }}
+  {%- if elasticsearch_scheme != https +%}
+  ssl_version TLSv1_2
+  {%- endif +%}
   logstash_format true
   logstash_prefix "eventd"
   reconnect_on_error true
@@ -32,6 +36,10 @@
   include_tag_key true
   host {{ elasticsearch_host }}
   port {{ elasticsearch_port }}
+  scheme {{ elasticsearch_scheme }}
+  {%- if elasticsearch_scheme != https +%}
+  ssl_version TLSv1_2
+  {%- endif +%}
   logstash_format true
   logstash_prefix "magma"
   reconnect_on_error true

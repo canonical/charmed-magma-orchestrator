@@ -30,6 +30,12 @@ juju config fluentd <CONFIG OPTION>=<VALUE>
 > The elasticsearch configuration will be modeled using juju relations once there is a kubernetes
 > charm for elasticsearch.
 
+## Relations
+
+### Requires
+
+- **fluentd-certs**: Relation that provides certificates for Fluentd.
+
 ## OCI Images
 
 Default: gcr.io/google-containers/fluentd-elasticsearch:v2.4.0

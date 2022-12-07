@@ -23,6 +23,14 @@ containers:
       - storage: config
         location: /etc/fluent/config.d
 
+peers:
+  replicas:
+    interface: fluetnd-replica
+
+requires:
+  fluentd-certs:
+    interface: tls-certificates
+
 storage:
   buffer:
     type: filesystem
