@@ -18,8 +18,6 @@ containers:
     mounts:
       - storage: buffer
         location: /var/log/fluentd-buffers
-      - storage: certs
-        location: /certs
       - storage: config
         location: /etc/fluent/config.d
 
@@ -28,10 +26,6 @@ storage:
     type: filesystem
     description: Fluentd buffer
     minimum-size: 10M
-  certs:
-    type: filesystem
-    description: Certificates storage
-    minimum-size: 1M
   config:
     type: filesystem
     description: Configs storage
