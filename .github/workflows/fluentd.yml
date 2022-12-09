@@ -21,6 +21,11 @@ jobs:
     with:
       charm_dir: fluentd-elasticsearch-operator
 
+  fluentd-elasticsearch-integration-test:
+    uses: ./.github/workflows/integration-tests.yml
+    with:
+      charm_dir: fluentd-elasticsearch-operator
+
   fluentd-elasticsearch-charmhub-upload:
     if: github.ref_name == 'main'
     uses: ./.github/workflows/upload-charm.yml

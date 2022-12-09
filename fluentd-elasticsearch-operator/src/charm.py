@@ -122,15 +122,13 @@ class FluentdElasticsearchCharm(CharmBase):
                 self.unit.status = WaitingStatus("Waiting for Fluentd CSR to be available")
                 event.defer()
                 return
-            self._save_fluentd_private_key_to_file(
-                self._get_value_from_peer_relation_data("fluentd_private_key")
-            )
-            self._save_fluentd_csr_to_file(self._get_value_from_peer_relation_data("fluentd_csr"))
         if not self._fluentd_certificates_stored_in_peer_relation_data:
             self.unit.status = WaitingStatus("Waiting for Fluentd certificates to be available")
             event.defer()
             return
         self.unit.status = MaintenanceStatus("Configuring pod")
+        self._save_fluentd_private_key_to_file(self._fluentd_private_key)
+        self._save_fluentd_csr_to_file(self._fluentd_csr)
         self._save_fluentd_cert_to_file(self._get_value_from_peer_relation_data("fluentd_cert"))
         self._save_ca_cert_to_file(self._get_value_from_peer_relation_data("ca_cert"))
         self._write_dynamic_config_files()
@@ -184,13 +182,17 @@ class FluentdElasticsearchCharm(CharmBase):
         self._renew_cerificate()
         self.unit.status = WaitingStatus("Waiting to receive new certificate from provider")
 
-    def _request_fluentd_certificates(self):
+    def _request_fluentd_certificates(self) -> None:
+        """Requests Fluentd certificates."""
         if not self._fluentd_private_key_stored_in_peer_relation_data:
             self._request_certificate_based_on_new_private_key()
+            return
         if not self._fluentd_csr_stored_in_peer_relation_data:
             self._request_certificate_based_on_existing_private_key()
+            return
         if not self._stored_csr_matches_charm_config:
             self._renew_cerificate()
+            return
 
     def _request_certificate_based_on_new_private_key(self) -> None:
         """Does the whole path of getting an SSL certificate for Fluentd.
@@ -200,9 +202,7 @@ class FluentdElasticsearchCharm(CharmBase):
         Requests a Fluentd certificate.
         """
         self._generate_and_save_fluentd_private_key()
-        self._push_fluentd_private_key_to_peer_relation_data()
         self._generate_and_save_fluentd_csr()
-        self._push_fluentd_csr_to_peer_relation_data()
         self._fluentd_certificates.request_certificate_creation(self._fluentd_csr.encode())
 
     def _request_certificate_based_on_existing_private_key(self) -> None:
@@ -212,7 +212,6 @@ class FluentdElasticsearchCharm(CharmBase):
         Requests a Fluentd certificate.
         """
         self._generate_and_save_fluentd_csr()
-        self._push_fluentd_csr_to_peer_relation_data()
         self._fluentd_certificates.request_certificate_creation(self._fluentd_csr.encode())
 
     def _renew_cerificate(self) -> None:
@@ -223,7 +222,6 @@ class FluentdElasticsearchCharm(CharmBase):
         """
         old_csr = self._fluentd_csr
         self._generate_and_save_fluentd_csr()
-        self._push_fluentd_csr_to_peer_relation_data()
         self._fluentd_certificates.request_certificate_renewal(
             old_certificate_signing_request=old_csr.encode(),
             new_certificate_signing_request=self._fluentd_csr.encode(),
@@ -232,33 +230,17 @@ class FluentdElasticsearchCharm(CharmBase):
     def _generate_and_save_fluentd_private_key(self) -> None:
         """Generates Fluentd private key and saves it in the container."""
         fluentd_private_key = generate_private_key()
-        self._save_fluentd_private_key_to_file(fluentd_private_key.decode())
-
-    def _push_fluentd_private_key_to_peer_relation_data(self) -> None:
-        """Pushes Fluentd private key to peer relation data."""
-        if not self._fluentd_private_key:
-            raise RuntimeError("Fluentd private key not available")
-        if not self._peer_relation_created:
-            raise RuntimeError("No peer relation")
-        self._store_item_in_peer_relation_data("fluentd_private_key", self._fluentd_private_key)
+        self._store_item_in_peer_relation_data("fluentd_private_key", fluentd_private_key.decode())
 
     def _generate_and_save_fluentd_csr(self) -> None:
         """Generates Fluentd CSR and saves it in the container."""
-        if not self._fluentd_private_key:
+        if not self._fluentd_private_key_stored_in_peer_relation_data:
             raise RuntimeError("Fluentd private key not available")
         fluentd_csr = generate_csr(
             private_key=self._fluentd_private_key.encode(),
             subject=f"fluentd.{self._domain_config}",
         )
-        self._save_fluentd_csr_to_file(fluentd_csr.decode())
-
-    def _push_fluentd_csr_to_peer_relation_data(self) -> None:
-        """Pushes Fluentd CSR to peer relation data."""
-        if not self._fluentd_csr:
-            raise RuntimeError("Fluentd CSR not available")
-        if not self._peer_relation_created:
-            raise RuntimeError("No peer relation")
-        self._store_item_in_peer_relation_data("fluentd_csr", self._fluentd_csr)
+        self._store_item_in_peer_relation_data("fluentd_csr", fluentd_csr.decode())
 
     def _push_fluentd_cert_to_peer_relation_data(self, fluentd_cert: str) -> None:
         """Pushes Fluentd certificate to peer relation data.
@@ -335,7 +317,7 @@ class FluentdElasticsearchCharm(CharmBase):
         Returns:
             str: Fluentd private key
         """
-        return str(self._container.pull(Path(f"{self.CERTIFICATES_DIRECTORY}/fluentd.key")).read())
+        return self._get_value_from_peer_relation_data("fluentd_private_key") or ""
 
     @property
     def _fluentd_csr(self) -> str:
@@ -344,7 +326,7 @@ class FluentdElasticsearchCharm(CharmBase):
         Returns:
             str: Fluentd CSR
         """
-        return str(self._container.pull(Path(f"{self.CERTIFICATES_DIRECTORY}/fluentd.csr")).read())
+        return self._get_value_from_peer_relation_data("fluentd_csr") or ""
 
     @property
     def _fluentd_private_key_stored_in_peer_relation_data(self) -> bool:
@@ -353,7 +335,7 @@ class FluentdElasticsearchCharm(CharmBase):
         Returns:
             bool: Whether Fluentd private key is stored in the peer relation data.
         """
-        if not self._get_value_from_peer_relation_data("fluentd_private_key"):
+        if not self._fluentd_private_key:
             return False
         return True
 
@@ -364,7 +346,7 @@ class FluentdElasticsearchCharm(CharmBase):
         Returns:
             bool: Whether Fluentd CSR is stored in the peer relation data.
         """
-        if not self._get_value_from_peer_relation_data("fluentd_csr"):
+        if not self._fluentd_csr:
             return False
         return True
 
