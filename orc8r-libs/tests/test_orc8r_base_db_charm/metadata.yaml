@@ -15,8 +15,8 @@ containers:
 resources:
   magma-orc8r-dummy-image:
     type: oci-image
-    description: OCI image for magma-orc8r-dummy (docker.artifactory.magmacore.org/controller:1.6.0)
-    upstream-source: docker.artifactory.magmacore.org/controller:1.6.0
+    description: OCI image for magma-orc8r-dummy (linuxfoundation.jfrog.io/magma-docker/controller:1.6.0)
+    upstream-source: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
 
 requires:
   db:
