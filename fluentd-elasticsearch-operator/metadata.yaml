@@ -25,7 +25,7 @@ containers:
 
 peers:
   replicas:
-    interface: fluetnd-replica
+    interface: fluentd-replica
 
 requires:
   fluentd-certs:
