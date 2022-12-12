@@ -1,0 +1,4 @@
+ops
+Jinja2
+lightkube
+lightkube-models
