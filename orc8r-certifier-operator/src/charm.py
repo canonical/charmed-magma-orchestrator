@@ -40,11 +40,8 @@ from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateCreationRequestEvent,
     CertificateExpiredEvent,
     CertificateExpiringEvent,
-<<<<<<< HEAD
     TLSCertificatesProvidesV1,
-=======
     CertificateRevokedEvent,
->>>>>>> main
     TLSCertificatesRequiresV1,
     generate_ca,
     generate_certificate,
