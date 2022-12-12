@@ -40,8 +40,8 @@ from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateCreationRequestEvent,
     CertificateExpiredEvent,
     CertificateExpiringEvent,
-    TLSCertificatesProvidesV1,
     CertificateRevokedEvent,
+    TLSCertificatesProvidesV1,
     TLSCertificatesRequiresV1,
     generate_ca,
     generate_certificate,
@@ -466,12 +466,16 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     def _on_fluentd_certificate_creation_request(
         self, event: CertificateCreationRequestEvent
     ) -> None:
-        """Creates Fluentd certificate and pushes it to the relation data along with the CA
+        """Triggered when a Fluentd certificate request is made on the fluentd-certs.
+
+        Creates Fluentd certificate and pushes it to the relation data along with the CA
         certificate used to sign Fluentd cert.
 
         Args:
             event (CertificateCreationRequestEvent): Custom Juju event for certificate request
         """
+        if not self._application_private_key:
+            raise RuntimeError("Application private key not available")
         if not event.certificate_signing_request:
             self.unit.status = BlockedStatus("Fluentd CSR not available in the relation data")
             event.defer()
@@ -712,9 +716,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                     "Waiting to receive new certificate from provider"
                 )
             else:
-                self.unit.status = BlockedStatus(
-                    "Waiting for certificates relation to be created"
-                )
+                self.unit.status = BlockedStatus("Waiting for certificates relation to be created")
         if not self._stored_root_csr_matches_config:
             old_csr = self._root_csr
             self._generate_root_csr()
@@ -727,9 +729,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                     "Waiting to receive new certificate from provider"
                 )
             else:
-                self.unit.status = BlockedStatus(
-                    "Waiting for certificates relation to be created"
-                )
+                self.unit.status = BlockedStatus("Waiting for certificates relation to be created")
         if (
             not self._application_certificates_are_stored
             or not self._stored_application_certificate_matches_config  # noqa: W503
