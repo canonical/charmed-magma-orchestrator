@@ -14,4 +14,4 @@ juju deploy magma-orc8r-feg-relay  orc8r-feg-relay --trust
 
 ## OCI Images
 
-Default: docker.artifactory.magmacore.org/controller:1.6.0
+Default: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
