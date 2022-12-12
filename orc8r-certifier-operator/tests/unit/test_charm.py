@@ -661,7 +661,7 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
 
         assert self.harness.charm.unit.status == BlockedStatus(
-            "Waiting for tls-certificates relation to be created"
+            "Waiting for certificates relation to be created"
         )
 
     @patch("psycopg2.connect", new=Mock())
