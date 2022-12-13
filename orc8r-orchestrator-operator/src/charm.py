@@ -305,7 +305,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             None
         """
         load_balancer_services = self._get_load_balancer_services()
-        event.set_results(load_balancer_services)
+        event.set_results(load_balancer_services)  # type: ignore[arg-type]
 
     def _get_load_balancer_services(self) -> Dict[str, str]:
         """Returns all Load balancer service addresses.
@@ -448,7 +448,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             logger.info(f"Return message: {stdout}, {error}")
         except ExecError as e:
             logger.error("Exited with code %d. Stderr:", e.exit_code)
-            for line in e.stderr.splitlines():
+            for line in e.stderr.splitlines():  # type: ignore[union-attr]
                 logger.error("    %s", line)
 
     def _set_log_verbosity_action(self, event: ActionEvent) -> None:
@@ -476,7 +476,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             logger.info(f"Return message: {stdout}, {error}")
         except ExecError as e:
             logger.error("Exited with code %d. Stderr:", e.exit_code)
-            for line in e.stderr.splitlines():
+            for line in e.stderr.splitlines():  # type: ignore[union-attr]
                 logger.error("    %s", line)
 
     def _configure_magma_orc8r_orchestrator(
@@ -542,8 +542,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
         Returns:
             tuple: Elasticsearch url and port.
         """
-        elasticsearch_url = self.model.config.get("elasticsearch-url")
-        if elasticsearch_url:
+        if elasticsearch_url := self.model.config.get("elasticsearch-url"):
             elasticsearch_url_split = elasticsearch_url.split(":")
             return elasticsearch_url_split[0], elasticsearch_url_split[1]
         else:

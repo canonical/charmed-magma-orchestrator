@@ -1,4 +1,4 @@
 jsonschema
-ops==1.5.2
+ops
 lightkube
 lightkube-models
