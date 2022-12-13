@@ -76,6 +76,8 @@ Typical usage of this class would look something like:
     ```
 """
 
+from typing import Union
+
 from ops.charm import CharmBase, CharmEvents, RelationChangedEvent, RelationJoinedEvent
 from ops.framework import EventBase, EventSource, Object
 
@@ -87,7 +89,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 3
 
 
 class CertificateRequestEvent(EventBase):
@@ -206,16 +208,17 @@ class CertRootCARequires(Object):
             charm.on[relationship_name].relation_changed, self._on_relation_changed
         )
 
-    def _on_relation_changed(self, event: RelationChangedEvent) -> None:
+    def _on_relation_changed(
+        self, event: Union[RelationChangedEvent, RelationJoinedEvent]
+    ) -> None:
         """Triggered everytime there's a change in relation data.
 
         Args:
-            event (RelationChangedEvent): Juju event
+            event (RelationChangedEvent, RelationJoinedEvent): Juju event
 
         Returns:
             None
         """
         relation_data = event.relation.data
-        certificate = relation_data[event.unit].get("certificate")
-        if certificate:
+        if certificate := relation_data[event.unit].get("certificate"):  # type: ignore[index]
             self.on.certificate_available.emit(certificate=certificate)

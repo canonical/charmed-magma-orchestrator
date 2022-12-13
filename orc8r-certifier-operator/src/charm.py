@@ -549,7 +549,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             return
         event.set_results(
             {
-                "password": self._admin_operator_pfx_password,
+                "password": self._admin_operator_pfx_password,  # type: ignore[dict-item]
             }
         )
 
