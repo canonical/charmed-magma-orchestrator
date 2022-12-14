@@ -69,17 +69,17 @@ class TestCharm(unittest.TestCase):
                 call(
                     Path("/etc/fluent/config.d/forward-input.conf"),
                     test_fluentd_configs[0],
-                    permissions=0o777,
+                    permissions=0o666,
                 ),
                 call(
                     Path("/etc/fluent/config.d/general.conf"),
                     test_fluentd_configs[1],
-                    permissions=0o777,
+                    permissions=0o666,
                 ),
                 call(
                     Path("/etc/fluent/config.d/system.conf"),
                     test_fluentd_configs[2],
-                    permissions=0o777,
+                    permissions=0o666,
                 ),
             ]
         )
@@ -457,7 +457,7 @@ class TestCharm(unittest.TestCase):
             call(
                 Path("/etc/fluent/config.d/output.conf"),
                 expected_rendered_test_optput_conf,
-                permissions=511,
+                permissions=0o666,
             ),
         )
 
