@@ -3,6 +3,7 @@
 
 import base64
 import io
+import json
 import unittest
 from typing import Tuple
 from unittest.mock import Mock, call, patch
@@ -1049,3 +1050,135 @@ class TestCharm(unittest.TestCase):
 
         patch_certificate_request.assert_not_called()
         patch_certificate_renewal.assert_not_called()
+
+    def test_given_application_key_not_available_when_fluentd_certificate_creation_request_then_runtime_error_is_raised(  # noqa: E501
+        self,
+    ):
+        fluentd_relation_id = self.harness.add_relation("fluentd-certs", "fluentd-app")
+        self.harness.add_relation_unit(fluentd_relation_id, "fluentd-app/0")
+
+        with self.assertRaises(RuntimeError):
+            self.harness.update_relation_data(
+                relation_id=fluentd_relation_id,
+                app_or_unit="fluentd-app/0",
+                key_values={
+                    "certificate_signing_requests": json.dumps(
+                        [{"certificate_signing_request": "whatever"}]
+                    )
+                },
+            )
+
+    def test_given_fluentd_csr_not_present_in_relation_data_when_fluentd_certificate_creation_request_then_status_is_blocked(  # noqa: E501
+        self,
+    ):
+        self.create_peer_relation_with_certificates(
+            domain_config="some.com", application_private_key=True
+        )
+        fluentd_relation_id = self.harness.add_relation("fluentd-certs", "fluentd-app")
+        self.harness.add_relation_unit(fluentd_relation_id, "fluentd-app/0")
+
+        self.harness.update_relation_data(
+            relation_id=fluentd_relation_id,
+            app_or_unit="fluentd-app/0",
+            key_values={
+                "certificate_signing_requests": json.dumps([{"certificate_signing_request": ""}])
+            },
+        )
+
+        assert self.harness.charm.unit.status == BlockedStatus(
+            "Fluentd CSR not available in the relation data"
+        )
+
+    def test_given_valid_fluentd_csr_but_application_cert_not_available_when_fluentd_certificate_creation_request_then_status_is_waiting(  # noqa: E501
+        self,
+    ):
+        self.create_peer_relation_with_certificates(
+            domain_config="some.com", application_private_key=True
+        )
+        fluentd_relation_id = self.harness.add_relation("fluentd-certs", "fluentd-app")
+        self.harness.add_relation_unit(fluentd_relation_id, "fluentd-app/0")
+
+        self.harness.update_relation_data(
+            relation_id=fluentd_relation_id,
+            app_or_unit="fluentd-app/0",
+            key_values={
+                "certificate_signing_requests": json.dumps(
+                    [{"certificate_signing_request": "whatever"}]
+                )
+            },
+        )
+
+        assert self.harness.charm.unit.status == WaitingStatus(
+            "Waiting for the CA certificate to be available"
+        )
+
+    @patch("charm.generate_certificate")
+    @patch("charm.TLSCertificatesProvidesV1.set_relation_certificate", Mock())
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
+    def test_given_aplication_key_and_cert_available_and_valid_fluentd_csr_in_the_relation_data_when_fluentd_certificate_creation_request_then_fluentd_cert_is_generated(  # noqa: E501
+        self, patched_generate_certificate
+    ):
+        self.harness.set_leader(is_leader=True)
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
+        test_csr = "whatever"
+        _, certs = self.create_peer_relation_with_certificates(
+            domain_config="some.com",
+            application_private_key=True,
+            application_certificate=True,
+        )
+        fluentd_relation_id = self.harness.add_relation("fluentd-certs", "fluentd-app")
+        self.harness.add_relation_unit(fluentd_relation_id, "fluentd-app/0")
+
+        self.harness.update_relation_data(
+            relation_id=fluentd_relation_id,
+            app_or_unit="fluentd-app/0",
+            key_values={
+                "certificate_signing_requests": json.dumps(
+                    [{"certificate_signing_request": test_csr}]
+                )
+            },
+        )
+
+        patched_generate_certificate.assert_called_once_with(
+            csr=test_csr.encode(),
+            ca=certs["application_certificate"].encode(),
+            ca_key=certs["application_private_key"].encode(),
+        )
+
+    @patch("charm.TLSCertificatesProvidesV1.set_relation_certificate")
+    @patch("charm.generate_certificate")
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
+    def test_given_aplication_key_and_cert_available_and_valid_fluentd_csr_in_the_relation_data_when_fluentd_certificate_creation_request_then_fluentd_cert_is_set_in_the_relation(  # noqa: E501
+        self, patched_generate_certificate, patched_set_relation_certificate
+    ):
+        test_fluentd_cert = b"whatever"
+        self.harness.set_leader(is_leader=True)
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
+        fluentd_key = generate_private_key()
+        fluentd_csr = generate_csr(private_key=fluentd_key, subject="test")
+        patched_generate_certificate.return_value = test_fluentd_cert
+        _, certs = self.create_peer_relation_with_certificates(
+            domain_config="some.com",
+            application_private_key=True,
+            application_certificate=True,
+        )
+        fluentd_relation_id = self.harness.add_relation("fluentd-certs", "fluentd-app")
+        self.harness.add_relation_unit(fluentd_relation_id, "fluentd-app/0")
+
+        self.harness.update_relation_data(
+            relation_id=fluentd_relation_id,
+            app_or_unit="fluentd-app/0",
+            key_values={
+                "certificate_signing_requests": json.dumps(
+                    [{"certificate_signing_request": fluentd_csr.decode()}]
+                )
+            },
+        )
+
+        patched_set_relation_certificate.assert_called_once_with(
+            certificate=test_fluentd_cert.decode(),
+            certificate_signing_request=fluentd_csr.decode(),
+            ca=certs["application_certificate"],
+            chain=[test_fluentd_cert.decode(), certs["application_certificate"]],
+            relation_id=fluentd_relation_id,
+        )
