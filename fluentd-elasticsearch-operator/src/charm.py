@@ -358,11 +358,6 @@ class FluentdElasticsearchCharm(CharmBase):
     def _write_static_config_files(self) -> None:
         """Writes static Fluentd config files to the container."""
         self._write_to_file(
-            destination_path=Path(f"{self.CONFIG_DIRECTORY}/forward-input.conf"),
-            content=self._read_file(Path(f"{self.CONFIG_SOURCE_DIRECTORY}/forward-input.conf")),
-            permissions=0o666,
-        )
-        self._write_to_file(
             destination_path=Path(f"{self.CONFIG_DIRECTORY}/general.conf"),
             content=self._read_file(Path(f"{self.CONFIG_SOURCE_DIRECTORY}/general.conf")),
             permissions=0o666,
@@ -376,9 +371,23 @@ class FluentdElasticsearchCharm(CharmBase):
     def _write_dynamic_config_files(self) -> None:
         """Writes dynamic Fluentd config files to the container."""
         self._write_to_file(
+            destination_path=Path(f"{self.CONFIG_DIRECTORY}/forward-input.conf"),
+            content=self._render_config_file_template(
+                Path(f"{self.CONFIG_SOURCE_DIRECTORY}"),
+                "forward-input.conf.j2",
+                certs_directory=self.CERTIFICATES_DIRECTORY,
+            ),
+            permissions=0o666,
+        )
+        self._write_to_file(
             destination_path=Path(f"{self.CONFIG_DIRECTORY}/output.conf"),
             content=self._render_config_file_template(
-                Path(f"{self.CONFIG_SOURCE_DIRECTORY}"), "output.conf.j2"
+                Path(f"{self.CONFIG_SOURCE_DIRECTORY}"),
+                "output.conf.j2",
+                elasticsearch_host=self._elasticsearch_host,
+                elasticsearch_port=self._elasticsearch_port,
+                fluentd_chunk_limit_size=self._config_fluentd_chunk_limit_size,
+                fluentd_queue_limit_length=self._config_fluentd_queue_limit_length,
             ),
             permissions=0o666,
         )
@@ -458,14 +467,16 @@ class FluentdElasticsearchCharm(CharmBase):
             file_content = file.read()
         return file_content
 
+    @staticmethod
     def _render_config_file_template(
-        self, config_templates_dir: Path, template_file_name: str
+        config_templates_dir: Path, template_file_name: str, **values: Optional[str]
     ) -> str:
         """Renders fluetnd config file from a given Jinja template.
 
         Args:
             config_templates_dir (Path): Directory containing config templates
             template_file_name (str): Template file name
+            values (str): Named args to be used for rendering the template
 
         Returns:
             str: Rendered config file's content
@@ -473,12 +484,7 @@ class FluentdElasticsearchCharm(CharmBase):
         file_loader = FileSystemLoader(config_templates_dir)
         env = Environment(loader=file_loader)
         template = env.get_template(template_file_name)
-        return template.render(
-            elasticsearch_host=self._elasticsearch_host,
-            elasticsearch_port=self._elasticsearch_port,
-            fluentd_chunk_limit_size=self._config_fluentd_chunk_limit_size,
-            fluentd_queue_limit_length=self._config_fluentd_queue_limit_length,
-        )
+        return template.render(values)
 
     @property
     def _elasticsearch_host(self) -> Optional[str]:

@@ -4,7 +4,7 @@
 import unittest
 from pathlib import Path
 from typing import Mapping, Tuple, Union
-from unittest.mock import Mock, call, mock_open, patch
+from unittest.mock import Mock, PropertyMock, call, mock_open, patch
 
 from charms.tls_certificates_interface.v1.tls_certificates import (
     generate_ca,
@@ -29,6 +29,7 @@ VALID_TEST_CHARM_CONFIG: Mapping[str, Union[str, int]] = {
     "fluentd-chunk-limit-size": TEST_FLUENTD_CHUNK_LIMIT,
     "fluentd-queue-limit-length": TEST_FLUENTD_QUEUE_LIMIT,
 }
+TEST_FORWARD_INPUT_CONF_TEMPLATE = b"{{ certs_directory }}"
 TEST_OUTPUT_CONF_TEMPLATE = b"""{{ elasticsearch_host }}
 {{ elasticsearch_port }}
 {{ fluentd_chunk_limit_size }}
@@ -56,7 +57,6 @@ class TestCharm(unittest.TestCase):
         test_fluentd_configs = [
             "config one",
             "config two",
-            "config three",
         ]
         patched_open.side_effect = [
             mock_open(read_data=content).return_value for content in test_fluentd_configs
@@ -67,18 +67,13 @@ class TestCharm(unittest.TestCase):
         patched_push.assert_has_calls(
             calls=[
                 call(
-                    Path("/etc/fluent/config.d/forward-input.conf"),
+                    Path("/etc/fluent/config.d/general.conf"),
                     test_fluentd_configs[0],
                     permissions=0o666,
                 ),
                 call(
-                    Path("/etc/fluent/config.d/general.conf"),
-                    test_fluentd_configs[1],
-                    permissions=0o666,
-                ),
-                call(
                     Path("/etc/fluent/config.d/system.conf"),
-                    test_fluentd_configs[2],
+                    test_fluentd_configs[1],
                     permissions=0o666,
                 ),
             ]
@@ -433,11 +428,19 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.push")
-    @patch("builtins.open", new_callable=mock_open, read_data=TEST_OUTPUT_CONF_TEMPLATE)
+    @patch("builtins.open", new_callable=mock_open())
+    @patch("charm.FluentdElasticsearchCharm.CERTIFICATES_DIRECTORY", new_callable=PropertyMock)
     def test_given_fluentd_certificates_in_peer_relation_data_when_config_changed_then_output_conf_is_generated_and_stored_in_the_container(  # noqa: E501
-        self, _, patched_push
+        self, patched_certs_dir, patched_open, patched_push
     ):
-        expected_rendered_test_optput_conf = f"""{TEST_ES_URL.split(":")[0]}
+        test_certs_path = "/test/path"
+        patched_certs_dir.return_value = test_certs_path
+        patched_open.side_effect = [
+            mock_open(read_data=content).return_value
+            for content in [TEST_FORWARD_INPUT_CONF_TEMPLATE, TEST_OUTPUT_CONF_TEMPLATE]
+        ]
+        expected_rendered_test_forward_input_conf = test_certs_path
+        expected_rendered_test_output_conf = f"""{TEST_ES_URL.split(":")[0]}
 {TEST_ES_URL.split(":")[1]}
 {TEST_FLUENTD_CHUNK_LIMIT}
 {TEST_FLUENTD_QUEUE_LIMIT}"""
@@ -455,8 +458,16 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(
             write_calls[4],
             call(
+                Path("/etc/fluent/config.d/forward-input.conf"),
+                expected_rendered_test_forward_input_conf,
+                permissions=0o666,
+            ),
+        )
+        self.assertEqual(
+            write_calls[5],
+            call(
                 Path("/etc/fluent/config.d/output.conf"),
-                expected_rendered_test_optput_conf,
+                expected_rendered_test_output_conf,
                 permissions=0o666,
             ),
         )
