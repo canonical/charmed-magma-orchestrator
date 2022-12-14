@@ -169,10 +169,6 @@ class FluentdElasticsearchCharm(CharmBase):
         if not self._domain_config_is_valid:
             self.unit.status = BlockedStatus("Config 'domain' is not valid")
             return
-        if not self._container.can_connect():
-            self.unit.status = WaitingStatus("Waiting for container to be ready")
-            event.defer()
-            return
         if not self._fluentd_private_key_stored_in_peer_relation_data:
             self._request_certificate_based_on_new_private_key()
             return
@@ -202,8 +198,7 @@ class FluentdElasticsearchCharm(CharmBase):
         Requests a Fluentd certificate.
         """
         self._generate_and_save_fluentd_private_key()
-        self._generate_and_save_fluentd_csr()
-        self._fluentd_certificates.request_certificate_creation(self._fluentd_csr.encode())
+        self._request_certificate_based_on_existing_private_key()
 
     def _request_certificate_based_on_existing_private_key(self) -> None:
         """Gets Fluentd certificate based on existing private key.
@@ -228,12 +223,12 @@ class FluentdElasticsearchCharm(CharmBase):
         )
 
     def _generate_and_save_fluentd_private_key(self) -> None:
-        """Generates Fluentd private key and saves it in the container."""
+        """Generates Fluentd private key and saves it in the peer relation data."""
         fluentd_private_key = generate_private_key()
         self._store_item_in_peer_relation_data("fluentd_private_key", fluentd_private_key.decode())
 
     def _generate_and_save_fluentd_csr(self) -> None:
-        """Generates Fluentd CSR and saves it in the container."""
+        """Generates Fluentd CSR and saves it in the peer relation data."""
         if not self._fluentd_private_key_stored_in_peer_relation_data:
             raise RuntimeError("Fluentd private key not available")
         fluentd_csr = generate_csr(
@@ -335,9 +330,7 @@ class FluentdElasticsearchCharm(CharmBase):
         Returns:
             bool: Whether Fluentd private key is stored in the peer relation data.
         """
-        if not self._fluentd_private_key:
-            return False
-        return True
+        return bool(self._fluentd_private_key)
 
     @property
     def _fluentd_csr_stored_in_peer_relation_data(self) -> bool:
@@ -346,9 +339,7 @@ class FluentdElasticsearchCharm(CharmBase):
         Returns:
             bool: Whether Fluentd CSR is stored in the peer relation data.
         """
-        if not self._fluentd_csr:
-            return False
-        return True
+        return bool(self._fluentd_csr)
 
     @property
     def _fluentd_certificates_stored_in_peer_relation_data(self) -> bool:
@@ -369,17 +360,17 @@ class FluentdElasticsearchCharm(CharmBase):
         self._write_to_file(
             destination_path=Path(f"{self.CONFIG_DIRECTORY}/forward-input.conf"),
             content=self._read_file(Path(f"{self.CONFIG_SOURCE_DIRECTORY}/forward-input.conf")),
-            permissions=0o777,
+            permissions=0o666,
         )
         self._write_to_file(
             destination_path=Path(f"{self.CONFIG_DIRECTORY}/general.conf"),
             content=self._read_file(Path(f"{self.CONFIG_SOURCE_DIRECTORY}/general.conf")),
-            permissions=0o777,
+            permissions=0o666,
         )
         self._write_to_file(
             destination_path=Path(f"{self.CONFIG_DIRECTORY}/system.conf"),
             content=self._read_file(Path(f"{self.CONFIG_SOURCE_DIRECTORY}/system.conf")),
-            permissions=0o777,
+            permissions=0o666,
         )
 
     def _write_dynamic_config_files(self) -> None:
@@ -389,7 +380,7 @@ class FluentdElasticsearchCharm(CharmBase):
             content=self._render_config_file_template(
                 Path(f"{self.CONFIG_SOURCE_DIRECTORY}"), "output.conf.j2"
             ),
-            permissions=0o777,
+            permissions=0o666,
         )
 
     def _configure_pebble_layer(self) -> None:
@@ -450,8 +441,8 @@ class FluentdElasticsearchCharm(CharmBase):
         """
         if not content:
             raise RuntimeError("Can't write to file - content not available")
-        logger.info(f"Writing config file to {destination_path}")
         self._container.push(destination_path, content, permissions=permissions)
+        logger.info(f"Config file written to {destination_path}")
 
     @staticmethod
     def _read_file(file: Path) -> str:
@@ -548,9 +539,7 @@ class FluentdElasticsearchCharm(CharmBase):
             r"+[A-Za-z0-9][A-Za-z0-9-_]{0,61}"  # First 61 characters of the gTLD
             r"[A-Za-z]$"  # Last character of the gTLD
         )
-        if pattern.match(self._domain_config):
-            return True
-        return False
+        return bool(pattern.match(self._domain_config))
 
     @property
     def _elasticsearch_url_is_valid(self) -> bool:
@@ -627,9 +616,7 @@ class FluentdElasticsearchCharm(CharmBase):
         Returns:
             str: Whether the relation was created.
         """
-        if not self.model.get_relation(relation_name):
-            return False
-        return True
+        return bool(self.model.get_relation(relation_name))
 
     @property
     def _domain_config(self) -> Optional[str]:

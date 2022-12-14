@@ -478,7 +478,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             raise RuntimeError("Application private key not available")
         if not event.certificate_signing_request:
             self.unit.status = BlockedStatus("Fluentd CSR not available in the relation data")
-            event.defer()
             return
         if not self._application_certificate:
             self.unit.status = WaitingStatus("Waiting for the CA certificate to be available")
