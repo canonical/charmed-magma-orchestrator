@@ -23,7 +23,7 @@ from charms.tls_certificates_interface.v1.tls_certificates import (
 )
 from cryptography import x509
 from jinja2 import Environment, FileSystemLoader
-from ops.charm import CharmBase, ConfigChangedEvent, InstallEvent
+from ops.charm import CharmBase, ConfigChangedEvent, InstallEvent, RelationJoinedEvent
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import Layer
@@ -54,6 +54,9 @@ class FluentdElasticsearchCharm(CharmBase):
 
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._configure)
+        self.framework.observe(
+            self.on.fluentd_certs_relation_joined, self._on_fluentd_certs_relation_joined
+        )
 
         self.framework.observe(
             self._fluentd_certificates.on.certificate_available,
@@ -81,8 +84,38 @@ class FluentdElasticsearchCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for container to be ready")
             event.defer()
             return
+        if not self._peer_relation_created:
+            self.unit.status = WaitingStatus("Waiting for replicas relation to be created")
+            event.defer()
+            return
         self.unit.status = MaintenanceStatus("Configuring pod")
+        if self.unit.is_leader():
+            self._generate_and_save_fluentd_private_key()
         self._write_static_config_files()
+
+    def _on_fluentd_certs_relation_joined(self, event: RelationJoinedEvent) -> None:
+        """Juju event triggered when the fluentd-certs relation joins.
+
+        Requests Fluentd certificates from the provider.
+
+        Args:
+            event: Juju event (RelationJoinedEvent)
+
+        Returns:
+            None
+        """
+        if not self.unit.is_leader():
+            return
+        if not self._peer_relation_created:
+            self.unit.status = WaitingStatus("Waiting for replicas relation to be created")
+            event.defer()
+            return
+        if not self._fluentd_certificates_stored_in_peer_relation_data:
+            if not self._fluentd_private_key_stored_in_peer_relation_data:
+                self.unit.status = WaitingStatus("Waiting for Fluentd private key to be created")
+                event.defer()
+                return
+            self._request_fluentd_certificates()
 
     def _configure(self, event: Union[CertificateAvailableEvent, ConfigChangedEvent]) -> None:
         """Configures fluentd once all prerequisites are in place.
@@ -111,17 +144,17 @@ class FluentdElasticsearchCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for the container to be available")
             event.defer()
             return
+        if not self._fluentd_private_key_stored_in_peer_relation_data:
+            self.unit.status = WaitingStatus("Waiting for Fluentd private key to be created")
+            event.defer()
+            return
+        if not self._fluentd_csr_stored_in_peer_relation_data:
+            self.unit.status = WaitingStatus("Waiting for Fluentd CSR to be available")
+            event.defer()
+            return
         if self.unit.is_leader():
-            self._request_fluentd_certificates()
-        else:
-            if not self._fluentd_private_key_stored_in_peer_relation_data:
-                self.unit.status = WaitingStatus("Waiting for Fluentd private key to be available")
-                event.defer()
-                return
-            if not self._fluentd_csr_stored_in_peer_relation_data:
-                self.unit.status = WaitingStatus("Waiting for Fluentd CSR to be available")
-                event.defer()
-                return
+            if not self._stored_csr_matches_charm_config:
+                self._renew_cerificate()
         if not self._fluentd_certificates_stored_in_peer_relation_data:
             self.unit.status = WaitingStatus("Waiting for Fluentd certificates to be available")
             event.defer()
@@ -170,38 +203,14 @@ class FluentdElasticsearchCharm(CharmBase):
             self.unit.status = BlockedStatus("Config 'domain' is not valid")
             return
         if not self._fluentd_private_key_stored_in_peer_relation_data:
-            self._request_certificate_based_on_new_private_key()
-            return
-        if not self._fluentd_csr_stored_in_peer_relation_data:
-            self._request_certificate_based_on_existing_private_key()
+            self.unit.status = WaitingStatus("Waiting for Fluentd private key to be created")
+            event.defer()
             return
         self._renew_cerificate()
         self.unit.status = WaitingStatus("Waiting to receive new certificate from provider")
 
     def _request_fluentd_certificates(self) -> None:
-        """Requests Fluentd certificates."""
-        if not self._fluentd_private_key_stored_in_peer_relation_data:
-            self._request_certificate_based_on_new_private_key()
-            return
-        if not self._fluentd_csr_stored_in_peer_relation_data:
-            self._request_certificate_based_on_existing_private_key()
-            return
-        if not self._stored_csr_matches_charm_config:
-            self._renew_cerificate()
-            return
-
-    def _request_certificate_based_on_new_private_key(self) -> None:
-        """Does the whole path of getting an SSL certificate for Fluentd.
-
-        Generates a private key.
-        Generates a CSR.
-        Requests a Fluentd certificate.
-        """
-        self._generate_and_save_fluentd_private_key()
-        self._request_certificate_based_on_existing_private_key()
-
-    def _request_certificate_based_on_existing_private_key(self) -> None:
-        """Gets Fluentd certificate based on existing private key.
+        """Gets Fluentd certificate.
 
         Generates CSR.
         Requests a Fluentd certificate.
@@ -235,6 +244,7 @@ class FluentdElasticsearchCharm(CharmBase):
             private_key=self._fluentd_private_key.encode(),
             subject=f"fluentd.{self._domain_config}",
         )
+        logger.error(fluentd_csr)
         self._store_item_in_peer_relation_data("fluentd_csr", fluentd_csr.decode())
 
     def _push_fluentd_cert_to_peer_relation_data(self, fluentd_cert: str) -> None:

@@ -29,6 +29,20 @@ VALID_TEST_CHARM_CONFIG: Mapping[str, Union[str, int]] = {
     "fluentd-chunk-limit-size": TEST_FLUENTD_CHUNK_LIMIT,
     "fluentd-queue-limit-length": TEST_FLUENTD_QUEUE_LIMIT,
 }
+VALID_TEST_CHARM_CONFIG_YAML = f"""options:
+  domain:
+    type: string
+    default: {TEST_DOMAIN}
+  elasticsearch-url:
+    type: string
+    default: {TEST_ES_URL}
+  fluentd-chunk-limit-size:
+    type: string
+    default: 2M
+  fluentd-queue-limit-length:
+    type: int
+    default: 8
+"""
 TEST_FORWARD_INPUT_CONF_TEMPLATE = b"{{ certs_directory }}"
 TEST_OUTPUT_CONF_TEMPLATE = b"""{{ elasticsearch_host }}
 {{ elasticsearch_port }}
@@ -44,16 +58,69 @@ class TestCharm(unittest.TestCase):
         lambda charm, ports, service_type: None,
     )
     def setUp(self):
-        self.harness = testing.Harness(FluentdElasticsearchCharm)
+        self.harness = testing.Harness(
+            FluentdElasticsearchCharm,
+            config=VALID_TEST_CHARM_CONFIG_YAML,
+        )
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
         self.harness.container_pebble_ready(container_name="fluentd")
 
+    def test_given_workload_container_not_ready_when_install_then_status_is_waiting(self):
+        self.harness.set_can_connect("fluentd", False)
+
+        self.harness.charm.on.install.emit()
+
+        assert self.harness.charm.unit.status == WaitingStatus("Waiting for container to be ready")
+
+    def test_given_peer_relation_not_created_when_install_then_status_is_waiting(self):
+        self.harness.charm.on.install.emit()
+
+        assert self.harness.charm.unit.status == WaitingStatus(
+            "Waiting for replicas relation to be created"
+        )
+
+    @patch("charm.generate_private_key")
+    @patch("ops.model.Container.push", Mock())
+    def test_given_fluentd_container_ready_and_peer_relation_created_and_unit_is_leader_when_install_then_private_key_is_generated_and_saved_in_the_peer_relation_data(  # noqa: E501
+        self, patched_generate_private_key
+    ):
+        self.harness.set_leader(is_leader=True)
+        test_private_key = b"testprivatekey"
+        patched_generate_private_key.return_value = test_private_key
+        peer_relation_id, _ = self._create_peer_relation_with_certificates(
+            domain_config=TEST_DOMAIN
+        )
+
+        self.harness.charm.on.install.emit()
+
+        patched_generate_private_key.assert_called_once()
+        self.assertEqual(
+            self.harness.get_relation_data(peer_relation_id, self.harness.charm.app.name),
+            {"fluentd_private_key": test_private_key.decode()},
+        )
+
+    @patch("charm.generate_private_key")
+    @patch("ops.model.Container.push", Mock())
+    def test_given_fluentd_container_ready_and_peer_relation_created_and_unit_is_not_leader_when_install_then_private_key_is_not_generated(  # noqa: E501
+        self, patched_generate_private_key
+    ):
+        peer_relation_id, _ = self._create_peer_relation_with_certificates(
+            domain_config=TEST_DOMAIN
+        )
+
+        self.harness.charm.on.install.emit()
+
+        patched_generate_private_key.assert_not_called()
+
     @patch("ops.model.Container.push")
     @patch("builtins.open", new_callable=mock_open())
-    def test_given_fluentd_charm_when_install_then_static_configs_are_pushed_to_the_container(
+    def test_given_fluentd_container_ready_and_peer_relation_created_when_install_then_static_configs_are_pushed_to_the_container(  # noqa: E501
         self, patched_open, patched_push
     ):
+        peer_relation_id, _ = self._create_peer_relation_with_certificates(
+            domain_config=TEST_DOMAIN
+        )
         test_fluentd_configs = [
             "config one",
             "config two",
@@ -79,8 +146,106 @@ class TestCharm(unittest.TestCase):
             ]
         )
 
+    def test_given_peer_relation_not_created_when_fluentd_certs_relation_joined_then_status_is_waiting(  # noqa: E501
+        self,
+    ):
+        self.harness.set_leader(is_leader=True)
+
+        self._create_fluentd_certs_relation()
+
+        assert self.harness.charm.unit.status == WaitingStatus(
+            "Waiting for replicas relation to be created"
+        )
+
+    def test_given_peer_relation_created_and_fluentd_certs_not_in_peer_relation_data_but_fluentd_private_key_not_in_peer_relation_data_when_fluentd_certs_relation_joined_then_status_is_waiting(  # noqa: E501
+        self,
+    ):
+        self.harness.set_leader(is_leader=True)
+        self._create_peer_relation_with_certificates(domain_config=TEST_DOMAIN)
+
+        self._create_fluentd_certs_relation()
+
+        assert self.harness.charm.unit.status == WaitingStatus(
+            "Waiting for Fluentd private key to be created"
+        )
+
+    @patch("charm.generate_csr")
+    def test_given_peer_relation_created_and_fluentd_certs_not_in_peer_relation_data_and_fluentd_private_key_in_peer_relation_data_when_fluentd_certs_relation_joined_then_csr_is_generated_and_stored_in_peer_relation_data(  # noqa: E501
+        self, patched_generate_csr
+    ):
+        self.harness.set_leader(is_leader=True)
+        config = {"domain": TEST_DOMAIN}
+        test_csr = b"whatever"
+        patched_generate_csr.return_value = test_csr
+        self.harness.update_config(key_values=config)
+        peer_relation_id, relation_data = self._create_peer_relation_with_certificates(
+            domain_config=TEST_DOMAIN,
+            fluentd_private_key=True,
+        )
+
+        self._create_fluentd_certs_relation()
+
+        patched_generate_csr.assert_called_once_with(
+            private_key=relation_data["fluentd_private_key"].encode(),
+            subject=f"fluentd.{TEST_DOMAIN}",
+        )
+        self.assertEqual(
+            self.harness.get_relation_data(peer_relation_id, self.harness.charm.app.name)[
+                "fluentd_csr"
+            ],
+            test_csr.decode(),
+        )
+
+    @patch(f"{TLS_CERTIFICATES_LIB}.TLSCertificatesRequiresV1.request_certificate_creation")
+    @patch("charm.generate_csr")
+    def test_given_peer_relation_created_and_fluentd_certs_not_in_peer_relation_data_and_fluentd_private_key_in_peer_relation_data_when_fluentd_certs_relation_joined_then_fluentd_certs_are_requested(  # noqa: E501
+        self, patched_generate_csr, patched_request_certificate_creation
+    ):
+        self.harness.set_leader(is_leader=True)
+        test_csr = b"whatever"
+        patched_generate_csr.return_value = test_csr
+        self._create_peer_relation_with_certificates(
+            domain_config=TEST_DOMAIN,
+            fluentd_private_key=True,
+        )
+
+        self._create_fluentd_certs_relation()
+
+        patched_request_certificate_creation.assert_called_once_with(test_csr)
+
+    @patch(f"{TLS_CERTIFICATES_LIB}.TLSCertificatesRequiresV1.request_certificate_creation")
+    def test_given_peer_relation_created_and_fluentd_certs_in_peer_relation_data_when_fluentd_certs_relation_joined_then_fluentd_certs_are_not_requested(  # noqa: E501
+        self, patched_request_certificate_creation
+    ):
+        self.harness.set_leader(is_leader=True)
+        self._create_peer_relation_with_certificates(
+            domain_config=TEST_DOMAIN,
+            fluentd_private_key=True,
+            fluentd_csr=True,
+            fluentd_certificate=True,
+        )
+
+        self._create_fluentd_certs_relation()
+
+        patched_request_certificate_creation.assert_not_called()
+
+    @patch(f"{TLS_CERTIFICATES_LIB}.TLSCertificatesRequiresV1.request_certificate_creation")
+    def test_given_peer_relation_created_and_fluentd_certs_in_peer_relation_data_but_unit_is_not_leader_when_fluentd_certs_relation_joined_then_fluentd_certs_are_not_requested(  # noqa: E501
+        self, patched_request_certificate_creation
+    ):
+        self._create_peer_relation_with_certificates(
+            domain_config=TEST_DOMAIN,
+            fluentd_private_key=True,
+            fluentd_csr=True,
+            fluentd_certificate=True,
+        )
+
+        self._create_fluentd_certs_relation()
+
+        patched_request_certificate_creation.assert_not_called()
+
     def test_given_domain_not_configured_when_config_changed_then_status_is_blocked(self):
-        self.harness.update_config(key_values={})
+        self.harness.update_config(key_values={"domain": ""})
 
         assert self.harness.charm.unit.status == BlockedStatus("Config 'domain' is not valid")
 
@@ -95,7 +260,7 @@ class TestCharm(unittest.TestCase):
     def test_given_elasticsearch_url_not_configured_when_config_changed_then_status_is_blocked(
         self,
     ):
-        config = {"domain": TEST_DOMAIN}
+        config = {"domain": TEST_DOMAIN, "elasticsearch-url": ""}
 
         self.harness.update_config(key_values=config)
 
@@ -134,264 +299,113 @@ class TestCharm(unittest.TestCase):
             "Waiting for fluentd-certs relation to be created"
         )
 
-    @patch("charm.generate_private_key")
-    @patch("charm.generate_csr")
-    def test_given_unit_is_leader_config_is_correct_and_relations_are_created_and_private_key_not_in_peer_relation_data_when_config_changed_then_private_key_is_generated_and_stored(  # noqa: E501
-        self, patched_generate_csr, patched_generate_private_key
-    ):
-        test_private_key = b"whatever"
-        test_csr = b"something"
-        patched_generate_private_key.return_value = test_private_key
-        patched_generate_csr.return_value = test_csr
-        self.harness.set_leader(is_leader=True)
-        peer_relation_id, _ = self._create_empty_relations()
-
-        self.harness.update_config(key_values=VALID_TEST_CHARM_CONFIG)
-
-        patched_generate_private_key.assert_called_once()
-        self.assertEqual(
-            self.harness.get_relation_data(peer_relation_id, self.harness.charm.app.name)[
-                "fluentd_private_key"
-            ],
-            test_private_key.decode(),
-        )
-
-    @patch("charm.generate_private_key")
-    @patch("charm.generate_csr")
-    def test_given_unit_is_leader_config_is_correct_and_relations_are_created_and_private_key_not_in_peer_relation_data_when_config_changed_then_csr_is_generated_and_stored(  # noqa: E501
-        self, patched_generate_csr, patched_generate_private_key
-    ):
-        test_private_key = b"whatever"
-        test_csr = b"something"
-        patched_generate_private_key.return_value = test_private_key
-        patched_generate_csr.return_value = test_csr
-        self.harness.set_leader(is_leader=True)
-        peer_relation_id, _ = self._create_empty_relations()
-
-        self.harness.update_config(key_values=VALID_TEST_CHARM_CONFIG)
-
-        patched_generate_csr.assert_called_once()
-        self.assertEqual(
-            self.harness.get_relation_data(peer_relation_id, self.harness.charm.app.name)[
-                "fluentd_csr"
-            ],
-            test_csr.decode(),
-        )
-
-    @patch(f"{TLS_CERTIFICATES_LIB}.TLSCertificatesRequiresV1.request_certificate_creation")
-    @patch("charm.generate_private_key")
-    @patch("charm.generate_csr")
-    def test_given_unit_is_leader_config_is_correct_and_relations_are_created_and_private_key_not_in_peer_relation_data_when_config_changed_then_fluentd_certificates_are_requested(  # noqa: E501
-        self,
-        patched_generate_csr,
-        patched_generate_private_key,
-        patched_request_certificate_creation,
-    ):
-        test_private_key = b"whatever"
-        test_csr = b"something"
-        patched_generate_private_key.return_value = test_private_key
-        patched_generate_csr.return_value = test_csr
-        self.harness.set_leader(is_leader=True)
-        self._create_empty_relations()
-
-        self.harness.update_config(key_values=VALID_TEST_CHARM_CONFIG)
-
-        patched_request_certificate_creation.assert_called_once_with(test_csr)
-
-    @patch("charm.generate_private_key")
-    @patch("charm.generate_csr")
-    def test_given_unit_is_leader_config_is_correct_and_relations_are_created_and_private_key_in_peer_relation_data_when_config_changed_then_private_key_is_not_generated(  # noqa: E501
-        self, patched_generate_csr, patched_generate_private_key
-    ):
-        test_csr = b"something"
-        patched_generate_csr.return_value = test_csr
-        self.harness.set_leader(is_leader=True)
-        self._create_peer_relation_with_certificates(
-            domain_config=TEST_DOMAIN, fluentd_private_key=True
-        )
-        self._create_fluentd_certs_relation()
-
-        self.harness.update_config(key_values=VALID_TEST_CHARM_CONFIG)
-
-        patched_generate_private_key.assert_not_called()
-
-    @patch("charm.generate_csr")
-    def test_given_unit_is_leader_config_is_correct_and_relations_are_created_and_private_key_in_peer_relation_data_when_config_changed_then_csr_is_generated_and_stored(  # noqa: E501
-        self, patched_generate_csr
-    ):
-        test_csr = b"something"
-        patched_generate_csr.return_value = test_csr
-        self.harness.set_leader(is_leader=True)
-        peer_relation_id, _ = self._create_peer_relation_with_certificates(
-            domain_config=TEST_DOMAIN, fluentd_private_key=True
-        )
-        self._create_fluentd_certs_relation()
-
-        self.harness.update_config(key_values=VALID_TEST_CHARM_CONFIG)
-
-        patched_generate_csr.assert_called_once()
-        self.assertEqual(
-            self.harness.get_relation_data(peer_relation_id, self.harness.charm.app.name)[
-                "fluentd_csr"
-            ],
-            test_csr.decode(),
-        )
-
-    @patch(f"{TLS_CERTIFICATES_LIB}.TLSCertificatesRequiresV1.request_certificate_creation")
-    @patch("charm.generate_csr")
-    def test_given_unit_is_leader_config_is_correct_and_relations_are_created_and_private_key_in_peer_relation_data_when_config_changed_then_fluentd_certificates_are_requested(  # noqa: E501
-        self, patched_generate_csr, patched_request_certificate_creation
-    ):
-        test_csr = b"something"
-        patched_generate_csr.return_value = test_csr
-        self.harness.set_leader(is_leader=True)
-        self._create_peer_relation_with_certificates(
-            domain_config=TEST_DOMAIN, fluentd_private_key=True
-        )
-        self._create_fluentd_certs_relation()
-
-        self.harness.update_config(key_values=VALID_TEST_CHARM_CONFIG)
-
-        patched_request_certificate_creation.assert_called_once_with(test_csr)
-
-    @patch("charm.generate_csr")
-    def test_given_unit_is_leader_and_domain_config_changes_when_config_changed_then_new_csr_is_generated(  # noqa: E501
-        self, patched_generate_csr
-    ):
-        test_charm_config = {
-            "domain": "newdomain.com",
-            "elasticsearch-url": TEST_ES_URL,
-        }
-        test_csr = b"newcsr"
-        patched_generate_csr.return_value = test_csr
-        self.harness.set_leader(is_leader=True)
-        peer_relation_id, _ = self._create_peer_relation_with_certificates(
-            domain_config=TEST_DOMAIN, fluentd_private_key=True, fluentd_csr=True
-        )
-        self._create_fluentd_certs_relation()
-
-        self.harness.update_config(key_values=test_charm_config)
-
-        patched_generate_csr.assert_called_once()
-        self.assertEqual(
-            self.harness.get_relation_data(peer_relation_id, self.harness.charm.app.name)[
-                "fluentd_csr"
-            ],
-            test_csr.decode(),
-        )
-
     @patch(f"{TLS_CERTIFICATES_LIB}.TLSCertificatesRequiresV1.request_certificate_renewal")
-    @patch("charm.generate_csr")
-    def test_given_unit_is_leader_and_domain_config_changes_when_config_changed_then_fluentd_certificates_renewal_is_requested(  # noqa: E501
-        self, patched_generate_csr, patched_request_certificate_renewal
+    @patch("ops.model.Container.push", Mock())
+    def test_given_unit_is_leader_and_charm_config_is_correct_and_relations_are_created_and_stored_csr_matches_charm_config_when_config_changed_then_fluentd_certs_are_not_renewed(  # noqa: E501
+        self, patched_request_certificate_renewal
     ):
-        test_charm_config = {
-            "domain": "newdomain.com",
-            "elasticsearch-url": TEST_ES_URL,
-        }
-        test_csr = b"newcsr"
-        patched_generate_csr.return_value = test_csr
         self.harness.set_leader(is_leader=True)
-        _, relation_data = self._create_peer_relation_with_certificates(
-            domain_config=TEST_DOMAIN, fluentd_private_key=True, fluentd_csr=True
-        )
         self._create_fluentd_certs_relation()
-        old_csr = relation_data["fluentd_csr"]
+        self._create_peer_relation_with_certificates(
+            domain_config=TEST_DOMAIN,
+            fluentd_private_key=True,
+            fluentd_csr=True,
+        )
 
-        self.harness.update_config(key_values=test_charm_config)
+        self.harness.update_config(key_values=VALID_TEST_CHARM_CONFIG)
+
+        patched_request_certificate_renewal.assert_not_called()
+
+    @patch("charm.generate_csr")
+    @patch(f"{TLS_CERTIFICATES_LIB}.TLSCertificatesRequiresV1.request_certificate_renewal")
+    @patch("ops.model.Container.push", Mock())
+    def test_given_unit_is_leader_and_charm_config_is_correct_and_relations_are_created_and_stored_csr_doesnt_match_charm_config_when_config_changed_then_fluentd_certs_are_renewed(  # noqa: E501
+        self, patched_request_certificate_renewal, patched_generate_csr
+    ):
+        new_test_csr = b"whatever"
+        self.harness.set_leader(is_leader=True)
+        patched_generate_csr.return_value = new_test_csr
+        self._create_fluentd_certs_relation()
+        _, peer_relation_data = self._create_peer_relation_with_certificates(
+            domain_config=TEST_DOMAIN,
+            fluentd_private_key=True,
+            fluentd_csr=True,
+        )
+        old_csr = peer_relation_data["fluentd_csr"]
+
+        self.harness.update_config(key_values={"domain": "new-domain.com"})
 
         patched_request_certificate_renewal.assert_called_once_with(
             old_certificate_signing_request=old_csr.encode(),
-            new_certificate_signing_request=test_csr,
+            new_certificate_signing_request=new_test_csr,
         )
 
-    @patch(f"{TLS_CERTIFICATES_LIB}.TLSCertificatesRequiresV1.request_certificate_creation")
     @patch(f"{TLS_CERTIFICATES_LIB}.TLSCertificatesRequiresV1.request_certificate_renewal")
-    def test_given_unit_is_leader_and_config_changes_but_domain_is_still_the_same_when_config_changed_then_fluentd_certs_are_not_requested(  # noqa: E501
-        self, patched_request_certificate_renewal, patched_request_certificate_creation
+    @patch("ops.model.Container.push", Mock())
+    def test_given_unit_is_not_leader_and_charm_config_is_correct_and_relations_are_created_and_stored_csr_doesnt_match_charm_config_when_config_changed_then_fluentd_certs_are_not_renewed(  # noqa: E501
+        self, patched_request_certificate_renewal
     ):
-        test_charm_config = {
-            "domain": TEST_DOMAIN,
-            "elasticsearch-url": "new-elastic-url.com",
-        }
-        self.harness.set_leader(is_leader=True)
-        self._create_peer_relation_with_certificates(
-            domain_config=TEST_DOMAIN, fluentd_private_key=True, fluentd_csr=True
-        )
         self._create_fluentd_certs_relation()
+        self._create_peer_relation_with_certificates(
+            domain_config=TEST_DOMAIN,
+            fluentd_private_key=True,
+            fluentd_csr=True,
+        )
 
-        self.harness.update_config(key_values=test_charm_config)
+        self.harness.update_config(key_values={"domain": "new-domain.com"})
 
-        patched_request_certificate_creation.assert_not_called()
         patched_request_certificate_renewal.assert_not_called()
 
-    def test_given_unit_is_not_leader_config_is_correct_and_relations_are_created_and_private_key_not_in_peer_relation_data_when_config_changed_then_status_is_waiting(  # noqa: E501
+    def test_charm_config_is_correct_and_relations_are_created_but_fluentd_private_key_is_not_available_when_config_changed_then_status_is_waiting(  # noqa: E501
         self,
     ):
         self._create_empty_relations()
 
-        self.harness.update_config(key_values=VALID_TEST_CHARM_CONFIG)
+        self.harness.update_config(key_values={})
 
         assert self.harness.charm.unit.status == WaitingStatus(
-            "Waiting for Fluentd private key to be available"
+            "Waiting for Fluentd private key to be created"
         )
 
-    def test_given_unit_is_not_leader_config_is_correct_and_relations_are_created_and_fluentd_csr_not_in_peer_relation_data_when_config_changed_then_status_is_waiting(  # noqa: E501
+    def test_charm_config_is_correct_and_relations_are_created_but_fluentd_csr_is_not_available_when_config_changed_then_status_is_waiting(  # noqa: E501
         self,
     ):
-        self._create_peer_relation_with_certificates(
-            domain_config=TEST_DOMAIN, fluentd_private_key=True
-        )
         self._create_fluentd_certs_relation()
+        self._create_peer_relation_with_certificates(fluentd_private_key=True)
 
-        self.harness.update_config(key_values=VALID_TEST_CHARM_CONFIG)
+        self.harness.update_config(key_values={})
 
         assert self.harness.charm.unit.status == WaitingStatus(
             "Waiting for Fluentd CSR to be available"
         )
 
-    @patch(f"{TLS_CERTIFICATES_LIB}.TLSCertificatesRequiresV1.request_certificate_creation")
-    @patch(f"{TLS_CERTIFICATES_LIB}.TLSCertificatesRequiresV1.request_certificate_renewal")
-    def test_given_unit_is_not_leader_config_is_correct_and_relations_are_created_and_private_key_and_csr_in_peer_relation_data_when_config_changed_then_certs_are_not_requested(  # noqa: E501
-        self, patched_request_certificate_renewal, patched_request_certificate_creation
-    ):
-        self._create_peer_relation_with_certificates(
-            domain_config=TEST_DOMAIN, fluentd_private_key=True, fluentd_csr=True
-        )
-        self._create_fluentd_certs_relation()
-
-        self.harness.update_config(key_values=VALID_TEST_CHARM_CONFIG)
-
-        patched_request_certificate_creation.assert_not_called()
-        patched_request_certificate_renewal.assert_not_called()
-
-    def test_given_certificates_have_been_requested_but_not_yet_present_in_peer_relation_data_when_config_changed_then_status_is_waiting(  # noqa: E501
+    def test_charm_config_is_correct_and_relations_are_created_but_fluentd_certs_not_available_when_config_changed_then_status_is_waiting(  # noqa: E501
         self,
     ):
-        self._create_peer_relation_with_certificates(
-            domain_config=TEST_DOMAIN, fluentd_private_key=True, fluentd_csr=True
-        )
         self._create_fluentd_certs_relation()
+        self._create_peer_relation_with_certificates(
+            fluentd_private_key=True,
+            fluentd_csr=True,
+        )
 
-        self.harness.update_config(key_values=VALID_TEST_CHARM_CONFIG)
+        self.harness.update_config(key_values={})
 
         assert self.harness.charm.unit.status == WaitingStatus(
             "Waiting for Fluentd certificates to be available"
         )
 
     @patch("ops.model.Container.push")
-    def test_given_fluentd_certificates_in_peer_relation_data_when_config_changed_then_certs_are_stored_in_the_container(  # noqa: E501
+    def test_charm_config_is_correct_and_relations_are_created_but_fluentd_certs_available_when_config_changed_then_certs_are_stored_in_the_conainer(  # noqa: E501
         self, patched_push
     ):
+        self._create_fluentd_certs_relation()
         _, peer_relation_data = self._create_peer_relation_with_certificates(
-            domain_config=TEST_DOMAIN,
             fluentd_private_key=True,
             fluentd_csr=True,
             fluentd_certificate=True,
         )
-        self._create_fluentd_certs_relation()
 
-        self.harness.update_config(key_values=VALID_TEST_CHARM_CONFIG)
+        self.harness.update_config(key_values={})
         write_calls = patched_push.mock_calls
 
         self.assertEqual(
@@ -456,6 +470,7 @@ class TestCharm(unittest.TestCase):
         write_calls = patched_push.mock_calls
 
         self.assertEqual(
+            # First 4 calls are Fluentd certs
             write_calls[4],
             call(
                 Path("/etc/fluent/config.d/forward-input.conf"),
@@ -516,13 +531,19 @@ class TestCharm(unittest.TestCase):
 
         assert self.harness.charm.unit.status == ActiveStatus()
 
+    @patch("ops.model.Container.push", Mock())
     def test_given_fluentd_certs_relation_created_when_certificates_available_then_fluentd_certs_are_stored_in_peer_relation_data(  # noqa: E501
         self,
     ):
         test_fluentd_cert = "whatever cert"
         test_ca_cert = "whatevent ca cert"
         self.harness.set_leader(is_leader=True)
-        peer_relation_id, _ = self._create_empty_relations()
+        self._create_fluentd_certs_relation()
+        peer_relation_id, peer_relation_data = self._create_peer_relation_with_certificates(
+            domain_config=TEST_DOMAIN,
+            fluentd_private_key=True,
+            fluentd_csr=True,
+        )
 
         self.harness.charm._fluentd_certificates.on.certificate_available.emit(
             certificate_signing_request="some csr",
