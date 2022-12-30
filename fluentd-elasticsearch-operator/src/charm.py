@@ -117,7 +117,9 @@ class FluentdElasticsearchCharm(CharmBase):
                 return
             self._request_fluentd_certificates()
 
-    def _configure(self, event: Union[CertificateAvailableEvent, ConfigChangedEvent]) -> None:
+    def _configure(  # noqa: C901
+        self, event: Union[CertificateAvailableEvent, ConfigChangedEvent]
+    ) -> None:
         """Configures fluentd once all prerequisites are in place.
 
         Args:
