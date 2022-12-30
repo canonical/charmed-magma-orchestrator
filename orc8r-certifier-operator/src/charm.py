@@ -469,7 +469,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                 relation_id=relation.id,
                 certificate=str(certificate_string),
             )
-            logger.error(relation.id)
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Runs whenever the certificates available event is triggered.
