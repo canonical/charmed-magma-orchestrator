@@ -180,7 +180,7 @@ class CertAdminOperatorRequires(Object):
             None
         """
         relation_data = event.relation.data
-        certificate = relation_data[event.unit].get("certificate")
-        private_key = relation_data[event.unit].get("private_key")
+        certificate = relation_data[event.unit].get("certificate")  # type: ignore[index]
+        private_key = relation_data[event.unit].get("private_key")  # type: ignore[index]
         if certificate and private_key:
             self.on.certificate_available.emit(certificate=certificate, private_key=private_key)
