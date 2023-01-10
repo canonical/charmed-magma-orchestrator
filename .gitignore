@@ -1,2 +1,10 @@
+# IDEs
 *.idea
 .vscode/
+
+# Python
+**/venv/**
+**/__pycache__/**
+
+# Packed charms
+*.charm
