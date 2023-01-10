@@ -63,13 +63,19 @@ async def run_get_load_balancer_services_action(ops_test: OpsTest) -> Tuple[str,
             - orc8r-nginx-proxy
             - nginx-proxy
     """
+    logger.warning("\n\n#################################### run_get_load_balancer_services_action ####################################\n\n")
     orc8r_orchestrator_unit = ops_test.model.units["orc8r-orchestrator/0"]  # type: ignore[union-attr]  # noqa: E501
+    logger.warning(f"orc8r_orchestrator_unit: {orc8r_orchestrator_unit}")
     load_balancer_action = await orc8r_orchestrator_unit.run_action(
         action_name="get-load-balancer-services"
     )
     load_balancer_action_output = await ops_test.model.get_action_output(  # type: ignore[union-attr]  # noqa: E501
-        action_uuid=load_balancer_action.entity_id, wait=60
+        action_uuid=load_balancer_action.entity_id, wait=240
     )
+    logger.warning(f"load_balancer_action_output: {load_balancer_action_output}")
+    
+    for key in load_balancer_action_output:
+        logger.warning(f"load_balancer_action_output[{key}]: {load_balancer_action_output[key]}")
     return (
         load_balancer_action_output["orc8r-bootstrap-nginx"],
         load_balancer_action_output["orc8r-clientcert-nginx"],
@@ -87,6 +93,7 @@ async def run_get_pfx_password_action(ops_test: OpsTest) -> str:
     Returns:
         str: PFX package password
     """
+    logger.warning("\n\n#################################### run_get_pfx_password_action ####################################\n\n")
     orc8r_certifier_unit = ops_test.model.units["orc8r-certifier/0"]  # type: ignore[union-attr]  # noqa: E501
     pfx_password_action = await orc8r_certifier_unit.run_action(
         action_name="get-pfx-package-password"
@@ -106,6 +113,7 @@ async def get_pfx_package(ops_test: OpsTest) -> str:
     Returns:
         str: pfx package path
     """
+    logger.warning("\n\n#################################### get_pfx_package ####################################\n\n")
     export_path = "admin_operator.pfx"
     run_args = [
         "juju",
@@ -121,6 +129,7 @@ async def get_pfx_package(ops_test: OpsTest) -> str:
 
 
 async def deploy_bundle(ops_test: OpsTest, bundle_path: str, overlay_file_path: str):
+    logger.warning("\n\n#################################### deploy_bundle ####################################\n\n")
     run_args = [
         "juju",
         "deploy",
@@ -149,6 +158,7 @@ async def pack_charm(ops_test: OpsTest, charm_directory: str, export_path: str) 
     Returns:
         None
     """
+    logger.warning("\n\n#################################### pack_charm ####################################\n\n")
     charm = await ops_test.build_charm(charm_directory)
     shutil.copy(charm, export_path)
     return
@@ -164,6 +174,7 @@ def render_overlay_file(jinja_template_path: str, destination_file_path: str) ->
     Returns:
         None
     """
+    logger.warning("\n\n#################################### render_overlay_file ####################################\n\n")
     with open(jinja_template_path, "r") as template_file:
         jinja_template = jinja2.Template(template_file.read(), autoescape=True)
     with open(destination_file_path, "wt") as output_file:
@@ -174,6 +185,7 @@ class TestOrc8rBundle:
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail
     async def pack_charms_and_deploy_bundle(self, ops_test: OpsTest):
+        logger.warning("\n\n#################################### pack_charms_and_deploy_bundle ####################################\n\n")
         overlay_jinja_template_path = f"{INTEGRATION_TESTS_DIR}/overlay.yaml.j2"
         bundle_jinja_template_path = "bundle.yaml.j2"
         overlay_file_path = f"{INTEGRATION_TESTS_DIR}/overlay.yaml"
@@ -200,6 +212,7 @@ class TestOrc8rBundle:
     async def test_given_bundle_deployed_when_set_api_client_then_magma_returns_200(
         self, ops_test: OpsTest, pack_charms_and_deploy_bundle
     ):
+        logger.warning("\n\n#################################### test_given_bundle_deployed_when_set_api_client_then_magma_returns_200 ####################################\n\n")
         (
             orc8r_bootstrap_nginx_ip,
             orc8r_clientcert_nginx_ip,
