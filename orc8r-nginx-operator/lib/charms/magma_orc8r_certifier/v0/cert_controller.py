@@ -48,7 +48,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 5
+LIBPATCH = 6
 
 
 class CertificateRequestEvent(EventBase):
@@ -181,7 +181,7 @@ class CertControllerRequires(Object):
             None
         """
         relation_data = event.relation.data
-        certificate = relation_data[event.unit].get("certificate")
-        private_key = relation_data[event.unit].get("private_key")
+        certificate = relation_data[event.unit].get("certificate")  # type: ignore[index]
+        private_key = relation_data[event.unit].get("private_key")  # type: ignore[index]
         if certificate and private_key:
             self.on.certificate_available.emit(certificate=certificate, private_key=private_key)
