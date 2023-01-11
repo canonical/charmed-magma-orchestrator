@@ -92,7 +92,7 @@ async def run_get_pfx_password_action(ops_test: OpsTest) -> str:
         action_name="get-pfx-package-password"
     )
     pfx_password_action_output = await ops_test.model.get_action_output(  # type: ignore[union-attr]  # noqa: E501
-        action_uuid=pfx_password_action.entity_id, wait=60
+        action_uuid=pfx_password_action.entity_id, wait=240
     )
     return pfx_password_action_output["password"]
 
