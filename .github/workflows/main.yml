@@ -66,9 +66,6 @@ jobs:
           echo "# Initialize LXD"
           /usr/bin/sudo lxd init --auto
 
-          echo "# Clean up LXD containers"
-          lxc list --project charmcraft | grep CONTAINER | awk '{ print $2 }' | xargs lxc delete --project charmcraft
-
           echo "# Configure LXD"
           /usr/bin/sudo lxc --project charmcraft project create local:charmcraft || true
           /usr/bin/sudo lxc --project charmcraft profile device add default root disk path=/ pool=default type=disk || true
