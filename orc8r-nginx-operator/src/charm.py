@@ -313,7 +313,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
             process.wait_output()
         except ExecError as e:
             logger.error("Exited with code %d. Stderr:", e.exit_code)
-            for line in e.stderr.splitlines():
+            for line in e.stderr.splitlines():  # type: ignore[union-attr]
                 logger.error("    %s", line)
             raise e
         logger.info("Successfully generated nginx config file")
