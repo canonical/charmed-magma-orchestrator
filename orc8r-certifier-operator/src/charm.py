@@ -909,7 +909,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._store_admin_operator_pfx_password(password)
         logger.info("Generated Application Certificates")
 
-    def _get_value_from_relation_data(self, key: str) -> Optional[str]:
+    def _get_value_from_peer_relation_data(self, key: str) -> Optional[str]:
         """Returns value from relation data.
 
         Args:
@@ -1137,52 +1137,52 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     @property
     def _root_csr(self) -> Optional[str]:
         """Returns root CSR."""
-        return self._get_value_from_relation_data("root_csr")
+        return self._get_value_from_peer_relation_data("root_csr")
 
     @property
     def _admin_operator_pfx(self) -> Optional[str]:
         """Returns admin operator pfx package."""
-        return self._get_value_from_relation_data("admin_operator_pfx")
+        return self._get_value_from_peer_relation_data("admin_operator_pfx")
 
     @property
     def _admin_operator_pfx_password(self) -> Optional[str]:
         """Returns admin operator pfx password."""
-        return self._get_value_from_relation_data("admin_operator_pfx_password")
+        return self._get_value_from_peer_relation_data("admin_operator_pfx_password")
 
     @property
     def _root_ca_certificate(self) -> Optional[str]:
         """Returns root ca certificate."""
-        return self._get_value_from_relation_data("root_ca_certificate")
+        return self._get_value_from_peer_relation_data("root_ca_certificate")
 
     @property
     def _root_certificate(self) -> Optional[str]:
         """Returns root certificate."""
-        return self._get_value_from_relation_data("root_certificate")
+        return self._get_value_from_peer_relation_data("root_certificate")
 
     @property
     def _application_certificate(self) -> Optional[str]:
         """Returns application certificate."""
-        return self._get_value_from_relation_data("application_certificate")
+        return self._get_value_from_peer_relation_data("application_certificate")
 
     @property
     def _admin_operator_certificate(self) -> Optional[str]:
         """Returns admin operator certificate."""
-        return self._get_value_from_relation_data("admin_operator_certificate")
+        return self._get_value_from_peer_relation_data("admin_operator_certificate")
 
     @property
     def _application_private_key(self) -> Optional[str]:
         """Returns application private key."""
-        return self._get_value_from_relation_data("application_private_key")
+        return self._get_value_from_peer_relation_data("application_private_key")
 
     @property
     def _admin_operator_private_key(self) -> Optional[str]:
         """Returns admin operator private key."""
-        return self._get_value_from_relation_data("admin_operator_private_key")
+        return self._get_value_from_peer_relation_data("admin_operator_private_key")
 
     @property
     def _root_private_key(self) -> Optional[str]:
         """Returns root private key."""
-        return self._get_value_from_relation_data("root_private_key")
+        return self._get_value_from_peer_relation_data("root_private_key")
 
     @property
     def _stored_root_csr_matches_config(self) -> bool:
