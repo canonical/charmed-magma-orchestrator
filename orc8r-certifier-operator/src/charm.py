@@ -749,7 +749,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                 self._container.restart(self._service_name)
                 logger.info(f"Restarted container {self._service_name}")
                 self._update_relations()
-                self.unit.status = ActiveStatus()
+            self.unit.status = ActiveStatus()
         else:
             self.unit.status = WaitingStatus("Waiting for container to be ready")
             event.defer()
