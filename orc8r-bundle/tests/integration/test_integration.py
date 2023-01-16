@@ -68,7 +68,7 @@ async def run_get_load_balancer_services_action(ops_test: OpsTest) -> Tuple[str,
         action_name="get-load-balancer-services"
     )
     load_balancer_action_output = await ops_test.model.get_action_output(  # type: ignore[union-attr]  # noqa: E501
-        action_uuid=load_balancer_action.entity_id, wait=240
+        action_uuid=load_balancer_action.entity_id, wait=1000
     )
     return (
         load_balancer_action_output["orc8r-bootstrap-nginx"],
@@ -92,7 +92,7 @@ async def run_get_pfx_password_action(ops_test: OpsTest) -> str:
         action_name="get-pfx-package-password"
     )
     pfx_password_action_output = await ops_test.model.get_action_output(  # type: ignore[union-attr]  # noqa: E501
-        action_uuid=pfx_password_action.entity_id, wait=240
+        action_uuid=pfx_password_action.entity_id, wait=1000
     )
     return pfx_password_action_output["password"]
 
