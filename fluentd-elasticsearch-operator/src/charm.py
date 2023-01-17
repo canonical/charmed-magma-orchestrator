@@ -23,7 +23,13 @@ from charms.tls_certificates_interface.v1.tls_certificates import (
 )
 from cryptography import x509
 from jinja2 import Environment, FileSystemLoader
-from ops.charm import CharmBase, ConfigChangedEvent, InstallEvent, RelationJoinedEvent
+from ops.charm import (
+    CharmBase,
+    ConfigChangedEvent,
+    InstallEvent,
+    PebbleReadyEvent,
+    RelationJoinedEvent,
+)
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import Layer
@@ -39,6 +45,7 @@ class FluentdElasticsearchCharm(CharmBase):
         "config_files",
     )
     CONFIG_DIRECTORY = "/etc/fluent/config.d"
+    REQUIRED_RELATIONS = ["fluentd-certs", "replicas"]
 
     def __init__(self, *args):
         """An instance of this object everytime an event occurs."""
@@ -53,7 +60,8 @@ class FluentdElasticsearchCharm(CharmBase):
         self._fluentd_certificates = TLSCertificatesRequiresV1(self, "fluentd-certs")
 
         self.framework.observe(self.on.install, self._on_install)
-        self.framework.observe(self.on.config_changed, self._configure)
+        self.framework.observe(self.on.fluentd_pebble_ready, self._on_fluentd_pebble_ready)
+        self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(
             self.on.fluentd_certs_relation_joined, self._on_fluentd_certs_relation_joined
         )
@@ -91,18 +99,62 @@ class FluentdElasticsearchCharm(CharmBase):
         self.unit.status = MaintenanceStatus("Configuring pod")
         if self.unit.is_leader():
             self._generate_and_save_fluentd_private_key()
-        self._write_static_config_files()
+        self._push_static_config_files_to_workload()
+
+    def _on_fluentd_pebble_ready(self, event: PebbleReadyEvent):
+        """Triggered when Fluentd pebble is ready.
+
+        Args:
+            event: Juju event (PebbleReadyEvent)
+        """
+        if not self._relations_created:
+            event.defer()
+            return
+        if not self._fluentd_certificates_stored_in_peer_relation_data:
+            self.unit.status = WaitingStatus("Waiting for Fluentd certificates to be available")
+            return
+        self._configure()
+
+    def _on_config_changed(self, event: ConfigChangedEvent) -> None:
+        """Triggered whenever config of a Juju model changes.
+
+        Validates config relevant for Fluentd.
+        Requests Fluentd certificates renewal if needed.
+        Triggers Fluentd configuration to reflect config changes.
+
+        Args:
+            event: Juju event (ConfigChangedEvent)
+        """
+        if not self._domain_config_is_valid:
+            self.unit.status = BlockedStatus("Config 'domain' is not valid")
+            return
+        if not self._elasticsearch_url_is_valid:
+            self.unit.status = BlockedStatus(
+                "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
+            )
+            return
+        if not self._relations_created:
+            event.defer()
+            return
+        if not self._fluentd_csr_stored_in_peer_relation_data:
+            self.unit.status = WaitingStatus("Waiting for Fluentd CSR to be available")
+            event.defer()
+            return
+        if self.unit.is_leader():
+            if not self._stored_csr_matches_charm_config:
+                self._renew_cerificate()
+        if not self._fluentd_certificates_stored_in_peer_relation_data:
+            self.unit.status = WaitingStatus("Waiting for Fluentd certificates to be available")
+            return
+        self._configure()
 
     def _on_fluentd_certs_relation_joined(self, event: RelationJoinedEvent) -> None:
-        """Juju event triggered when the fluentd-certs relation joins.
+        """Triggered when the fluentd-certs relation joins.
 
         Requests Fluentd certificates from the provider.
 
         Args:
             event: Juju event (RelationJoinedEvent)
-
-        Returns:
-            None
         """
         if not self.unit.is_leader():
             return
@@ -117,59 +169,6 @@ class FluentdElasticsearchCharm(CharmBase):
                 return
             self._request_fluentd_certificates()
 
-    def _configure(  # noqa: C901
-        self, event: Union[CertificateAvailableEvent, ConfigChangedEvent]
-    ) -> None:
-        """Configures fluentd once all prerequisites are in place.
-
-        Args:
-            event: Juju event (PebbleReadyEvent)
-        """
-        if not self._domain_config_is_valid:
-            self.unit.status = BlockedStatus("Config 'domain' is not valid")
-            event.defer()
-            return
-        if not self._elasticsearch_url_is_valid:
-            self.unit.status = BlockedStatus(
-                "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
-            )
-            return
-        if not self._peer_relation_created:
-            self.unit.status = WaitingStatus("Waiting for replicas relation to be created")
-            event.defer()
-            return
-        if not self._fluentd_certs_relation_created:
-            self.unit.status = BlockedStatus("Waiting for fluentd-certs relation to be created")
-            event.defer()
-            return
-        if not self._container.can_connect():
-            self.unit.status = WaitingStatus("Waiting for the container to be available")
-            event.defer()
-            return
-        if not self._fluentd_private_key_stored_in_peer_relation_data:
-            self.unit.status = WaitingStatus("Waiting for Fluentd private key to be created")
-            event.defer()
-            return
-        if not self._fluentd_csr_stored_in_peer_relation_data:
-            self.unit.status = WaitingStatus("Waiting for Fluentd CSR to be available")
-            event.defer()
-            return
-        if self.unit.is_leader():
-            if not self._stored_csr_matches_charm_config:
-                self._renew_cerificate()
-        if not self._fluentd_certificates_stored_in_peer_relation_data:
-            self.unit.status = WaitingStatus("Waiting for Fluentd certificates to be available")
-            event.defer()
-            return
-        self.unit.status = MaintenanceStatus("Configuring pod")
-        self._save_fluentd_private_key_to_file(self._fluentd_private_key)
-        self._save_fluentd_csr_to_file(self._fluentd_csr)
-        self._save_fluentd_cert_to_file(self._get_value_from_peer_relation_data("fluentd_cert"))
-        self._save_ca_cert_to_file(self._get_value_from_peer_relation_data("ca_cert"))
-        self._write_dynamic_config_files()
-        self._configure_pebble_layer()
-        self.unit.status = ActiveStatus()
-
     def _on_fluentd_certificates_available(self, event: CertificateAvailableEvent) -> None:
         """Saves Fluentd certificate and CA certificate to the container.
 
@@ -180,13 +179,17 @@ class FluentdElasticsearchCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for replicas relation to be created")
             event.defer()
             return
-        if not self._container.can_connect():
-            self.unit.status = WaitingStatus("Waiting for the container to be available")
-            event.defer()
-            return
         self._push_fluentd_cert_to_peer_relation_data(event.certificate)
         self._push_ca_cert_to_peer_relation_data(event.ca)
-        self._configure(event)
+        self._configure()
+
+    def _configure(self) -> None:
+        """Configures Fluentd once all prerequisites are in place."""
+        self.unit.status = MaintenanceStatus("Configuring pod")
+        self._push_fluentd_certs_to_workload()
+        self._push_dynamic_config_files_to_workload()
+        self._configure_pebble_layer()
+        self.unit.status = ActiveStatus()
 
     def _on_certificate_renewal_needed(
         self,
@@ -269,7 +272,7 @@ class FluentdElasticsearchCharm(CharmBase):
             raise RuntimeError("No peer relation")
         self._store_item_in_peer_relation_data("ca_cert", ca_cert)
 
-    def _save_fluentd_private_key_to_file(self, private_key: Optional[str]) -> None:
+    def _push_fluentd_private_key_to_workload(self, private_key: Optional[str]) -> None:
         """Saves Fluentd private key to a file.
 
         Args:
@@ -281,7 +284,7 @@ class FluentdElasticsearchCharm(CharmBase):
             permissions=0o420,
         )
 
-    def _save_fluentd_csr_to_file(self, csr: Optional[str]) -> None:
+    def _push_fluentd_csr_to_workload(self, csr: Optional[str]) -> None:
         """Saves Fluentd CSR to a file.
 
         Args:
@@ -293,7 +296,7 @@ class FluentdElasticsearchCharm(CharmBase):
             permissions=0o420,
         )
 
-    def _save_fluentd_cert_to_file(self, cert: Optional[str]) -> None:
+    def _push_fluentd_cert_to_workload(self, cert: Optional[str]) -> None:
         """Saves Fluentd certificate to a file.
 
         Args:
@@ -301,11 +304,11 @@ class FluentdElasticsearchCharm(CharmBase):
         """
         self._write_to_file(
             destination_path=Path(f"{self.CERTIFICATES_DIRECTORY}/fluentd.pem"),
-            content=cert,
+            content=f"{cert}\n",
             permissions=0o420,
         )
 
-    def _save_ca_cert_to_file(self, cert: Optional[str]) -> None:
+    def _push_ca_cert_to_workload(self, cert: Optional[str]) -> None:
         """Saves CA certificate to a file.
 
         Args:
@@ -334,6 +337,24 @@ class FluentdElasticsearchCharm(CharmBase):
             str: Fluentd CSR
         """
         return self._get_value_from_peer_relation_data("fluentd_csr") or ""
+
+    @property
+    def _fluentd_cert(self) -> str:
+        """Returns Fluentd certificate.
+
+        Returns:
+            str: Fluentd certificate
+        """
+        return self._get_value_from_peer_relation_data("fluentd_cert") or ""
+
+    @property
+    def _ca_cert(self) -> str:
+        """Returns CA certificate used to sign Fluentd certificate.
+
+        Returns:
+            str: CA certificate
+        """
+        return self._get_value_from_peer_relation_data("ca_cert") or ""
 
     @property
     def _fluentd_private_key_stored_in_peer_relation_data(self) -> bool:
@@ -367,7 +388,7 @@ class FluentdElasticsearchCharm(CharmBase):
             ]
         )
 
-    def _write_static_config_files(self) -> None:
+    def _push_static_config_files_to_workload(self) -> None:
         """Writes static Fluentd config files to the container."""
         self._write_to_file(
             destination_path=Path(f"{self.CONFIG_DIRECTORY}/general.conf"),
@@ -380,7 +401,7 @@ class FluentdElasticsearchCharm(CharmBase):
             permissions=0o666,
         )
 
-    def _write_dynamic_config_files(self) -> None:
+    def _push_dynamic_config_files_to_workload(self) -> None:
         """Writes dynamic Fluentd config files to the container."""
         self._write_to_file(
             destination_path=Path(f"{self.CONFIG_DIRECTORY}/forward-input.conf"),
@@ -404,14 +425,21 @@ class FluentdElasticsearchCharm(CharmBase):
             permissions=0o666,
         )
 
+    def _push_fluentd_certs_to_workload(self) -> None:
+        """Pushes Fluentd certs from peer relation data to the workload container."""
+        self._push_fluentd_private_key_to_workload(self._fluentd_private_key)
+        self._push_fluentd_csr_to_workload(self._fluentd_csr)
+        self._push_fluentd_cert_to_workload(self._fluentd_cert)
+        self._push_ca_cert_to_workload(self._ca_cert)
+
     def _configure_pebble_layer(self) -> None:
         """Configures pebble layer."""
         pebble_layer = self._pebble_layer()
         plan = self._container.get_plan()
         if plan.services != pebble_layer.services:
             self._container.add_layer(self._container_name, pebble_layer, combine=True)
-            self._container.restart(self._service_name)
-            logger.info(f"Restarted container {self._service_name}")
+        self._container.restart(self._service_name)
+        logger.info(f"Restarted container {self._service_name}")
 
     def _pebble_layer(self) -> Layer:
         """Returns pebble layer for the charm.
@@ -635,6 +663,23 @@ class FluentdElasticsearchCharm(CharmBase):
             str: Whether the relation was created.
         """
         return bool(self.model.get_relation(relation_name))
+
+    @property
+    def _relations_created(self) -> bool:
+        """Checks whether required relations are created.
+
+        Returns:
+            bool: True/False
+        """
+        if missing_relations := [
+            relation
+            for relation in self.REQUIRED_RELATIONS
+            if not self.model.get_relation(relation)
+        ]:
+            msg = f"Waiting for relation(s) to be created: {', '.join(missing_relations)}"
+            self.unit.status = BlockedStatus(msg)
+            return False
+        return True
 
     @property
     def _domain_config(self) -> Optional[str]:

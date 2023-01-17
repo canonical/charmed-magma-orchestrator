@@ -105,9 +105,7 @@ class TestCharm(unittest.TestCase):
     def test_given_fluentd_container_ready_and_peer_relation_created_and_unit_is_not_leader_when_install_then_private_key_is_not_generated(  # noqa: E501
         self, patched_generate_private_key
     ):
-        peer_relation_id, _ = self._create_peer_relation_with_certificates(
-            domain_config=TEST_DOMAIN
-        )
+        self._create_peer_relation_with_certificates(domain_config=TEST_DOMAIN)
 
         self.harness.charm.on.install.emit()
 
@@ -115,12 +113,10 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.push")
     @patch("builtins.open", new_callable=mock_open())
-    def test_given_fluentd_container_ready_and_peer_relation_created_when_install_then_static_configs_are_pushed_to_the_container(  # noqa: E501
+    def test_given_fluentd_container_ready_and_peer_relation_created_when_install_then_static_configs_are_pushed_to_the_workload_container(  # noqa: E501
         self, patched_open, patched_push
     ):
-        peer_relation_id, _ = self._create_peer_relation_with_certificates(
-            domain_config=TEST_DOMAIN
-        )
+        self._create_peer_relation_with_certificates(domain_config=TEST_DOMAIN)
         test_fluentd_configs = [
             "config one",
             "config two",
@@ -145,6 +141,118 @@ class TestCharm(unittest.TestCase):
                 ),
             ]
         )
+
+    def test_given_relations_not_created_when_pebble_ready_then_status_is_blocked(self):
+        event = Mock()
+
+        self.harness.charm.on.fluentd_pebble_ready.emit(event)
+
+        assert self.harness.charm.unit.status == BlockedStatus(
+            "Waiting for relation(s) to be created: fluentd-certs, replicas"
+        )
+
+    def test_given_replicas_relation_created_but_fluentd_certs_relation_not_created_when_pebble_ready_then_status_is_blocked(  # noqa: E501
+        self,
+    ):
+        event = Mock()
+        self._create_peer_relation_with_certificates(domain_config=TEST_DOMAIN)
+
+        self.harness.charm.on.fluentd_pebble_ready.emit(event)
+
+        assert self.harness.charm.unit.status == BlockedStatus(
+            "Waiting for relation(s) to be created: fluentd-certs"
+        )
+
+    def test_given_fluentd_certs_relation_created_but_replicas_relation_not_created_when_pebble_ready_then_status_is_blocked(  # noqa: E501
+        self,
+    ):
+        event = Mock()
+        self._create_fluentd_certs_relation()
+
+        self.harness.charm.on.fluentd_pebble_ready.emit(event)
+
+        assert self.harness.charm.unit.status == BlockedStatus(
+            "Waiting for relation(s) to be created: replicas"
+        )
+
+    def test_given_fluentd_certs_relation_created_but_fluentd_certs_not_in_the_peer_relation_data_when_pebble_ready_then_status_is_waiting(  # noqa: E501
+        self,
+    ):
+        event = Mock()
+        self._create_peer_relation_with_certificates(domain_config=TEST_DOMAIN)
+        self._create_fluentd_certs_relation()
+
+        self.harness.charm.on.fluentd_pebble_ready.emit(event)
+
+        assert self.harness.charm.unit.status == WaitingStatus(
+            "Waiting for Fluentd certificates to be available"
+        )
+
+    @patch("ops.model.Container.push")
+    def test_given_fluentd_certs_relation_created_and_fluentd_certs_in_the_peer_relation_data_when_pebble_ready_then_certs_are_pushed_to_the_workload_container(  # noqa: E501
+        self, patched_push
+    ):
+        event = Mock()
+        _, peer_relation_data = self._create_peer_relation_with_certificates(
+            domain_config=TEST_DOMAIN,
+            fluentd_private_key=True,
+            fluentd_csr=True,
+            fluentd_certificate=True,
+        )
+        self._create_fluentd_certs_relation()
+
+        self.harness.charm.on.fluentd_pebble_ready.emit(event)
+        write_calls = patched_push.mock_calls
+
+        self.assertEqual(
+            write_calls[0],
+            call(
+                Path("/certs/fluentd.key"),
+                peer_relation_data["fluentd_private_key"],
+                permissions=0o420,
+            ),
+        )
+        self.assertEqual(
+            write_calls[1],
+            call(
+                Path("/certs/fluentd.csr"),
+                peer_relation_data["fluentd_csr"],
+                permissions=0o420,
+            ),
+        )
+        self.assertEqual(
+            write_calls[2],
+            call(
+                Path("/certs/fluentd.pem"),
+                peer_relation_data["fluentd_cert"],
+                permissions=0o420,
+            ),
+        )
+        self.assertEqual(
+            write_calls[3],
+            call(
+                Path("/certs/ca.pem"),
+                peer_relation_data["ca_cert"],
+                permissions=0o420,
+            ),
+        )
+
+    @patch("ops.model.Container.push", Mock())
+    def test_given_fluentd_certs_relation_created_and_fluentd_certs_in_the_peer_relation_data_when_pebble_ready_then_status_is_active(  # noqa: E501
+        self,
+    ):
+        event = Mock()
+        self._create_peer_relation_with_certificates(
+            domain_config=TEST_DOMAIN,
+            fluentd_private_key=True,
+            fluentd_csr=True,
+            fluentd_certificate=True,
+        )
+        self._create_fluentd_certs_relation()
+
+        self.harness.charm.on.fluentd_pebble_ready.emit(event)
+
+        assert self.harness.charm.unit.status == ActiveStatus()
 
     def test_given_peer_relation_not_created_when_fluentd_certs_relation_joined_then_status_is_waiting(  # noqa: E501
         self,
@@ -281,14 +389,7 @@ class TestCharm(unittest.TestCase):
             "Config for elasticsearch is not valid. Format should be <hostname>:<port>"
         )
 
-    def test_given_peer_relation_not_created_when_config_changed_then_status_is_waiting(self):
-        self.harness.update_config(key_values=VALID_TEST_CHARM_CONFIG)
-
-        assert self.harness.charm.unit.status == WaitingStatus(
-            "Waiting for replicas relation to be created"
-        )
-
-    def test_given_fluentd_certs_relation_not_created_when_config_changed_then_status_is_blocked(
+    def test_given_replicas_relation_created_but_fluentd_certs_relation_not_created_when_config_changed_then_status_is_blocked(  # noqa: E501
         self,
     ):
         self.harness.add_relation(relation_name="replicas", remote_app=self.harness.charm.app.name)
@@ -296,7 +397,7 @@ class TestCharm(unittest.TestCase):
         self.harness.update_config(key_values=VALID_TEST_CHARM_CONFIG)
 
         assert self.harness.charm.unit.status == BlockedStatus(
-            "Waiting for fluentd-certs relation to be created"
+            "Waiting for relation(s) to be created: fluentd-certs"
         )
 
     @patch(f"{TLS_CERTIFICATES_LIB}.TLSCertificatesRequiresV1.request_certificate_renewal")
@@ -356,17 +457,6 @@ class TestCharm(unittest.TestCase):
 
         patched_request_certificate_renewal.assert_not_called()
 
-    def test_charm_config_is_correct_and_relations_are_created_but_fluentd_private_key_is_not_available_when_config_changed_then_status_is_waiting(  # noqa: E501
-        self,
-    ):
-        self._create_empty_relations()
-
-        self.harness.update_config(key_values={})
-
-        assert self.harness.charm.unit.status == WaitingStatus(
-            "Waiting for Fluentd private key to be created"
-        )
-
     def test_charm_config_is_correct_and_relations_are_created_but_fluentd_csr_is_not_available_when_config_changed_then_status_is_waiting(  # noqa: E501
         self,
     ):
@@ -395,7 +485,7 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.push")
-    def test_charm_config_is_correct_and_relations_are_created_but_fluentd_certs_available_when_config_changed_then_certs_are_stored_in_the_conainer(  # noqa: E501
+    def test_charm_config_is_correct_and_relations_are_created_and_fluentd_certs_available_when_config_changed_then_certs_are_stored_in_the_container(  # noqa: E501
         self, patched_push
     ):
         self._create_fluentd_certs_relation()
@@ -725,7 +815,7 @@ class TestCharm(unittest.TestCase):
                 )
                 .decode()
                 .strip()
-            )
+            ) + "\n"
 
         peer_relation_id = self.harness.add_relation("replicas", self.harness.charm.app.name)
         self.harness.add_relation_unit(peer_relation_id, self.harness.charm.unit.name)
