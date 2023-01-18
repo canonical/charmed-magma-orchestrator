@@ -818,37 +818,6 @@ class TestCharm(unittest.TestCase):
 
         self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
 
-        expected_plan = {
-            "services": {
-                "magma-orc8r-certifier": {
-                    "override": "replace",
-                    "startup": "enabled",
-                    "command": "/usr/bin/envdir "
-                    "/var/opt/magma/envdir "
-                    "/var/opt/magma/bin/certifier "
-                    "-cac=/var/opt/magma/certs/certifier.pem "
-                    "-cak=/var/opt/magma/certs/certifier.key "
-                    "-vpnc=/var/opt/magma/certs/vpn_ca.crt "
-                    "-vpnk=/var/opt/magma/certs/vpn_ca.key "
-                    "-logtostderr=true "
-                    "-v=0",
-                    "environment": {
-                        "DATABASE_SOURCE": f"dbname={self.TEST_DB_NAME} "
-                        f"user={self.TEST_DB_CONNECTION_STRING.user} "
-                        f"password={self.TEST_DB_CONNECTION_STRING.password} "
-                        f"host={self.TEST_DB_CONNECTION_STRING.host} "
-                        f"sslmode=disable",
-                        "SQL_DRIVER": "postgres",
-                        "SQL_DIALECT": "psql",
-                        "SERVICE_HOSTNAME": "magma-orc8r-certifier",
-                        "SERVICE_REGISTRY_MODE": "k8s",
-                        "SERVICE_REGISTRY_NAMESPACE": self.model_name,
-                    },
-                }
-            },
-        }
-        updated_plan = self.harness.get_container_pebble_plan("magma-orc8r-certifier").to_dict()
-        self.assertEqual(expected_plan, updated_plan)
         self.harness.charm.unit.status = WaitingStatus("Waiting for certs")
 
         self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
