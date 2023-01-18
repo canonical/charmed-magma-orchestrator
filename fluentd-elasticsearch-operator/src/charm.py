@@ -113,7 +113,7 @@ class FluentdElasticsearchCharm(CharmBase):
         if not self._fluentd_certificates_stored_in_peer_relation_data:
             self.unit.status = WaitingStatus("Waiting for Fluentd certificates to be available")
             return
-        self._configure()
+        self._configure_and_start_workload()
 
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:
         """Triggered whenever config of a Juju model changes.
@@ -146,7 +146,7 @@ class FluentdElasticsearchCharm(CharmBase):
         if not self._fluentd_certificates_stored_in_peer_relation_data:
             self.unit.status = WaitingStatus("Waiting for Fluentd certificates to be available")
             return
-        self._configure()
+        self._configure_and_start_workload()
 
     def _on_fluentd_certs_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Triggered when the fluentd-certs relation joins.
@@ -181,9 +181,9 @@ class FluentdElasticsearchCharm(CharmBase):
             return
         self._push_fluentd_cert_to_peer_relation_data(event.certificate)
         self._push_ca_cert_to_peer_relation_data(event.ca)
-        self._configure()
+        self._configure_and_start_workload()
 
-    def _configure(self) -> None:
+    def _configure_and_start_workload(self) -> None:
         """Configures Fluentd once all prerequisites are in place."""
         self.unit.status = MaintenanceStatus("Configuring pod")
         self._push_fluentd_certs_to_workload()
@@ -249,7 +249,6 @@ class FluentdElasticsearchCharm(CharmBase):
             private_key=self._fluentd_private_key.encode(),
             subject=f"fluentd.{self._domain_config}",
         )
-        logger.error(fluentd_csr)
         self._store_item_in_peer_relation_data("fluentd_csr", fluentd_csr.decode())
 
     def _push_fluentd_cert_to_peer_relation_data(self, fluentd_cert: str) -> None:
@@ -400,9 +399,6 @@ class FluentdElasticsearchCharm(CharmBase):
             content=self._read_file(Path(f"{self.CONFIG_SOURCE_DIRECTORY}/system.conf")),
             permissions=0o666,
         )
-
-    def _push_dynamic_config_files_to_workload(self) -> None:
-        """Writes dynamic Fluentd config files to the container."""
         self._write_to_file(
             destination_path=Path(f"{self.CONFIG_DIRECTORY}/forward-input.conf"),
             content=self._render_config_file_template(
@@ -412,6 +408,9 @@ class FluentdElasticsearchCharm(CharmBase):
             ),
             permissions=0o666,
         )
+
+    def _push_dynamic_config_files_to_workload(self) -> None:
+        """Writes dynamic Fluentd config files to the container."""
         self._write_to_file(
             destination_path=Path(f"{self.CONFIG_DIRECTORY}/output.conf"),
             content=self._render_config_file_template(
@@ -511,7 +510,7 @@ class FluentdElasticsearchCharm(CharmBase):
     def _render_config_file_template(
         config_templates_dir: Path, template_file_name: str, **values: Optional[str]
     ) -> str:
-        """Renders fluetnd config file from a given Jinja template.
+        """Renders fluentd config file from a given Jinja template.
 
         Args:
             config_templates_dir (Path): Directory containing config templates

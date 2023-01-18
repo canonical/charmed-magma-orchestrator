@@ -38,7 +38,7 @@ storage:
     minimum-size: 10M
   certs:
     type: filesystem
-    description: Fluetnd certs
+    description: Fluentd certs
     minumum-size: 1M
   config:
     type: filesystem
