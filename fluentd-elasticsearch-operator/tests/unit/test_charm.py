@@ -113,17 +113,22 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.push")
     @patch("builtins.open", new_callable=mock_open())
+    @patch("charm.FluentdElasticsearchCharm.CERTIFICATES_DIRECTORY", new_callable=PropertyMock)
     def test_given_fluentd_container_ready_and_peer_relation_created_when_install_then_static_configs_are_pushed_to_the_workload_container(  # noqa: E501
-        self, patched_open, patched_push
+        self, patched_certs_dir, patched_open, patched_push
     ):
+        test_certs_path = "/test/path"
+        patched_certs_dir.return_value = test_certs_path
         self._create_peer_relation_with_certificates(domain_config=TEST_DOMAIN)
         test_fluentd_configs = [
             "config one",
             "config two",
+            TEST_FORWARD_INPUT_CONF_TEMPLATE,
         ]
         patched_open.side_effect = [
             mock_open(read_data=content).return_value for content in test_fluentd_configs
         ]
+        expected_rendered_test_forward_input_conf = test_certs_path
 
         self.harness.charm.on.install.emit()
 
@@ -137,6 +142,11 @@ class TestCharm(unittest.TestCase):
                 call(
                     Path("/etc/fluent/config.d/system.conf"),
                     test_fluentd_configs[1],
+                    permissions=0o666,
+                ),
+                call(
+                    Path("/etc/fluent/config.d/forward-input.conf"),
+                    expected_rendered_test_forward_input_conf,
                     permissions=0o666,
                 ),
             ]
@@ -532,18 +542,10 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.push")
-    @patch("builtins.open", new_callable=mock_open())
-    @patch("charm.FluentdElasticsearchCharm.CERTIFICATES_DIRECTORY", new_callable=PropertyMock)
+    @patch("builtins.open", new_callable=mock_open, read_data=TEST_OUTPUT_CONF_TEMPLATE)
     def test_given_fluentd_certificates_in_peer_relation_data_when_config_changed_then_output_conf_is_generated_and_stored_in_the_container(  # noqa: E501
-        self, patched_certs_dir, patched_open, patched_push
+        self, _, patched_push
     ):
-        test_certs_path = "/test/path"
-        patched_certs_dir.return_value = test_certs_path
-        patched_open.side_effect = [
-            mock_open(read_data=content).return_value
-            for content in [TEST_FORWARD_INPUT_CONF_TEMPLATE, TEST_OUTPUT_CONF_TEMPLATE]
-        ]
-        expected_rendered_test_forward_input_conf = test_certs_path
         expected_rendered_test_output_conf = f"""{TEST_ES_URL.split(":")[0]}
 {TEST_ES_URL.split(":")[1]}
 {TEST_FLUENTD_CHUNK_LIMIT}
@@ -560,16 +562,7 @@ class TestCharm(unittest.TestCase):
         write_calls = patched_push.mock_calls
 
         self.assertEqual(
-            # First 4 calls are Fluentd certs
             write_calls[4],
-            call(
-                Path("/etc/fluent/config.d/forward-input.conf"),
-                expected_rendered_test_forward_input_conf,
-                permissions=0o666,
-            ),
-        )
-        self.assertEqual(
-            write_calls[5],
             call(
                 Path("/etc/fluent/config.d/output.conf"),
                 expected_rendered_test_output_conf,
