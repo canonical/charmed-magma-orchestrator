@@ -197,7 +197,7 @@ class FluentdElasticsearchCharm(CharmBase):
     ) -> None:
         """Triggered whenever new Fluentd certificate is needed.
 
-        Will ask for new certificates.
+        Requests new certificates when the old one expires or gets revoked.
 
         Args:
             event: Juju event (CertificateExpiringEvent, CertificateExpiredEvent or
