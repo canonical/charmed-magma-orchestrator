@@ -200,7 +200,8 @@ class FluentdElasticsearchCharm(CharmBase):
         Will ask for new certificates.
 
         Args:
-            event: Juju event
+            event: Juju event (CertificateExpiringEvent, CertificateExpiredEvent or
+                   CertificateRevokedEvent)
         """
         if not self.unit.is_leader():
             return
