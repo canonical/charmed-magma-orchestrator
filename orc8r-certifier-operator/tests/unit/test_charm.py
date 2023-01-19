@@ -19,7 +19,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.serialization import pkcs12
 from ops import testing
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
-from ops.pebble import PathError
+from ops.pebble import Layer, PathError
 from pgconnstr import ConnectionString  # type: ignore[import]
 
 from charm import MagmaOrc8rCertifierCharm
@@ -801,6 +801,7 @@ class TestCharm(unittest.TestCase):
     ):
         patch_file_exists.return_value = True
         self.harness.update_config(key_values={"domain": "whatever.com"})
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
         db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
         certificates_relation_id = self.harness.add_relation(
             relation_name="certificates", remote_app="vault-k8s"
@@ -816,9 +817,40 @@ class TestCharm(unittest.TestCase):
             relation_id=db_relation_id, app_or_unit="postgresql-k8s", key_values=key_values
         )
 
-        self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
-
-        self.harness.charm.unit.status = WaitingStatus("Waiting for certs")
+        layer = Layer(
+            {
+                "services": {
+                    "magma-orc8r-certifier": {
+                        "override": "replace",
+                        "startup": "enabled",
+                        "command": "/usr/bin/envdir "
+                        "/var/opt/magma/envdir "
+                        "/var/opt/magma/bin/certifier "
+                        "-cac=/var/opt/magma/certs/certifier.pem "
+                        "-cak=/var/opt/magma/certs/certifier.key "
+                        "-vpnc=/var/opt/magma/certs/vpn_ca.crt "
+                        "-vpnk=/var/opt/magma/certs/vpn_ca.key "
+                        "-logtostderr=true "
+                        "-v=0",
+                        "environment": {
+                            "DATABASE_SOURCE": f"dbname={self.TEST_DB_NAME} "
+                            f"user={self.TEST_DB_CONNECTION_STRING.user} "
+                            f"password={self.TEST_DB_CONNECTION_STRING.password} "
+                            f"host={self.TEST_DB_CONNECTION_STRING.host} "
+                            f"sslmode=disable",
+                            "SQL_DRIVER": "postgres",
+                            "SQL_DIALECT": "psql",
+                            "SERVICE_HOSTNAME": "magma-orc8r-certifier",
+                            "SERVICE_REGISTRY_MODE": "k8s",
+                            "SERVICE_REGISTRY_NAMESPACE": self.model_name,
+                        },
+                    }
+                },
+            }
+        )
+        self.harness.model.unit.get_container("magma-orc8r-certifier").add_layer(
+            "magma-orc8r-certifier", layer, combine=True
+        )
 
         self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
         assert self.harness.charm.unit.status == ActiveStatus()
