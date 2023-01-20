@@ -256,9 +256,11 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.exists")
+    @patch("ops.model.Container.exec", new_callable=Mock)
     def test_given_pebble_ready_when_obsidian_relation_broken_then_status_is_blocked(  # noqa: E501
-        self, patch_file_exists
+        self, patched_exec, patch_file_exists
     ):
+        patched_exec.return_value = MockExec()
         patch_file_exists.return_value = True
         self.harness.update_config(key_values={"domain": "whatever.com"})
         self._create_all_relations()
@@ -274,9 +276,11 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.exists")
+    @patch("ops.model.Container.exec", new_callable=Mock)
     def test_given_pebble_ready_when_bootstrapper_relation_broken_then_status_is_blocked(  # noqa: E501
-        self, patch_file_exists
+        self, patched_exec, patch_file_exists
     ):
+        patched_exec.return_value = MockExec()
         patch_file_exists.return_value = True
         self.harness.update_config(key_values={"domain": "whatever.com"})
         self._create_all_relations()
@@ -346,9 +350,11 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.exists")
+    @patch("ops.model.Container.exec", new_callable=Mock)
     def test_given_all_relations_created_and_ready_and_nginx_services_are_created_when_pebble_ready_event_emitted_then_pebble_layer_is_configured(  # noqa: E501
-        self, patch_file_exists
+        self, patched_exec, patch_file_exists
     ):
+        patched_exec.return_value = MockExec()
         patch_file_exists.return_value = True
         self.harness.update_config(key_values={"domain": "whatever.com"})
         self._create_all_relations()
@@ -372,9 +378,11 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(expected_plan, updated_plan)
 
     @patch("ops.model.Container.exists")
+    @patch("ops.model.Container.exec", new_callable=Mock)
     def test_given_all_relations_created_and_ready_and_nginx_services_are_created_when_pebble_ready_event_emitted_then_status_is_active(  # noqa: E501
-        self, patch_file_exists
+        self, patched_exec, patch_file_exists
     ):
+        patched_exec.return_value = MockExec()
         patch_file_exists.return_value = True
         self.harness.update_config(key_values={"domain": "whatever.com"})
         self._create_all_relations()
@@ -395,10 +403,12 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.exists")
+    @patch("ops.model.Container.exec", new_callable=Mock)
     @patch("ops.model.Container.push", Mock())
     def test_given_metricsd_service_running_when_metricsd_relation_joined_then_service_active_status_in_the_relation_data_bag_is_true(  # noqa: E501
-        self, patch_file_exists
+        self, patched_exec, patch_file_exists
     ):
+        patched_exec.return_value = MockExec()
         self.harness.set_leader(True)
         patch_file_exists.return_value = True
         self.harness.update_config(key_values={"domain": "whatever.com"})

@@ -127,6 +127,9 @@ class MagmaOrc8rNginxCharm(CharmBase):
             logger.info("Can't connect to container - Deferring")
             event.defer()
             return
+        # TODO: _install_procps() is needed by the workaround for not working container.restart()
+        #       and should be removed as soon as the proper Juju mechanism works as expected.
+        self._install_procps()
         self._generate_nginx_config()
         self._create_additional_orc8r_nginx_services()
 
@@ -359,14 +362,72 @@ class MagmaOrc8rNginxCharm(CharmBase):
                     f"Configuring pebble layer for {self._service_name}"
                 )
                 self._container.add_layer(self._container_name, layer, combine=True)
-                self._container.restart(self._service_name)
-                logger.info(f"Restarted service {self._service_name}")
-                self._update_relations()
-                self.unit.status = ActiveStatus()
+            # TODO: _kill_nginx_process() is needed by the workaround for not working
+            #       container.restart() and should be removed as soon as the proper Juju mechanism
+            #       works as expected.
+            self._kill_nginx_process()
+            self._container.start(self._service_name)
+            logger.info(f"Restarted service {self._service_name}")
+            self._update_relations()
+            self.unit.status = ActiveStatus()
         else:
             self.unit.status = WaitingStatus(f"Waiting for {self._container} to be ready")
             event.defer()
             return
+
+    def _kill_nginx_process(self) -> None:
+        """Kills all running nginx processes."""
+        processes = self._get_workload_processes()
+        nginx_pids = self._get_process_pid(processes, "nginx")
+        if nginx_pids:
+            for nginx_pid in nginx_pids:
+                self._kill_process(nginx_pid)
+
+    def _get_workload_processes(self) -> List[str]:
+        """Returns the list of processes running inside a workload container.
+
+        Returns:
+            List[str]: List of processes as returned by the `ps x` command
+
+        Raises:
+            RuntimeError: Raised if `ps x` fails
+        """
+        list_processes = self._container.exec(["ps", "x"])
+        try:
+            out, _ = list_processes.wait_output()
+            return out.split("\n")
+        except ExecError:
+            raise RuntimeError("Unable to get workload processes!")
+
+    @staticmethod
+    def _get_process_pid(processes: list, process_name: str) -> Optional[List[int]]:
+        """Returns a list containing PID(s) of the process(es) matching given name.
+
+        It is assumed, that the list of processes will be fetched using `_get_workload_processes`
+        function.
+
+        Args:
+            processes (list): List of processes returned by the `_get_workload_processes`
+                              function
+            process_name (str): Name of the process to get PID for
+
+        Returns:
+            Optional[List[int]]: List of PIDs of the processes matching given process_name or None
+                                if none of running processes matches the process_name
+        """
+        try:
+            return [process.split()[0] for process in processes if process_name in process]
+        except IndexError:
+            return None
+
+    def _kill_process(self, pid: int) -> None:
+        """Kills then process with given PID.
+
+        Args:
+            pid (int): PID of a process to kill
+        """
+        self._container.exec(["kill", "-9", f"{pid}"], timeout=60).wait()
+        logger.info(f"Killed process with pid {pid}")
 
     def _update_relations(self) -> None:
         """Updates the status of the `orc8r-nginx` service.
@@ -604,6 +665,11 @@ class MagmaOrc8rNginxCharm(CharmBase):
             except ModelError:
                 pass
         return False
+
+    def _install_procps(self) -> None:
+        """Installs procps."""
+        self._container.exec(["apt", "update", "--allow-releaseinfo-change", "-y"]).wait()
+        self._container.exec(["apt", "install", "-y", "procps"]).wait()
 
     @property
     def _pebble_layer(self) -> Layer:
