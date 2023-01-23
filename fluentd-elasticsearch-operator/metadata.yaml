@@ -18,14 +18,28 @@ containers:
     mounts:
       - storage: buffer
         location: /var/log/fluentd-buffers
+      - storage: certs
+        location: /certs
       - storage: config
         location: /etc/fluent/config.d
+
+peers:
+  replicas:
+    interface: fluentd-replica
+
+requires:
+  fluentd-certs:
+    interface: tls-certificates
 
 storage:
   buffer:
     type: filesystem
     description: Fluentd buffer
     minimum-size: 10M
+  certs:
+    type: filesystem
+    description: Fluentd certs
+    minimum-size: 1M
   config:
     type: filesystem
     description: Configs storage

@@ -37,9 +37,11 @@ from charms.observability_libs.v1.kubernetes_service_patch import (
 )
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
+    CertificateCreationRequestEvent,
     CertificateExpiredEvent,
     CertificateExpiringEvent,
     CertificateRevokedEvent,
+    TLSCertificatesProvidesV1,
     TLSCertificatesRequiresV1,
     generate_ca,
     generate_certificate,
@@ -94,6 +96,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self.certificates_certifier_provider = CertCertifierProvides(self, "cert-certifier")
         self.certificates_controller_provider = CertControllerProvides(self, "cert-controller")
         self.certificates_root_ca_provider = CertRootCAProvides(self, "cert-root-ca")
+        self.fluentd_certificates_provider = TLSCertificatesProvidesV1(self, "fluentd-certs")
         self._container_name = self._service_name = "magma-orc8r-certifier"
         self.provided_relation_name = "magma-orc8r-certifier"
         self._container = self.unit.get_container(self._container_name)
@@ -145,6 +148,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self.framework.observe(
             self.certificates_root_ca_provider.on.certificate_request,
             self._on_root_ca_certificate_request,
+        )
+        self.framework.observe(
+            self.fluentd_certificates_provider.on.certificate_creation_request,
+            self._on_fluentd_certificate_creation_request,
         )
         self.framework.observe(
             self.tls_certificates_requirer.on.certificate_available, self._on_certificate_available
@@ -249,7 +256,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             event.defer()
             return
         if not self._certificates_relation_created:
-            self.unit.status = BlockedStatus("Waiting for tls-certificates relation to be created")
+            self.unit.status = BlockedStatus("Waiting for certificates relation to be created")
             event.defer()
             return
         if not self._db_relation_established:
@@ -454,6 +461,39 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self.certificates_root_ca_provider.set_certificate(
             relation_id=event.relation_id,
             certificate=str(certificate_string),
+        )
+
+    def _on_fluentd_certificate_creation_request(
+        self, event: CertificateCreationRequestEvent
+    ) -> None:
+        """Triggered when a Fluentd certificate request is made on the fluentd-certs.
+
+        Creates Fluentd certificate and pushes it to the relation data along with the CA
+        certificate used to sign Fluentd cert.
+
+        Args:
+            event (CertificateCreationRequestEvent): Custom Juju event for certificate request
+        """
+        if not self._application_private_key:
+            raise RuntimeError("Application private key not available")
+        if not event.certificate_signing_request:
+            self.unit.status = BlockedStatus("Fluentd CSR not available in the relation data")
+            return
+        if not self._application_certificate:
+            self.unit.status = WaitingStatus("Waiting for the CA certificate to be available")
+            event.defer()
+            return
+        fluentd_certificate = generate_certificate(
+            csr=event.certificate_signing_request.encode(),
+            ca=self._application_certificate.encode(),
+            ca_key=self._application_private_key.encode(),
+        )
+        self.fluentd_certificates_provider.set_relation_certificate(
+            certificate=fluentd_certificate.decode(),
+            certificate_signing_request=event.certificate_signing_request,
+            ca=self._application_certificate,
+            chain=[fluentd_certificate.decode(), self._application_certificate],
+            relation_id=event.relation_id,
         )
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
@@ -675,9 +715,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                     "Waiting to receive new certificate from provider"
                 )
             else:
-                self.unit.status = BlockedStatus(
-                    "Waiting for tls-certificates relation to be created"
-                )
+                self.unit.status = BlockedStatus("Waiting for certificates relation to be created")
         if not self._stored_root_csr_matches_config:
             old_csr = self._root_csr
             self._generate_root_csr()
@@ -690,9 +728,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                     "Waiting to receive new certificate from provider"
                 )
             else:
-                self.unit.status = BlockedStatus(
-                    "Waiting for tls-certificates relation to be created"
-                )
+                self.unit.status = BlockedStatus("Waiting for certificates relation to be created")
         if (
             not self._application_certificates_are_stored
             or not self._stored_application_certificate_matches_config  # noqa: W503
