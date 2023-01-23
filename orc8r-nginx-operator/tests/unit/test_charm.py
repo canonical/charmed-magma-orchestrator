@@ -30,10 +30,11 @@ class TestCharm(unittest.TestCase):
 
     @patch("lightkube.core.client.GenericSyncClient", new=Mock())
     @patch("lightkube.core.client.Client.create", new=Mock())
-    @patch("ops.model.Container.exec")
+    @patch("ops.model.Container.exec", new_callable=Mock)
     def test_given_domain_config_set_when_install_then_nginx_config_file_is_created(
-        self, patch_exec
+        self, patched_exec
     ):
+        patched_exec.return_value = MockExec()
         event = Mock()
         domain = "whatever domain"
         key_values = {"domain": domain}
@@ -43,7 +44,7 @@ class TestCharm(unittest.TestCase):
 
         self.harness.charm._on_install(event)
 
-        patch_exec.assert_called_with(
+        patched_exec.assert_called_with(
             command=["/usr/local/bin/generate_nginx_configs.py"],
             environment={
                 "PROXY_BACKENDS": f"{self.namespace}.svc.cluster.local",
@@ -56,10 +57,11 @@ class TestCharm(unittest.TestCase):
     @patch("lightkube.core.client.GenericSyncClient", new=Mock())
     @patch("lightkube.core.client.Client.get")
     @patch("lightkube.core.client.Client.create")
-    @patch("ops.model.Container.exec", new=Mock())
+    @patch("ops.model.Container.exec", new_callable=Mock)
     def test_given_domain_config_set_when_install_then_additional_k8s_services_are_created(
-        self, patch_create, patch_get
+        self, patched_exec, patch_create, patch_get
     ):
+        patched_exec.return_value = MockExec()
         patch_get.side_effect = HTTPStatusError(
             message="whatever",
             response=Response(status_code=400),
@@ -422,6 +424,70 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(
             self.harness.get_relation_data(relation_id, "magma-orc8r-nginx/0"),
             {"active": "True"},
+        )
+
+    @patch("ops.model.Container.push")
+    def test_given_container_can_be_connected_when_certifier_certificate_available_then_certifier_pem_is_pushed_to_workload(  # noqa: E501
+        self, patched_push
+    ):
+        test_certifier_cert = "some cert"
+        container = self.harness.model.unit.get_container("magma-orc8r-nginx")
+        relation_id = self.harness.add_relation("cert-certifier", "whatever")
+        self.harness.add_relation_unit(relation_id, "whatever/0")
+
+        self.harness.set_can_connect(container=container, val=True)
+        self.harness.update_relation_data(
+            relation_id,
+            "whatever/0",
+            {"certificate": test_certifier_cert},
+        )
+
+        patched_push.assert_called_once_with(
+            path="/var/opt/magma/certs/certifier.pem", source=test_certifier_cert
+        )
+
+    @patch("ops.model.Container.push")
+    def test_given_container_can_be_connected_when_controller_certificate_available_then_controller_crt_and_controller_key_are_pushed_to_workload(  # noqa: E501
+        self, patched_push
+    ):
+        test_controller_cert = "some cert"
+        test_controller_key = "some key"
+        container = self.harness.model.unit.get_container("magma-orc8r-nginx")
+        relation_id = self.harness.add_relation("cert-controller", "whatever")
+        self.harness.add_relation_unit(relation_id, "whatever/0")
+
+        self.harness.set_can_connect(container=container, val=True)
+        self.harness.update_relation_data(
+            relation_id,
+            "whatever/0",
+            {"certificate": test_controller_cert, "private_key": test_controller_key},
+        )
+
+        patched_push.assert_has_calls(
+            [
+                call(path="/var/opt/magma/certs/controller.crt", source=test_controller_cert),
+                call(path="/var/opt/magma/certs/controller.key", source=test_controller_key),
+            ]
+        )
+
+    @patch("ops.model.Container.push")
+    def test_given_container_can_be_connected_when_rootca_certificate_available_then_rootca_pem_is_pushed_to_workload(  # noqa: E501
+        self, patched_push
+    ):
+        test_rootca_cert = "some cert"
+        container = self.harness.model.unit.get_container("magma-orc8r-nginx")
+        relation_id = self.harness.add_relation("cert-root-ca", "whatever")
+        self.harness.add_relation_unit(relation_id, "whatever/0")
+
+        self.harness.set_can_connect(container=container, val=True)
+        self.harness.update_relation_data(
+            relation_id,
+            "whatever/0",
+            {"certificate": test_rootca_cert},
+        )
+
+        patched_push.assert_called_once_with(
+            path="/var/opt/magma/certs/rootCA.pem", source=test_rootca_cert
         )
 
     def _create_active_relation(self, relation_name: str, remote_app: str):
