@@ -258,13 +258,9 @@ class MagmaOrc8rNginxCharm(CharmBase):
             logger.info("Can't connect to container - Deferring")
             event.defer()
             return
-        logger.error("Cert:")
-        logger.error(event.certificate)
         self._container.push(
             path=f"{self.BASE_CERTS_PATH}/controller.crt", source=event.certificate
         )
-        logger.error("Key:")
-        logger.error(event.private_key)
         self._container.push(
             path=f"{self.BASE_CERTS_PATH}/controller.key", source=event.private_key
         )
