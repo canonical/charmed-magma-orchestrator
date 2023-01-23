@@ -18,9 +18,18 @@ From your Ubuntu machine, create an `overlay.yaml` file that contains the follow
 
 ```yaml
 applications:
+  fluentd:
+    options:
+    domain: <your domain name>
+    elasticsearch-url: <your elasticsearch https url>
+    fluentd-chunk-limit-size: "2M"
+    fluentd-queue-limit-length: 8
   orc8r-certifier:
     options:
       domain: <your domain name>
+  orc8r-eventd:
+    options:
+      elasticsearch-url: <your elasticsearch http url>
   orc8r-nginx:
     options:
       domain: <your domain name>
@@ -34,7 +43,10 @@ applications:
 
 Deploy Orchestrator:
 
-**Note**: The magma-orc8r bundle is available on edge and beta channels.
+> **Note**: The magma-orc8r bundle is available on edge and beta channels.
+
+> **Note**: Elasticsearch is not part of magma-orc8r bundle and needs to be deployed prior
+to deploying the bundle. Elasticsearch needs to support both `http` and `https` requests.
 
 ```bash
 juju deploy magma-orc8r --overlay overlay.yaml --trust --channel=edge
@@ -70,6 +82,7 @@ In your domain registrar, create A records for the following Kubernetes services
 | `<orc8r-nginx-proxy External IP>`      | `api.<your domain>`                     | 
 | `<orc8r-clientcert-nginx External IP>` | `controller.<your domain>`              | 
 | `<nginx-proxy External IP>`            | `*.nms.<your domain>`                   | 
+| `<fluentd External IP>`                | `fluentd.<your domain>`                 | 
 
 ### Verify the deployment
 
