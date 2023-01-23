@@ -101,7 +101,7 @@ class FluentdElasticsearchCharm(CharmBase):
             self._generate_and_save_fluentd_private_key()
         self._push_static_config_files_to_workload()
 
-    def _on_fluentd_pebble_ready(self, event: PebbleReadyEvent):
+    def _on_fluentd_pebble_ready(self, event: PebbleReadyEvent) -> None:
         """Triggered when Fluentd pebble is ready.
 
         Args:
@@ -170,7 +170,10 @@ class FluentdElasticsearchCharm(CharmBase):
             self._request_fluentd_certificates()
 
     def _on_fluentd_certificates_available(self, event: CertificateAvailableEvent) -> None:
-        """Saves Fluentd certificate and CA certificate to the container.
+        """Triggered when Fluentd certificates become available in the relation data.
+
+        Pushes Fluentd certificate and CA certificate to the peer relation data.
+        Triggers configuration and starting of a workload.
 
         Args:
             event: Juju event (CertificateAvailableEvent)
@@ -278,7 +281,7 @@ class FluentdElasticsearchCharm(CharmBase):
         Args:
             private_key (str): Fluentd private key
         """
-        self._write_to_file(
+        self._push_file_to_workload(
             destination_path=Path(f"{self.CERTIFICATES_DIRECTORY}/fluentd.key"),
             content=private_key,
             permissions=0o420,
@@ -290,7 +293,7 @@ class FluentdElasticsearchCharm(CharmBase):
         Args:
             csr (str): Fluentd CSR
         """
-        self._write_to_file(
+        self._push_file_to_workload(
             destination_path=Path(f"{self.CERTIFICATES_DIRECTORY}/fluentd.csr"),
             content=csr,
             permissions=0o420,
@@ -302,7 +305,7 @@ class FluentdElasticsearchCharm(CharmBase):
         Args:
             cert (str): Fluentd certificate
         """
-        self._write_to_file(
+        self._push_file_to_workload(
             destination_path=Path(f"{self.CERTIFICATES_DIRECTORY}/fluentd.pem"),
             content=f"{cert}\n",
             permissions=0o420,
@@ -314,7 +317,7 @@ class FluentdElasticsearchCharm(CharmBase):
         Args:
             cert (str): CA certificate
         """
-        self._write_to_file(
+        self._push_file_to_workload(
             destination_path=Path(f"{self.CERTIFICATES_DIRECTORY}/ca.pem"),
             content=cert,
             permissions=0o420,
@@ -390,17 +393,17 @@ class FluentdElasticsearchCharm(CharmBase):
 
     def _push_static_config_files_to_workload(self) -> None:
         """Writes static Fluentd config files to the container."""
-        self._write_to_file(
+        self._push_file_to_workload(
             destination_path=Path(f"{self.CONFIG_DIRECTORY}/general.conf"),
             content=self._read_file(Path(f"{self.CONFIG_SOURCE_DIRECTORY}/general.conf")),
             permissions=0o666,
         )
-        self._write_to_file(
+        self._push_file_to_workload(
             destination_path=Path(f"{self.CONFIG_DIRECTORY}/system.conf"),
             content=self._read_file(Path(f"{self.CONFIG_SOURCE_DIRECTORY}/system.conf")),
             permissions=0o666,
         )
-        self._write_to_file(
+        self._push_file_to_workload(
             destination_path=Path(f"{self.CONFIG_DIRECTORY}/forward-input.conf"),
             content=self._render_config_file_template(
                 Path(f"{self.CONFIG_SOURCE_DIRECTORY}"),
@@ -412,7 +415,7 @@ class FluentdElasticsearchCharm(CharmBase):
 
     def _push_dynamic_config_files_to_workload(self) -> None:
         """Writes dynamic Fluentd config files to the container."""
-        self._write_to_file(
+        self._push_file_to_workload(
             destination_path=Path(f"{self.CONFIG_DIRECTORY}/output.conf"),
             content=self._render_config_file_template(
                 Path(f"{self.CONFIG_SOURCE_DIRECTORY}"),
@@ -478,7 +481,7 @@ class FluentdElasticsearchCharm(CharmBase):
             logger.info("Fluentd CSR subject doesn't match charm's config")
             return False
 
-    def _write_to_file(
+    def _push_file_to_workload(
         self, destination_path: Path, content: Optional[str], permissions: Optional[int]
     ) -> None:
         """Writes given content to a file in a given path.
