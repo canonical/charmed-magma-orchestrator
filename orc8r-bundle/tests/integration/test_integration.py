@@ -50,6 +50,36 @@ ORCHESTRATOR_CHARMS = [
     "orc8r-tenants",
 ]
 
+ORCHESTRATOR_APPS = [
+    "fluentd",
+    "nms-magmalte",
+    "nms-nginx-proxy",
+    "orc8r-accessd",
+    "orc8r-analytics",
+    "orc8r-bootstrapper",
+    "orc8r-certifier",
+    "orc8r-configurator",
+    "orc8r-ctraced",
+    "orc8r-device",
+    "orc8r-directoryd",
+    "orc8r-dispatcher",
+    "orc8r-eventd",
+    "orc8r-ha",
+    "orc8r-lte",
+    "orc8r-metricsd",
+    "orc8r-nginx",
+    "orc8r-obsidian",
+    "orc8r-orchestrator",
+    "orc8r-policydb",
+    "orc8r-service-registry",
+    "orc8r-smsd",
+    "orc8r-state",
+    "orc8r-streamer",
+    "orc8r-subscriberdb",
+    "orc8r-subscriberdb-cache",
+    "orc8r-tenants",
+]
+
 
 async def run_get_load_balancer_services_action(
     ops_test: OpsTest,
@@ -137,7 +167,7 @@ async def deploy_bundle(ops_test: OpsTest, bundle_path: str, overlay_file_path: 
     if retcode != 0:
         raise RuntimeError(f"Error: {stderr}")
     await ops_test.model.wait_for_idle(  # type: ignore[union-attr]
-        apps=ORCHESTRATOR_CHARMS,
+        apps=ORCHESTRATOR_APPS,
         status="active",
         timeout=2000,
     )
