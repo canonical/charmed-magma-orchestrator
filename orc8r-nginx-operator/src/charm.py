@@ -619,8 +619,17 @@ class MagmaOrc8rNginxCharm(CharmBase):
 
     def _install_procps(self) -> None:
         """Installs procps."""
-        self._container.exec(["apt", "update", "--allow-releaseinfo-change", "-y"]).wait()
-        self._container.exec(["apt", "install", "-y", "procps"]).wait()
+        try:
+            out, err = self._container.exec(
+                ["apt", "update", "--allow-releaseinfo-change", "-y"]
+            ).wait_output()
+            out, err = self._container.exec(["apt", "install", "-y", "procps"]).wait_output()
+        except ExecError:
+            logger.error("====================================================================")
+            logger.error(err.read())
+            logger.error("====================================================================")
+            logger.error(out.read())
+            logger.error("====================================================================")
 
     @property
     def _pebble_layer(self) -> Layer:
