@@ -21,7 +21,7 @@ DOMAIN = "pizza.com"
 INTEGRATION_TESTS_DIR = "tests/integration"
 
 ORCHESTRATOR_CHARMS = [
-    "fluentd",
+    "fluentd-elasticsearch",
     "nms-magmalte",
     "nms-nginx-proxy",
     "orc8r-accessd",
@@ -52,7 +52,7 @@ ORCHESTRATOR_CHARMS = [
 
 
 async def run_get_load_balancer_services_action(
-    ops_test: OpsTest
+    ops_test: OpsTest,
 ) -> Tuple[str, str, str, str, str]:
     """Runs `get-load-balancer-services` on the `orc8r-orchestrator/0` unit.
 
