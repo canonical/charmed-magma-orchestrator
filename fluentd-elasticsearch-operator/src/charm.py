@@ -142,7 +142,7 @@ class FluentdElasticsearchCharm(CharmBase):
             return
         if self.unit.is_leader():
             if not self._stored_csr_matches_charm_config:
-                self._renew_cerificate()
+                self._renew_certificate()
         if not self._fluentd_certificates_stored_in_peer_relation_data:
             self.unit.status = WaitingStatus("Waiting for Fluentd certificates to be available")
             return
@@ -212,7 +212,7 @@ class FluentdElasticsearchCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for Fluentd private key to be created")
             event.defer()
             return
-        self._renew_cerificate()
+        self._renew_certificate()
         self.unit.status = WaitingStatus("Waiting to receive new certificate from provider")
 
     def _request_fluentd_certificates(self) -> None:
@@ -224,7 +224,7 @@ class FluentdElasticsearchCharm(CharmBase):
         self._generate_and_save_fluentd_csr()
         self._fluentd_certificates.request_certificate_creation(self._fluentd_csr.encode())
 
-    def _renew_cerificate(self) -> None:
+    def _renew_certificate(self) -> None:
         """Renews Fluentd certificate.
 
         Generates new CSR based on existing private key.
