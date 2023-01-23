@@ -21,6 +21,7 @@ DOMAIN = "pizza.com"
 INTEGRATION_TESTS_DIR = "tests/integration"
 
 ORCHESTRATOR_CHARMS = [
+    "fluentd",
     "nms-magmalte",
     "nms-nginx-proxy",
     "orc8r-accessd",
@@ -50,18 +51,21 @@ ORCHESTRATOR_CHARMS = [
 ]
 
 
-async def run_get_load_balancer_services_action(ops_test: OpsTest) -> Tuple[str, str, str, str]:
+async def run_get_load_balancer_services_action(
+    ops_test: OpsTest
+) -> Tuple[str, str, str, str, str]:
     """Runs `get-load-balancer-services` on the `orc8r-orchestrator/0` unit.
 
     Args:
         ops_test (OpsTest): OpsTest
 
     Returns:
-        (str, str, str, str): External loadbalancer IP's in the following order:
+        (str, str, str, str, str): External loadbalancer IP's in the following order:
             - orc8r-bootstrap-nginx
             - orc8r-clientcert-nginx
             - orc8r-nginx-proxy
             - nginx-proxy
+            - fluentd
     """
     orc8r_orchestrator_unit = ops_test.model.units["orc8r-orchestrator/0"]  # type: ignore[union-attr]  # noqa: E501
     load_balancer_action = await orc8r_orchestrator_unit.run_action(
@@ -75,6 +79,7 @@ async def run_get_load_balancer_services_action(ops_test: OpsTest) -> Tuple[str,
         load_balancer_action_output["orc8r-clientcert-nginx"],
         load_balancer_action_output["orc8r-nginx-proxy"],
         load_balancer_action_output["nginx-proxy"],
+        load_balancer_action_output["fluentd"],
     )
 
 
@@ -205,6 +210,7 @@ class TestOrc8rBundle:
             orc8r_clientcert_nginx_ip,
             orc8r_nginx_proxy_ip,
             nginx_proxy_ip,
+            fluentd_ip,
         ) = await run_get_load_balancer_services_action(ops_test)
         pfx_password = await run_get_pfx_password_action(ops_test)
         pfx_package_path = await get_pfx_package(ops_test)

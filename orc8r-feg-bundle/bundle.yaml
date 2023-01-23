@@ -7,6 +7,16 @@ description: |
   This bundles includes all orc8r charms as well as the ones necessary to manage federation 
   gateways.
 applications:
+  fluentd:
+    charm: fluentd-elasticsearch
+    channel: edge
+    scale: 1
+    trust: true
+    options:
+      domain: "example.com"
+      elasticsearch-url: "orc8r-elasticsearch:1234"
+      fluentd-chunk-limit-size: "2M"
+      fluentd-queue-limit-length: 8
   nms-magmalte:
     charm: magma-nms-magmalte
     channel: edge
@@ -213,6 +223,8 @@ applications:
     scale: 1
     trust: true
 relations:
+- - fluentd
+  - orc8r-certifier:fluentd-certs
 - - nms-magmalte
   - orc8r-certifier
 - - nms-magmalte:db
