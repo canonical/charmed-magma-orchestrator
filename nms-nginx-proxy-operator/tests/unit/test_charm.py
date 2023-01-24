@@ -205,22 +205,6 @@ class TestCharm(unittest.TestCase):
             ),
         )
 
-    @patch("ops.model.Container.push", Mock())
-    @patch("ops.model.Container.exec")
-    def test_given_pebble_ready_when_on_install_then_procps_is_installed(self, patched_exec):
-        self.harness.container_pebble_ready(container_name="magma-nms-nginx-proxy")
-
-        self.harness.charm.on.install.emit()
-
-        patched_exec.assert_has_calls(
-            [
-                call(["apt", "update", "--allow-releaseinfo-change", "-y"]),
-                call().wait_output(),
-                call(["apt", "install", "-y", "procps"]),
-                call().wait_output(),
-            ]
-        )
-
     @patch("ops.model.Container.push")
     def test_given_pebble_ready_when_on_certificate_available_then_certificates_are_pushed_to_workload(  # noqa: E501
         self, patch_push

@@ -62,9 +62,6 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         if not self._container.can_connect():
             event.defer()
             return
-        # TODO: _install_procps() is needed by the workaround for not working container.restart()
-        #       and should be removed as soon as the proper Juju mechanism works as expected.
-        self._install_procps()
         self._write_nginx_config_file()
 
     def _on_magma_nms_nginx_proxy_pebble_ready(
@@ -163,16 +160,6 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         nginx_master_pid, _ = self._container.exec(["cat", "/var/run/nginx.pid"]).wait_output()
         self._container.exec(["kill", "-HUP", f"{nginx_master_pid.strip()}"])
         logger.info(f"Reloaded process with pid {nginx_master_pid.strip()}")
-
-    def _install_procps(self) -> None:
-        """Installs procps."""
-        try:
-            self._container.exec(
-                ["apt", "update", "--allow-releaseinfo-change", "-y"]
-            ).wait_output()
-            self._container.exec(["apt", "install", "-y", "procps"]).wait_output()
-        except ExecError as error:
-            raise ProcessExecutionError(error)
 
     @property
     def _nginx_config_file_is_stored(self) -> bool:
