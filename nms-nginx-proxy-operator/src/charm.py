@@ -76,12 +76,17 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         """Returns whether `magmalte` relation is created.
 
         Returns:
-            bool: True/False
+            bool: Whether the `magmalte` relation is created
         """
         return self._relation_created("magma-nms-magmalte")
 
     @property
     def _certs_are_stored(self) -> bool:
+        """Checks whether the nginx certs are stored.
+
+        Returns:
+            bool: Whether the nginx certs are stored
+        """
         return self._container.exists(
             f"{self.BASE_NGINX_PATH}/nms_nginx.pem"
         ) and self._container.exists(f"{self.BASE_NGINX_PATH}/nms_nginx.key.pem")
@@ -126,9 +131,6 @@ class MagmaNmsNginxProxyCharm(CharmBase):
 
         Args:
             event: Juju event.
-
-        Returns:
-            None
         """
         if not self._container.can_connect():
             event.defer()
@@ -136,11 +138,7 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         self._write_nginx_config_file()
 
     def _write_nginx_config_file(self) -> None:
-        """Writes nginx config file to workload container.
-
-        Returns:
-            None
-        """
+        """Writes nginx config file to workload container."""
         # TODO: Replace the proxy_pass line content with data coming from the magmalte relation
         config_file = (
             "server {\n"
@@ -166,9 +164,6 @@ class MagmaNmsNginxProxyCharm(CharmBase):
 
         Args:
             event: Juju event
-
-        Returns:
-            None
         """
         if not self._magmalte_relation_created:
             self.unit.status = BlockedStatus("Waiting for magmalte relation to be created")
@@ -195,9 +190,6 @@ class MagmaNmsNginxProxyCharm(CharmBase):
 
         Args:
             event: Juju event.
-
-        Returns:
-            None
         """
         if not self._container.can_connect():
             self.unit.status = WaitingStatus("Waiting for container to be ready")
@@ -219,9 +211,6 @@ class MagmaNmsNginxProxyCharm(CharmBase):
 
         Args:
             event (CertificateAvailableEvent): Juju event
-
-        Returns:
-            None
         """
         logger.info("Controller certificate available")
         if not self._container.can_connect():

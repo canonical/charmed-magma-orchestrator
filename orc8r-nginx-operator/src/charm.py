@@ -643,9 +643,11 @@ class ProcessExecutionError(Exception):
         Args:
             error (ExecError): Original error
         """
-        logger.error(f"ERROR: Process exited with code {error.exit_code}. Stderr:")
-        for line in error.stderr.splitlines():
-            logger.error(f"    {line}")
+        logger.error(f"ERROR: Process exited with code {error.exit_code}.")
+        if error.stderr:
+            logger.error("Stderr:")
+            for line in error.stderr.splitlines():
+                logger.error(f"    {str(line)}")
 
 
 if __name__ == "__main__":
