@@ -79,9 +79,11 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.exists")
+    @patch("ops.model.Container.exec")
     def test_given_required_relations_are_created_and_certs_are_stored_when_pebble_ready_event_emitted_then_pebble_is_configured_with_correct_plan(  # noqa: E501
-        self, patch_exists
+        self, patched_exec, patch_exists
     ):
+        patched_exec.return_value = MockExec()
         self.harness.add_relation(
             relation_name="magma-nms-magmalte", remote_app="magma-nms-magmalte"
         )
@@ -105,9 +107,11 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(expected_plan, updated_plan)
 
     @patch("ops.model.Container.exists")
+    @patch("ops.model.Container.exec")
     def test_given_required_relations_are_created_and_certs_are_stored_when_pebble_ready_event_emitted_then_status_is_active(  # noqa: E501
-        self, patch_exists
+        self, patched_exec, patch_exists
     ):
+        patched_exec.return_value = MockExec()
         self.harness.add_relation(
             relation_name="magma-nms-magmalte", remote_app="magma-nms-magmalte"
         )
@@ -121,6 +125,7 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
 
     @patch("ops.model.Container.push")
+    @patch("ops.model.Container.exec", Mock())
     def test_given_pebble_ready_when_on_install_then_nginx_config_is_stored(self, patch_push):
         self.harness.container_pebble_ready(container_name="magma-nms-nginx-proxy")
 
@@ -143,6 +148,22 @@ class TestCharm(unittest.TestCase):
             ),
         )
 
+    @patch("ops.model.Container.push", Mock())
+    @patch("ops.model.Container.exec")
+    def test_given_pebble_ready_when_on_install_then_procps_is_installed(self, patched_exec):
+        self.harness.container_pebble_ready(container_name="magma-nms-nginx-proxy")
+
+        self.harness.charm.on.install.emit()
+
+        patched_exec.assert_has_calls(
+            [
+                call(['apt', 'update', '--allow-releaseinfo-change', '-y']),
+                call().wait_output(),
+                call(['apt', 'install', '-y', 'procps']),
+                call().wait_output()
+            ]
+        )
+
     @patch("ops.model.Container.push")
     def test_given_pebble_ready_when_on_certificate_available_then_certificates_are_pushed_to_workload(  # noqa: E501
         self, patch_push
@@ -162,3 +183,14 @@ class TestCharm(unittest.TestCase):
             call(path="/etc/nginx/conf.d/nms_nginx.key.pem", source=private_key),
         ]
         patch_push.assert_has_calls(calls=calls)
+
+
+class MockExec:
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def exec(self, *args, **kwargs):
+        pass
+
+    def wait_output(self, *args, **kwargs):
+        return "test stdout", "test err"

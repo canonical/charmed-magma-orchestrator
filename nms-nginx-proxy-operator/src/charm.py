@@ -21,7 +21,7 @@ from charms.observability_libs.v1.kubernetes_service_patch import (
 from ops.charm import CharmBase, InstallEvent, PebbleReadyEvent
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
-from ops.pebble import Layer
+from ops.pebble import ExecError, Layer
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +52,127 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         self.framework.observe(
             self.cert_controller.on.certificate_available, self._on_certificate_available
         )
+
+    def _on_install(self, event: InstallEvent) -> None:
+        """Triggered once when the charm is installed.
+
+        Args:
+            event: Juju event.
+        """
+        if not self._container.can_connect():
+            event.defer()
+            return
+        # TODO: _install_procps() is needed by the workaround for not working container.restart()
+        #       and should be removed as soon as the proper Juju mechanism works as expected.
+        self._install_procps()
+        self._write_nginx_config_file()
+
+    def _on_magma_nms_nginx_proxy_pebble_ready(
+        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
+    ) -> None:
+        """Configures magma-nms-nginx-proxy pebble layer.
+
+        Args:
+            event: Juju event
+        """
+        if not self._magmalte_relation_created:
+            self.unit.status = BlockedStatus("Waiting for magmalte relation to be created")
+            event.defer()
+            return
+        if not self._cert_controller_relation_created:
+            self.unit.status = BlockedStatus("Waiting for cert-controller relation to be created")
+            event.defer()
+            return
+        if not self._certs_are_stored:
+            self.unit.status = WaitingStatus("Waiting for certs to be available")
+            event.defer()
+            return
+        if not self._nginx_config_file_is_stored:
+            self.unit.status = WaitingStatus("Waiting for NGINX Config file to be stored")
+            event.defer()
+            return
+        self._configure_pebble(event)
+
+    def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
+        """Triggered when controller certificate is available.
+
+        Args:
+            event (CertificateAvailableEvent): Juju event
+        """
+        logger.info("Controller certificate available")
+        if not self._container.can_connect():
+            logger.info("Can't connect to container - Deferring")
+            event.defer()
+            return
+        self._container.push(
+            path=f"{self.BASE_NGINX_PATH}/nms_nginx.pem", source=event.certificate
+        )
+        self._container.push(
+            path=f"{self.BASE_NGINX_PATH}/nms_nginx.key.pem", source=event.private_key
+        )
+        self._on_magma_nms_nginx_proxy_pebble_ready(event)
+
+    def _write_nginx_config_file(self) -> None:
+        """Writes nginx config file to workload container."""
+        # TODO: Replace the proxy_pass line content with data coming from the magmalte relation
+        config_file = (
+            "server {\n"
+            "listen 443;\n"
+            "ssl on;\n"
+            f"ssl_certificate {self.BASE_NGINX_PATH}/nms_nginx.pem;\n"
+            f"ssl_certificate_key {self.BASE_NGINX_PATH}/nms_nginx.key.pem;\n"
+            "location / {\n"
+            "proxy_pass http://magmalte:8081;\n"
+            "proxy_set_header Host $http_host;\n"
+            "proxy_set_header X-Forwarded-Proto $scheme;\n"
+            "}\n"
+            "}"
+        )
+        self._container.push(
+            path=f"{self.BASE_NGINX_PATH}/{self.NGINX_CONFIG_FILE_NAME}", source=config_file
+        )
+
+    def _configure_pebble(self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]) -> None:
+        """Configures Pebble layer.
+
+        Creates nginx service and starts it.
+
+        Args:
+            event: Juju event.
+        """
+        if not self._container.can_connect():
+            self.unit.status = WaitingStatus("Waiting for container to be ready")
+            event.defer()
+            return
+
+        plan = self._container.get_plan()
+        if plan.services != self._pebble_layer.services:
+            self.unit.status = MaintenanceStatus(
+                f"Configuring pebble layer for {self._service_name}"
+            )
+            self._container.add_layer(self._container_name, self._pebble_layer, combine=True)
+            self._container.restart(self._service_name)
+        # TODO: _reload_nginx() is needed by the workaround for not working container.restart()
+        #       and should be removed as soon as the proper Juju mechanism works as expected.
+        self._reload_nginx()
+        logger.info(f"Restarted container {self._service_name}")
+        self.unit.status = ActiveStatus()
+
+    def _reload_nginx(self) -> None:
+        """Reloads the nginx process."""
+        nginx_master_pid, _ = self._container.exec(["cat", "/var/run/nginx.pid"]).wait_output()
+        self._container.exec(["kill", "-HUP", f"{nginx_master_pid.strip()}"])
+        logger.info(f"Reloaded process with pid {nginx_master_pid.strip()}")
+
+    def _install_procps(self) -> None:
+        """Installs procps."""
+        try:
+            self._container.exec(
+                ["apt", "update", "--allow-releaseinfo-change", "-y"]
+            ).wait_output()
+            self._container.exec(["apt", "install", "-y", "procps"]).wait_output()
+        except ExecError as error:
+            raise ProcessExecutionError(error)
 
     @property
     def _nginx_config_file_is_stored(self) -> bool:
@@ -91,6 +212,21 @@ class MagmaNmsNginxProxyCharm(CharmBase):
             f"{self.BASE_NGINX_PATH}/nms_nginx.pem"
         ) and self._container.exists(f"{self.BASE_NGINX_PATH}/nms_nginx.key.pem")
 
+    def _relation_created(self, relation_name: str) -> bool:
+        """Returns whether given relation was created.
+
+        Args:
+            relation_name (str): Relation name
+
+        Returns:
+            bool: True/False
+        """
+        try:
+            relation = self.model.get_relation(relation_name)
+            return bool(relation)
+        except KeyError:
+            return False
+
     @property
     def _pebble_layer(self) -> Layer:
         """Returns pebble layer with workload service.
@@ -111,119 +247,21 @@ class MagmaNmsNginxProxyCharm(CharmBase):
             }
         )
 
-    def _relation_created(self, relation_name: str) -> bool:
-        """Returns whether given relation was created.
+
+class ProcessExecutionError(Exception):
+    """Custom error improving logging in case of ExecError."""
+
+    def __init__(self, error: ExecError):
+        """Print error details.
 
         Args:
-            relation_name (str): Relation name
-
-        Returns:
-            bool: True/False
+            error (ExecError): Original error
         """
-        try:
-            relation = self.model.get_relation(relation_name)
-            return bool(relation)
-        except KeyError:
-            return False
-
-    def _on_install(self, event: InstallEvent) -> None:
-        """Triggered once when the charm is installed.
-
-        Args:
-            event: Juju event.
-        """
-        if not self._container.can_connect():
-            event.defer()
-            return
-        self._write_nginx_config_file()
-
-    def _write_nginx_config_file(self) -> None:
-        """Writes nginx config file to workload container."""
-        # TODO: Replace the proxy_pass line content with data coming from the magmalte relation
-        config_file = (
-            "server {\n"
-            "listen 443;\n"
-            "ssl on;\n"
-            f"ssl_certificate {self.BASE_NGINX_PATH}/nms_nginx.pem;\n"
-            f"ssl_certificate_key {self.BASE_NGINX_PATH}/nms_nginx.key.pem;\n"
-            "location / {\n"
-            "proxy_pass http://magmalte:8081;\n"
-            "proxy_set_header Host $http_host;\n"
-            "proxy_set_header X-Forwarded-Proto $scheme;\n"
-            "}\n"
-            "}"
-        )
-        self._container.push(
-            path=f"{self.BASE_NGINX_PATH}/{self.NGINX_CONFIG_FILE_NAME}", source=config_file
-        )
-
-    def _on_magma_nms_nginx_proxy_pebble_ready(
-        self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
-    ) -> None:
-        """Configures magma-nms-nginx-proxy pebble layer.
-
-        Args:
-            event: Juju event
-        """
-        if not self._magmalte_relation_created:
-            self.unit.status = BlockedStatus("Waiting for magmalte relation to be created")
-            event.defer()
-            return
-        if not self._cert_controller_relation_created:
-            self.unit.status = BlockedStatus("Waiting for cert-controller relation to be created")
-            event.defer()
-            return
-        if not self._certs_are_stored:
-            self.unit.status = WaitingStatus("Waiting for certs to be available")
-            event.defer()
-            return
-        if not self._nginx_config_file_is_stored:
-            self.unit.status = WaitingStatus("Waiting for NGINX Config file to be stored")
-            event.defer()
-            return
-        self._configure_pebble(event)
-
-    def _configure_pebble(self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]) -> None:
-        """Configures Pebble layer.
-
-        Creates nginx service and starts it.
-
-        Args:
-            event: Juju event.
-        """
-        if not self._container.can_connect():
-            self.unit.status = WaitingStatus("Waiting for container to be ready")
-            event.defer()
-            return
-
-        plan = self._container.get_plan()
-        if plan.services != self._pebble_layer.services:
-            self.unit.status = MaintenanceStatus(
-                f"Configuring pebble layer for {self._service_name}"
-            )
-            self._container.add_layer(self._container_name, self._pebble_layer, combine=True)
-        self._container.restart(self._service_name)
-        logger.info(f"Restarted container {self._service_name}")
-        self.unit.status = ActiveStatus()
-
-    def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
-        """Triggered when controller certificate is available.
-
-        Args:
-            event (CertificateAvailableEvent): Juju event
-        """
-        logger.info("Controller certificate available")
-        if not self._container.can_connect():
-            logger.info("Can't connect to container - Deferring")
-            event.defer()
-            return
-        self._container.push(
-            path=f"{self.BASE_NGINX_PATH}/nms_nginx.pem", source=event.certificate
-        )
-        self._container.push(
-            path=f"{self.BASE_NGINX_PATH}/nms_nginx.key.pem", source=event.private_key
-        )
-        self._on_magma_nms_nginx_proxy_pebble_ready(event)
+        logger.error(f"ERROR: Process exited with code {error.exit_code}.")
+        if error.stderr:
+            logger.error("Stderr:")
+            for line in error.stderr.splitlines():
+                logger.error(f"    {str(line)}")
 
 
 if __name__ == "__main__":
