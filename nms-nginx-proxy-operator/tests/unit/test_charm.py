@@ -6,6 +6,7 @@ from unittest.mock import Mock, call, patch
 
 from ops import testing
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.pebble import Layer
 
 from charm import MagmaNmsNginxProxyCharm
 
@@ -108,6 +109,62 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.exists")
     @patch("ops.model.Container.exec")
+    def test_workload_without_pebble_layer_applied_when_pebble_ready_then_nginx_is_reloaded(
+        self, patched_exec, patch_exists
+    ):
+        test_nginx_pid = "1234"
+        patch_exists.return_value = True
+        patched_exec.return_value = MockExec(stdout=test_nginx_pid)
+        self.harness.add_relation(
+            relation_name="magma-nms-magmalte", remote_app="magma-nms-magmalte"
+        )
+        self.harness.add_relation(
+            relation_name="cert-controller", remote_app="magma-orc8r-certifier"
+        )
+
+        self.harness.container_pebble_ready("magma-nms-nginx-proxy")
+
+        patched_exec.assert_has_calls(
+            [call(["cat", "/var/run/nginx.pid"]), call(["kill", "-HUP", test_nginx_pid])]
+        )
+
+    @patch("ops.model.Container.exists")
+    @patch("ops.model.Container.exec")
+    def test_workload_with_pebble_layer_already_applied_when_pebble_ready_then_nginx_is_reloaded(
+        self, patched_exec, patch_exists
+    ):
+        test_nginx_pid = "1234"
+        patch_exists.return_value = True
+        patched_exec.return_value = MockExec(stdout=test_nginx_pid)
+        nms_nginx_container = self.harness.charm.unit.get_container("magma-nms-nginx-proxy")
+        self.harness.set_can_connect(container=nms_nginx_container, val=True)
+        self.harness.add_relation(
+            relation_name="magma-nms-magmalte", remote_app="magma-nms-magmalte"
+        )
+        self.harness.add_relation(
+            relation_name="cert-controller", remote_app="magma-orc8r-certifier"
+        )
+        test_pebble_layer = Layer(
+            {
+                "services": {
+                    "magma-nms-nginx-proxy": {
+                        "override": "replace",
+                        "startup": "enabled",
+                        "command": "nginx",
+                    }
+                }
+            }
+        )
+        nms_nginx_container.add_layer("magma-nms-nginx-proxy", test_pebble_layer, combine=True)
+
+        self.harness.container_pebble_ready("magma-nms-nginx-proxy")
+
+        patched_exec.assert_has_calls(
+            [call(["cat", "/var/run/nginx.pid"]), call(["kill", "-HUP", test_nginx_pid])]
+        )
+
+    @patch("ops.model.Container.exists")
+    @patch("ops.model.Container.exec")
     def test_given_required_relations_are_created_and_certs_are_stored_when_pebble_ready_event_emitted_then_status_is_active(  # noqa: E501
         self, patched_exec, patch_exists
     ):
@@ -157,10 +214,10 @@ class TestCharm(unittest.TestCase):
 
         patched_exec.assert_has_calls(
             [
-                call(['apt', 'update', '--allow-releaseinfo-change', '-y']),
+                call(["apt", "update", "--allow-releaseinfo-change", "-y"]),
                 call().wait_output(),
-                call(['apt', 'install', '-y', 'procps']),
-                call().wait_output()
+                call(["apt", "install", "-y", "procps"]),
+                call().wait_output(),
             ]
         )
 
@@ -186,11 +243,12 @@ class TestCharm(unittest.TestCase):
 
 
 class MockExec:
-    def __init__(self, *args, **kwargs):
-        pass
+    def __init__(self, stdout="test stdout", stderr="test stderr"):
+        self.wait_output_stdout = stdout
+        self.wait_output_stderr = stderr
 
     def exec(self, *args, **kwargs):
         pass
 
-    def wait_output(self, *args, **kwargs):
-        return "test stdout", "test err"
+    def wait_output(self):
+        return self.wait_output_stdout, self.wait_output_stderr
