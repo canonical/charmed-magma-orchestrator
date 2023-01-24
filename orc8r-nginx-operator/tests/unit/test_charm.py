@@ -496,6 +496,7 @@ class TestCharm(unittest.TestCase):
 
         patched_push.assert_called_once_with(
             path="/var/opt/magma/certs/rootCA.pem", source=test_rootca_cert
+        )
 
     @patch("ops.model.Container.exec")
     def test_given_valid_domain_config_set_when_config_changed_then_nginx_config_file_is_recreated(
