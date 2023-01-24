@@ -127,7 +127,6 @@ class MagmaOrc8rNginxCharm(CharmBase):
             logger.info("Can't connect to container - Deferring")
             event.defer()
             return
-        self._generate_nginx_config()
         self._create_additional_orc8r_nginx_services()
 
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:
@@ -141,6 +140,10 @@ class MagmaOrc8rNginxCharm(CharmBase):
         """
         if not self._domain_config_is_valid:
             self.unit.status = BlockedStatus("Domain config is not valid")
+            return
+        if not self._container.can_connect():
+            logger.info("Can't connect to container - Deferring")
+            event.defer()
             return
         self._generate_nginx_config()
         self._configure_magma_orc8r_nginx(event)

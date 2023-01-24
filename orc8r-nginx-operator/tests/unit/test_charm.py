@@ -29,31 +29,6 @@ class TestCharm(unittest.TestCase):
         self.harness.begin()
 
     @patch("lightkube.core.client.GenericSyncClient", new=Mock())
-    @patch("lightkube.core.client.Client.create", new=Mock())
-    @patch("ops.model.Container.exec")
-    def test_given_domain_config_set_when_install_then_nginx_config_file_is_created(
-        self, patch_exec
-    ):
-        event = Mock()
-        domain = "whatever domain"
-        key_values = {"domain": domain}
-        self.harness.update_config(key_values=key_values)
-        container = self.harness.model.unit.get_container("magma-orc8r-nginx")
-        self.harness.set_can_connect(container=container, val=True)
-
-        self.harness.charm._on_install(event)
-
-        patch_exec.assert_called_with(
-            command=["/usr/local/bin/generate_nginx_configs.py"],
-            environment={
-                "PROXY_BACKENDS": f"{self.namespace}.svc.cluster.local",
-                "CONTROLLER_HOSTNAME": f"controller.{domain}",
-                "RESOLVER": "kube-dns.kube-system.svc.cluster.local valid=10s",
-                "SERVICE_REGISTRY_MODE": "k8s",
-            },
-        )
-
-    @patch("lightkube.core.client.GenericSyncClient", new=Mock())
     @patch("lightkube.core.client.Client.get")
     @patch("lightkube.core.client.Client.create")
     @patch("ops.model.Container.exec", new=Mock())
