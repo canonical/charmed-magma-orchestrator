@@ -210,9 +210,9 @@ class MagmaNmsNginxProxyCharm(CharmBase):
                 f"Configuring pebble layer for {self._service_name}"
             )
             self._container.add_layer(self._container_name, self._pebble_layer, combine=True)
-            self._container.restart(self._service_name)
-            logger.info(f"Restarted container {self._service_name}")
-            self.unit.status = ActiveStatus()
+        self._container.restart(self._service_name)
+        logger.info(f"Restarted container {self._service_name}")
+        self.unit.status = ActiveStatus()
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Triggered when controller certificate is available.
