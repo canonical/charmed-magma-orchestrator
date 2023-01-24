@@ -125,7 +125,10 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready("magma-nms-nginx-proxy")
 
         patched_exec.assert_has_calls(
-            [call(["cat", "/var/run/nginx.pid"]), call(["kill", "-HUP", test_nginx_pid])]
+            [
+                call(["cat", "/var/run/nginx.pid"]),
+                call(["/bin/bash", "-c", "kill", "-HUP", test_nginx_pid]),
+            ]
         )
 
     @patch("ops.model.Container.exists")
@@ -160,7 +163,10 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready("magma-nms-nginx-proxy")
 
         patched_exec.assert_has_calls(
-            [call(["cat", "/var/run/nginx.pid"]), call(["kill", "-HUP", test_nginx_pid])]
+            [
+                call(["cat", "/var/run/nginx.pid"]),
+                call(["/bin/bash", "-c", "kill", "-HUP", test_nginx_pid]),
+            ]
         )
 
     @patch("ops.model.Container.exists")

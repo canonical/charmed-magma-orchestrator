@@ -31,6 +31,7 @@ class MagmaNmsNginxProxyCharm(CharmBase):
 
     BASE_NGINX_PATH = "/etc/nginx/conf.d"
     NGINX_CONFIG_FILE_NAME = "nginx_proxy_ssl.conf"
+    NGINX_HTTPS_PORT = 443
 
     def __init__(self, *args):
         """Initializes all events that need to be observed."""
@@ -40,7 +41,7 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         self.cert_controller = CertControllerRequires(self, "cert-controller")
         self.service_patcher = KubernetesServicePatch(
             charm=self,
-            ports=[ServicePort(name="https", port=443)],
+            ports=[ServicePort(name="https", port=self.NGINX_HTTPS_PORT)],
             service_type="LoadBalancer",
             service_name="nginx-proxy",
             additional_labels={"app.kubernetes.io/part-of": "magma"},
@@ -62,7 +63,7 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         if not self._container.can_connect():
             event.defer()
             return
-        self._write_nginx_config_file()
+        self._push_nginx_config_file_to_workload()
 
     def _on_magma_nms_nginx_proxy_pebble_ready(
         self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
@@ -109,12 +110,12 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         )
         self._on_magma_nms_nginx_proxy_pebble_ready(event)
 
-    def _write_nginx_config_file(self) -> None:
+    def _push_nginx_config_file_to_workload(self) -> None:
         """Writes nginx config file to workload container."""
         # TODO: Replace the proxy_pass line content with data coming from the magmalte relation
         config_file = (
             "server {\n"
-            "listen 443;\n"
+            f"listen {self.NGINX_HTTPS_PORT};\n"
             "ssl on;\n"
             f"ssl_certificate {self.BASE_NGINX_PATH}/nms_nginx.pem;\n"
             f"ssl_certificate_key {self.BASE_NGINX_PATH}/nms_nginx.key.pem;\n"
@@ -152,13 +153,13 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         # TODO: _reload_nginx() is needed by the workaround for not working container.restart()
         #       and should be removed as soon as the proper Juju mechanism works as expected.
         self._reload_nginx()
-        logger.info(f"Restarted container {self._service_name}")
+        logger.info(f"Restarted service {self._service_name}")
         self.unit.status = ActiveStatus()
 
     def _reload_nginx(self) -> None:
         """Reloads the nginx process."""
         nginx_master_pid, _ = self._container.exec(["cat", "/var/run/nginx.pid"]).wait_output()
-        self._container.exec(["kill", "-HUP", f"{nginx_master_pid.strip()}"])
+        self._container.exec(["/bin/bash", "-c", "kill", "-HUP", f"{nginx_master_pid.strip()}"])
         logger.info(f"Reloaded process with pid {nginx_master_pid.strip()}")
 
     @property
