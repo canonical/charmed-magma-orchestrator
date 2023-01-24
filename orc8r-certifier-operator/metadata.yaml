@@ -55,5 +55,7 @@ provides:
     interface: cert-certifier
   cert-root-ca:
     interface: cert-root-ca
+  fluentd-certs:
+    interface: tls-certificates
   magma-orc8r-certifier:
     interface: magma-orc8r-certifier

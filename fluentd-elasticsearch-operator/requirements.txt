@@ -1,4 +1,6 @@
+cryptography
 ops
+jsonschema
 Jinja2
 lightkube
 lightkube-models

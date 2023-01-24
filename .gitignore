@@ -1,2 +1,9 @@
 *.idea
 .vscode/
+
+# Python
+**/venv/**
+*.pyc
+
+# Charmcraft
+*.charm
