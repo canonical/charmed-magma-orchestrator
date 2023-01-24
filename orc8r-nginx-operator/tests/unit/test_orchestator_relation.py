@@ -40,6 +40,7 @@ class TestOrchestratorRelation(unittest.TestCase):
             {},
         )
 
+    @patch("ops.model.Container.exec", Mock())
     def test_given_invalid_domain_when_orchestrator_relation_joined_then_charm_goes_to_blocked_status(  # noqa: E501
         self,
     ):
@@ -50,6 +51,7 @@ class TestOrchestratorRelation(unittest.TestCase):
 
         assert self.harness.charm.unit.status == BlockedStatus("Domain config is not valid")
 
+    @patch("ops.model.Container.exec", Mock())
     def test_given_magma_orc8r_nginx_service_not_running_when_orchestrator_relation_joined_then_charm_goes_to_waiting_status(  # noqa: E501
         self,
     ):
@@ -63,6 +65,7 @@ class TestOrchestratorRelation(unittest.TestCase):
         )
 
     @patch("ops.model.Container.get_service", new=Mock())
+    @patch("ops.model.Container.exec", Mock())
     def test_given_magma_orc8r_nginx_service_active_but_rootca_not_stored_when_orchestrator_relation_joined_then_charm_goes_to_waiting_status(  # noqa: E501
         self,
     ):
@@ -79,6 +82,7 @@ class TestOrchestratorRelation(unittest.TestCase):
     @patch("ops.model.Container.pull")
     @patch("ops.model.Container.exists")
     @patch("ops.model.Container.get_service", new=Mock())
+    @patch("ops.model.Container.exec", Mock())
     def test_given_path_error_when_orchestrator_relation_joined_then_pulling_rootca_from_container_fails_and_charm_goes_to_blocked_status(  # noqa: E501
         self, patched_exists, patched_pull
     ):
@@ -97,6 +101,7 @@ class TestOrchestratorRelation(unittest.TestCase):
     @patch("ops.model.Container.pull")
     @patch("ops.model.Container.exists")
     @patch("ops.model.Container.get_service", new=Mock())
+    @patch("ops.model.Container.exec", Mock())
     def test_given_protocol_error_when_pulling_rootca_when_orchestrator_relation_joined_then_pulling_rootca_from_container_fails_and_relevant_message_is_logged(  # noqa: E501
         self, patched_exists, patched_pull
     ):
@@ -115,6 +120,7 @@ class TestOrchestratorRelation(unittest.TestCase):
     @patch("ops.model.Container.pull")
     @patch("ops.model.Container.exists")
     @patch("ops.model.Container.get_service", new=Mock())
+    @patch("ops.model.Container.exec", Mock())
     def test_given_all_checks_passed_when_orchestrator_relation_joined_then_relation_data_bag_is_updated(  # noqa: E501
         self, patched_exists, patched_pull
     ):

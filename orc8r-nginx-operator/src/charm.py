@@ -82,7 +82,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
         )
 
         self.framework.observe(self.on.install, self._on_install)
-        self.framework.observe(self.on.config_changed, self._configure_magma_orc8r_nginx)
+        self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(
             self.on.magma_orc8r_nginx_pebble_ready, self._configure_magma_orc8r_nginx
         )
@@ -127,8 +127,26 @@ class MagmaOrc8rNginxCharm(CharmBase):
             logger.info("Can't connect to container - Deferring")
             event.defer()
             return
-        self._generate_nginx_config()
         self._create_additional_orc8r_nginx_services()
+
+    def _on_config_changed(self, event: ConfigChangedEvent) -> None:
+        """Triggered when configuration is changed.
+
+        Args:
+            event: Juju event
+
+        Returns:
+            None
+        """
+        if not self._domain_config_is_valid:
+            self.unit.status = BlockedStatus("Domain config is not valid")
+            return
+        if not self._container.can_connect():
+            logger.info("Can't connect to container - Deferring")
+            event.defer()
+            return
+        self._generate_nginx_config()
+        self._configure_magma_orc8r_nginx(event)
 
     def _configure_magma_orc8r_nginx(
         self,
