@@ -11,7 +11,6 @@ from ops.pebble import PathError, ProtocolError
 
 from charm import MagmaOrc8rNginxCharm
 
-testing.SIMULATE_CAN_CONNECT = True
 TEST_APP_NAME = "whatever"
 TEST_DOMAIN = "example.com"
 TEST_ROOT_CA_PEM_STRING = "thisisjustatest"

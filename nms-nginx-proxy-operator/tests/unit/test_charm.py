@@ -2,15 +2,13 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import Mock, call, patch
+from unittest.mock import Mock, PropertyMock, call, patch
 
 from ops import testing
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from ops.pebble import Layer
 
 from charm import MagmaNmsNginxProxyCharm
-
-testing.SIMULATE_CAN_CONNECT = True
 
 
 class TestCharm(unittest.TestCase):
@@ -22,6 +20,7 @@ class TestCharm(unittest.TestCase):
         self.harness = testing.Harness(MagmaNmsNginxProxyCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
+        self._container_name = self.harness.charm.unit.get_container("magma-nms-nginx-proxy")
 
     @patch("ops.model.Container.exists")
     def test_given_cert_controller_relation_not_created_when_pebble_ready_event_emitted_then_unit_is_in_blocked_state(  # noqa: E501
@@ -139,8 +138,7 @@ class TestCharm(unittest.TestCase):
         test_nginx_pid = "1234"
         patch_exists.return_value = True
         patched_exec.return_value = MockExec(stdout=test_nginx_pid)
-        nms_nginx_container = self.harness.charm.unit.get_container("magma-nms-nginx-proxy")
-        self.harness.set_can_connect(container=nms_nginx_container, val=True)
+        self.harness.set_can_connect(container=self._container_name, val=True)
         self.harness.add_relation(
             relation_name="magma-nms-magmalte", remote_app="magma-nms-magmalte"
         )
@@ -158,7 +156,7 @@ class TestCharm(unittest.TestCase):
                 }
             }
         )
-        nms_nginx_container.add_layer("magma-nms-nginx-proxy", test_pebble_layer, combine=True)
+        self._container_name.add_layer("magma-nms-nginx-proxy", test_pebble_layer, combine=True)
 
         self.harness.container_pebble_ready("magma-nms-nginx-proxy")
 
@@ -187,23 +185,60 @@ class TestCharm(unittest.TestCase):
 
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
 
+    @patch("charm.MagmaNmsNginxProxyCharm.NGINX_HTTPS_PORT", new_callable=PropertyMock)
     @patch("ops.model.Container.push")
-    @patch("ops.model.Container.exec", Mock())
-    def test_given_pebble_ready_when_on_install_then_nginx_config_is_stored(self, patch_push):
-        self.harness.container_pebble_ready(container_name="magma-nms-nginx-proxy")
+    def test_given_workload_container_cant_be_connected_to_when_magma_nms_magmalte_relation_joined_then_nginx_config_file_with_nms_magmalte_k8s_service_details_from_the_relation_data_bag_is_not_pushed_to_the_workload_and_event_deferred_message_is_logged(  # noqa: E501
+        self, patched_push, patched_nginx_https_port
+    ):
+        test_nginx_https_port = 1234
+        test_nms_magmalte_k8s_service_name = "mud"
+        test_nms_magmalte_k8s_service_port = 44
+        patched_nginx_https_port.return_value = test_nginx_https_port
+        relation_data = {
+            "k8s_service_name": test_nms_magmalte_k8s_service_name,
+            "k8s_service_port": str(test_nms_magmalte_k8s_service_port),
+        }
 
-        self.harness.charm.on.install.emit()
+        with self.assertLogs() as captured:
+            relation_id = self.harness.add_relation("magma-nms-magmalte", "whatever")
+            self.harness.add_relation_unit(relation_id, "whatever/0")
+            self.harness.update_relation_data(relation_id, "whatever/0", key_values=relation_data)
 
-        patch_push.assert_called_with(
+        patched_push.assert_not_called()
+        self.assertEqual(
+            "Can't connect to container. Deferring event.",
+            captured.records[1].getMessage(),
+        )
+
+    @patch("charm.MagmaNmsNginxProxyCharm.NGINX_HTTPS_PORT", new_callable=PropertyMock)
+    @patch("ops.model.Container.push")
+    def test_given_no_magma_nms_magmalte_relation_when_magma_nms_magmalte_relation_joined_then_nginx_config_file_with_nms_magmalte_k8s_service_details_from_the_relation_data_bag_is_pushed_to_the_workload(  # noqa: E501
+        self, patched_push, patched_nginx_https_port
+    ):
+        test_nginx_https_port = 1234
+        test_nms_magmalte_k8s_service_name = "mud"
+        test_nms_magmalte_k8s_service_port = 44
+        patched_nginx_https_port.return_value = test_nginx_https_port
+        relation_data = {
+            "k8s_service_name": test_nms_magmalte_k8s_service_name,
+            "k8s_service_port": str(test_nms_magmalte_k8s_service_port),
+        }
+        self.harness.set_can_connect(container=self._container_name, val=True)
+
+        relation_id = self.harness.add_relation("magma-nms-magmalte", "whatever")
+        self.harness.add_relation_unit(relation_id, "whatever/0")
+        self.harness.update_relation_data(relation_id, "whatever/0", key_values=relation_data)
+
+        patched_push.assert_called_with(
             path="/etc/nginx/conf.d/nginx_proxy_ssl.conf",
             source=(
                 "server {\n"
-                "listen 443;\n"
+                f"listen {test_nginx_https_port};\n"
                 "ssl on;\n"
                 "ssl_certificate /etc/nginx/conf.d/nms_nginx.pem;\n"
                 "ssl_certificate_key /etc/nginx/conf.d/nms_nginx.key.pem;\n"
                 "location / {\n"
-                "proxy_pass http://magmalte:8081;\n"
+                f"proxy_pass http://{test_nms_magmalte_k8s_service_name}:{test_nms_magmalte_k8s_service_port};\n"  # noqa: E501, W505
                 "proxy_set_header Host $http_host;\n"
                 "proxy_set_header X-Forwarded-Proto $scheme;\n"
                 "}\n"
@@ -217,8 +252,7 @@ class TestCharm(unittest.TestCase):
     ):
         certificate = "whatever cert"
         private_key = "whatever private key"
-        container = self.harness.model.unit.get_container("magma-nms-nginx-proxy")
-        self.harness.set_can_connect(container=container, val=True)
+        self.harness.set_can_connect(container=self._container_name, val=True)
         event = Mock()
         event.certificate = certificate
         event.private_key = private_key

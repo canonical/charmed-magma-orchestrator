@@ -18,7 +18,12 @@ from charms.observability_libs.v1.kubernetes_service_patch import (
     KubernetesServicePatch,
     ServicePort,
 )
-from ops.charm import CharmBase, InstallEvent, PebbleReadyEvent
+from ops.charm import (
+    CharmBase,
+    PebbleReadyEvent,
+    RelationChangedEvent,
+    RelationJoinedEvent,
+)
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import ExecError, Layer
@@ -46,24 +51,21 @@ class MagmaNmsNginxProxyCharm(CharmBase):
             service_name="nginx-proxy",
             additional_labels={"app.kubernetes.io/part-of": "magma"},
         )
-        self.framework.observe(self.on.install, self._on_install)
+
         self.framework.observe(
             self.on.magma_nms_nginx_proxy_pebble_ready, self._on_magma_nms_nginx_proxy_pebble_ready
         )
         self.framework.observe(
+            self.on.magma_nms_magmalte_relation_joined,
+            self._push_nginx_config_file_to_workload,
+        )
+        self.framework.observe(
+            self.on.magma_nms_magmalte_relation_changed,
+            self._push_nginx_config_file_to_workload,
+        )
+        self.framework.observe(
             self.cert_controller.on.certificate_available, self._on_certificate_available
         )
-
-    def _on_install(self, event: InstallEvent) -> None:
-        """Triggered once when the charm is installed.
-
-        Args:
-            event: Juju event.
-        """
-        if not self._container.can_connect():
-            event.defer()
-            return
-        self._push_nginx_config_file_to_workload()
 
     def _on_magma_nms_nginx_proxy_pebble_ready(
         self, event: Union[PebbleReadyEvent, CertificateAvailableEvent]
@@ -110,9 +112,29 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         )
         self._on_magma_nms_nginx_proxy_pebble_ready(event)
 
-    def _push_nginx_config_file_to_workload(self) -> None:
-        """Writes nginx config file to workload container."""
-        # TODO: Replace the proxy_pass line content with data coming from the magmalte relation
+    def _push_nginx_config_file_to_workload(
+        self, event: Union[RelationChangedEvent, RelationJoinedEvent]
+    ) -> None:
+        """Triggered on `nms-magmalte` relation events.
+
+        Writes nginx config file to workload container.
+
+        Args:
+            event: Juju event (RelationChangedEvent or RelationJoinedEvent)
+        """
+        magmalte_relation = event.relation
+        units = magmalte_relation.units
+        try:
+            magmalte_service_name = magmalte_relation.data[next(iter(units))]["k8s_service_name"]
+            magmalte_service_port = magmalte_relation.data[next(iter(units))]["k8s_service_port"]
+        except KeyError:
+            logger.info("Magmalte service details not available. Deferring event.")
+            event.defer()
+            return
+        if not self._container.can_connect():
+            logger.info("Can't connect to container. Deferring event.")
+            event.defer()
+            return
         config_file = (
             "server {\n"
             f"listen {self.NGINX_HTTPS_PORT};\n"
@@ -120,7 +142,7 @@ class MagmaNmsNginxProxyCharm(CharmBase):
             f"ssl_certificate {self.BASE_NGINX_PATH}/nms_nginx.pem;\n"
             f"ssl_certificate_key {self.BASE_NGINX_PATH}/nms_nginx.key.pem;\n"
             "location / {\n"
-            "proxy_pass http://magmalte:8081;\n"
+            f"proxy_pass http://{magmalte_service_name}:{magmalte_service_port};\n"
             "proxy_set_header Host $http_host;\n"
             "proxy_set_header X-Forwarded-Proto $scheme;\n"
             "}\n"

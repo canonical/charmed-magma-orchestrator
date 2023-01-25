@@ -13,8 +13,6 @@ from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 
 from charm import MagmaOrc8rNginxCharm
 
-testing.SIMULATE_CAN_CONNECT = True
-
 
 class TestCharm(unittest.TestCase):
     @patch(
@@ -399,7 +397,7 @@ class TestCharm(unittest.TestCase):
 
         self.assertEqual(ActiveStatus(), self.harness.charm.unit.status)
 
-    def test_given_orc8r_nginx_service_not_running_when_orc8r_nginx_relation_joined_then_service_active_status_in_the_relation_data_bag_is_false(  # noqa: E501
+    def test_given_orc8r_nginx_service_not_running_when_magma_orc8r_nginx_relation_joined_then_service_active_status_in_the_relation_data_bag_is_false(  # noqa: E501
         self,
     ):
         self.harness.set_leader(True)
@@ -415,7 +413,7 @@ class TestCharm(unittest.TestCase):
     @patch("ops.model.Container.exec", new_callable=Mock)
     @patch("ops.model.Container.push", Mock())
     @patch("ops.model.Container.exec", Mock())
-    def test_given_metricsd_service_running_when_metricsd_relation_joined_then_service_active_status_in_the_relation_data_bag_is_true(  # noqa: E501
+    def test_given_orc8r_nginx_service_running_when_magma_orc8r_nginx_relation_joined_then_service_active_status_in_the_relation_data_bag_is_true(  # noqa: E501
         self, patched_exec, patch_file_exists
     ):
         patched_exec.return_value = MockExec()
