@@ -13,8 +13,6 @@ from ops import testing
 
 from charm import MagmaOrc8rFEGRelayCharm
 
-testing.SIMULATE_CAN_CONNECT = True
-
 
 class TestCharm(unittest.TestCase):
     @patch(
