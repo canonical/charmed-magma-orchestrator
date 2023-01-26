@@ -90,7 +90,8 @@ class MagmaOrc8rNginxCharm(CharmBase):
             self.on.magma_orc8r_nginx_relation_joined, self._on_magma_orc8r_nginx_relation_joined
         )
         self.framework.observe(
-            self.on.orchestrator_relation_joined, self._on_orchestrator_relation_joined
+            self.on.orchestrator_relation_joined,
+            self._publish_orchestrator_details_in_the_relation_data_bag,
         )
         self.framework.observe(self.on.remove, self._on_remove)
 
@@ -135,9 +136,6 @@ class MagmaOrc8rNginxCharm(CharmBase):
 
         Args:
             event: Juju event
-
-        Returns:
-            None
         """
         if not self._domain_config_is_valid:
             self.unit.status = BlockedStatus("Domain config is not valid")
@@ -148,6 +146,8 @@ class MagmaOrc8rNginxCharm(CharmBase):
             return
         self._generate_nginx_config()
         self._configure_magma_orc8r_nginx(event)
+        if self.model.relations.get("orchestrator"):
+            self._publish_orchestrator_details_in_the_relation_data_bag(event)
 
     def _configure_magma_orc8r_nginx(
         self,
@@ -194,7 +194,16 @@ class MagmaOrc8rNginxCharm(CharmBase):
             event.defer()
             return
 
-    def _on_orchestrator_relation_joined(self, event: RelationJoinedEvent):
+    def _publish_orchestrator_details_in_the_relation_data_bag(
+        self,
+        event: Union[ConfigChangedEvent, RelationJoinedEvent, RootCACertificateAvailableEvent],
+    ) -> None:
+        """Publishes Orchestrator details inside the `orchestrator` relation data bag.
+
+        Args:
+            event: Juju event (ConfigChangedEvent, RelationJoinedEvent
+                   or RootCACertificateAvailableEvent)
+        """
         if not self.unit.is_leader():
             return
         if not self._domain_config_is_valid:
@@ -287,8 +296,10 @@ class MagmaOrc8rNginxCharm(CharmBase):
             return
         self._container.push(path=f"{self.BASE_CERTS_PATH}/rootCA.pem", source=event.certificate)
         self._configure_magma_orc8r_nginx(event)
+        if self.model.relations.get("orchestrator"):
+            self._publish_orchestrator_details_in_the_relation_data_bag(event)
 
-    def _on_required_relation_broken(self, event: RelationBrokenEvent):
+    def _on_required_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Triggered on relation broken events, sets the status of the charm to blocked.
 
         Args:

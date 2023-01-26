@@ -3,6 +3,7 @@
 
 import io
 import unittest
+from copy import deepcopy
 from unittest.mock import Mock, patch
 
 from ops import testing
@@ -127,23 +128,82 @@ class TestOrchestratorRelation(unittest.TestCase):
         self.harness.update_config(key_values={"domain": TEST_DOMAIN})
         self.harness.set_can_connect(container="magma-orc8r-nginx", val=True)
         patched_exists.return_value = True
-        patched_pull.return_value = TEST_ROOT_CA_PEM
-        expected_relation_data = {
-            "root_ca_certificate": TEST_ROOT_CA_PEM_STRING,
-            "orchestrator_address": f"controller.{TEST_DOMAIN}",
-            "orchestrator_port": "443",
-            "bootstrapper_address": f"bootstrapper-controller.{TEST_DOMAIN}",
-            "bootstrapper_port": "443",
-            "fluentd_address": f"fluentd.{TEST_DOMAIN}",
-            "fluentd_port": "24224",
-        }
+        patched_pull.return_value = deepcopy(TEST_ROOT_CA_PEM)
 
         orchestrator_relation_id = self._create_orchestrator_relation(TEST_APP_NAME)
 
         self.assertEqual(
             self.harness.get_relation_data(orchestrator_relation_id, self.harness.charm.app),
-            expected_relation_data,
+            self._generate_expected_relation_data(TEST_ROOT_CA_PEM_STRING, TEST_DOMAIN),
         )
+
+    @patch("ops.model.Container.pull")
+    @patch("ops.model.Container.exists")
+    @patch("ops.model.Container.get_service", new=Mock())
+    @patch("ops.model.Container.exec", Mock())
+    def test_given_orchestrator_relation_created_and_orchestrator_details_in_the_relation_data_bag_when_domain_changes_then_relation_data_bag_is_updated(  # noqa: E501
+        self, patched_exists, patched_pull
+    ):
+        test_new_domain = "whatever.else.com"
+        self.harness.set_can_connect(container="magma-orc8r-nginx", val=True)
+        self.harness.set_leader(is_leader=True)
+        self.harness.update_config(key_values={"domain": TEST_DOMAIN})
+        patched_exists.return_value = True
+        patched_pull.side_effect = [deepcopy(TEST_ROOT_CA_PEM), deepcopy(TEST_ROOT_CA_PEM)]
+        orchestrator_relation_id = self._create_orchestrator_relation(TEST_APP_NAME)
+        self.assertEqual(
+            self.harness.get_relation_data(orchestrator_relation_id, self.harness.charm.app),
+            self._generate_expected_relation_data(TEST_ROOT_CA_PEM_STRING, TEST_DOMAIN),
+        )
+
+        self.harness.update_config(key_values={"domain": test_new_domain})
+
+        self.assertEqual(
+            self.harness.get_relation_data(orchestrator_relation_id, self.harness.charm.app),
+            self._generate_expected_relation_data(TEST_ROOT_CA_PEM_STRING, test_new_domain),
+        )
+
+    @patch("ops.model.Container.pull")
+    @patch("ops.model.Container.exists")
+    @patch("ops.model.Container.get_service", new=Mock())
+    @patch("ops.model.Container.exec", Mock())
+    @patch("ops.model.Container.push", Mock())
+    def test_given_orchestrator_relation_created_and_orchestrator_details_in_the_relation_data_bag_when_root_ca_certificate_updated_then_relation_data_bag_is_updated(  # noqa: E501
+        self, patched_exists, patched_pull
+    ):
+        test_rootca_cert_string = "some cert"
+        test_rootca_cert = io.StringIO(test_rootca_cert_string)
+        self.harness.set_leader(is_leader=True)
+        self.harness.update_config(key_values={"domain": TEST_DOMAIN})
+        self.harness.set_can_connect(container="magma-orc8r-nginx", val=True)
+        patched_exists.return_value = True
+        patched_pull.side_effect = [deepcopy(TEST_ROOT_CA_PEM), test_rootca_cert]
+        orchestrator_relation_id = self._create_orchestrator_relation(TEST_APP_NAME)
+        self.assertEqual(
+            self.harness.get_relation_data(orchestrator_relation_id, self.harness.charm.app),
+            self._generate_expected_relation_data(TEST_ROOT_CA_PEM_STRING, TEST_DOMAIN),
+        )
+
+        self.harness.charm._cert_root_ca.on.certificate_available.emit(
+            certificate=test_rootca_cert_string,
+        )
+
+        self.assertEqual(
+            self.harness.get_relation_data(orchestrator_relation_id, self.harness.charm.app),
+            self._generate_expected_relation_data(test_rootca_cert_string, TEST_DOMAIN),
+        )
+
+    @staticmethod
+    def _generate_expected_relation_data(root_ca_pem: str, domain: str) -> dict:
+        return {
+            "root_ca_certificate": root_ca_pem,
+            "orchestrator_address": f"controller.{domain}",
+            "orchestrator_port": "443",
+            "bootstrapper_address": f"bootstrapper-controller.{domain}",
+            "bootstrapper_port": "443",
+            "fluentd_address": f"fluentd.{domain}",
+            "fluentd_port": "24224",
+        }
 
     def _create_orchestrator_relation(self, app_name: str) -> int:
         orchestrator_relation_id = self.harness.add_relation(
