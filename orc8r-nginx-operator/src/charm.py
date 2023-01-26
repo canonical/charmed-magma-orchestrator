@@ -125,9 +125,6 @@ class MagmaOrc8rNginxCharm(CharmBase):
             logger.info("Can't connect to container - Deferring")
             event.defer()
             return
-        # TODO: _install_procps() is needed by the workaround for not working container.restart()
-        #       and should be removed as soon as the proper Juju mechanism works as expected.
-        self._install_procps()
         self._generate_nginx_config()
         self._create_additional_orc8r_nginx_services()
 
@@ -378,7 +375,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
     def _reload_nginx(self) -> None:
         """Reloads the nginx process."""
         nginx_master_pid, _ = self._container.exec(["cat", "/var/run/nginx.pid"]).wait_output()
-        self._container.exec(["kill", "-HUP", f"{nginx_master_pid.strip()}"])
+        self._container.exec(["/bin/bash", "-c", "kill", "-HUP", f"{nginx_master_pid.strip()}"])
         logger.info(f"Reloaded process with pid {nginx_master_pid.strip()}")
 
     def _update_relations(self) -> None:
@@ -614,16 +611,6 @@ class MagmaOrc8rNginxCharm(CharmBase):
             except ModelError:
                 pass
         return False
-
-    def _install_procps(self) -> None:
-        """Installs procps."""
-        try:
-            self._container.exec(
-                ["apt", "update", "--allow-releaseinfo-change", "-y"]
-            ).wait_output()
-            self._container.exec(["apt", "install", "-y", "procps"]).wait_output()
-        except ExecError as error:
-            raise ProcessExecutionError(error)
 
     @property
     def _pebble_layer(self) -> Layer:
