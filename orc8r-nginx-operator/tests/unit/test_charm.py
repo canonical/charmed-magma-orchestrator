@@ -414,7 +414,7 @@ class TestCharm(unittest.TestCase):
         patched_exec.assert_has_calls(
             [
                 call(["cat", "/var/run/nginx.pid"]),
-                call(["kill", "-HUP", test_nginx_pid]),
+                call(["/bin/bash", "-c", "kill", "-HUP", test_nginx_pid]),
             ]
         )
 
@@ -434,7 +434,7 @@ class TestCharm(unittest.TestCase):
         patched_exec.assert_has_calls(
             [
                 call(["cat", "/var/run/nginx.pid"]),
-                call(["kill", "-HUP", test_nginx_pid]),
+                call(["/bin/bash", "-c", "kill", "-HUP", test_nginx_pid]),
             ]
         )
 
