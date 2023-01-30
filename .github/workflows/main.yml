@@ -1,12 +1,12 @@
-name: main-branch
+name: 1.6
 
 on:
   pull_request:
     branches:
-      - main
+      - 1.6
   push:
     branches:
-      - main
+      - 1.6
 
 jobs:
   orchestrator-lint-report:

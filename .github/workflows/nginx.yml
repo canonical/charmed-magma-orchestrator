@@ -94,7 +94,7 @@ jobs:
           yes | juju kill-controller integration-tests-$GITHUB_RUN_ID
 
   orc8r-nginx-charmhub-upload:
-    if: github.ref_name == 'main'
+    if: github.ref_name == '1.6'
     uses: ./.github/workflows/upload-charm.yml
     secrets: inherit
     with:

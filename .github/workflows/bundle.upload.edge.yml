@@ -3,7 +3,7 @@ name: Upload orc8r-bundle
 on:
   push:
     branches:
-      - "main"
+      - "1.6"
     paths:
       - "orc8r-bundle/**"
 

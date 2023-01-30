@@ -109,7 +109,7 @@ jobs:
         with:
           credentials: ${{ secrets.CHARMCRAFT_AUTH }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          destination-channel: latest/${{ env.promote-to }}
+          destination-channel: 1.6/${{ env.promote-to }}
           origin-channel: latest/${{ env.promote-from }}
           tag-prefix: magma-${{ matrix.charms }}
           charm-path: ./${{ matrix.charms }}-operator
@@ -139,7 +139,7 @@ jobs:
         with:
           credentials: ${{ secrets.CHARMCRAFT_AUTH }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          destination-channel: latest/${{ env.promote-to }}
+          destination-channel: 1.6/${{ env.promote-to }}
           origin-channel: latest/${{ env.promote-from }}
           tag-prefix: magma-${{ github.event.inputs.charm-name }}
           charm-path: ./${{ github.event.inputs.charm-name }}-operator

@@ -20,7 +20,7 @@ jobs:
       - name: Wait for integration tests to succeed
         uses: lewagon/wait-on-check-action@v1.1.2
         with:
-          ref: main
+          ref: 1.6
           check-name: "Integration tests"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 20
