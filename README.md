@@ -2,6 +2,8 @@
 
 ## Overview
 
+DUMMY CHANGE
+
 Orchestrator is a Magma service that provides a simple and consistent way to
 configure and monitor the wireless network securely. The metrics acquired through the platform
 allows you to see the analytics and traffic flows of the wireless users through the Magma web UI.
@@ -46,14 +48,13 @@ Deploy Orchestrator:
 > **Note**: The magma-orc8r bundle is available on edge and beta channels.
 
 > **Note**: Elasticsearch is not part of magma-orc8r bundle and needs to be deployed prior
-to deploying the bundle. Elasticsearch needs to support both `http` and `https` requests.
+> to deploying the bundle. Elasticsearch needs to support both `http` and `https` requests.
 
 ```bash
 juju deploy magma-orc8r --overlay overlay.yaml --trust --channel=edge
 ```
 
 The deployment is completed when all services are in the `Active-Idle` state.
-
 
 ### Import the admin operator HTTPS certificate
 
@@ -76,13 +77,13 @@ juju run-action orc8r-orchestrator/leader get-load-balancer-services --wait
 
 In your domain registrar, create A records for the following Kubernetes services:
 
-| Address                                | Hostname                                | 
-|----------------------------------------|-----------------------------------------|
-| `<orc8r-bootstrap-nginx External IP>`  | `bootstrapper-controller.<your domain>` | 
-| `<orc8r-nginx-proxy External IP>`      | `api.<your domain>`                     | 
-| `<orc8r-clientcert-nginx External IP>` | `controller.<your domain>`              | 
-| `<nginx-proxy External IP>`            | `*.nms.<your domain>`                   | 
-| `<fluentd External IP>`                | `fluentd.<your domain>`                 | 
+| Address                                | Hostname                                |
+| -------------------------------------- | --------------------------------------- |
+| `<orc8r-bootstrap-nginx External IP>`  | `bootstrapper-controller.<your domain>` |
+| `<orc8r-nginx-proxy External IP>`      | `api.<your domain>`                     |
+| `<orc8r-clientcert-nginx External IP>` | `controller.<your domain>`              |
+| `<nginx-proxy External IP>`            | `*.nms.<your domain>`                   |
+| `<fluentd External IP>`                | `fluentd.<your domain>`                 |
 
 ### Verify the deployment
 
