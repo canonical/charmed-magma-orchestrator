@@ -251,7 +251,7 @@ class MagmaNmsNginxProxyCharm(CharmBase):
                     self._service_name: {
                         "override": "replace",
                         "startup": "enabled",
-                        "command": "nginx",
+                        "command": "nginx -g 'daemon off;'",
                     }
                 },
             }
