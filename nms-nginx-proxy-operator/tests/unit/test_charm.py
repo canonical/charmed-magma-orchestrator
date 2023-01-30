@@ -96,7 +96,7 @@ class TestCharm(unittest.TestCase):
                 "magma-nms-nginx-proxy": {
                     "override": "replace",
                     "startup": "enabled",
-                    "command": "nginx",
+                    "command": "nginx -g 'daemon off;'",
                 }
             }
         }
