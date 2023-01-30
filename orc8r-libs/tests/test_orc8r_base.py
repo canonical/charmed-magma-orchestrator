@@ -10,8 +10,6 @@ from test_orc8r_base_charm.src.charm import (  # type: ignore[import]
     MagmaOrc8rDummyCharmWithRequiredRelation,
 )
 
-testing.SIMULATE_CAN_CONNECT = True
-
 
 class TestCharm(unittest.TestCase):
     @patch(

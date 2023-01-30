@@ -12,8 +12,6 @@ from test_orc8r_base_db_charm.src.charm import (  # type: ignore[import]
     MagmaOrc8rDummyCharm,
 )
 
-testing.SIMULATE_CAN_CONNECT = True
-
 
 class TestCharm(unittest.TestCase):
 

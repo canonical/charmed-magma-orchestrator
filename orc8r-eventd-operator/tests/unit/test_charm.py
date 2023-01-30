@@ -10,8 +10,6 @@ from ops.model import BlockedStatus
 
 from charm import MagmaOrc8rEventdCharm
 
-testing.SIMULATE_CAN_CONNECT = True
-
 
 class Test(unittest.TestCase):
     """Placeholder tests.

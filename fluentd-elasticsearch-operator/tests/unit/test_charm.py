@@ -17,8 +17,6 @@ from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 
 from charm import FluentdElasticsearchCharm
 
-testing.SIMULATE_CAN_CONNECT = True
-
 TEST_DOMAIN = "example.com"
 TEST_ES_URL = "testes:1234"
 TEST_FLUENTD_CHUNK_LIMIT = "size"

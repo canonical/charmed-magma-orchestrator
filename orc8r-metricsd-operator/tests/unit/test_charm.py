@@ -10,8 +10,6 @@ from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 
 from charm import MagmaOrc8rMetricsdCharm
 
-testing.SIMULATE_CAN_CONNECT = True
-
 TEST_ALERTMANAGER_APP_NAME = "test-alertmanager"
 TEST_ALERTMANAGER_CONFIGURER_APP_NAME = "test-alertmanager-configurer"
 TEST_ALERTMANAGER_CONFIGURER_SERVICE_NAME = "tank"

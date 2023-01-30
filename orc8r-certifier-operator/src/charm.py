@@ -143,11 +143,11 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         )
         self.framework.observe(
             self.certificates_controller_provider.on.certificate_request,
-            self._on_controller_certificate_request,
+            self._publish_controller_certificate,
         )
         self.framework.observe(
             self.certificates_root_ca_provider.on.certificate_request,
-            self._on_root_ca_certificate_request,
+            self._publish_root_ca_certificate,
         )
         self.framework.observe(
             self.fluentd_certificates_provider.on.certificate_creation_request,
@@ -406,7 +406,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             certificate=str(certificate_string),
         )
 
-    def _on_controller_certificate_request(self, event: ControllerCertificateRequestEvent) -> None:
+    def _publish_controller_certificate(
+        self,
+        event: Union[CertificateAvailableEvent, ControllerCertificateRequestEvent],
+    ) -> None:
         """Triggered when a certificate request is made on the cert-controller relation.
 
         Args:
@@ -415,6 +418,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         Returns:
             None
         """
+        cert_controller_relation = self.model.relations.get("cert-controller")
+        if not cert_controller_relation:
+            raise RuntimeError("'cert-controller' relation not available!")
         if not self._container.can_connect():
             logger.info("Container not yet available")
             event.defer()
@@ -432,13 +438,17 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             return
         certificate_string = certificate.read()
         private_key_string = private_key.read()
-        self.certificates_controller_provider.set_certificate(
-            relation_id=event.relation_id,
-            certificate=str(certificate_string),
-            private_key=str(private_key_string),
-        )
+        for relation in cert_controller_relation:
+            self.certificates_controller_provider.set_certificate(
+                relation_id=relation.id,
+                certificate=str(certificate_string),
+                private_key=str(private_key_string),
+            )
 
-    def _on_root_ca_certificate_request(self, event: RootCACertificateRequestEvent) -> None:
+    def _publish_root_ca_certificate(
+        self,
+        event: Union[CertificateAvailableEvent, RootCACertificateRequestEvent],
+    ) -> None:
         """Triggered when a certificate request is made on the cert-root-ca relation.
 
         Args:
@@ -447,6 +457,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         Returns:
             None
         """
+        cert_root_ca_relation = self.model.relations.get("cert-root-ca")
+        if not cert_root_ca_relation:
+            raise RuntimeError("'cert-root-ca' relation not available!")
         if not self._container.can_connect():
             logger.info("Container not yet available")
             event.defer()
@@ -458,10 +471,11 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             event.defer()
             return
         certificate_string = certificate.read()
-        self.certificates_root_ca_provider.set_certificate(
-            relation_id=event.relation_id,
-            certificate=str(certificate_string),
-        )
+        for relation in cert_root_ca_relation:
+            self.certificates_root_ca_provider.set_certificate(
+                relation_id=relation.id,
+                certificate=str(certificate_string),
+            )
 
     def _on_fluentd_certificate_creation_request(
         self, event: CertificateCreationRequestEvent
@@ -533,6 +547,10 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                 event.defer()
                 return
         self._push_root_certificates()
+        if self.model.relations.get("cert-controller"):
+            self._publish_controller_certificate(event)
+        if self.model.relations.get("cert-root-ca"):
+            self._publish_root_ca_certificate(event)
         self._on_magma_orc8r_certifier_pebble_ready(event)
 
     def _on_certificate_expiring(
@@ -589,7 +607,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             return
         event.set_results(
             {
-                "password": self._admin_operator_pfx_password,  # type: ignore[dict-item]
+                "password": self._admin_operator_pfx_password,
             }
         )
 

@@ -16,8 +16,6 @@ from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 
 from charm import MagmaOrc8rOrchestratorCharm
 
-testing.SIMULATE_CAN_CONNECT = True
-
 
 class MockExec:
     def __init__(self, *args, **kwargs):

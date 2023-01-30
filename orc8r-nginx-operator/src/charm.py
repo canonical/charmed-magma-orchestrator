@@ -90,7 +90,8 @@ class MagmaOrc8rNginxCharm(CharmBase):
             self.on.magma_orc8r_nginx_relation_joined, self._on_magma_orc8r_nginx_relation_joined
         )
         self.framework.observe(
-            self.on.orchestrator_relation_joined, self._on_orchestrator_relation_joined
+            self.on.orchestrator_relation_joined,
+            self._publish_orchestrator_details_in_the_relation_data_bag,
         )
         self.framework.observe(self.on.remove, self._on_remove)
 
@@ -118,15 +119,13 @@ class MagmaOrc8rNginxCharm(CharmBase):
         """Triggerred once when charm is installed.
 
         Args:
-            event: Juju event
-
-        Returns:
-            None
+            event: Juju event (InstallEvent)
         """
         if not self._container.can_connect():
             logger.info("Can't connect to container - Deferring")
             event.defer()
             return
+        self._generate_nginx_config()
         self._create_additional_orc8r_nginx_services()
 
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:
@@ -134,9 +133,6 @@ class MagmaOrc8rNginxCharm(CharmBase):
 
         Args:
             event: Juju event
-
-        Returns:
-            None
         """
         if not self._domain_config_is_valid:
             self.unit.status = BlockedStatus("Domain config is not valid")
@@ -147,6 +143,8 @@ class MagmaOrc8rNginxCharm(CharmBase):
             return
         self._generate_nginx_config()
         self._configure_magma_orc8r_nginx(event)
+        if self.model.relations.get("orchestrator"):
+            self._publish_orchestrator_details_in_the_relation_data_bag(event)
 
     def _configure_magma_orc8r_nginx(
         self,
@@ -162,9 +160,6 @@ class MagmaOrc8rNginxCharm(CharmBase):
 
         Args:
             event: Juju event
-
-        Returns:
-            None
         """
         if not self._domain_config_is_valid:
             self.unit.status = BlockedStatus("Domain config is not valid")
@@ -196,7 +191,16 @@ class MagmaOrc8rNginxCharm(CharmBase):
             event.defer()
             return
 
-    def _on_orchestrator_relation_joined(self, event: RelationJoinedEvent):
+    def _publish_orchestrator_details_in_the_relation_data_bag(
+        self,
+        event: Union[ConfigChangedEvent, RelationJoinedEvent, RootCACertificateAvailableEvent],
+    ) -> None:
+        """Publishes Orchestrator details inside the `orchestrator` relation data bag.
+
+        Args:
+            event: Juju event (ConfigChangedEvent, RelationJoinedEvent
+                   or RootCACertificateAvailableEvent)
+        """
         if not self.unit.is_leader():
             return
         if not self._domain_config_is_valid:
@@ -230,11 +234,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
         )
 
     def _on_remove(self, _) -> None:
-        """Remove additional magma-orc8r-nginx services.
-
-        Returns:
-            None
-        """
+        """Remove additional magma-orc8r-nginx services."""
         client = Client()
         for service in self._magma_orc8r_nginx_additional_services:
             client.delete(Service, name=service.metadata.name, namespace=self._namespace)
@@ -246,9 +246,6 @@ class MagmaOrc8rNginxCharm(CharmBase):
 
         Args:
             event (CertifierCertificateAvailableEvent): Juju event
-
-        Returns:
-            None
         """
         logger.info("Certifier certificate available")
         if not self._container.can_connect():
@@ -267,9 +264,6 @@ class MagmaOrc8rNginxCharm(CharmBase):
 
         Args:
             event (ControllerCertificateAvailableEvent): Juju event
-
-        Returns:
-            None
         """
         logger.info("Controller certificate available")
         if not self._container.can_connect():
@@ -299,8 +293,10 @@ class MagmaOrc8rNginxCharm(CharmBase):
             return
         self._container.push(path=f"{self.BASE_CERTS_PATH}/rootCA.pem", source=event.certificate)
         self._configure_magma_orc8r_nginx(event)
+        if self.model.relations.get("orchestrator"):
+            self._publish_orchestrator_details_in_the_relation_data_bag(event)
 
-    def _on_required_relation_broken(self, event: RelationBrokenEvent):
+    def _on_required_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Triggered on relation broken events, sets the status of the charm to blocked.
 
         Args:
@@ -311,11 +307,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
         )
 
     def _generate_nginx_config(self) -> None:
-        """Generates nginx config to /etc/nginx/nginx.conf.
-
-        Returns:
-            None
-        """
+        """Generates nginx config to /etc/nginx/nginx.conf."""
         logger.info("Generating nginx config file...")
         domain_name = self.model.config.get("domain")
         process = self._container.exec(
@@ -329,20 +321,14 @@ class MagmaOrc8rNginxCharm(CharmBase):
         )
         try:
             process.wait_output()
-        except ExecError as e:
-            logger.error("Exited with code %d. Stderr:", e.exit_code)
-            for line in e.stderr.splitlines():  # type: ignore[union-attr]
-                logger.error("    %s", line)
-            raise e
+        except ExecError as error:
+            raise ProcessExecutionError(error)
         logger.info("Successfully generated nginx config file")
 
     def _create_additional_orc8r_nginx_services(self) -> None:
         """Creates additional K8s services.
 
         Those services are expected to be delivered by the magma-orc8r-nginx service.
-
-        Returns:
-            None
         """
         client = Client()
         logger.info("Creating additional magma-orc8r-nginx services")
@@ -365,9 +351,6 @@ class MagmaOrc8rNginxCharm(CharmBase):
 
         Args:
             event: Juju event
-
-        Returns:
-            None
         """
         if self._container.can_connect():
             plan = self._container.get_plan()
@@ -378,13 +361,22 @@ class MagmaOrc8rNginxCharm(CharmBase):
                 )
                 self._container.add_layer(self._container_name, layer, combine=True)
                 self._container.restart(self._service_name)
-                logger.info(f"Restarted service {self._service_name}")
-                self._update_relations()
-                self.unit.status = ActiveStatus()
+            # TODO: _reload_nginx() is needed by the workaround for not working container.restart()
+            #       and should be removed as soon as the proper Juju mechanism works as expected.
+            self._reload_nginx()
+            logger.info(f"Restarted service {self._service_name}")
+            self._update_relations()
+            self.unit.status = ActiveStatus()
         else:
             self.unit.status = WaitingStatus(f"Waiting for {self._container} to be ready")
             event.defer()
             return
+
+    def _reload_nginx(self) -> None:
+        """Reloads the nginx process."""
+        nginx_master_pid, _ = self._container.exec(["cat", "/var/run/nginx.pid"]).wait_output()
+        self._container.exec(["/bin/bash", "-c", "kill", "-HUP", f"{nginx_master_pid.strip()}"])
+        logger.info(f"Reloaded process with pid {nginx_master_pid.strip()}")
 
     def _update_relations(self) -> None:
         """Updates the status of the `orc8r-nginx` service.
@@ -406,9 +398,6 @@ class MagmaOrc8rNginxCharm(CharmBase):
         Args:
             relation: Juju Relation object to update
             is_active: Workload service status
-
-        Returns:
-            None
         """
         relation.data[self.unit].update(
             {
@@ -625,6 +614,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
 
     @property
     def _pebble_layer(self) -> Layer:
+        """Returns pebble layer for the magma-orc8r-nginx service."""
         return Layer(
             {
                 "summary": f"{self._service_name} pebble layer",
@@ -644,12 +634,37 @@ class MagmaOrc8rNginxCharm(CharmBase):
 
     @property
     def _domain_config(self) -> Optional[str]:
-        """Returns domain config."""
+        """Returns domain config.
+
+        Returns:
+            str: Domain config
+        """
         return self.model.config.get("domain")
 
     @property
     def _namespace(self) -> str:
+        """Returns k8s namespace (equivalent to Juju model name).
+
+        Returns:
+            str: K8s namespace.
+        """
         return self.model.name
+
+
+class ProcessExecutionError(Exception):
+    """Custom error improving logging in case of ExecError."""
+
+    def __init__(self, error: ExecError):
+        """Print error details.
+
+        Args:
+            error (ExecError): Original error
+        """
+        logger.error(f"ERROR: Process exited with code {error.exit_code}.")
+        if error.stderr:
+            logger.error("Stderr:")
+            for line in error.stderr.splitlines():
+                logger.error(f"    {str(line)}")
 
 
 if __name__ == "__main__":

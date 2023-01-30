@@ -12,8 +12,6 @@ from ops.model import ActiveStatus, WaitingStatus
 
 from charm import MagmaOrc8rBootstrapperCharm
 
-testing.SIMULATE_CAN_CONNECT = True
-
 
 def generate_private_key(
     password: Optional[bytes] = None,
