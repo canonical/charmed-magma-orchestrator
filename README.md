@@ -52,8 +52,6 @@ applications:
 
 Deploy Orchestrator:
 
-> **Note**: The magma-orc8r bundle is available on edge and beta channels.
-
 > **Note**: Elasticsearch is not part of magma-orc8r bundle and needs to be deployed prior
 > to deploying the bundle. Elasticsearch needs to support both `http` and `https` requests.
 
