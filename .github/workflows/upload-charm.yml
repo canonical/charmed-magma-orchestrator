@@ -6,10 +6,6 @@ on:
       charm:
         required: true
         type: string
-      upload-image:
-        required: false
-        type: string
-        default: "false"
 
 jobs:
   charmhub-upload:
@@ -43,7 +39,7 @@ jobs:
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
           github-token: "${{ secrets.GITHUB_TOKEN }}"
-          upload-image: ${{ inputs.upload-image }}
+          upload-image: "false"
           channel: "${{ steps.channel.outputs.name }}"
           charm-path: ./${{ inputs.charm }}
           tag-prefix: magma-${{ inputs.charm }}

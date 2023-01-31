@@ -369,7 +369,7 @@ class TestCharm(unittest.TestCase):
                 "magma-orc8r-nginx": {
                     "override": "replace",
                     "startup": "enabled",
-                    "command": "nginx",
+                    "command": "nginx -g 'daemon off;'",
                     "environment": {
                         "SERVICE_REGISTRY_MODE": "k8s",
                         "SERVICE_REGISTRY_NAMESPACE": self.namespace,
@@ -382,61 +382,6 @@ class TestCharm(unittest.TestCase):
 
         updated_plan = self.harness.get_container_pebble_plan("magma-orc8r-nginx").to_dict()
         self.assertEqual(expected_plan, updated_plan)
-
-    @patch("ops.model.Container.exists")
-    @patch("ops.model.Container.exec")
-    def test_given_workload_container_without_pebble_layer_when_pebble_ready_then_nginx_service_is_reloaded(  # noqa: E501
-        self, patched_exec, patch_file_exists
-    ):
-        test_pebble_layer = {
-            "services": {
-                "magma-orc8r-nginx": {
-                    "override": "replace",
-                    "startup": "enabled",
-                    "command": "nginx",
-                    "environment": {
-                        "SERVICE_REGISTRY_MODE": "k8s",
-                        "SERVICE_REGISTRY_NAMESPACE": self.namespace,
-                    },
-                }
-            },
-        }
-        self.harness.set_can_connect(container=self._container, val=True)
-        patch_file_exists.return_value = True
-        test_nginx_pid = "1234"
-        patched_exec.return_value = MockExec(stdout=test_nginx_pid)
-        self.harness.update_config(key_values={"domain": "whatever.com"})
-        self._create_all_relations()
-        self._container.add_layer("magma-nms-nginx-proxy", test_pebble_layer, combine=True)
-
-        self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
-
-        patched_exec.assert_has_calls(
-            [
-                call(["cat", "/var/run/nginx.pid"]),
-                call(["/bin/bash", "-c", "kill", "-HUP", test_nginx_pid]),
-            ]
-        )
-
-    @patch("ops.model.Container.exists")
-    @patch("ops.model.Container.exec")
-    def test_given_workload_container_with_pebble_layer_when_pebble_ready_then_nginx_service_is_reloaded(  # noqa: E501
-        self, patched_exec, patch_file_exists
-    ):
-        patch_file_exists.return_value = True
-        test_nginx_pid = "1234"
-        patched_exec.return_value = MockExec(stdout=test_nginx_pid)
-        self.harness.update_config(key_values={"domain": "whatever.com"})
-        self._create_all_relations()
-
-        self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
-
-        patched_exec.assert_has_calls(
-            [
-                call(["cat", "/var/run/nginx.pid"]),
-                call(["/bin/bash", "-c", "kill", "-HUP", test_nginx_pid]),
-            ]
-        )
 
     @patch("ops.model.Container.exists")
     @patch("ops.model.Container.exec", new_callable=Mock)
