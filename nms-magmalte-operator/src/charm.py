@@ -17,7 +17,7 @@ from typing import Optional, Union
 
 import ops.lib
 import psycopg2  # type: ignore[import]
-from charms.grafana_auth.v0.grafana_auth import (
+from charms.grafana_k8s.v0.grafana_auth import (
     GrafanaAuthProxyProvider,
     UrlsAvailableEvent,
 )
