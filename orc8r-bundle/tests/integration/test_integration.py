@@ -109,7 +109,7 @@ async def run_get_load_balancer_services_action(
         load_balancer_action_output["orc8r-clientcert-nginx"],
         load_balancer_action_output["orc8r-nginx-proxy"],
         load_balancer_action_output["nginx-proxy"],
-        load_balancer_action_output["fluentd"],
+        load_balancer_action_output["fluentd-elasticsearch"],
     )
 
 
