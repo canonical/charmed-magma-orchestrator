@@ -172,17 +172,8 @@ class MagmaNmsNginxProxyCharm(CharmBase):
             )
             self._container.add_layer(self._container_name, self._pebble_layer, combine=True)
             self._container.restart(self._service_name)
-        # TODO: _reload_nginx() is needed by the workaround for not working container.restart()
-        #       and should be removed as soon as the proper Juju mechanism works as expected.
-        self._reload_nginx()
-        logger.info(f"Restarted service {self._service_name}")
+            logger.info(f"Restarted service {self._service_name}")
         self.unit.status = ActiveStatus()
-
-    def _reload_nginx(self) -> None:
-        """Reloads the nginx process."""
-        nginx_master_pid, _ = self._container.exec(["cat", "/var/run/nginx.pid"]).wait_output()
-        self._container.exec(["/bin/bash", "-c", "kill", "-HUP", f"{nginx_master_pid.strip()}"])
-        logger.info(f"Reloaded process with pid {nginx_master_pid.strip()}")
 
     @property
     def _nginx_config_file_is_stored(self) -> bool:
@@ -251,7 +242,7 @@ class MagmaNmsNginxProxyCharm(CharmBase):
                     self._service_name: {
                         "override": "replace",
                         "startup": "enabled",
-                        "command": "nginx",
+                        "command": "nginx -g 'daemon off;'",
                     }
                 },
             }

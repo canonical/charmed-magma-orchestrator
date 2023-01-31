@@ -361,22 +361,13 @@ class MagmaOrc8rNginxCharm(CharmBase):
                 )
                 self._container.add_layer(self._container_name, layer, combine=True)
                 self._container.restart(self._service_name)
-            # TODO: _reload_nginx() is needed by the workaround for not working container.restart()
-            #       and should be removed as soon as the proper Juju mechanism works as expected.
-            self._reload_nginx()
-            logger.info(f"Restarted service {self._service_name}")
+                logger.info(f"Restarted service {self._service_name}")
             self._update_relations()
             self.unit.status = ActiveStatus()
         else:
             self.unit.status = WaitingStatus(f"Waiting for {self._container} to be ready")
             event.defer()
             return
-
-    def _reload_nginx(self) -> None:
-        """Reloads the nginx process."""
-        nginx_master_pid, _ = self._container.exec(["cat", "/var/run/nginx.pid"]).wait_output()
-        self._container.exec(["/bin/bash", "-c", "kill", "-HUP", f"{nginx_master_pid.strip()}"])
-        logger.info(f"Reloaded process with pid {nginx_master_pid.strip()}")
 
     def _update_relations(self) -> None:
         """Updates the status of the `orc8r-nginx` service.
@@ -622,7 +613,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
                     self._service_name: {
                         "override": "replace",
                         "startup": "enabled",
-                        "command": "nginx",
+                        "command": "nginx -g 'daemon off;'",
                         "environment": {
                             "SERVICE_REGISTRY_MODE": "k8s",
                             "SERVICE_REGISTRY_NAMESPACE": self._namespace,
