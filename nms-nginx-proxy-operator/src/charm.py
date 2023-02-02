@@ -249,21 +249,5 @@ class MagmaNmsNginxProxyCharm(CharmBase):
         )
 
 
-class ProcessExecutionError(Exception):
-    """Custom error improving logging in case of ExecError."""
-
-    def __init__(self, error: ExecError):
-        """Print error details.
-
-        Args:
-            error (ExecError): Original error
-        """
-        logger.error(f"ERROR: Process exited with code {error.exit_code}.")
-        if error.stderr:
-            logger.error("Stderr:")
-            for line in error.stderr.splitlines():
-                logger.error(f"    {str(line)}")
-
-
 if __name__ == "__main__":
     main(MagmaNmsNginxProxyCharm)
