@@ -7,7 +7,6 @@ from render_bundle import render_bundle
 
 
 def test_given_channel_is_not_provided_and_local_not_set_when_render_bundle_then_valueerror_is_raised():  # noqa: E501
-
     with pytest.raises(ValueError) as e:
         render_bundle(
             template="bundle.yaml.j2",
@@ -18,7 +17,6 @@ def test_given_channel_is_not_provided_and_local_not_set_when_render_bundle_then
 
 
 def test_given_channel_is_provided_and_local_set_to_true_when_render_bundle_then_valueerror_is_raised():  # noqa: E501
-
     with pytest.raises(ValueError) as e:
         render_bundle(
             channel="edge",
