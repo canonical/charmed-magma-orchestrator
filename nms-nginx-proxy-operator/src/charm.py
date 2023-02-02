@@ -26,7 +26,7 @@ from ops.charm import (
 )
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
-from ops.pebble import ExecError, Layer
+from ops.pebble import Layer
 
 logger = logging.getLogger(__name__)
 
