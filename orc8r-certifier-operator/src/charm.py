@@ -1363,11 +1363,11 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             certificate_signing_request = yaml.safe_load(csr_relation_data)[0][
                 "certificate_signing_request"
             ]
-            return certificate_signing_request
         except KeyError:
             logger.info(f"Fluentd CSR not found for relation {relation.id}. Skipping...")
         except StopIteration:
             logger.info(f"Units not found for relation {relation.id}. Skipping...")
+        return certificate_signing_request
 
     @property
     def _namespace(self) -> str:
