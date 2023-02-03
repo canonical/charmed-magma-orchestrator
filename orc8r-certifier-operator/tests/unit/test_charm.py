@@ -27,7 +27,6 @@ from charm import MagmaOrc8rCertifierCharm
 
 
 class TestCharm(unittest.TestCase):
-
     TEST_DB_NAME = MagmaOrc8rCertifierCharm.DB_NAME
     TEST_DB_PORT = "1234"
     TEST_DB_CONNECTION_STRING = ConnectionString(
