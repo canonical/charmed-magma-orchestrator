@@ -1256,9 +1256,7 @@ class TestCharm(unittest.TestCase):
             relation_id=fluentd_relation_id,
             app_or_unit="fluentd-app/0",
             key_values={
-                "certificate_signing_requests": json.dumps(
-                    [{"certificate_signing_request": ""}]
-                )
+                "certificate_signing_requests": json.dumps([{"certificate_signing_request": ""}])
             },
         )
 
