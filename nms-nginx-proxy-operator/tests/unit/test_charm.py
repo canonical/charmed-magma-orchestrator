@@ -6,7 +6,6 @@ from unittest.mock import Mock, PropertyMock, call, patch
 
 from ops import testing
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
-from ops.pebble import Layer
 
 from charm import MagmaNmsNginxProxyCharm
 
@@ -96,7 +95,7 @@ class TestCharm(unittest.TestCase):
                 "magma-nms-nginx-proxy": {
                     "override": "replace",
                     "startup": "enabled",
-                    "command": "nginx",
+                    "command": "nginx -g 'daemon off;'",
                 }
             }
         }
@@ -105,67 +104,6 @@ class TestCharm(unittest.TestCase):
 
         updated_plan = self.harness.get_container_pebble_plan("magma-nms-nginx-proxy").to_dict()
         self.assertEqual(expected_plan, updated_plan)
-
-    @patch("ops.model.Container.exists")
-    @patch("ops.model.Container.exec")
-    def test_workload_without_pebble_layer_applied_when_pebble_ready_then_nginx_is_reloaded(
-        self, patched_exec, patch_exists
-    ):
-        test_nginx_pid = "1234"
-        patch_exists.return_value = True
-        patched_exec.return_value = MockExec(stdout=test_nginx_pid)
-        self.harness.add_relation(
-            relation_name="magma-nms-magmalte", remote_app="magma-nms-magmalte"
-        )
-        self.harness.add_relation(
-            relation_name="cert-controller", remote_app="magma-orc8r-certifier"
-        )
-
-        self.harness.container_pebble_ready("magma-nms-nginx-proxy")
-
-        patched_exec.assert_has_calls(
-            [
-                call(["cat", "/var/run/nginx.pid"]),
-                call(["/bin/bash", "-c", "kill", "-HUP", test_nginx_pid]),
-            ]
-        )
-
-    @patch("ops.model.Container.exists")
-    @patch("ops.model.Container.exec")
-    def test_workload_with_pebble_layer_already_applied_when_pebble_ready_then_nginx_is_reloaded(
-        self, patched_exec, patch_exists
-    ):
-        test_nginx_pid = "1234"
-        patch_exists.return_value = True
-        patched_exec.return_value = MockExec(stdout=test_nginx_pid)
-        self.harness.set_can_connect(container=self._container_name, val=True)
-        self.harness.add_relation(
-            relation_name="magma-nms-magmalte", remote_app="magma-nms-magmalte"
-        )
-        self.harness.add_relation(
-            relation_name="cert-controller", remote_app="magma-orc8r-certifier"
-        )
-        test_pebble_layer = Layer(
-            {
-                "services": {
-                    "magma-nms-nginx-proxy": {
-                        "override": "replace",
-                        "startup": "enabled",
-                        "command": "nginx",
-                    }
-                }
-            }
-        )
-        self._container_name.add_layer("magma-nms-nginx-proxy", test_pebble_layer, combine=True)
-
-        self.harness.container_pebble_ready("magma-nms-nginx-proxy")
-
-        patched_exec.assert_has_calls(
-            [
-                call(["cat", "/var/run/nginx.pid"]),
-                call(["/bin/bash", "-c", "kill", "-HUP", test_nginx_pid]),
-            ]
-        )
 
     @patch("ops.model.Container.exists")
     @patch("ops.model.Container.exec")

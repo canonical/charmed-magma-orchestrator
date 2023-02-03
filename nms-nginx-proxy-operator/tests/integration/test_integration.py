@@ -91,6 +91,7 @@ class TestNmsNginxProxy:
             "grafana-k8s",
             application_name="grafana-k8s",
             channel="edge",
+            trust=True,
         )
 
     @staticmethod
