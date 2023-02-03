@@ -18,7 +18,7 @@ containers:
 resources:
   magma-nms-nginx-proxy-image:
     type: oci-image
-    description: OCI image for nginx-proxy (nginx:latest)
+    description: OCI image for nginx-proxy
     upstream-source: ghcr.io/canonical/nginx:1.23.3
 
 storage:
