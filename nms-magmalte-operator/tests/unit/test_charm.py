@@ -350,7 +350,6 @@ class TestCharm(unittest.TestCase):
     def test_given_workload_service_is_running_and_peer_relation_not_created_when_get_admin_credentials_action_then_get_admin_credentials_fail(  # noqa: E501
         self, action_event
     ):
-
         self.harness.remove_relation(self.peer_relation_id)
         self.harness.charm._on_get_master_admin_credentials(action_event)
 
