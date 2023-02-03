@@ -502,21 +502,19 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             return
         for relation in fluentd_relations:
             certificate_signing_request = self._get_csr_from_relation_data(relation)
-            if not certificate_signing_request:
-                logger.info(f"Fluentd CSR not found for relation {relation.id}. Skipping...")
-                return
-            fluentd_certificate = generate_certificate(
-                csr=certificate_signing_request.encode(),
-                ca=self._application_certificate.encode(),
-                ca_key=self._application_private_key.encode(),
-            )
-            self.fluentd_certificates_provider.set_relation_certificate(
-                certificate=fluentd_certificate.decode(),
-                certificate_signing_request=certificate_signing_request,
-                ca=self._application_certificate,
-                chain=[fluentd_certificate.decode(), self._application_certificate],
-                relation_id=relation.id,
-            )
+            if certificate_signing_request:
+                fluentd_certificate = generate_certificate(
+                    csr=certificate_signing_request.encode(),
+                    ca=self._application_certificate.encode(),
+                    ca_key=self._application_private_key.encode(),
+                )
+                self.fluentd_certificates_provider.set_relation_certificate(
+                    certificate=fluentd_certificate.decode(),
+                    certificate_signing_request=certificate_signing_request,
+                    ca=self._application_certificate,
+                    chain=[fluentd_certificate.decode(), self._application_certificate],
+                    relation_id=relation.id,
+                )
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Runs whenever the certificates available event is triggered.
@@ -1348,7 +1346,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             return None
 
     @staticmethod
-    def _get_csr_from_relation_data(relation: Relation) -> str:
+    def _get_csr_from_relation_data(relation: Relation) -> Optional[str]:
         """Returns CSR from the relation data bag.
 
         Args:
@@ -1358,13 +1356,18 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             str: Certificate Signing Request
         """
         relation_units = relation.units
-        csr_relation_data = relation.data[next(iter(relation_units))][
-            "certificate_signing_requests"
-        ]
-        certificate_signing_request = yaml.safe_load(csr_relation_data)[0][
-            "certificate_signing_request"
-        ]
-        return certificate_signing_request
+        try:
+            csr_relation_data = relation.data[next(iter(relation_units))][
+                "certificate_signing_requests"
+            ]
+            certificate_signing_request = yaml.safe_load(csr_relation_data)[0][
+                "certificate_signing_request"
+            ]
+            return certificate_signing_request
+        except KeyError:
+            logger.info(f"Fluentd CSR not found for relation {relation.id}. Skipping...")
+        except StopIteration:
+            logger.info(f"Units not found for relation {relation.id}. Skipping...")
 
     @property
     def _namespace(self) -> str:

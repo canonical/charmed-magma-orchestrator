@@ -1243,7 +1243,7 @@ class TestCharm(unittest.TestCase):
             )
 
     @patch("charm.generate_certificate")
-    def test_given_fluentd_csr_not_present_in_relation_data_when_fluentd_certificate_creation_request_then_fluentd_cert_is_not_generated_and_relevant_message_is_logged(  # noqa: E501
+    def test_given_fluentd_csr_not_present_in_relation_data_when_fluentd_certificate_creation_request_then_fluentd_cert_is_not_generated(  # noqa: E501
         self, patched_generate_certificate
     ):
         self.create_peer_relation_with_certificates(
@@ -1252,22 +1252,17 @@ class TestCharm(unittest.TestCase):
         fluentd_relation_id = self.harness.add_relation("fluentd-certs", "fluentd-app")
         self.harness.add_relation_unit(fluentd_relation_id, "fluentd-app/0")
 
-        with self.assertLogs() as captured:
-            self.harness.update_relation_data(
-                relation_id=fluentd_relation_id,
-                app_or_unit="fluentd-app/0",
-                key_values={
-                    "certificate_signing_requests": json.dumps(
-                        [{"certificate_signing_request": ""}]
-                    )
-                },
-            )
+        self.harness.update_relation_data(
+            relation_id=fluentd_relation_id,
+            app_or_unit="fluentd-app/0",
+            key_values={
+                "certificate_signing_requests": json.dumps(
+                    [{"certificate_signing_request": ""}]
+                )
+            },
+        )
 
         patched_generate_certificate.assert_not_called()
-        self.assertEqual(
-            f"Fluentd CSR not found for relation {fluentd_relation_id}. Skipping...",
-            captured.records[0].getMessage(),
-        )
 
     def test_given_valid_fluentd_csr_but_application_cert_not_available_when_fluentd_certificate_creation_request_then_status_is_waiting(  # noqa: E501
         self,
