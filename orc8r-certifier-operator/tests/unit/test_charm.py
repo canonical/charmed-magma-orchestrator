@@ -1366,10 +1366,6 @@ class TestCharm(unittest.TestCase):
 
     @patch("charm.generate_certificate")
     @patch("charm.generate_pfx_package")
-    @patch(
-        "charms.tls_certificates_interface.v1.tls_certificates.TLSCertificatesRequiresV1.request_certificate_renewal",  # noqa: E501,W505
-        new=Mock(),
-    )
     @patch("charm.TLSCertificatesProvidesV1.set_relation_certificate", Mock())
     @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("ops.model.Container.push", Mock())
