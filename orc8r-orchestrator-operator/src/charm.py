@@ -427,7 +427,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
     def _create_orchestrator_admin_user(self):
         process = self._container.exec(
             [
-                "/var/opt/magma/bin/accessc",
+                "accessc",
                 "add-existing",
                 "-admin",
                 "-cert",

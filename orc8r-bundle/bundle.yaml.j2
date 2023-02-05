@@ -282,7 +282,7 @@ applications:
     {%- if local == true %}
     charm: ./magma-orc8r-smsd_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-smsd-image: ghcr.io/gruyaume/magma-orc8r-controller:1.6.1
+      magma-orc8r-smsd-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
     {%- else %}
     charm: magma-orc8r-smsd
     channel: {{ channel|default("edge") }}

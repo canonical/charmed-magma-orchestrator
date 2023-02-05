@@ -16,7 +16,7 @@ resources:
   magma-orc8r-smsd-image:
     type: oci-image
     description: OCI image for magma-orc8r-smsd
-    upstream-source: ghcr.io/gruyaume/magma-orc8r-controller:1.6.1
+    upstream-source: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
 
 provides:
   magma-orc8r-smsd:
