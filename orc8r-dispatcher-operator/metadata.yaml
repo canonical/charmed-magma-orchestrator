@@ -15,8 +15,8 @@ containers:
 resources:
   magma-orc8r-dispatcher-image:
     type: oci-image
-    description: OCI image for magma-orc8r-dispatcher (linuxfoundation.jfrog.io/magma-docker/controller:1.6.0)
-    upstream-source: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+    description: OCI image for magma-orc8r-dispatcher
+    upstream-source: ghcr.io/gruyaume/magma-orc8r-controller:1.6.10
 
 provides:
   magma-orc8r-dispatcher:
