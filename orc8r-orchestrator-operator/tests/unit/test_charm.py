@@ -153,7 +153,7 @@ class TestCharm(unittest.TestCase):
         args, _ = patch_exec.call_args
         patch_exec.assert_called_once()
         call_command = [
-            "/var/opt/magma/bin/accessc",
+            "accessc",
             "add-existing",
             "-admin",
             "-cert",
