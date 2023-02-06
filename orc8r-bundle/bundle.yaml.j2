@@ -34,7 +34,7 @@ applications:
     trust: true
   nms-nginx-proxy:
     {%- if local == true %}
-    charm: ./magma-nms-nginx-proxy_ubuntu-20.04-amd64.charm
+    charm: ./magma-nms-nginx-proxy_ubuntu-22.04-amd64.charm
     resources:
       magma-nms-nginx-proxy-image: nginx:latest
     {%- else %}
