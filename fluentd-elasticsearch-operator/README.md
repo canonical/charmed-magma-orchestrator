@@ -1,4 +1,4 @@
-# fluentd
+# fluentd-elasticsearch
 
 ## Description
 
@@ -9,7 +9,8 @@ is specifically built to forward Magma logs to elasticsearch.
 ## Usage
 
 ```bash
-juju deploy fluentd --trust --channel edge \
+juju deploy fluentd-elasticsearch --trust --channel edge \
+--config domain="example.com" \
 --config elasticsearch-url="yourelasticsearch:9200" 
 ```
 
@@ -17,6 +18,7 @@ juju deploy fluentd --trust --channel edge \
 
 ### Config options
 
+- **domain**:  Domain for self-signed certificate generation.
 - **elasticsearch-url**: ElasticSearch URL (example: orc8r-elasticsearch:9200).
 - **fluentd-chunk-limit-size**: The size limit of the received chunk. If the chunk size is larger 
 than this value, the received chunk is dropped. Defaults to 2M.
@@ -29,6 +31,12 @@ juju config fluentd <CONFIG OPTION>=<VALUE>
 
 > The elasticsearch configuration will be modeled using juju relations once there is a kubernetes
 > charm for elasticsearch.
+
+## Relations
+
+### Requires
+
+- **fluentd-certs**: Relation that provides certificates for Fluentd.
 
 ## OCI Images
 

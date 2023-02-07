@@ -9,8 +9,6 @@ from ops import testing
 
 from charm import MagmaOrc8rAnalyticsCharm
 
-testing.SIMULATE_CAN_CONNECT = True
-
 
 class Test(unittest.TestCase):
     """Placeholder tests.

@@ -11,8 +11,6 @@ from pgconnstr import ConnectionString  # type: ignore[import]
 
 from charm import MagmaNmsMagmalteCharm, ServiceNotRunningError
 
-testing.SIMULATE_CAN_CONNECT = True
-
 
 class MockExec:
     def __init__(self, *args, **kwargs):
@@ -153,14 +151,7 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
         )
-        key_values = {
-            "master": "dbname=test_db_name "
-            "fallback_application_name=whatever "
-            "host=123.456.789.012 "
-            "password=aaaBBBcccDDDeee "
-            "port=1234 "
-            "user=test_db_user"
-        }
+        key_values = {"master": str(self.TEST_DB_CONNECTION_STRING)}
         self.harness.update_relation_data(
             relation_id=db_relation_id, key_values=key_values, app_or_unit="postgresql-k8s"
         )
@@ -217,14 +208,7 @@ class TestCharm(unittest.TestCase):
             relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
         )
         db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
-        key_values = {
-            "master": "dbname=test_db_name "
-            "fallback_application_name=whatever "
-            "host=123.456.789.012 "
-            "password=aaaBBBcccDDDeee "
-            "port=1234 "
-            "user=test_db_user"
-        }
+        key_values = {"master": str(self.TEST_DB_CONNECTION_STRING)}
         self.harness.update_relation_data(
             relation_id=db_relation_id, key_values=key_values, app_or_unit="postgresql-k8s"
         )
@@ -249,14 +233,7 @@ class TestCharm(unittest.TestCase):
             relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
         )
         db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
-        key_values = {
-            "master": "dbname=test_db_name "
-            "fallback_application_name=whatever "
-            "host=123.456.789.012 "
-            "password=aaaBBBcccDDDeee "
-            "port=1234 "
-            "user=test_db_user"
-        }
+        key_values = {"master": str(self.TEST_DB_CONNECTION_STRING)}
         self.harness.update_relation_data(
             relation_id=db_relation_id, key_values=key_values, app_or_unit="postgresql-k8s"
         )
@@ -373,7 +350,6 @@ class TestCharm(unittest.TestCase):
     def test_given_workload_service_is_running_and_peer_relation_not_created_when_get_admin_credentials_action_then_get_admin_credentials_fail(  # noqa: E501
         self, action_event
     ):
-
         self.harness.remove_relation(self.peer_relation_id)
         self.harness.charm._on_get_master_admin_credentials(action_event)
 
@@ -451,3 +427,69 @@ class TestCharm(unittest.TestCase):
             self.peer_relation_id, self.harness.charm.app.name
         ).get("grafana_url")
         self.assertEqual("auth-requirer:3000", url)
+
+    def test_given_nms_magmalte_service_not_running_when_magma_nms_magmalte_relation_joined_then_service_active_status_in_the_relation_data_bag_is_false(  # noqa: E501
+        self,
+    ):
+        app_name = self.harness.model.app.name
+
+        relation_id = self.harness.add_relation("magma-nms-magmalte", app_name)
+        self.harness.add_relation_unit(relation_id, f"{app_name}/0")
+
+        self.assertEqual(
+            self.harness.get_relation_data(relation_id, f"{app_name}/0")["active"],
+            "False",
+        )
+
+    @patch("ops.model.Container.exec", new=Mock())
+    @patch("ops.model.Container.exists")
+    @patch("psycopg2.connect", new=Mock())
+    @patch("charm.ConnectionString")
+    @patch("charm.MagmaNmsMagmalteCharm._grafana_url", new_callable=PropertyMock)
+    def test_given_nms_magmalte_service_running_when_magma_nms_magmalte_relation_joined_then_service_active_status_in_the_relation_data_bag_is_true(  # noqa: E501
+        self, grafana_url_mock, patch_connection_string, patch_exists
+    ):
+        app_name = self.harness.model.app.name
+        grafana_url_mock.return_value = self.GRAFANA_URLS[0]
+        patch_exists.return_value = True
+        patch_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
+        self.harness.add_relation(
+            relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
+        )
+        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        key_values = {"master": str(self.TEST_DB_CONNECTION_STRING)}
+        self.harness.update_relation_data(
+            relation_id=db_relation_id, key_values=key_values, app_or_unit="postgresql-k8s"
+        )
+        self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
+
+        relation_id = self.harness.add_relation("magma-nms-magmalte", app_name)
+        self.harness.add_relation_unit(relation_id, f"{app_name}/0")
+
+        self.assertEqual(
+            self.harness.get_relation_data(relation_id, f"{app_name}/0")["active"],
+            "True",
+        )
+
+    @patch("charm.MagmaNmsMagmalteCharm.NMS_MAGMALTE_K8S_SERVICE_NAME", new_callable=PropertyMock)
+    @patch("charm.MagmaNmsMagmalteCharm.NMS_MAGMALTE_K8S_SERVICE_PORT", new_callable=PropertyMock)
+    def test_given_no_nms_magmalte_relation_when_magma_nms_magmalte_relation_joined_then_magmalte_k8s_service_details_are_published_in_the_relation_data_bag(  # noqa: E501
+        self, patched_service_port, patched_service_name
+    ):
+        test_magmalte_k8s_service_name = "mud"
+        test_magmalte_k8s_service_port = 44
+        patched_service_name.return_value = test_magmalte_k8s_service_name
+        patched_service_port.return_value = test_magmalte_k8s_service_port
+        app_name = self.harness.model.app.name
+
+        relation_id = self.harness.add_relation("magma-nms-magmalte", app_name)
+        self.harness.add_relation_unit(relation_id, f"{app_name}/0")
+
+        self.assertEqual(
+            self.harness.get_relation_data(relation_id, f"{app_name}/0")["k8s_service_name"],
+            test_magmalte_k8s_service_name,
+        )
+        self.assertEqual(
+            self.harness.get_relation_data(relation_id, f"{app_name}/0")["k8s_service_port"],
+            str(test_magmalte_k8s_service_port),
+        )

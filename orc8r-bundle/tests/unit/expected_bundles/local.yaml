@@ -5,6 +5,17 @@ description: |
   configure and monitor the wireless network securely. The metrics acquired through the platform
   allows you to see the analytics and traffic flows of the wireless users through the Magma web UI.
 applications:
+  fluentd:
+    charm: ./fluentd-elasticsearch_ubuntu-20.04-amd64.charm
+    resources:
+      fluentd-elasticsearch-image: gcr.io/google-containers/fluentd-elasticsearch:v2.4.0
+    scale: 1
+    trust: true
+    options:
+      domain: "example.com"
+      elasticsearch-url: "orc8r-elasticsearch:1234"
+      fluentd-chunk-limit-size: "2M"
+      fluentd-queue-limit-length: 8
   nms-magmalte:
     charm: ./magma-nms-magmalte_ubuntu-20.04-amd64.charm
     resources:
@@ -217,6 +228,8 @@ applications:
     channel: edge
     scale: 1
 relations:
+- - fluentd
+  - orc8r-certifier:fluentd-certs
 - - nms-magmalte
   - orc8r-certifier
 - - nms-magmalte:db

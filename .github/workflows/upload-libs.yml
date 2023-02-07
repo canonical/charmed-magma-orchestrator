@@ -23,7 +23,7 @@ jobs:
           ref: main
           check-name: "Integration tests"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 20
+          wait-interval: 60
 
       - name: Check libraries
         uses: canonical/charming-actions/check-libraries@2.0.0-rc

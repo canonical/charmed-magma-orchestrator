@@ -1,4 +1,8 @@
 options:
+  domain:
+    type: string
+    default:
+    description: Fluentd domain
   elasticsearch-url:
     type: string
     default:

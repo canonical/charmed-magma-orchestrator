@@ -14,7 +14,7 @@ The requirer will consume the authentication configuration to authenticate to Gr
 ## Getting Started
 From a charm directory, fetch the library using `charmcraft`:
 ```shell
-charmcraft fetch-lib charms.grafana_auth.v0.grafana_auth
+charmcraft fetch-lib charms.grafana_k8s.v0.grafana_auth
 ```
 You will also need to add the following library to the charm's `requirements.txt` file:
 - jsonschema
@@ -34,7 +34,7 @@ The default arguments are:
     `headers_encoded: bool : None`
     `enable_login_token: bool : None`
 ```python
-from charms.grafana_auth.v0.grafana_auth import GrafanaAuthProxyProvider
+from charms.grafana_k8s.v0.grafana_auth import GrafanaAuthProxyProvider
 from ops.charm import CharmBase
 class ExampleProviderCharm(CharmBase):
     def __init__(self, *args):
@@ -51,7 +51,7 @@ The [official documentation](https://grafana.com/docs/grafana/latest/setup-grafa
 of Grafana provides further explanation on the values that can be assigned to the different variables.
 Example:
 ```python
-from charms.grafana_auth.v0.grafana_auth import GrafanaAuthProxyProvider
+from charms.grafana_k8s.v0.grafana_auth import GrafanaAuthProxyProvider
 from ops.charm import CharmBase
 class ExampleProviderCharm(CharmBase):
     def __init__(self, *args):
@@ -72,7 +72,7 @@ class ExampleProviderCharm(CharmBase):
 Example:
 An example on how to use the auth requirer.
 ```python
-from charms.grafana_auth.v0.grafana_auth import AuthRequirer
+from charms.grafana_k8s.v0.grafana_auth import AuthRequirer
 from ops.charm import CharmBase
 class ExampleRequirerCharm(CharmBase):
     def __init__(self, *args):
@@ -89,13 +89,7 @@ class ExampleRequirerCharm(CharmBase):
 
 import json
 import logging
-from typing import (
-    Any,
-    Dict,
-    List,
-    Union,
-    Optional,
-)
+from typing import Any, Dict, List, Optional, Union
 
 from jsonschema import validate  # type: ignore[import]
 from ops.charm import (
@@ -107,12 +101,12 @@ from ops.charm import (
     RelationJoinedEvent,
 )
 from ops.framework import (
+    BoundEvent,
     EventBase,
     EventSource,
     Object,
     StoredDict,
     StoredList,
-    BoundEvent,
 )
 
 # The unique Charmhub library identifier, never change it
@@ -123,7 +117,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 2
 
 AUTH_PROXY_PROVIDER_JSON_SCHEMA = {
     "$schema": "http://json-schema.org/draft-07/schema",
@@ -287,7 +281,8 @@ class AuthProvider(Object):
     """Base class for authentication configuration provider classes.
 
     This class shouldn't be initialized,
-    Its children classes define the authentication mode and configuration to be used."""
+    Its children classes define the authentication mode and configuration to be used.
+    """
 
     on = AuthProviderCharmEvents()
 
@@ -312,7 +307,9 @@ class AuthProvider(Object):
                     len(self._charm.meta.containers),
                 )
                 refresh_event = self._charm.on.update_status
-        self.framework.observe(refresh_event, self._get_urls_from_relation_data)  # type: ignore[arg-type]
+
+        assert type(refresh_event) is BoundEvent  # for static checker
+        self.framework.observe(refresh_event, self._get_urls_from_relation_data)
         self.framework.observe(
             self._charm.on[relation_name].relation_joined,
             self._set_auth_config_in_relation_data,
@@ -453,7 +450,8 @@ class AuthRequirer(Object):
                 )
                 refresh_event = self._charm.on.update_status
 
-        self.framework.observe(refresh_event, self._get_auth_config_from_relation_data)  # type: ignore[arg-type]
+        assert type(refresh_event) is BoundEvent  # for static checker
+        self.framework.observe(refresh_event, self._get_auth_config_from_relation_data)
 
         self.framework.observe(
             self._charm.on[relation_name].relation_changed,
@@ -513,8 +511,7 @@ class AuthRequirer(Object):
 
         if not auth_conf_json:
             logger.warning(
-                "No authentication config found in %s relation data",
-                self._relation_name
+                "No authentication config found in %s relation data", self._relation_name
             )
             return
 
@@ -543,11 +540,11 @@ class GrafanaAuthProxyProvider(AuthProvider):
         header_name: str = "X-WEBAUTH-USER",
         header_property: str = "username",
         auto_sign_up: bool = True,
-        sync_ttl: int = None,
-        whitelist: List[str] = None,
-        headers: List[str] = None,
-        headers_encoded: bool = None,
-        enable_login_token: bool = None,
+        sync_ttl: Optional[int] = None,
+        whitelist: Optional[List[str]] = None,
+        headers: Optional[List[str]] = None,
+        headers_encoded: Optional[bool] = None,
+        enable_login_token: Optional[bool] = None,
     ) -> None:
         """Constructs GrafanaAuthProxyProvider.
 

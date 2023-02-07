@@ -17,7 +17,7 @@ from typing import Optional, Union
 
 import ops.lib
 import psycopg2  # type: ignore[import]
-from charms.grafana_auth.v0.grafana_auth import (
+from charms.grafana_k8s.v0.grafana_auth import (
     GrafanaAuthProxyProvider,
     UrlsAvailableEvent,
 )
@@ -66,6 +66,8 @@ class MagmaNmsMagmalteCharm(CharmBase):
     BASE_CERTS_PATH = "/run/secrets"
     NMS_ADMIN_USERNAME = "admin@juju.com"
     CERT_ADMIN_OPERATOR_RELATION = "cert-admin-operator"
+    NMS_MAGMALTE_K8S_SERVICE_NAME = "magmalte"
+    NMS_MAGMALTE_K8S_SERVICE_PORT = 8081
 
     def __init__(self, *args):
         """Initializes all event that need to be observed."""
@@ -76,11 +78,16 @@ class MagmaNmsMagmalteCharm(CharmBase):
         self.admin_operator = CertAdminOperatorRequires(self, self.CERT_ADMIN_OPERATOR_RELATION)
         self._service_patcher = KubernetesServicePatch(
             charm=self,
-            ports=[ServicePort(name="magmalte", port=8081)],
-            service_name="magmalte",
+            ports=[
+                ServicePort(
+                    name=self.NMS_MAGMALTE_K8S_SERVICE_NAME,
+                    port=self.NMS_MAGMALTE_K8S_SERVICE_PORT,
+                )
+            ],
+            service_name=self.NMS_MAGMALTE_K8S_SERVICE_NAME,
             additional_labels={
                 "app.kubernetes.io/part-of": "magma",
-                "app.kubernetes.io/component": "magmalte",
+                "app.kubernetes.io/component": self.NMS_MAGMALTE_K8S_SERVICE_NAME,
             },
         )
         self._grafana_auth_provider = GrafanaAuthProxyProvider(
@@ -438,6 +445,19 @@ class MagmaNmsMagmalteCharm(CharmBase):
             }
         )
 
+    def _publish_nms_magmalte_k8s_service_details(self, relation: Relation) -> None:
+        """Publishes the details of the nms-magmalte Kubertnetes service.
+
+        Args:
+            relation (Relation): Juju relation
+        """
+        relation.data[self.unit].update(
+            {
+                "k8s_service_name": self.NMS_MAGMALTE_K8S_SERVICE_NAME,
+                "k8s_service_port": str(self.NMS_MAGMALTE_K8S_SERVICE_PORT),
+            }
+        )
+
     def _configure_pebble(
         self,
         event: Union[
@@ -478,6 +498,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             return
         relations = self.model.relations[self.meta.name]
         for relation in relations:
+            self._publish_nms_magmalte_k8s_service_details(relation)
             self._update_relation_active_status(
                 relation=relation, is_active=self._service_is_running
             )
