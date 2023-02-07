@@ -83,7 +83,6 @@ ORCHESTRATOR_APPS = [
     "orc8r-subscriberdb-cache",
     "orc8r-tenants",
     "orc8r-user-grafana",
-    "postgresql-k8s",
     "tls-certificates-operator",
 ]
 
