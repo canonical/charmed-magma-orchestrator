@@ -47,7 +47,7 @@ jobs:
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
           github-token: "${{ secrets.GITHUB_TOKEN }}"
-          upload-image: "false"
+          upload-image: ${{ inputs.upload-image }}
           channel: "${{ steps.channel.outputs.name }}"
           charm-path: ./${{ inputs.charm }}
           tag-prefix: magma-${{ inputs.charm }}
