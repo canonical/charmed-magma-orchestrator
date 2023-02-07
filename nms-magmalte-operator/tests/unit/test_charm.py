@@ -350,7 +350,6 @@ class TestCharm(unittest.TestCase):
     def test_given_workload_service_is_running_and_peer_relation_not_created_when_get_admin_credentials_action_then_get_admin_credentials_fail(  # noqa: E501
         self, action_event
     ):
-
         self.harness.remove_relation(self.peer_relation_id)
         self.harness.charm._on_get_master_admin_credentials(action_event)
 
@@ -397,15 +396,18 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.push")
+    @patch("ops.model.Secret")
     def test_given_pebble_ready_when_certificate_available_then_certs_are_pushed_to_container(
-        self, patch_push
+        self, patched_secret, patch_push
     ):
         certificate = "whatever certificate"
         private_key = "whatever private key"
         event = Mock()
-        event.certificate = certificate
-        event.private_key = private_key
-
+        patched_secret.get_content.return_value = {
+            "certificate": certificate,
+            "private_key": private_key,
+        }
+        event.secret = patched_secret
         container = self.harness.model.unit.get_container("magma-nms-magmalte")
         self.harness.set_can_connect(container=container, val=True)
 

@@ -36,8 +36,10 @@ class CertAdminOperatorRequires(Object):
 
 """
 
-from ops.charm import CharmBase, CharmEvents, RelationChangedEvent, RelationJoinedEvent
+from ops.charm import CharmBase, CharmEvents, RelationChangedEvent, RelationJoinedEvent, SecretEvent
 from ops.framework import EventBase, EventSource, Object
+from ops.model import Secret
+from typing import Optional
 
 # The unique Charmhub library identifier, never change it
 LIBID = "6ca3a0b88afc4bebafbaa49514afb18f"
@@ -47,7 +49,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 6
+LIBPATCH = 7
 
 
 class CertificateRequestEvent(EventBase):
@@ -69,23 +71,30 @@ class CertificateRequestEvent(EventBase):
         self.relation_id = snapshot["relation_id"]
 
 
-class CertificateAvailableEvent(EventBase):
+class CertificateAvailableEvent(SecretEvent):
     """Dataclass for certificate available events."""
 
-    def __init__(self, handle, certificate: str, private_key: str):
+    def __init__(self, handle, id: str, label: Optional[str]):
+        super().__init__(handle)
+        self._id = id
+        self._label = label
         """Sets certificate and private key."""
         super().__init__(handle)
-        self.certificate = certificate
-        self.private_key = private_key
+
+    @property
+    def secret(self) -> Secret:
+        """The secret instance this event refers to."""
+        backend = self.framework.model._backend
+        return Secret(backend=backend, id=self._id, label=self._label)
 
     def snapshot(self) -> dict:
         """Returns event data."""
-        return {"certificate": self.certificate, "private_key": self.private_key}
+        return {"certificate": self.certificate, "private-key": self.private_key}
 
     def restore(self, snapshot) -> None:
         """Restores event data."""
         self.certificate = snapshot["certificate"]
-        self.private_key = snapshot["private_key"]
+        self.private_key = snapshot["private-key"]
 
 
 class CertAdminOperatorProviderCharmEvents(CharmEvents):
@@ -120,7 +129,7 @@ class CertAdminOperatorProvides(Object):
         )
 
     def set_certificate(self, relation_id: int, certificate: str, private_key: str) -> None:
-        """Sets certificates in relation data.
+        """Sets certificates in relation data as a juju secret.
 
         Args:
             relation_id (str): Relation ID
@@ -130,11 +139,17 @@ class CertAdminOperatorProvides(Object):
         Returns:
             None
         """
+        content = {
+            'certificate': certificate,
+            'private-key': private_key,
+        }
+        secret = self.model.unit.add_secret(content)
         relation = self.model.get_relation(
             relation_name=self.relationship_name, relation_id=relation_id
         )
-        relation.data[self.model.unit]["certificate"] = certificate  # type: ignore[union-attr]
-        relation.data[self.model.unit]["private_key"] = private_key  # type: ignore[union-attr]
+        secret.grant(relation)
+        relation.data[self.model.unit]['secret-id'] = secret.id
+
 
     def _on_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Triggered whenever a requirer charm joins the relation.
@@ -180,7 +195,10 @@ class CertAdminOperatorRequires(Object):
             None
         """
         relation_data = event.relation.data
-        certificate = relation_data[event.unit].get("certificate")  # type: ignore[index]
-        private_key = relation_data[event.unit].get("private_key")  # type: ignore[index]
+        secret_id = relation_data[event.unit]['secret-id']
+        secret = self.model.get_secret(id=secret_id)
+        content = secret.get_content()
+        certificate = content["certificate"]  # type: ignore[index]
+        private_key = content["private-key"]  # type: ignore[index]
         if certificate and private_key:
-            self.on.certificate_available.emit(certificate=certificate, private_key=private_key)
+            self.on.certificate_available.emit(id=secret_id, label="cert_admin_operator")
