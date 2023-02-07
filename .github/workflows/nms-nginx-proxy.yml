@@ -99,3 +99,4 @@ jobs:
     secrets: inherit
     with:
       charm: nms-nginx-proxy-operator
+      upload-image: "true"
