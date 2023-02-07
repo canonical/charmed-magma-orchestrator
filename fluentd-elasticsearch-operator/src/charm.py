@@ -38,7 +38,6 @@ logger = logging.getLogger(__name__)
 
 
 class FluentdElasticsearchCharm(CharmBase):
-
     CERTIFICATES_DIRECTORY = "/certs"
     CONFIG_SOURCE_DIRECTORY = os.path.join(
         os.path.abspath(os.path.dirname(__file__)),
