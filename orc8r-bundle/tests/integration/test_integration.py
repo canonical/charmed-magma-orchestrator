@@ -21,7 +21,6 @@ DOMAIN = "pizza.com"
 INTEGRATION_TESTS_DIR = "tests/integration"
 
 ORCHESTRATOR_CHARMS = [
-    "fluentd-elasticsearch",
     "nms-magmalte",
     "nms-nginx-proxy",
     "orc8r-accessd",
@@ -55,6 +54,8 @@ ORCHESTRATOR_APPS = [
     "nms-magmalte",
     "nms-nginx-proxy",
     "orc8r-accessd",
+    "orc8r-alertmanager",
+    "orc8r-alertmanager-configurer",
     "orc8r-analytics",
     "orc8r-bootstrapper",
     "orc8r-certifier",
@@ -71,6 +72,9 @@ ORCHESTRATOR_APPS = [
     "orc8r-obsidian",
     "orc8r-orchestrator",
     "orc8r-policydb",
+    "orc8r-prometheus",
+    "orc8r-prometheus-cache",
+    "orc8r-prometheus-configurer",
     "orc8r-service-registry",
     "orc8r-smsd",
     "orc8r-state",
@@ -78,6 +82,9 @@ ORCHESTRATOR_APPS = [
     "orc8r-subscriberdb",
     "orc8r-subscriberdb-cache",
     "orc8r-tenants",
+    "orc8r-user-grafana",
+    "postgresql-k8s",
+    "tls-certificates-operator",
 ]
 
 
