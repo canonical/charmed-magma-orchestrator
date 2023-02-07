@@ -21,8 +21,6 @@ juju relate nms-nginx-proxy orc8r-certifier
 juju relate nms-nginx-proxy nms-magmalte
 ```
 
-> **Warning**: Deploying this charm must be done with an alias as shown above.
-
 ## Relations
 
 ### Requires
@@ -32,4 +30,4 @@ juju relate nms-nginx-proxy nms-magmalte
 
 ## OCI Images
 
-Default: nginx:latest
+- magma-nms-nginx-proxy-image: `ghcr.io/canonical/nginx:1.23.3`

@@ -95,7 +95,7 @@ jobs:
 
   nms-nginx-proxy-charmhub-upload:
     if: github.ref_name == 'main'
-    uses: ./.github/workflows/upload-charm.yml
+    uses: ./.github/workflows/upload-charm22.04.yml
     secrets: inherit
     with:
       charm: nms-nginx-proxy-operator
