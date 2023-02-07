@@ -26,7 +26,7 @@ juju relate nms-nginx-proxy nms-magmalte
 ### Requires
 
 - **cert-controller**: Relation that provides the admin-operator certificates.
-- **magma-nms-magmalte**: Used to retrieve the workload service status.
+- **magma-nms-magmalte**: Relation used to retrieve the workload service status.
 
 ## OCI Images
 
