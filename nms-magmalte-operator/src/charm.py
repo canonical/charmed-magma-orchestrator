@@ -301,7 +301,6 @@ class MagmaNmsMagmalteCharm(CharmBase):
             event.defer()
             return
         content = event.secret.get_content()  # type: ignore[attr-defined]
-        print(content["certificate"])
         self._container.push(
             path=f"{self.BASE_CERTS_PATH}/admin_operator.pem", source=content["certificate"]
         )
