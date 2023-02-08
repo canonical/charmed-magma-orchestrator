@@ -16,7 +16,7 @@ resources:
   magma-orc8r-device-image:
     type: oci-image
     description: OCI image for magma-orc8r-device
-    upstream-source: ghcr.io/gruyaume/magma-orc8r-controller:1.6.1
+    upstream-source: ghcr.io/canonical/magma-orc8r-controller:1.6.1
 
 provides:
   magma-orc8r-device:
