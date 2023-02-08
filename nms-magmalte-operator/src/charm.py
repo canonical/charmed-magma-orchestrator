@@ -481,9 +481,9 @@ class MagmaNmsMagmalteCharm(CharmBase):
                     f"Configuring pebble layer for {self._service_name}"
                 )
                 self._container.add_layer(self._container_name, layer, combine=True)
-                self._container.restart(self._service_name)
-                logger.info(f"Restarted service {self._service_name}")
-                self._update_relations()
+            self._container.restart(self._service_name)
+            logger.info(f"Restarted service {self._service_name}")
+            self._update_relations()
         else:
             self.unit.status = WaitingStatus("Waiting for container to be ready")
             event.defer()

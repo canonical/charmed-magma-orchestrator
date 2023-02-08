@@ -491,7 +491,9 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.push")
-    def test_given_pebble_ready_when_certificate_available_then(self, patch_push):
+    def test_given_pebble_ready_when_certificate_available_then_certificates_are_pushed(
+        self, patch_push
+    ):
         certificate = "whatever certificate"
         private_key = "whatever private key"
         event = Mock()
@@ -510,10 +512,58 @@ class TestCharm(unittest.TestCase):
             ]
         )
 
+    @patch("ops.model.Container.exists")
+    @patch("ops.model.Container.push")
+    @patch("ops.model.Container.restart")
+    def test_given_pebble_plan_changed_when_configure_pebble_then_container_is_restarted(
+        self, patch_container_restart, patch_push, patch_exists
+    ):
+        certificate = "whatever certificate"
+        # private_key = "whatever private key"
+        event = Mock()
+        event.certificate = certificate
+        service_name = "magma-orc8r-orchestrator"
+        container = self.harness.model.unit.get_container(service_name)
+        self.harness.set_can_connect(container=container, val=True)
+        self._create_all_relations()
+        self.harness.add_relation(
+            relation_name="cert-admin-operator", remote_app="orc8r-certifier"
+        )
+        plan = self.harness.get_container_pebble_plan(service_name).to_dict()
+        self.harness.charm._on_certificate_available(event=event)
+        updated_plan = self.harness.get_container_pebble_plan(service_name).to_dict()
+
+        self.assertNotEqual(plan, updated_plan)
+        patch_container_restart.assert_called_once()
+
+    @patch("ops.model.Container.exists")
+    @patch("ops.model.Container.push")
+    @patch("ops.model.Container.restart")
+    def test_given_no_change_in_pebble_plan_when_configure_pebble_then_container_is_restarted(
+        self, patch_container_restart, patch_push, patch_exists
+    ):
+        certificate = "whatever certificate"
+        event = Mock()
+        event.certificate = certificate
+        service_name = "magma-orc8r-orchestrator"
+        container = self.harness.model.unit.get_container(service_name)
+        self.harness.set_can_connect(container=container, val=True)
+        self._create_all_relations()
+        self.harness.add_relation(
+            relation_name="cert-admin-operator", remote_app="orc8r-certifier"
+        )
+        self.harness.charm._on_certificate_available(event=event)
+        plan = self.harness.get_container_pebble_plan(service_name).to_dict()
+        self.harness.container_pebble_ready(container_name=service_name)
+        updated_plan = self.harness.get_container_pebble_plan(service_name).to_dict()
+
+        self.assertEqual(plan, updated_plan)
+        self.assertEqual(patch_container_restart.call_count, 2)
+
     def _create_active_relation(self, relation_name: str, remote_app: str):
         """Creates a relation between orc8r-nginx and a remote app.
 
-         Mocks service status of remote app workload.
+        Mocks service status of remote app workload.
 
         Args:
             relation_name (str): Relation name
