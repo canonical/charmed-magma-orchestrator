@@ -31,19 +31,19 @@ jobs:
           wait-interval: 60
 
       - name: Check libraries
-        uses: canonical/charming-actions/check-libraries@2.0.0-rc
+        uses: canonical/charming-actions/check-libraries@2.2.2
         with:
           credentials: ${{ secrets.CHARMCRAFT_AUTH }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           charm-path: ./${{ inputs.charm }}
 
       - name: Select charmhub channel
-        uses: canonical/charming-actions/channel@2.0.0-rc
+        uses: canonical/charming-actions/channel@2.2.2
         id: channel
 
       - name: Upload charm to charmhub
         id: upload
-        uses: canonical/charming-actions/upload-charm@2.0.0-rc
+        uses: canonical/charming-actions/upload-charm@2.2.2
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
           github-token: "${{ secrets.GITHUB_TOKEN }}"
