@@ -601,7 +601,6 @@ class TestCharm(unittest.TestCase):
         return relation_id
 
     def _create_all_relations(self) -> dict:
-
         bootstrapper_relation_id = self._create_active_relation(
             relation_name="magma-orc8r-bootstrapper", remote_app="magma-orc8r-bootstrapper"
         )
