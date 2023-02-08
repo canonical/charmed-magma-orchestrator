@@ -722,7 +722,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         )
         logger.info("Pushed root private key")
 
-    def _on_leader_config_changed(self, event: ConfigChangedEvent) -> None:  # noqa: C901
+    def _on_leader_config_changed(self, event: ConfigChangedEvent) -> None:
         """Triggered on config changed for leader unit.
 
         If the 'domain' config changed, new root certificates will be requested and new
@@ -774,14 +774,25 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             not self._application_certificates_are_stored
             or not self._stored_application_certificate_matches_config  # noqa: W503
         ):
-            self._generate_application_certificates()
-            self._push_application_certificates()
-            if self.model.relations.get("cert-certifier"):
-                self._publish_certifier_certificate(event)
-            if self.model.relations.get("cert-admin-operator"):
-                self._publish_admin_operator_certificate(event)
-            if self.model.relations.get("fluentd-certs"):
-                self._regenerate_fluentd_certificates(event)
+            self._renew_application_certificates(event)
+
+    def _renew_application_certificates(self, event: ConfigChangedEvent) -> None:
+        """Renews application certificates.
+
+        Generates new application certificates, pushes them to the workload container and
+        updates relation data bags.
+
+        Args:
+            event: Juju ConfigChangedEvent event
+        """
+        self._generate_application_certificates()
+        self._push_application_certificates()
+        if self.model.relations.get("cert-certifier"):
+            self._publish_certifier_certificate(event)
+        if self.model.relations.get("cert-admin-operator"):
+            self._publish_admin_operator_certificate(event)
+        if self.model.relations.get("fluentd-certs"):
+            self._regenerate_fluentd_certificates(event)
 
     def _on_non_leader_config_changed(self, event: ConfigChangedEvent) -> None:
         """Triggered on config changed for non-leader unit.

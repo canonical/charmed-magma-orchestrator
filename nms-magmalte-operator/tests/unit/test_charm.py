@@ -445,8 +445,10 @@ class TestCharm(unittest.TestCase):
             relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
         )
         self.harness.container_pebble_ready(container_name=service_name)
+        self.assertEqual(patch_container_restart.call_count, 1)
         self.harness.container_pebble_ready(container_name=service_name)
         plan = self.harness.get_container_pebble_plan("magma-nms-magmalte").to_dict()
+        self.assertEqual(patch_container_restart.call_count, 2)
         self.harness.container_pebble_ready(container_name=service_name)
         updated_plan = self.harness.get_container_pebble_plan("magma-nms-magmalte").to_dict()
 

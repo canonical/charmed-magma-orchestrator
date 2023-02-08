@@ -519,7 +519,6 @@ class TestCharm(unittest.TestCase):
         self, patch_container_restart, patch_push, patch_exists
     ):
         certificate = "whatever certificate"
-        # private_key = "whatever private key"
         event = Mock()
         event.certificate = certificate
         service_name = "magma-orc8r-orchestrator"
