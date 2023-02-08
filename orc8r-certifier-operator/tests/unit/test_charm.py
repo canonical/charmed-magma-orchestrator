@@ -867,10 +867,10 @@ class TestCharm(unittest.TestCase):
         )
 
         certificates_relation_id = self.harness.add_relation(
-            relation_name="certificates", remote_app="whatever app"
+            relation_name="certificates", remote_app="whatever_app"
         )
         self.harness.add_relation_unit(
-            relation_id=certificates_relation_id, remote_unit_name="whatever unit name"
+            relation_id=certificates_relation_id, remote_unit_name="whatever_app/0"
         )
 
         patch_request_certificates.assert_called_with(
@@ -886,12 +886,12 @@ class TestCharm(unittest.TestCase):
     ):
         self.harness.set_leader(is_leader=True)
         certificates_relation_id = self.harness.add_relation(
-            relation_name="certificates", remote_app="whatever app"
+            relation_name="certificates", remote_app="whatever_app"
         )
         self.create_peer_relation_with_certificates(domain_config="whatever")
 
         self.harness.add_relation_unit(
-            relation_id=certificates_relation_id, remote_unit_name="whatever unit name"
+            relation_id=certificates_relation_id, remote_unit_name="whatever_app/0"
         )
 
         self.assertEqual(0, patch_request_certificates.call_count)
@@ -905,7 +905,7 @@ class TestCharm(unittest.TestCase):
     ):
         self.harness.set_leader(is_leader=False)
         certificates_relation_id = self.harness.add_relation(
-            relation_name="certificates", remote_app="whatever app"
+            relation_name="certificates", remote_app="whatever_app"
         )
         self.create_peer_relation_with_certificates(
             domain_config="whatever",
@@ -914,7 +914,7 @@ class TestCharm(unittest.TestCase):
         )
 
         self.harness.add_relation_unit(
-            relation_id=certificates_relation_id, remote_unit_name="whatever unit name"
+            relation_id=certificates_relation_id, remote_unit_name="whatever_app/0"
         )
 
         patch_request_certificates.assert_not_called()
@@ -1270,11 +1270,12 @@ class TestCharm(unittest.TestCase):
                 },
             )
 
-    def test_given_fluentd_csr_not_present_in_relation_data_when_fluentd_certificate_creation_request_then_status_is_blocked(  # noqa: E501
-        self,
+    @patch("charm.generate_certificate")
+    def test_given_fluentd_csr_not_present_in_relation_data_when_fluentd_certificate_creation_request_then_fluentd_cert_is_not_generated(  # noqa: E501
+        self, patched_generate_certificate
     ):
         self.create_peer_relation_with_certificates(
-            domain_config="some.com", application_private_key=True
+            domain_config="some.com", application_private_key=True, application_certificate=True
         )
         fluentd_relation_id = self.harness.add_relation("fluentd-certs", "fluentd-app")
         self.harness.add_relation_unit(fluentd_relation_id, "fluentd-app/0")
@@ -1287,9 +1288,7 @@ class TestCharm(unittest.TestCase):
             },
         )
 
-        assert self.harness.charm.unit.status == BlockedStatus(
-            "Fluentd CSR not available in the relation data"
-        )
+        patched_generate_certificate.assert_not_called()
 
     def test_given_valid_fluentd_csr_but_application_cert_not_available_when_fluentd_certificate_creation_request_then_status_is_waiting(  # noqa: E501
         self,
@@ -1317,7 +1316,7 @@ class TestCharm(unittest.TestCase):
     @patch("charm.generate_certificate")
     @patch("charm.TLSCertificatesProvidesV1.set_relation_certificate", Mock())
     @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
-    def test_given_aplication_key_and_cert_available_and_valid_fluentd_csr_in_the_relation_data_when_fluentd_certificate_creation_request_then_fluentd_cert_is_generated(  # noqa: E501
+    def test_given_application_key_and_cert_available_and_valid_fluentd_csr_in_the_relation_data_when_fluentd_certificate_creation_request_then_fluentd_cert_is_generated(  # noqa: E501
         self, patched_generate_certificate
     ):
         self.harness.set_leader(is_leader=True)
@@ -1576,3 +1575,58 @@ class TestCharm(unittest.TestCase):
                 call(relation_id=certifier_relation_id3, certificate=certificate_string),
             ]
         )
+
+    @patch("charm.generate_certificate")
+    @patch("charm.generate_pfx_package")
+    @patch("charm.TLSCertificatesProvidesV1.set_relation_certificate", Mock())
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
+    @patch("ops.model.Container.push", Mock())
+    def test_given_application_key_and_cert_available_and_valid_fluentd_csr_in_the_relation_data_when_new_certifier_pem_then_fluentd_cert_is_generated(  # noqa: E501
+        self, patched_generate_pfx_package, patched_generate_certificate
+    ):
+        self.harness.set_leader(is_leader=True)
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
+        patched_generate_certificate.return_value = b"some cert"
+        patched_generate_pfx_package.return_value = b"some pfx"
+        test_csr = "whatever"
+        _, certs = self.create_peer_relation_with_certificates(
+            domain_config="some.com",
+            root_csr=True,
+            root_private_key=True,
+            admin_operator_private_key=True,
+            application_private_key=True,
+            application_certificate=True,
+        )
+        fluentd_relation_id = self.harness.add_relation("fluentd-certs", "fluentd-app")
+        self.harness.add_relation_unit(fluentd_relation_id, "fluentd-app/0")
+        self.harness.update_relation_data(
+            relation_id=fluentd_relation_id,
+            app_or_unit="fluentd-app/0",
+            key_values={
+                "certificate_signing_requests": json.dumps(
+                    [{"certificate_signing_request": test_csr}]
+                )
+            },
+        )
+
+        self.harness.update_config(key_values={"domain": "new-domain.com"})
+
+        expected_calls = [
+            call(
+                csr=test_csr.encode(),
+                ca=certs["application_certificate"].encode(),
+                ca_key=certs["application_private_key"].encode(),
+            ),
+            call(
+                csr=test_csr.encode(),
+                ca=self.harness.model.get_relation("replicas")  # type: ignore[union-attr]
+                .data[self.harness.charm.app]["application_certificate"]
+                .encode(),
+                ca_key=certs["application_private_key"].encode(),
+            ),
+        ]
+        actual_calls = patched_generate_certificate.mock_calls
+
+        self.assertEqual(actual_calls[0], expected_calls[0])
+        # Second actual_call is made to generate new certifier.pem and is irrelevant for this test.
+        self.assertEqual(actual_calls[2], expected_calls[1])

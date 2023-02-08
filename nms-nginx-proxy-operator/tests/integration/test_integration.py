@@ -91,6 +91,7 @@ class TestNmsNginxProxy:
             "grafana-k8s",
             application_name="grafana-k8s",
             channel="edge",
+            trust=True,
         )
 
     @staticmethod
@@ -142,7 +143,7 @@ class TestNmsNginxProxy:
             resources=resources,
             application_name=APPLICATION_NAME,
             trust=True,
-            series="focal",
+            series="jammy",
         )
 
     @pytest.mark.abort_on_fail

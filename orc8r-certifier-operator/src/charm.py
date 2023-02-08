@@ -13,6 +13,7 @@ from typing import Optional, Union
 
 import ops.lib
 import psycopg2  # type: ignore[import]
+import yaml
 from charms.magma_orc8r_certifier.v0.cert_admin_operator import (
     CertAdminOperatorProvides,
 )
@@ -428,8 +429,8 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         Returns:
             None
         """
-        cert_controller_relation = self.model.relations.get("cert-controller")
-        if not cert_controller_relation:
+        cert_controller_relations = self.model.relations.get("cert-controller")
+        if not cert_controller_relations:
             raise RuntimeError("'cert-controller' relation not available!")
         if not self._container.can_connect():
             logger.info("Container not yet available")
@@ -448,7 +449,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             return
         certificate_string = certificate.read()
         private_key_string = private_key.read()
-        for relation in cert_controller_relation:
+        for relation in cert_controller_relations:
             self.certificates_controller_provider.set_certificate(
                 relation_id=relation.id,
                 certificate=str(certificate_string),
@@ -467,8 +468,8 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         Returns:
             None
         """
-        cert_root_ca_relation = self.model.relations.get("cert-root-ca")
-        if not cert_root_ca_relation:
+        cert_root_ca_relations = self.model.relations.get("cert-root-ca")
+        if not cert_root_ca_relations:
             raise RuntimeError("'cert-root-ca' relation not available!")
         if not self._container.can_connect():
             logger.info("Container not yet available")
@@ -481,7 +482,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             event.defer()
             return
         certificate_string = certificate.read()
-        for relation in cert_root_ca_relation:
+        for relation in cert_root_ca_relations:
             self.certificates_root_ca_provider.set_certificate(
                 relation_id=relation.id,
                 certificate=str(certificate_string),
@@ -492,6 +493,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     ) -> None:
         """Triggered when a Fluentd certificate request is made on the fluentd-certs.
 
+        Runs when Fluentd certificate request is made on the fluentd-certs relation.
         Creates Fluentd certificate and pushes it to the relation data along with the CA
         certificate used to sign Fluentd cert.
 
@@ -507,18 +509,35 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for the CA certificate to be available")
             event.defer()
             return
-        fluentd_certificate = generate_certificate(
-            csr=event.certificate_signing_request.encode(),
-            ca=self._application_certificate.encode(),
-            ca_key=self._application_private_key.encode(),
+        self._generate_and_publish_fluentd_certificate(
+            event.certificate_signing_request, event.relation_id
         )
-        self.fluentd_certificates_provider.set_relation_certificate(
-            certificate=fluentd_certificate.decode(),
-            certificate_signing_request=event.certificate_signing_request,
-            ca=self._application_certificate,
-            chain=[fluentd_certificate.decode(), self._application_certificate],
-            relation_id=event.relation_id,
-        )
+
+    def _regenerate_fluentd_certificates(self, event: ConfigChangedEvent) -> None:
+        """Triggered whenever new Fluentd certificate is needed.
+
+        Runs when certifier.pem (CA signing fluentd.pem) changes.
+        Creates Fluentd certificate and pushes it to the relation data along with the CA
+        certificate used to sign Fluentd cert.
+
+        Args:
+            event (ConfigChangedEvent): Juju event
+        """
+        fluentd_relations = self.model.relations.get("fluentd-certs")
+        if not fluentd_relations:
+            raise RuntimeError("'fluentd-certs' relation not available!")
+        if not self._application_private_key:
+            raise RuntimeError("Application private key not available")
+        if not self._application_certificate:
+            self.unit.status = WaitingStatus("Waiting for the CA certificate to be available")
+            event.defer()
+            return
+        for relation in fluentd_relations:
+            certificate_signing_request = self._get_csr_from_relation_data(relation)
+            if certificate_signing_request:
+                self._generate_and_publish_fluentd_certificate(
+                    certificate_signing_request, relation.id
+                )
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Runs whenever the certificates available event is triggered.
@@ -527,9 +546,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
         Args:
             event (CertificateAvailableEvent): Custom Juju event for certificate available.
-
-        Returns:
-            None
         """
         if event.certificate_signing_request != self._root_csr:
             logger.warning("Certificate's CSR doesn't match stored root CSR")
@@ -573,9 +589,6 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
         Args:
             event: Juju event
-
-        Returns:
-            None
         """
         if not self.unit.is_leader():
             return
@@ -767,6 +780,8 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                 self._publish_certifier_certificate(event)
             if self.model.relations.get("cert-admin-operator"):
                 self._publish_admin_operator_certificate(event)
+            if self.model.relations.get("fluentd-certs"):
+                self._regenerate_fluentd_certificates(event)
 
     def _on_non_leader_config_changed(self, event: ConfigChangedEvent) -> None:
         """Triggered on config changed for non-leader unit.
@@ -1350,6 +1365,57 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[union-attr, index]  # noqa: E501
         except (AttributeError, KeyError):
             return None
+
+    @staticmethod
+    def _get_csr_from_relation_data(relation: Relation) -> Optional[str]:
+        """Returns CSR from the relation data bag.
+
+        Args:
+            relation (Relation): Juju relation
+
+        Returns:
+            str: Certificate Signing Request
+        """
+        relation_units = relation.units
+        try:
+            csr_relation_data = relation.data[next(iter(relation_units))][
+                "certificate_signing_requests"
+            ]
+            certificate_signing_request = yaml.safe_load(csr_relation_data)[0][
+                "certificate_signing_request"
+            ]
+            return certificate_signing_request
+        except KeyError:
+            logger.info(f"Fluentd CSR not found for relation {relation.id}. Skipping...")
+        except StopIteration:
+            logger.info(f"Units not found for relation {relation.id}. Skipping...")
+        return None
+
+    def _generate_and_publish_fluentd_certificate(
+        self, certificate_signing_request: str, relation_id: int
+    ) -> None:
+        """Generates Fluentd certificate and pushes it to the relation data bag.
+
+        Args:
+            certificate_signing_request (str): Certificate Signing Request
+            relation_id (int): ID of a `fluentd-certs` relation to push the data to
+        """
+        if not self._application_private_key:
+            raise RuntimeError("Application private key not available")
+        if not self._application_certificate:
+            raise RuntimeError("Application certificate not available")
+        fluentd_certificate = generate_certificate(
+            csr=certificate_signing_request.encode(),
+            ca=self._application_certificate.encode(),
+            ca_key=self._application_private_key.encode(),
+        )
+        self.fluentd_certificates_provider.set_relation_certificate(
+            certificate=fluentd_certificate.decode(),
+            certificate_signing_request=certificate_signing_request,
+            ca=self._application_certificate,
+            chain=[fluentd_certificate.decode(), self._application_certificate],
+            relation_id=relation_id,
+        )
 
     @property
     def _namespace(self) -> str:

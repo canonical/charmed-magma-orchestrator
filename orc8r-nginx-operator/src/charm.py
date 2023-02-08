@@ -193,7 +193,12 @@ class MagmaOrc8rNginxCharm(CharmBase):
 
     def _publish_orchestrator_details_in_the_relation_data_bag(
         self,
-        event: Union[ConfigChangedEvent, RelationJoinedEvent, RootCACertificateAvailableEvent],
+        event: Union[
+            ConfigChangedEvent,
+            RelationJoinedEvent,
+            RootCACertificateAvailableEvent,
+            CertifierCertificateAvailableEvent,
+        ],
     ) -> None:
         """Publishes Orchestrator details inside the `orchestrator` relation data bag.
 
@@ -217,14 +222,22 @@ class MagmaOrc8rNginxCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for rootCA certificate to be available")
             event.defer()
             return
+        if not self._cert_is_stored(f"{self.BASE_CERTS_PATH}/certifier.pem"):
+            self.unit.status = WaitingStatus(
+                "Waiting for `certifier.pem` certificate to be available"
+            )
+            event.defer()
+            return
         try:
             rootca_cert = self._container.pull(f"{self.BASE_CERTS_PATH}/rootCA.pem")
+            certifier_pem = self._container.pull(f"{self.BASE_CERTS_PATH}/certifier.pem")
         except (PathError, ProtocolError):
-            self.unit.status = BlockedStatus("Failed to pull rootCA.pem from the container")
+            self.unit.status = BlockedStatus("Failed to pull certs from the container")
             event.defer()
             return
         self.orchestrator_provider.set_orchestrator_information(
             root_ca_certificate=rootca_cert.read(),  # type: ignore[arg-type]
+            certifier_pem_certificate=certifier_pem.read(),  # type: ignore[arg-type]
             orchestrator_address=f"controller.{self._domain_config}",
             orchestrator_port=443,
             bootstrapper_address=f"bootstrapper-controller.{self._domain_config}",
@@ -256,6 +269,8 @@ class MagmaOrc8rNginxCharm(CharmBase):
             path=f"{self.BASE_CERTS_PATH}/certifier.pem", source=event.certificate
         )
         self._configure_magma_orc8r_nginx(event)
+        if self.model.relations.get("orchestrator"):
+            self._publish_orchestrator_details_in_the_relation_data_bag(event)
 
     def _on_controller_certificate_available(
         self, event: ControllerCertificateAvailableEvent
@@ -361,22 +376,13 @@ class MagmaOrc8rNginxCharm(CharmBase):
                 )
                 self._container.add_layer(self._container_name, layer, combine=True)
                 self._container.restart(self._service_name)
-            # TODO: _reload_nginx() is needed by the workaround for not working container.restart()
-            #       and should be removed as soon as the proper Juju mechanism works as expected.
-            self._reload_nginx()
-            logger.info(f"Restarted service {self._service_name}")
+                logger.info(f"Restarted service {self._service_name}")
             self._update_relations()
             self.unit.status = ActiveStatus()
         else:
             self.unit.status = WaitingStatus(f"Waiting for {self._container} to be ready")
             event.defer()
             return
-
-    def _reload_nginx(self) -> None:
-        """Reloads the nginx process."""
-        nginx_master_pid, _ = self._container.exec(["cat", "/var/run/nginx.pid"]).wait_output()
-        self._container.exec(["/bin/bash", "-c", "kill", "-HUP", f"{nginx_master_pid.strip()}"])
-        logger.info(f"Reloaded process with pid {nginx_master_pid.strip()}")
 
     def _update_relations(self) -> None:
         """Updates the status of the `orc8r-nginx` service.
@@ -622,7 +628,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
                     self._service_name: {
                         "override": "replace",
                         "startup": "enabled",
-                        "command": "nginx",
+                        "command": "nginx -g 'daemon off;'",
                         "environment": {
                             "SERVICE_REGISTRY_MODE": "k8s",
                             "SERVICE_REGISTRY_NAMESPACE": self._namespace,
