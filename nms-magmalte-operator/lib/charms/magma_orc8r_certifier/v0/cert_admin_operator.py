@@ -36,7 +36,13 @@ class CertAdminOperatorRequires(Object):
 
 """
 
-from ops.charm import CharmBase, CharmEvents, RelationChangedEvent, RelationJoinedEvent, SecretEvent
+from ops.charm import(
+    CharmBase,
+    CharmEvents,
+    RelationChangedEvent,
+    RelationJoinedEvent,
+    SecretEvent
+    )
 from ops.framework import EventBase, EventSource, Object
 from ops.model import Secret
 from typing import Optional
@@ -75,6 +81,7 @@ class CertificateAvailableEvent(SecretEvent):
     """Dataclass for certificate available events."""
 
     def __init__(self, handle, id: str, label: Optional[str]):
+        """Sets secret id and secret label."""
         super().__init__(handle)
         self._id = id
         self._label = label
@@ -160,7 +167,6 @@ class CertAdminOperatorProvides(Object):
             None
         """
         self.on.certificate_request.emit(relation_id=event.relation.id)
-
 
 class CertAdminOperatorRequires(Object):
     """Class to be instantiated by requirer of admin operator certificates."""

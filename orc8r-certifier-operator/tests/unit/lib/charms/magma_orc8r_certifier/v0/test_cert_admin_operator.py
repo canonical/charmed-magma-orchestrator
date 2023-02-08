@@ -26,8 +26,7 @@ class TestCertAdminOperatorProvides(unittest.TestCase):
             relation_name=self.relationship_name, remote_app=app_name
         )
 
-
-        self.harness.add_relation_unit(relation_id, f"{app_name}/0")
+        self.harness.add_relation_unit(relation_id, "whatever-app/0")
         self.harness.charm.admin_operator.set_certificate(
             certificate=certificate, private_key=private_key, relation_id=relation_id
         )
@@ -35,7 +34,7 @@ class TestCertAdminOperatorProvides(unittest.TestCase):
         relation_data = self.harness.get_relation_data(
             relation_id=relation_id, app_or_unit=self.harness.charm.unit
         )
-        secret_id = relation_data['secret-id']
+        secret_id = relation_data["secret-id"]
         secret = self.harness.model.get_secret(id=secret_id)
         content = secret.get_content()
         self.assertEqual(certificate, content["certificate"])

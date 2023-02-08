@@ -36,10 +36,17 @@ class CertAdminOperatorRequires(Object):
 
 """
 
-from ops.charm import CharmBase, CharmEvents, RelationChangedEvent, RelationJoinedEvent, SecretEvent
+from typing import Optional
+
+from ops.charm import (
+    CharmBase,
+    CharmEvents,
+    RelationChangedEvent,
+    RelationJoinedEvent,
+    SecretEvent,
+)
 from ops.framework import EventBase, EventSource, Object
 from ops.model import Secret
-from typing import Optional
 
 # The unique Charmhub library identifier, never change it
 LIBID = "6ca3a0b88afc4bebafbaa49514afb18f"
@@ -75,11 +82,10 @@ class CertificateAvailableEvent(SecretEvent):
     """Dataclass for certificate available events."""
 
     def __init__(self, handle, id: str, label: Optional[str]):
-        super().__init__(handle)
+        """Sets secret id and secret label."""
+        super().__init__(handle, id, label)
         self._id = id
         self._label = label
-        """Sets certificate and private key."""
-        super().__init__(handle)
 
     @property
     def secret(self) -> Secret:
@@ -140,16 +146,15 @@ class CertAdminOperatorProvides(Object):
             None
         """
         content = {
-            'certificate': certificate,
-            'private-key': private_key,
+            "certificate": certificate,
+            "private-key": private_key,
         }
         secret = self.model.unit.add_secret(content)
         relation = self.model.get_relation(
             relation_name=self.relationship_name, relation_id=relation_id
         )
-        secret.grant(relation)
-        relation.data[self.model.unit]['secret-id'] = secret.id
-
+        secret.grant(relation)  # type: ignore[arg-type]
+        relation.data[self.model.unit]["secret-id"] = secret.id  # type: ignore[union-attr]
 
     def _on_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Triggered whenever a requirer charm joins the relation.
@@ -195,10 +200,10 @@ class CertAdminOperatorRequires(Object):
             None
         """
         relation_data = event.relation.data
-        secret_id = relation_data[event.unit]['secret-id']
+        secret_id = relation_data[event.unit]["secret-id"]  # type: ignore[index]
         secret = self.model.get_secret(id=secret_id)
         content = secret.get_content()
-        certificate = content["certificate"]  # type: ignore[index]
-        private_key = content["private-key"]  # type: ignore[index]
+        certificate = content["certificate"]
+        private_key = content["private-key"]
         if certificate and private_key:
             self.on.certificate_available.emit(id=secret_id, label="cert_admin_operator")

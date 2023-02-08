@@ -300,7 +300,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             logger.info("Can't connect to container - Deferring")
             event.defer()
             return
-        content = event.secret.get_content()  # type: ignore[attr-defined]
+        content = event.secret.get_content()
         self._container.push(
             path=f"{self.BASE_CERTS_PATH}/admin_operator.pem", source=content["certificate"]
         )
