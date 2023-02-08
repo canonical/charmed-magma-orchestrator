@@ -174,6 +174,9 @@ class MagmaOrc8rNginxCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for certificates to be available.")
             event.defer()
             return
+        if not self._nginx_config_is_generated:
+            self.unit.status = WaitingStatus("Waiting for nginx config to be generated.")
+            return
         self._configure_pebble_layer(event)
 
     def _on_magma_orc8r_nginx_relation_joined(self, event: RelationJoinedEvent) -> None:
@@ -339,6 +342,13 @@ class MagmaOrc8rNginxCharm(CharmBase):
         except ExecError as error:
             raise ProcessExecutionError(error)
         logger.info("Successfully generated nginx config file")
+
+    @property
+    def _nginx_config_is_generated(self) -> bool:
+        """Returns whether nginx config is generated."""
+        if not self._container.can_connect():
+            return False
+        return self._container.exists(f"{self.BASE_CERTS_PATH}/nginx.conf")
 
     def _create_additional_orc8r_nginx_services(self) -> None:
         """Creates additional K8s services.

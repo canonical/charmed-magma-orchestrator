@@ -512,6 +512,34 @@ class TestCharm(unittest.TestCase):
             },
         )
 
+    @patch("ops.model.Container.exists")
+    @patch("ops.model.Container.exec")
+    @patch("ops.model.Container.push")
+    def test_given_nginx_config_file_not_yet_generated_when_certifier_certificate_available_then_status_is_waiting(  # noqa: E501
+        self,
+        _,
+        __,
+        patch_exists,
+    ):
+        patch_exists.side_effect = [True, True, True, True, False]
+        self.harness.set_can_connect(container=self._container, val=True)
+        self.harness.update_config(key_values={"domain": "whatever.com"})
+        relations = self._create_all_relations()
+        certifier_relation_id = relations["cert-certifier"]
+        self.harness.add_relation_unit(certifier_relation_id, "magma-orc8r-certifier/0")
+
+        self.harness.update_relation_data(
+            certifier_relation_id,
+            "magma-orc8r-certifier/0",
+            {"certificate": "some cert"},
+        )
+
+        self.assertEqual(
+            WaitingStatus("Waiting for nginx config to be generated."),
+            self.harness.charm.unit.status,
+        )
+
+    def _create_active_relation(self, relation_name: str, remote_app: str) -> int:
     @patch("ops.model.Container.restart")
     @patch("ops.model.Container.exists")
     def test_given_workload_container_with_pebble_layer_when_pebble_ready_then_nginx_service_is_reloaded(  # noqa: E501
@@ -570,20 +598,28 @@ class TestCharm(unittest.TestCase):
             app_or_unit=f"{remote_app}/0",
             key_values={"active": "True"},
         )
+        return relation_id
 
-    def _create_all_relations(self):
-        self._create_active_relation(
+    def _create_all_relations(self) -> dict:
+
+        bootstrapper_relation_id = self._create_active_relation(
             relation_name="magma-orc8r-bootstrapper", remote_app="magma-orc8r-bootstrapper"
         )
-        self._create_active_relation(
+        obsidian_relation_id = self._create_active_relation(
             relation_name="magma-orc8r-obsidian", remote_app="magma-orc8r-obsidian"
         )
-        self.harness.add_relation(
+        certifier_relation_id = self.harness.add_relation(
             relation_name="cert-certifier", remote_app="magma-orc8r-certifier"
         )
-        self.harness.add_relation(
+        controller_relation_id = self.harness.add_relation(
             relation_name="cert-controller", remote_app="magma-orc8r-certifier"
         )
+        return {
+            "magma-orc8r-bootstrapper": bootstrapper_relation_id,
+            "magma-orc8r-obsidian": obsidian_relation_id,
+            "cert-certifier": certifier_relation_id,
+            "cert-controller": controller_relation_id,
+        }
 
 
 class MockExec:
