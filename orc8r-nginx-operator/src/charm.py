@@ -176,6 +176,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
             return
         if not self._nginx_config_is_generated:
             self.unit.status = WaitingStatus("Waiting for nginx config to be generated.")
+            event.defer()
             return
         self._configure_pebble_layer(event)
 
