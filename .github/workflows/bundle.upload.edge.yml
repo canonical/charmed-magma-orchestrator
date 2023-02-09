@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - "1.6"
-      - "main"
     paths:
       - "orc8r-bundle/**"
 

@@ -27,6 +27,7 @@ jobs:
       charm_dir: orc8r-subscriberdb-cache-operator
 
   orc8r-subscriberdb-cache-charmhub-upload:
+    if: github.ref_name == '1.6'
     uses: ./.github/workflows/upload-charm.yml
     secrets: inherit
     with:

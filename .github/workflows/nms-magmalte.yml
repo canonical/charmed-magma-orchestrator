@@ -78,6 +78,7 @@ jobs:
           yes | juju kill-controller integration-tests-$GITHUB_RUN_ID
 
   nms-magmalte-charmhub-upload:
+    if: github.ref_name == '1.6'
     uses: ./.github/workflows/upload-charm.yml
     secrets: inherit
     with:
