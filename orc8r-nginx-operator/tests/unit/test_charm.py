@@ -28,35 +28,10 @@ class TestCharm(unittest.TestCase):
         self._container = self.harness.model.unit.get_container("magma-orc8r-nginx")
 
     @patch("lightkube.core.client.GenericSyncClient", new=Mock())
-    @patch("lightkube.core.client.Client.create", new=Mock())
-    @patch("ops.model.Container.exec", new_callable=Mock)
-    def test_given_domain_config_set_when_install_then_nginx_config_file_is_created(
-        self, patched_exec
-    ):
-        patched_exec.return_value = MockExec()
-        event = Mock()
-        domain = "whatever domain"
-        key_values = {"domain": domain}
-        self.harness.update_config(key_values=key_values)
-        self.harness.set_can_connect(container=self._container, val=True)
-
-        self.harness.charm._on_install(event)
-
-        patched_exec.assert_called_with(
-            command=["/usr/local/bin/generate_nginx_configs.py"],
-            environment={
-                "PROXY_BACKENDS": f"{self.namespace}.svc.cluster.local",
-                "CONTROLLER_HOSTNAME": f"controller.{domain}",
-                "RESOLVER": "kube-dns.kube-system.svc.cluster.local valid=10s",
-                "SERVICE_REGISTRY_MODE": "k8s",
-            },
-        )
-
-    @patch("lightkube.core.client.GenericSyncClient", new=Mock())
     @patch("lightkube.core.client.Client.get")
     @patch("lightkube.core.client.Client.create")
     @patch("ops.model.Container.exec", new_callable=Mock)
-    def test_given_domain_config_set_when_install_then_additional_k8s_services_are_created(
+    def test_given_when_pebble_ready_then_additional_k8s_services_are_created(
         self, patched_exec, patch_create, patch_get
     ):
         patched_exec.return_value = MockExec()
@@ -493,7 +468,7 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.exec")
-    def test_given_valid_domain_config_set_when_config_changed_then_nginx_config_file_is_recreated(
+    def test_given_valid_domain_config_set_when_config_changed_then_nginx_config_file_is_created(
         self, patch_exec
     ):
         self.harness.set_can_connect(container=self._container, val=True)

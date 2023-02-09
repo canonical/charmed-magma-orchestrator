@@ -32,7 +32,6 @@ from lightkube.resources.core_v1 import Service
 from ops.charm import (
     CharmBase,
     ConfigChangedEvent,
-    InstallEvent,
     PebbleReadyEvent,
     RelationBrokenEvent,
     RelationJoinedEvent,
@@ -55,6 +54,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
     """An instance of this object everytime an event occurs."""
 
     BASE_CERTS_PATH = "/var/opt/magma/certs"
+    CONFIG_PATH = "/etc/nginx"
     REQUIRED_RELATIONS = ["cert-certifier", "cert-controller"]
     REQUIRED_MAGMA_SERVICES_RELATIONS = ["magma-orc8r-bootstrapper", "magma-orc8r-obsidian"]
 
@@ -115,17 +115,8 @@ class MagmaOrc8rNginxCharm(CharmBase):
                 self.on[required_rel].relation_joined, self._configure_magma_orc8r_nginx
             )
 
-    def _on_install(self, event: InstallEvent) -> None:
-        """Triggerred once when charm is installed.
-
-        Args:
-            event: Juju event (InstallEvent)
-        """
-        if not self._container.can_connect():
-            logger.info("Can't connect to container - Deferring")
-            event.defer()
-            return
-        self._generate_nginx_config()
+    def _on_install(self, _) -> None:
+        """Triggerred once when charm is installed."""
         self._create_additional_orc8r_nginx_services()
 
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:
@@ -349,7 +340,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
         """Returns whether nginx config is generated."""
         if not self._container.can_connect():
             return False
-        return self._container.exists(f"{self.BASE_CERTS_PATH}/nginx.conf")
+        return self._container.exists(f"{self.CONFIG_PATH}/nginx.conf")
 
     def _create_additional_orc8r_nginx_services(self) -> None:
         """Creates additional K8s services.
