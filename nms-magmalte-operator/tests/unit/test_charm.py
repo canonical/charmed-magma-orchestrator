@@ -444,16 +444,41 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
         )
-        self.harness.container_pebble_ready(container_name=service_name)
-        self.assertEqual(patch_container_restart.call_count, 1)
-        self.harness.container_pebble_ready(container_name=service_name)
-        plan = self.harness.get_container_pebble_plan("magma-nms-magmalte").to_dict()
-        self.assertEqual(patch_container_restart.call_count, 2)
-        self.harness.container_pebble_ready(container_name=service_name)
-        updated_plan = self.harness.get_container_pebble_plan("magma-nms-magmalte").to_dict()
 
-        self.assertEqual(patch_container_restart.call_count, 3)
-        self.assertEqual(plan, updated_plan)
+        test_pebble_layer = {
+            "summary": "magma-nms-magmalte pebble layer",
+            "services": {
+                service_name: {
+                    "override": "replace",
+                    "startup": "enabled",
+                    "command": f"/usr/local/bin/wait-for-it.sh -s -t 30 "
+                    f"{self.TEST_DB_CONNECTION_STRING.host}:"
+                    f"{self.TEST_DB_CONNECTION_STRING.port} --"
+                    "-- yarn run start:prod",
+                    "environment": {
+                        "API_CERT_FILENAME": "/run/secrets/admin_operator.pem",
+                        "API_PRIVATE_KEY_FILENAME": "/run/secrets/admin_operator.key.pem",
+                        "API_HOST": f"orc8r-nginx-proxy.{self.namespace}.svc.cluster.local",
+                        "PORT": str(8081),
+                        "HOST": "0.0.0.0",
+                        "MYSQL_HOST": str(self.TEST_DB_CONNECTION_STRING.host),
+                        "MYSQL_PORT": str(self.TEST_DB_CONNECTION_STRING.port),
+                        "MYSQL_DB": "magma_dev",
+                        "MYSQL_USER": str(self.TEST_DB_CONNECTION_STRING.user),
+                        "MYSQL_PASS": str(self.TEST_DB_CONNECTION_STRING.password),
+                        "MAPBOX_ACCESS_TOKEN": "",
+                        "MYSQL_DIALECT": "postgres",
+                        "PUPPETEER_SKIP_DOWNLOAD": "true",
+                        "USER_GRAFANA_ADDRESS": self.harness.charm._grafana_url,
+                    },
+                }
+            },
+        }
+        self.harness.model.unit.get_container("magma-nms-magmalte").add_layer(
+            "magma-nms-magmalte", test_pebble_layer, combine=True
+        )
+        self.harness.container_pebble_ready(container_name=service_name)
+        patch_container_restart.assert_called_once()
 
     @patch("ops.model.Container.exec", Mock())
     @patch("ops.model.Container.exists")

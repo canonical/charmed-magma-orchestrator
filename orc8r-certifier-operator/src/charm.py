@@ -774,19 +774,16 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             not self._application_certificates_are_stored
             or not self._stored_application_certificate_matches_config  # noqa: W503
         ):
-            self._renew_application_certificates(event)
+            self._generate_application_certificates()
+            self._push_application_certificates()
+            self._update_certificates_in_relations(event)
 
-    def _renew_application_certificates(self, event: ConfigChangedEvent) -> None:
-        """Renews application certificates.
-
-        Generates new application certificates, pushes them to the workload container and
-        updates relation data bags.
+    def _update_certificates_in_relations(self, event: ConfigChangedEvent) -> None:
+        """Publishes new certificates.
 
         Args:
             event: Juju ConfigChangedEvent event
         """
-        self._generate_application_certificates()
-        self._push_application_certificates()
         if self.model.relations.get("cert-certifier"):
             self._publish_certifier_certificate(event)
         if self.model.relations.get("cert-admin-operator"):

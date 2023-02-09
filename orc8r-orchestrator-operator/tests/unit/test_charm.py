@@ -516,7 +516,8 @@ class TestCharm(unittest.TestCase):
     @patch("ops.model.Container.push", Mock())
     @patch("ops.model.Container.restart")
     def test_given_pebble_plan_changed_when_configure_pebble_then_container_is_restarted(
-        self, patch_container_restart,
+        self,
+        patch_container_restart,
     ):
         certificate = "whatever certificate"
         event = Mock()
@@ -551,13 +552,32 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="orc8r-certifier"
         )
-        self.harness.charm._on_certificate_available(event=event)
-        plan = self.harness.get_container_pebble_plan(service_name).to_dict()
+        test_pebble_plan = {
+            "summary": f"{service_name} pebble layer",
+            "services": {
+                service_name: {
+                    "override": "replace",
+                    "startup": "enabled",
+                    "command": "/usr/bin/envdir "
+                    "/var/opt/magma/envdir "
+                    "/var/opt/magma/bin/orchestrator "
+                    "-run_echo_server=true "
+                    "-logtostderr=true "
+                    "-v=0",
+                    "environment": {
+                        "SERVICE_HOSTNAME": service_name,
+                        "SERVICE_REGISTRY_MODE": "k8s",
+                        "SERVICE_REGISTRY_NAMESPACE": self.namespace,
+                    },
+                }
+            },
+        }
+        self.harness.model.unit.get_container("magma-orc8r-orchestrator").add_layer(
+            "magma-orc8r-orchestrator", test_pebble_plan, combine=True
+        )
         self.harness.container_pebble_ready(container_name=service_name)
-        updated_plan = self.harness.get_container_pebble_plan(service_name).to_dict()
 
-        self.assertEqual(plan, updated_plan)
-        self.assertEqual(patch_container_restart.call_count, 2)
+        patch_container_restart.assert_called_once()
 
     def _create_active_relation(self, relation_name: str, remote_app: str):
         """Creates a relation between orc8r-nginx and a remote app.
