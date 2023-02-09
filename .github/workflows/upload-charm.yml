@@ -6,10 +6,18 @@ on:
       charm:
         required: true
         type: string
+      upload-image:
+        required: false
+        type: string
+        default: "false"
+      runner-version:
+        required: false
+        type: string
+        default: "ubuntu-20.04"
 
 jobs:
   charmhub-upload:
-    runs-on: ubuntu-20.04
+    runs-on: ${{ inputs.runner-version }}
     name: Charmhub upload ${{ inputs.charm }}
     steps:
       - uses: actions/checkout@v2
@@ -23,23 +31,23 @@ jobs:
           wait-interval: 60
 
       - name: Check libraries
-        uses: canonical/charming-actions/check-libraries@2.0.0-rc
+        uses: canonical/charming-actions/check-libraries@2.2.2
         with:
           credentials: ${{ secrets.CHARMCRAFT_AUTH }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           charm-path: ./${{ inputs.charm }}
 
       - name: Select charmhub channel
-        uses: canonical/charming-actions/channel@2.0.0-rc
+        uses: canonical/charming-actions/channel@2.2.2
         id: channel
 
       - name: Upload charm to charmhub
         id: upload
-        uses: canonical/charming-actions/upload-charm@2.0.0-rc
+        uses: canonical/charming-actions/upload-charm@2.2.2
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
           github-token: "${{ secrets.GITHUB_TOKEN }}"
-          upload-image: "false"
+          upload-image: ${{ inputs.upload-image }}
           channel: 1.6/"${{ steps.channel.outputs.name }}"
           charm-path: ./${{ inputs.charm }}
           tag-prefix: magma-${{ inputs.charm }}

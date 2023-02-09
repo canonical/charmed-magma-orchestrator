@@ -103,3 +103,5 @@ jobs:
     secrets: inherit
     with:
       charm: nms-nginx-proxy-operator
+      upload-image: "true"
+      runner-version: ubuntu-22.04

@@ -99,8 +99,9 @@ if __name__ == "__main__":
 
 
 import logging
+from urllib.parse import urlparse
 
-from jsonschema import exceptions, validate  # type: ignore[import]
+from jsonschema import FormatChecker, exceptions, validate  # type: ignore[import]
 from ops.charm import CharmBase, CharmEvents, RelationChangedEvent
 from ops.framework import EventBase, EventSource, Handle, Object
 
@@ -112,7 +113,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 5
+LIBPATCH = 7
 
 
 logger = logging.getLogger(__name__)
@@ -125,11 +126,12 @@ REQUIRER_JSON_SCHEMA = {
     "examples": [
         {
             "root_ca_certificate": "-----BEGIN CERTIFICATE-----\nMIICvDCCAaQCFFPAOD7utDTsgFrm0vS4We18OcnKMA0GCSqGSIb3DQEBCwUAMCAx\nCzAJBgNVBAYTAlVTMREwDwYDVQQDDAh3aGF0ZXZlcjAeFw0yMjA3MjkyMTE5Mzha\nFw0yMzA3MjkyMTE5MzhaMBUxEzARBgNVBAMMCmJhbmFuYS5jb20wggEiMA0GCSqG\nSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDVpcfcBOnFuyZG+A2WQzmaBI5NXgwTCfvE\neKciqRQXhzJdUkEg7eqwFrK3y9yjhoiB6q0WNAeR+nOdS/Cw7layRtGz5skOq7Aa\nN4FZHg0or30i7Rrx7afJcGJyLpxfK/OfLmJm5QEdLXV0DZp0L5vuhhEb1EUOrMaY\nGe4iwqTyg6D7fuBili9dBVn9IvNhYMVgtiqkWVLTW4ChE0LgES4oO3rQZgp4dtM5\nsp6KwHGO766UzwGnkKRizaqmLylfVusllWNPFfp6gEaxa45N70oqGUrvGSVHWeHf\nfvkhpWx+wOnu+2A5F/Yv3UNz2v4g7Vjt7V0tjL4KMV9YklpRjTh3AgMBAAEwDQYJ\nKoZIhvcNAQELBQADggEBAChjRzuba8zjQ7NYBVas89Oy7u++MlS8xWxh++yiUsV6\nWMk3ZemsPtXc1YmXorIQohtxLxzUPm2JhyzFzU/sOLmJQ1E/l+gtZHyRCwsb20fX\nmphuJsMVd7qv/GwEk9PBsk2uDqg4/Wix0Rx5lf95juJP7CPXQJl5FQauf3+LSz0y\nwF/j+4GqvrwsWr9hKOLmPdkyKkR6bHKtzzsxL9PM8GnElk2OpaPMMnzbL/vt2IAt\nxK01ZzPxCQCzVwHo5IJO5NR/fIyFbEPhxzG17QsRDOBR9fl9cOIvDeSO04vyZ+nz\n+kA2c3fNrZFAtpIlOOmFh8Q12rVL4sAjI5mVWnNEgvI=\n-----END CERTIFICATE-----\n",  # noqa: E501
-            "orchestrator_address": "http://orchestrator.com",
+            "certifier_pem_certificate": "-----BEGIN CERTIFICATE-----\nMIICvDCCAaQCFFPAOD7utDTsgFrm0vS4We18OcnKMA0GCSqGSIb3DQEBCwUAMCAx\nCzAJBgNVBAYTAlVTMREwDwYDVQQDDAh3aGF0ZXZlcjAeFw0yMjA3MjkyMTE5Mzha\nFw0yMzA3MjkyMTE5MzhaMBUxEzARBgNVBAMMCmJhbmFuYS5jb20wggEiMA0GCSqG\nSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDVpcfcBOnFuyZG+A2WQzmaBI5NXgwTCfvE\neKciqRQXhzJdUkEg7eqwFrK3y9yjhoiB6q0WNAeR+nOdS/Cw7layRtGz5skOq7Aa\nN4FZHg0or30i7Rrx7afJcGJyLpxfK/OfLmJm5QEdLXV0DZp0L5vuhhEb1EUOrMaY\nGe4iwqTyg6D7fuBili9dBVn9IvNhYMVgtiqkWVLTW4ChE0LgES4oO3rQZgp4dtM5\nsp6KwHGO766UzwGnkKRizaqmLylfVusllWNPFfp6gEaxa45N70oqGUrvGSVHWeHf\nfvkhpWx+wOnu+2A5F/Yv3UNz2v4g7Vjt7V0tjL4KMV9YklpRjTh3AgMBAAEwDQYJ\nKoZIhvcNAQELBQADggEBAChjRzuba8zjQ7NYBVas89Oy7u++MlS8xWxh++yiUsV6\nWMk3ZemsPtXc1YmXorIQohtxLxzUPm2JhyzFzU/sOLmJQ1E/l+gtZHyRCwsb20fX\nmphuJsMVd7qv/GwEk9PBsk2uDqg4/Wix0Rx5lf95juJP7CPXQJl5FQauf3+LSz0y\nwF/j+4GqvrwsWr9hKOLmPdkyKkR6bHKtzzsxL9PM8GnElk2OpaPMMnzbL/vt2IAt\nxK01ZzPxCQCzVwHo5IJO5NR/fIyFbEPhxzG17QsRDOBR9fl9cOIvDeSO04vyZ+nz\n+kA2c3fNrZFAtpIlOOmFh8Q12rVL4sAjI5mVWnNEgvI=\n-----END CERTIFICATE-----\n",  # noqa: E501
+            "orchestrator_address": "orchestrator.com",
             "orchestrator_port": "1234",
-            "bootstrapper_address": "http://bootstrapper.com",
+            "bootstrapper_address": "bootstrapper.com",
             "bootstrapper_port": "5678",
-            "fluentd_address": "http://fluentd.com",
+            "fluentd_address": "fluentd.com",
             "fluentd_port": "9112",
         }
     ],
@@ -137,23 +139,23 @@ REQUIRER_JSON_SCHEMA = {
         "root_ca_certificate": {
             "type": "string",
         },
+        "certifier_pem_certificate": {
+            "type": "string",
+        },
         "orchestrator_address": {
             "type": "string",
-            "format": "uri",
         },
         "orchestrator_port": {
             "type": "string",
         },
         "bootstrapper_address": {
             "type": "string",
-            "format": "uri",
         },
         "bootstrapper_port": {
             "type": "string",
         },
         "fluentd_address": {
             "type": "string",
-            "format": "uri",
         },
         "fluentd_port": {
             "type": "string",
@@ -161,6 +163,7 @@ REQUIRER_JSON_SCHEMA = {
     },
     "required": [
         "root_ca_certificate",
+        "certifier_pem_certificate",
         "orchestrator_address",
         "orchestrator_port",
         "bootstrapper_address",
@@ -179,6 +182,7 @@ class OrchestratorAvailableEvent(EventBase):
         self,
         handle: Handle,
         root_ca_certificate: str,
+        certifier_pem_certificate: str,
         orchestrator_address: str,
         orchestrator_port: int,
         bootstrapper_address: str,
@@ -189,6 +193,7 @@ class OrchestratorAvailableEvent(EventBase):
         """Init."""
         super().__init__(handle)
         self.root_ca_certificate = root_ca_certificate
+        self.certifier_pem_certificate = certifier_pem_certificate
         self.orchestrator_address = orchestrator_address
         self.orchestrator_port = orchestrator_port
         self.bootstrapper_address = bootstrapper_address
@@ -200,6 +205,7 @@ class OrchestratorAvailableEvent(EventBase):
         """Returns snapshot."""
         return {
             "root_ca_certificate": self.root_ca_certificate,
+            "certifier_pem_certificate": self.certifier_pem_certificate,
             "orchestrator_address": self.orchestrator_address,
             "orchestrator_port": self.orchestrator_port,
             "bootstrapper_address": self.bootstrapper_address,
@@ -211,6 +217,7 @@ class OrchestratorAvailableEvent(EventBase):
     def restore(self, snapshot: dict):
         """Restores snapshot."""
         self.root_ca_certificate = snapshot["root_ca_certificate"]
+        self.certifier_pem_certificate = snapshot["certifier_pem_certificate"]
         self.orchestrator_address = snapshot["orchestrator_address"]
         self.orchestrator_port = snapshot["orchestrator_port"]
         self.bootstrapper_address = snapshot["bootstrapper_address"]
@@ -240,15 +247,28 @@ class OrchestratorRequires(Object):
         )
 
     @staticmethod
+    def _uri_validator(uri) -> bool:
+        result = urlparse(uri)
+        if not all([result.scheme, result.netloc]):
+            return False
+        return True
+
+    @staticmethod
     def _relation_data_is_valid(remote_app_relation_data: dict) -> bool:
+        format_checker = FormatChecker()
+        format_checker.checks("uri")(OrchestratorRequires._uri_validator)
         try:
-            validate(instance=remote_app_relation_data, schema=REQUIRER_JSON_SCHEMA)
+            validate(
+                instance=remote_app_relation_data,
+                schema=REQUIRER_JSON_SCHEMA,
+                format_checker=format_checker,
+            )
             return True
         except exceptions.ValidationError:
             return False
 
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
-        """Handler triggerred on relation changed events.
+        """Handler triggered on relation changed events.
 
         Args:
             event: Juju event
@@ -263,15 +283,19 @@ class OrchestratorRequires(Object):
         if not relation.app:
             logger.warning(f"No remote application in relation: {self.relationship_name}")
             return
+        if not event.app:
+            logger.warning(f"No remote application for the event: {event}")
+            return
         remote_app_relation_data = relation.data[relation.app]
         if not self._relation_data_is_valid(dict(remote_app_relation_data)):
             logger.warning(
-                f"Provider relation data did not pass JSON Schema validation: "  # type: ignore[index]  # noqa: E501,W505
+                f"Provider relation data did not pass JSON Schema validation: "
                 f"{event.relation.data[event.app]}"
             )
             return
         self.on.orchestrator_available.emit(
             root_ca_certificate=remote_app_relation_data["root_ca_certificate"],
+            certifier_pem_certificate=remote_app_relation_data["certifier_pem_certificate"],
             orchestrator_address=remote_app_relation_data["orchestrator_address"],
             orchestrator_port=int(remote_app_relation_data["orchestrator_port"]),
             bootstrapper_address=remote_app_relation_data["bootstrapper_address"],
@@ -300,6 +324,7 @@ class OrchestratorProvides(Object):
     def set_orchestrator_information(
         self,
         root_ca_certificate: str,
+        certifier_pem_certificate: str,
         orchestrator_address: str,
         bootstrapper_address: str,
         fluentd_address: str,
@@ -311,6 +336,7 @@ class OrchestratorProvides(Object):
 
         Args:
             root_ca_certificate: Orchestrator Root CA Certificate
+            certifier_pem_certificate: Orchestrator `certifier.pem`
             orchestrator_address: Orchestrator address (ex. controller.yourdomain.com)
             bootstrapper_address: Bootstrapper address (ex. bootstrapper-controller.yourdomain.com)
             fluentd_address: Fluentd Address (ex. fluentd.yourdomain.com)
@@ -336,6 +362,7 @@ class OrchestratorProvides(Object):
             relation.data[self.charm.app].update(
                 {
                     "root_ca_certificate": root_ca_certificate,
+                    "certifier_pem_certificate": certifier_pem_certificate,
                     "orchestrator_address": orchestrator_address,
                     "orchestrator_port": str(orchestrator_port),
                     "bootstrapper_address": bootstrapper_address,
