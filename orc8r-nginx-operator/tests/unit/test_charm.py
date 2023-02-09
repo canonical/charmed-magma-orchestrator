@@ -513,7 +513,6 @@ class TestCharm(unittest.TestCase):
             self.harness.charm.unit.status,
         )
 
-    def _create_active_relation(self, relation_name: str, remote_app: str) -> int:
     @patch("ops.model.Container.restart")
     @patch("ops.model.Container.exists")
     def test_given_workload_container_with_pebble_layer_when_pebble_ready_then_nginx_service_is_reloaded(  # noqa: E501
