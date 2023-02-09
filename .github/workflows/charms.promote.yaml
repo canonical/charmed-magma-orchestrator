@@ -140,6 +140,6 @@ jobs:
           credentials: ${{ secrets.CHARMCRAFT_AUTH }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           destination-channel: github.ref_name/${{ env.promote-to }}
-          origin-channel: latest/${{ env.promote-from }}
+          origin-channel: github.ref_name/${{ env.promote-from }}
           tag-prefix: magma-${{ github.event.inputs.charm-name }}
           charm-path: ./${{ github.event.inputs.charm-name }}-operator
