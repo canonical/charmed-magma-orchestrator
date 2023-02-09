@@ -31,7 +31,7 @@ class TestCharm(unittest.TestCase):
     @patch("lightkube.core.client.Client.get")
     @patch("lightkube.core.client.Client.create")
     @patch("ops.model.Container.exec", new_callable=Mock)
-    def test_given_additional_k8s_services_not_created_when_on_install_then_additional_k8s_services_are_created(  # noqa: E501
+    def test_given_additional_k8s_services_not_created_when_on_install_then_services_are_created(
         self, patched_exec, patch_create, patch_get
     ):
         patched_exec.return_value = MockExec()
