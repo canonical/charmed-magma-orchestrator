@@ -512,6 +512,48 @@ class TestCharm(unittest.TestCase):
             },
         )
 
+    @patch("ops.model.Container.restart")
+    @patch("ops.model.Container.exists")
+    def test_given_workload_container_with_pebble_layer_when_pebble_ready_then_nginx_service_is_reloaded(  # noqa: E501
+        self, patched_file_exists, patched_restart
+    ):
+        patched_file_exists.return_value = True
+        self.harness.update_config(key_values={"domain": "whatever.com"})
+        self._create_all_relations()
+
+        self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
+
+        patched_restart.assert_called_once()
+
+    @patch("ops.model.Container.restart")
+    @patch("ops.model.Container.exists")
+    @patch("ops.model.Container.exec", Mock())
+    def test_given_workload_container_without_pebble_layer_when_pebble_ready_then_nginx_service_is_reloaded(  # noqa: E501
+        self, patched_file_exists, patched_restart
+    ):
+        test_pebble_layer = {
+            "services": {
+                "magma-orc8r-nginx": {
+                    "override": "replace",
+                    "startup": "enabled",
+                    "command": "nginx",
+                    "environment": {
+                        "SERVICE_REGISTRY_MODE": "k8s",
+                        "SERVICE_REGISTRY_NAMESPACE": self.namespace,
+                    },
+                }
+            },
+        }
+        self.harness.set_can_connect(container=self._container, val=True)
+        patched_file_exists.return_value = True
+        self.harness.update_config(key_values={"domain": "whatever.com"})
+        self._create_all_relations()
+        self._container.add_layer("magma-nms-nginx-proxy", test_pebble_layer, combine=True)
+
+        self.harness.container_pebble_ready(container_name="magma-orc8r-nginx")
+
+        patched_restart.assert_called_once()
+
     def _create_active_relation(self, relation_name: str, remote_app: str):
         """Creates a relation between orc8r-nginx and a remote app.
 
