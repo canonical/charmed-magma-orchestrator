@@ -21,7 +21,7 @@ jobs:
       - name: Install tox
         run: pip install tox==$TOX_VERSION
       - name: Setup operator environment
-        uses: charmed-kubernetes/actions-operator@main
+        uses: charmed-kubernetes/actions-operator@1.1.0
         with:
           provider: microk8s
           juju-channel: $JUJU_CHANNEL
