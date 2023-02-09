@@ -50,7 +50,7 @@ on:
 
 jobs:
   promote-all:
-    if: github.event.inputs.charm-name == 'all'
+    if: github.ref_name == '1.6' && github.event.inputs.charm-name == 'all'
     name: Promote All Charms
     runs-on: ubuntu-latest
     strategy:
@@ -109,12 +109,12 @@ jobs:
         with:
           credentials: ${{ secrets.CHARMCRAFT_AUTH }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          destination-channel: latest/${{ env.promote-to }}
-          origin-channel: latest/${{ env.promote-from }}
+          destination-channel: 1.6/${{ env.promote-to }}
+          origin-channel: 1.6/${{ env.promote-from }}
           tag-prefix: magma-${{ matrix.charms }}
           charm-path: ./${{ matrix.charms }}-operator
   promote:
-    if: github.event.inputs.charm-name != 'all'
+    if: github.ref_name == '1.6' && github.event.inputs.charm-name != 'all'
     name: Promote Charm
     runs-on: ubuntu-latest
     steps:
@@ -139,7 +139,7 @@ jobs:
         with:
           credentials: ${{ secrets.CHARMCRAFT_AUTH }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          destination-channel: latest/${{ env.promote-to }}
-          origin-channel: latest/${{ env.promote-from }}
+          destination-channel: 1.6/${{ env.promote-to }}
+          origin-channel: 1.6/${{ env.promote-from }}
           tag-prefix: magma-${{ github.event.inputs.charm-name }}
           charm-path: ./${{ github.event.inputs.charm-name }}-operator
