@@ -31,7 +31,7 @@ class TestCharm(unittest.TestCase):
     @patch("lightkube.core.client.Client.get")
     @patch("lightkube.core.client.Client.create")
     @patch("ops.model.Container.exec", new_callable=Mock)
-    def test_given_when_pebble_ready_then_additional_k8s_services_are_created(
+    def test_given_additional_k8s_services_not_created_when_on_install_then_additional_k8s_services_are_created(  # noqa: E501
         self, patched_exec, patch_create, patch_get
     ):
         patched_exec.return_value = MockExec()
@@ -41,7 +41,6 @@ class TestCharm(unittest.TestCase):
             request=Request(url="whatever", method="get"),
         )
         event = Mock()
-        self.harness.set_can_connect(container=self._container, val=True)
 
         self.harness.charm._on_install(event)
 
