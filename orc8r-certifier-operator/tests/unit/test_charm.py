@@ -1379,14 +1379,14 @@ class TestCharm(unittest.TestCase):
             relation_id=fluentd_relation_id,
         )
 
-    @patch("ops.model.Container.push")
+    @patch("ops.model.Container.push", Mock())
     @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("ops.model.Container.pull")
     @patch(
         "charms.magma_orc8r_certifier.v0.cert_admin_operator.CertAdminOperatorProvides.set_certificate"  # noqa: E501, W505
     )
     def test_given_admin_operator_certificate_when_certificate_is_regenerated_then_certificate_is_set_in_admin_operator_lib_for_each_relation(  # noqa: E501
-        self, patch_set_certificate, patch_pull, patch_push
+        self, patch_set_certificate, patch_pull
     ):
         self.harness.set_leader(is_leader=True)
         container = self.harness.model.unit.get_container("magma-orc8r-certifier")
@@ -1396,7 +1396,7 @@ class TestCharm(unittest.TestCase):
         certificate = io.StringIO(certificate_string)
         private_key = io.StringIO(private_key_string)
         domain_config = "whatever.com"
-        _, key_values = self.create_peer_relation_with_certificates(
+        _, __ = self.create_peer_relation_with_certificates(
             domain_config=domain_config,
             root_private_key=True,
             admin_operator_private_key=True,
@@ -1442,12 +1442,12 @@ class TestCharm(unittest.TestCase):
             ]
         )
 
-    @patch("ops.model.Container.push")
+    @patch("ops.model.Container.push", Mock())
     @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("ops.model.Container.pull")
     @patch("charms.magma_orc8r_certifier.v0.cert_certifier.CertCertifierProvides.set_certificate")
     def test_given_certifier_certificate_when_certificate_is_regenerated_then_certificate_is_set_in_cert_certifier_lib_for_each_relation(  # noqa: E501
-        self, patch_set_certificate, patch_pull, patch_push
+        self, patch_set_certificate, patch_pull
     ):
         self.harness.set_leader(is_leader=True)
         container = self.harness.model.unit.get_container("magma-orc8r-certifier")

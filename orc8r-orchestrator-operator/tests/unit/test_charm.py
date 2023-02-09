@@ -512,11 +512,11 @@ class TestCharm(unittest.TestCase):
             ]
         )
 
-    @patch("ops.model.Container.exists")
-    @patch("ops.model.Container.push")
+    @patch("ops.model.Container.exists", Mock())
+    @patch("ops.model.Container.push", Mock())
     @patch("ops.model.Container.restart")
     def test_given_pebble_plan_changed_when_configure_pebble_then_container_is_restarted(
-        self, patch_container_restart, patch_push, patch_exists
+        self, patch_container_restart,
     ):
         certificate = "whatever certificate"
         event = Mock()
@@ -535,11 +535,11 @@ class TestCharm(unittest.TestCase):
         self.assertNotEqual(plan, updated_plan)
         patch_container_restart.assert_called_once()
 
-    @patch("ops.model.Container.exists")
-    @patch("ops.model.Container.push")
+    @patch("ops.model.Container.exists", Mock())
+    @patch("ops.model.Container.push", Mock())
     @patch("ops.model.Container.restart")
     def test_given_no_change_in_pebble_plan_when_configure_pebble_then_container_is_restarted(
-        self, patch_container_restart, patch_push, patch_exists
+        self, patch_container_restart
     ):
         certificate = "whatever certificate"
         event = Mock()
