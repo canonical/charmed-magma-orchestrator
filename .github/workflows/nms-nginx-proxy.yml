@@ -38,7 +38,7 @@ jobs:
 
           echo "# Install LXD"
           /usr/bin/sudo apt-get remove -qy lxd lxd-client || true
-          /usr/bin/sudo snap install lxd
+          /usr/bin/sudo snap install lxd --channel=$LXD_CHANNEL
 
           echo "# Initialize LXD"
           /usr/bin/sudo lxd waitready
@@ -66,12 +66,12 @@ jobs:
 
           echo "# Install tools"
           /usr/bin/sudo snap install jq
-          /usr/bin/sudo snap install charm --classic --channel=latest/stable
-          /usr/bin/sudo snap install charmcraft --classic --channel=latest/stable
+          /usr/bin/sudo snap install charm --classic --channel=$CHARM_CHANNEL
+          /usr/bin/sudo snap install charmcraft --classic --channel=$CHARMCRAFT_CHANNEL
           /usr/bin/sudo snap install juju-bundle --classic --channel=latest/stable
 
           echo "# Install microk8s"
-          /usr/bin/sudo snap install microk8s --classic
+          /usr/bin/sudo snap install microk8s --channel=$MICROK8S_CHANNEL --classic
 
           echo "# Initialize microk8s"
           /usr/bin/bash -c "sudo usermod -a -G microk8s $USER"

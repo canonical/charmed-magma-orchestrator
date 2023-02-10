@@ -54,10 +54,10 @@ jobs:
           /usr/bin/sudo snap install juju --classic --channel=$JUJU_CHANNEL
 
           echo "# Install charmcraft"
-          /usr/bin/sudo snap install charmcraft --classic --channel=latest/stable
+          /usr/bin/sudo snap install charmcraft --classic --channel=$CHARMCRAFT_CHANNEL
 
           echo "# Install microk8s"
-          /usr/bin/sudo snap install microk8s --classic
+          /usr/bin/sudo snap install microk8s --channel=$MICROK8S_CHANNEL --classic
 
           echo "# Initialize microk8s"
           /usr/bin/bash -c "sudo usermod -a -G microk8s $USER"

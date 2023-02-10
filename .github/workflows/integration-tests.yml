@@ -24,7 +24,11 @@ jobs:
         uses: charmed-kubernetes/actions-operator@1.1.0
         with:
           provider: microk8s
-          juju-channel: $JUJU_CHANNEL
+          channel: ${{ env.MICROK8S_CHANNEL }}
+          lxd-channel: ${{ env.LXD_CHANNEL }}
+          charmcraft-channel: ${{ env.CHARMCRAFT_CHANNEL }}
+          charm-channel: ${{ env.CHARM_CHANNEL }}
+          juju-channel: ${{ env.JUJU_CHANNEL }}
       - name: Run integration tests
         run: cd ${{ inputs.charm_dir }} && tox -e integration
       - name: Archive charmcraft logs
