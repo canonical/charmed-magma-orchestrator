@@ -77,7 +77,7 @@ pgsql = ops.lib.use("pgsql", 1, "postgresql-charmers@lists.launchpad.net")
 
 
 class MagmaOrc8rCertifierCharm(CharmBase):
-    """Main class that is instantiated everytime an event occurs."""
+    """Main class that is instantiated every time an event occurs."""
 
     DB_NAME = "magma_dev"
     BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
@@ -136,11 +136,11 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         # Certs events
         self.framework.observe(
             self.certificates_admin_operator_provider.on.certificate_request,
-            self._on_admin_operator_certificate_request,
+            self._publish_admin_operator_certificate,
         )
         self.framework.observe(
             self.certificates_certifier_provider.on.certificate_request,
-            self._on_certifier_certificate_request,
+            self._publish_certifier_certificate,
         )
         self.framework.observe(
             self.certificates_controller_provider.on.certificate_request,
@@ -348,17 +348,20 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             event.defer()
             return
 
-    def _on_admin_operator_certificate_request(
-        self, event: AdminOperatorCertificateRequestEvent
+    def _publish_admin_operator_certificate(
+        self, event: Union[AdminOperatorCertificateRequestEvent, ConfigChangedEvent]
     ) -> None:
-        """Triggered when a certificate request is made on the admin_operator relation.
+        """Pulls the certificate from the workload container and sets it in the relation data.
 
         Args:
-            event (AdminOperatorCertificateRequestEvent): Juju event.
+            event (AdminOperatorCertificateRequestEvent, ConfigChangedEvent): Juju event.
 
         Returns:
             None
         """
+        admin_operator_relations = self.model.relations.get("cert-admin-operator")
+        if not admin_operator_relations:
+            raise RuntimeError("'cert-admin-operator' relation not available!")
         if not self._container.can_connect():
             logger.info("Container not yet available")
             event.defer()
@@ -376,21 +379,27 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             return
         certificate_string = certificate.read()
         private_key_string = private_key.read()
-        self.certificates_admin_operator_provider.set_certificate(
-            relation_id=event.relation_id,
-            certificate=str(certificate_string),
-            private_key=str(private_key_string),
-        )
+        for relation in admin_operator_relations:
+            self.certificates_admin_operator_provider.set_certificate(
+                relation_id=relation.id,
+                certificate=str(certificate_string),
+                private_key=str(private_key_string),
+            )
 
-    def _on_certifier_certificate_request(self, event: CertifierCertificateRequestEvent) -> None:
-        """Triggered when a certificate request is made on the cert-certifier relation.
+    def _publish_certifier_certificate(
+        self, event: Union[CertifierCertificateRequestEvent, ConfigChangedEvent]
+    ) -> None:
+        """Pulls the certificate from the workload container and sets it in the relation data.
 
         Args:
-            event (CertifierCertificateRequestEvent): Juju event
+            event Union[CertifierCertificateRequestEvent, ConfigChangedEvent]: Juju events
 
         Returns:
             None
         """
+        cert_certifier_relations = self.model.relations.get("cert-certifier")
+        if not cert_certifier_relations:
+            raise RuntimeError("'cert-certifier' relation not available!")
         if not self._container.can_connect():
             logger.info("Container not yet available")
             event.defer()
@@ -402,10 +411,11 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             event.defer()
             return
         certificate_string = certificate.read()
-        self.certificates_certifier_provider.set_certificate(
-            relation_id=event.relation_id,
-            certificate=str(certificate_string),
-        )
+        for relation in cert_certifier_relations:
+            self.certificates_certifier_provider.set_certificate(
+                relation_id=relation.id,
+                certificate=str(certificate_string),
+            )
 
     def _publish_controller_certificate(
         self,
@@ -766,8 +776,20 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         ):
             self._generate_application_certificates()
             self._push_application_certificates()
-            if self.model.relations.get("fluentd-certs"):
-                self._regenerate_fluentd_certificates(event)
+            self._update_certificates_in_relations(event)
+
+    def _update_certificates_in_relations(self, event: ConfigChangedEvent) -> None:
+        """Publishes new certificates.
+
+        Args:
+            event: Juju ConfigChangedEvent event
+        """
+        if self.model.relations.get("cert-certifier"):
+            self._publish_certifier_certificate(event)
+        if self.model.relations.get("cert-admin-operator"):
+            self._publish_admin_operator_certificate(event)
+        if self.model.relations.get("fluentd-certs"):
+            self._regenerate_fluentd_certificates(event)
 
     def _on_non_leader_config_changed(self, event: ConfigChangedEvent) -> None:
         """Triggered on config changed for non-leader unit.

@@ -417,6 +417,95 @@ class TestCharm(unittest.TestCase):
             ]
         )
 
+    @patch("ops.model.Container.exists")
+    @patch("psycopg2.connect", new=Mock())
+    @patch("charm.ConnectionString")
+    @patch("charm.MagmaNmsMagmalteCharm._create_master_nms_admin_user")
+    @patch("charm.MagmaNmsMagmalteCharm._grafana_url", new_callable=PropertyMock)
+    @patch("ops.model.Container.restart")
+    def test_given_unchanged_pebble_plan_when_configure_pebble_then_container_is_restarted(
+        self,
+        patch_container_restart,
+        grafana_url_mock,
+        patch_create_admin_user,
+        patch_connection_string,
+        patch_exists,
+    ):
+        service_name = "magma-nms-magmalte"
+        grafana_url_mock.return_value = self.GRAFANA_URLS[0]
+        patch_exists.return_value = True
+        container = self.harness.model.unit.get_container(service_name)
+        self.harness.set_can_connect(container=container, val=True)
+        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        key_values = {"master": str(self.TEST_DB_CONNECTION_STRING)}
+        self.harness.update_relation_data(
+            relation_id=db_relation_id, key_values=key_values, app_or_unit="postgresql-k8s"
+        )
+        self.harness.add_relation(
+            relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
+        )
+
+        test_pebble_layer = {
+            "summary": "magma-nms-magmalte pebble layer",
+            "services": {
+                service_name: {
+                    "override": "replace",
+                    "startup": "enabled",
+                    "command": f"/usr/local/bin/wait-for-it.sh -s -t 30 "
+                    f"{self.TEST_DB_CONNECTION_STRING.host}:"
+                    f"{self.TEST_DB_CONNECTION_STRING.port} --"
+                    "-- yarn run start:prod",
+                    "environment": {
+                        "API_CERT_FILENAME": "/run/secrets/admin_operator.pem",
+                        "API_PRIVATE_KEY_FILENAME": "/run/secrets/admin_operator.key.pem",
+                        "API_HOST": f"orc8r-nginx-proxy.{self.namespace}.svc.cluster.local",
+                        "PORT": str(8081),
+                        "HOST": "0.0.0.0",
+                        "MYSQL_HOST": str(self.TEST_DB_CONNECTION_STRING.host),
+                        "MYSQL_PORT": str(self.TEST_DB_CONNECTION_STRING.port),
+                        "MYSQL_DB": "magma_dev",
+                        "MYSQL_USER": str(self.TEST_DB_CONNECTION_STRING.user),
+                        "MYSQL_PASS": str(self.TEST_DB_CONNECTION_STRING.password),
+                        "MAPBOX_ACCESS_TOKEN": "",
+                        "MYSQL_DIALECT": "postgres",
+                        "PUPPETEER_SKIP_DOWNLOAD": "true",
+                        "USER_GRAFANA_ADDRESS": self.harness.charm._grafana_url,
+                    },
+                }
+            },
+        }
+        self.harness.model.unit.get_container("magma-nms-magmalte").add_layer(
+            "magma-nms-magmalte", test_pebble_layer, combine=True
+        )
+        self.harness.container_pebble_ready(container_name=service_name)
+        patch_container_restart.assert_called_once()
+
+    @patch("ops.model.Container.exec", Mock())
+    @patch("ops.model.Container.exists")
+    @patch("psycopg2.connect", new=Mock())
+    @patch("charm.MagmaNmsMagmalteCharm._grafana_url", new_callable=PropertyMock)
+    @patch("ops.model.Container.restart")
+    def test_given_changed_pebble_plan_when_configure_pebble_then_container_is_restarted(
+        self,
+        patch_container_restart,
+        grafana_url_mock,
+        patch_exists,
+    ):
+        service_name = "magma-nms-magmalte"
+        grafana_url_mock.return_value = self.GRAFANA_URLS[0]
+        patch_exists.return_value = True
+        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        key_values = {"master": str(self.TEST_DB_CONNECTION_STRING)}
+        self.harness.update_relation_data(
+            relation_id=db_relation_id, key_values=key_values, app_or_unit="postgresql-k8s"
+        )
+        self.harness.add_relation(
+            relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
+        )
+        self.harness.container_pebble_ready(container_name=service_name)
+
+        patch_container_restart.assert_called_once()
+
     def test_given_grafana_auth_relation_when_urls_available_event_then_grafana_urls_are_stored_in_peer_data(  # noqa: E501
         self,
     ):
