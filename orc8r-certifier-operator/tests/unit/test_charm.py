@@ -8,6 +8,7 @@ import unittest
 from typing import Tuple
 from unittest.mock import Mock, call, patch
 
+import pytest
 from certificates import (
     generate_ca,
     generate_certificate,
@@ -1066,19 +1067,41 @@ class TestCharm(unittest.TestCase):
         certificate_string = "whatever certificate"
         private_key_string = "whatever private key"
         event = Mock()
-        relation_id = 3
+        relation_id = 0
         event.relation_id = relation_id
         certificate = io.StringIO(certificate_string)
         private_key = io.StringIO(private_key_string)
         patch_pull.side_effect = [certificate, private_key]
         container = self.harness.model.unit.get_container("magma-orc8r-certifier")
         self.harness.set_can_connect(container=container, val=True)
+        self.harness.add_relation("cert-admin-operator", "whatever")
 
-        self.harness.charm._on_admin_operator_certificate_request(event=event)
+        self.harness.charm._publish_admin_operator_certificate(event=event)
 
         patch_set_private_key.assert_called_with(
-            private_key=private_key_string, certificate=certificate_string, relation_id=relation_id
+            relation_id=relation_id, certificate=certificate_string, private_key=private_key_string
         )
+
+    @patch("ops.model.Container.pull")
+    @patch(
+        "charms.magma_orc8r_certifier.v0.cert_admin_operator.CertAdminOperatorProvides.set_certificate"  # noqa: E501, W505
+    )
+    def test_given_certificate_is_stored_with_no_relation_when_admin_operator_controller_certificate_request_then_runtime_error_is_raised(  # noqa: E501
+        self, patch_set_private_key, patch_pull
+    ):
+        certificate_string = "whatever certificate"
+        private_key_string = "whatever private key"
+        relation_id = 0
+        certificate = io.StringIO(certificate_string)
+        private_key = io.StringIO(private_key_string)
+        patch_pull.side_effect = [certificate, private_key]
+        container = self.harness.model.unit.get_container("magma-orc8r-certifier")
+        self.harness.set_can_connect(container=container, val=True)
+
+        with pytest.raises(RuntimeError):
+            self.harness.charm.certificates_admin_operator_provider.on.certificate_request.emit(
+                relation_id=relation_id
+            )
 
     @patch("ops.model.Container.pull")
     @patch(
@@ -1354,6 +1377,208 @@ class TestCharm(unittest.TestCase):
             ca=certs["application_certificate"],
             chain=[test_fluentd_cert.decode(), certs["application_certificate"]],
             relation_id=fluentd_relation_id,
+        )
+
+    @patch("ops.model.Container.push", Mock())
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
+    @patch("ops.model.Container.pull")
+    @patch(
+        "charms.magma_orc8r_certifier.v0.cert_admin_operator.CertAdminOperatorProvides.set_certificate"  # noqa: E501, W505
+    )
+    def test_given_admin_operator_certificate_when_certificate_is_regenerated_then_certificate_is_set_in_admin_operator_lib_for_each_relation(  # noqa: E501
+        self, patch_set_certificate, patch_pull
+    ):
+        self.harness.set_leader(is_leader=True)
+        container = self.harness.model.unit.get_container("magma-orc8r-certifier")
+        self.harness.set_can_connect(container=container, val=True)
+        certificate_string = "whatever certificate"
+        private_key_string = "whatever private key"
+        certificate = io.StringIO(certificate_string)
+        private_key = io.StringIO(private_key_string)
+        domain_config = "whatever.com"
+        _, __ = self.create_peer_relation_with_certificates(
+            domain_config=domain_config,
+            root_private_key=True,
+            admin_operator_private_key=True,
+            application_private_key=True,
+            application_certificate=True,
+            admin_operator_certificate=True,
+            root_csr=True,
+            root_certificate=True,
+        )
+        cert_admin_operator_relation_id1 = self.harness.add_relation(
+            "cert-admin-operator", "whateverapp1"
+        )
+        cert_admin_operator_relation_id2 = self.harness.add_relation(
+            "cert-admin-operator", "whateverapp2"
+        )
+        cert_admin_operator_relation_id3 = self.harness.add_relation(
+            "cert-admin-operator", "whateverapp3"
+        )
+        self.harness.update_config(key_values={"domain": "whateverdifferent.com"})
+        patch_pull.side_effect = [certificate, private_key]
+
+        self.harness.charm.certificates_admin_operator_provider.on.certificate_request.emit(
+            relation_id=cert_admin_operator_relation_id1
+        )
+
+        patch_set_certificate.assert_has_calls(
+            [
+                call(
+                    relation_id=cert_admin_operator_relation_id1,
+                    certificate=certificate_string,
+                    private_key=private_key_string,
+                ),
+                call(
+                    relation_id=cert_admin_operator_relation_id2,
+                    certificate=certificate_string,
+                    private_key=private_key_string,
+                ),
+                call(
+                    relation_id=cert_admin_operator_relation_id3,
+                    certificate=certificate_string,
+                    private_key=private_key_string,
+                ),
+            ]
+        )
+
+    @patch("ops.model.Container.push", Mock())
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
+    @patch("ops.model.Container.pull")
+    @patch("charms.magma_orc8r_certifier.v0.cert_certifier.CertCertifierProvides.set_certificate")
+    def test_given_certifier_certificate_when_certificate_is_regenerated_then_certificate_is_set_in_cert_certifier_lib_for_each_relation(  # noqa: E501
+        self, patch_set_certificate, patch_pull
+    ):
+        self.harness.set_leader(is_leader=True)
+        container = self.harness.model.unit.get_container("magma-orc8r-certifier")
+        self.harness.set_can_connect(container=container, val=True)
+        certificate_string = "whatever certificate"
+        private_key_string = "whatever private key"
+        certificate = io.StringIO(certificate_string)
+        private_key = io.StringIO(private_key_string)
+        domain_config = "whatever.com"
+        _, __ = self.create_peer_relation_with_certificates(
+            domain_config=domain_config,
+            root_private_key=True,
+            admin_operator_private_key=True,
+            application_private_key=True,
+            application_certificate=True,
+            admin_operator_certificate=True,
+            root_csr=True,
+            root_certificate=True,
+        )
+        cert_cert_certifier_id1 = self.harness.add_relation("cert-certifier", "whateverapp1")
+        cert_cert_certifier_id2 = self.harness.add_relation("cert-certifier", "whateverapp2")
+        cert_cert_certifier_id3 = self.harness.add_relation("cert-certifier", "whateverapp3")
+        patch_pull.side_effect = [certificate, private_key]
+
+        self.harness.update_config(key_values={"domain": "whateverdifferent.com"})
+
+        patch_set_certificate.assert_has_calls(
+            [
+                call(relation_id=cert_cert_certifier_id1, certificate=certificate_string),
+                call(relation_id=cert_cert_certifier_id2, certificate=certificate_string),
+                call(relation_id=cert_cert_certifier_id3, certificate=certificate_string),
+            ]
+        )
+
+    @patch("ops.model.Container.push")
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
+    @patch("ops.model.Container.pull")
+    @patch(
+        "charms.magma_orc8r_certifier.v0.cert_admin_operator.CertAdminOperatorProvides.set_certificate"  # noqa: E501, W505
+    )
+    def test_given_admin_operator_certificate_when_certificate_regeneration_then_admin_operator_certificate_is_set_in_admin_operator_lib_for_each_relation(  # noqa: E501
+        self, patch_set_certificate, patch_pull, patch_push
+    ):
+        self.harness.set_leader(is_leader=True)
+        container = self.harness.model.unit.get_container("magma-orc8r-certifier")
+        self.harness.set_can_connect(container=container, val=True)
+        certificate_string = "whatever certificate"
+        private_key_string = "whatever private key"
+        certificate = io.StringIO(certificate_string)
+        private_key = io.StringIO(private_key_string)
+        domain_config = "whatever.com"
+        _, key_values = self.create_peer_relation_with_certificates(
+            domain_config=domain_config,
+            root_private_key=True,
+            admin_operator_private_key=True,
+            application_private_key=True,
+            application_certificate=True,
+            admin_operator_certificate=True,
+            root_csr=True,
+            root_certificate=True,
+        )
+        cert_admin_operator_relation_id1 = self.harness.add_relation(
+            "cert-admin-operator", "whateverapp1"
+        )
+        cert_admin_operator_relation_id2 = self.harness.add_relation(
+            "cert-admin-operator", "whateverapp2"
+        )
+        cert_admin_operator_relation_id3 = self.harness.add_relation(
+            "cert-admin-operator", "whateverapp3"
+        )
+        patch_pull.side_effect = [certificate, private_key]
+
+        self.harness.update_config(key_values={"domain": "whateverdifferent.com"})
+        patch_set_certificate.assert_has_calls(
+            [
+                call(
+                    relation_id=cert_admin_operator_relation_id1,
+                    certificate=certificate_string,
+                    private_key=private_key_string,
+                ),
+                call(
+                    relation_id=cert_admin_operator_relation_id2,
+                    certificate=certificate_string,
+                    private_key=private_key_string,
+                ),
+                call(
+                    relation_id=cert_admin_operator_relation_id3,
+                    certificate=certificate_string,
+                    private_key=private_key_string,
+                ),
+            ]
+        )
+
+    @patch("ops.model.Container.push")
+    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
+    @patch("ops.model.Container.pull")
+    @patch("charms.magma_orc8r_certifier.v0.cert_certifier.CertCertifierProvides.set_certificate")
+    def test_given_certifier_certificate_when_certificate_regeneration_then_certifier_certificate_is_set_in_admin_operator_lib_for_each_relation(  # noqa: E501
+        self, patch_set_certificate, patch_pull, patch_push
+    ):
+        self.harness.set_leader(is_leader=True)
+        container = self.harness.model.unit.get_container("magma-orc8r-certifier")
+        self.harness.set_can_connect(container=container, val=True)
+        certificate_string = "whatever certificate"
+        private_key_string = "whatever private key"
+        certificate = io.StringIO(certificate_string)
+        private_key = io.StringIO(private_key_string)
+        domain_config = "whatever.com"
+        _, key_values = self.create_peer_relation_with_certificates(
+            domain_config=domain_config,
+            root_private_key=True,
+            admin_operator_private_key=True,
+            application_private_key=True,
+            application_certificate=True,
+            admin_operator_certificate=True,
+            root_csr=True,
+            root_certificate=True,
+        )
+        cert_certifier_relation_id1 = self.harness.add_relation("cert-certifier", "whateverapp1")
+        certifier_relation_id2 = self.harness.add_relation("cert-certifier", "whateverapp2")
+        certifier_relation_id3 = self.harness.add_relation("cert-certifier", "whateverapp3")
+        patch_pull.side_effect = [certificate, private_key]
+
+        self.harness.update_config(key_values={"domain": "whateverdifferent.com"})
+
+        patch_set_certificate.assert_has_calls(
+            [
+                call(relation_id=cert_certifier_relation_id1, certificate=certificate_string),
+                call(relation_id=certifier_relation_id2, certificate=certificate_string),
+                call(relation_id=certifier_relation_id3, certificate=certificate_string),
+            ]
         )
 
     @patch("charm.generate_certificate")
