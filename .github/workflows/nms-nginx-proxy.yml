@@ -58,7 +58,7 @@ jobs:
           /usr/bin/sudo --preserve-env=http_proxy,https_proxy,no_proxy pip3 install tox
 
           echo "# Install Juju"
-          /usr/bin/sudo snap install juju --classic --channel=latest/stable
+          /usr/bin/sudo snap install juju --classic --channel=3.1/stable
 
           echo "# Install tools"
           /usr/bin/sudo snap install jq
@@ -67,7 +67,7 @@ jobs:
           /usr/bin/sudo snap install juju-bundle --classic --channel=latest/stable
 
           echo "# Install microk8s"
-          /usr/bin/sudo snap install microk8s --classic
+          /usr/bin/sudo snap install microk8s --channel=1.26-strict/stable
 
           echo "# Initialize microk8s"
           /usr/bin/bash -c "sudo usermod -a -G microk8s $USER"

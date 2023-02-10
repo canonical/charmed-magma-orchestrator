@@ -14,7 +14,7 @@ from ops.main import main
 
 
 class MagmaOrc8rDispatcherCharm(CharmBase):
-    """An instance of this object everytime an event occurs."""
+    """An instance of this object everytime an event occurs.."""
 
     def __init__(self, *args):
         """Uses the Orc8rBase library to manage events."""
