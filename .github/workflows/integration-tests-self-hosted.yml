@@ -75,4 +75,4 @@ jobs:
       - name: Clean up
         if: always()
         run: |
-          yes | juju kill-controller integration-tests-$GITHUB_RUN_ID
+          juju kill-controller --no-prompt integration-tests-$GITHUB_RUN_ID -t0
