@@ -120,6 +120,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      - name: Set Environment Variables
+        uses: tw3lveparsecs/github-actions-setvars@v0.2
+        with:
+          varFilePath: ./.github/variables/dependencies_versions.env
       - name: Set target channel
         env:
           PROMOTE_FROM: ${{ github.event.inputs.promotion }}
@@ -143,3 +147,4 @@ jobs:
           origin-channel: 1.6/${{ env.promote-from }}
           tag-prefix: magma-${{ github.event.inputs.charm-name }}
           charm-path: ./${{ github.event.inputs.charm-name }}-operator
+          charmcraft-channel: ${{ env.CHARMCRAFT_VERSION }}
