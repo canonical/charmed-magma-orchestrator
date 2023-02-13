@@ -21,7 +21,10 @@ jobs:
     name: Charmhub upload ${{ inputs.charm }}
     steps:
       - uses: actions/checkout@v2
-
+      - name: Set Environment Variables
+        uses: tw3lveparsecs/github-actions-setvars@v0.2
+        with:
+          varFilePath: ./.github/variables/dependencies_versions.env
       - name: Wait for integration tests to succeed
         uses: lewagon/wait-on-check-action@v1.1.2
         with:
@@ -51,6 +54,7 @@ jobs:
           channel: 1.6/"${{ steps.channel.outputs.name }}"
           charm-path: ./${{ inputs.charm }}
           tag-prefix: magma-${{ inputs.charm }}
+          charmcraft-channel: ${{ env.CHARMCRAFT_VERSION }}
 
       - name: Chmod charmcraft logs
         if: steps.upload.conclusion == 'failure'
