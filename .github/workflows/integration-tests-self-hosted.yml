@@ -15,7 +15,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Set Environment Variables
-        uses: tw3lveparsecs/github-actions-setvars@latest
+        uses: tw3lveparsecs/github-actions-setvars@v0.2
         with:
           varFilePath: ./.github/variables/dependencies_versions.env
       - name: Setup operator environment
@@ -42,7 +42,7 @@ jobs:
           echo "# Install tox"
           /usr/bin/sudo apt update -yqq
           /usr/bin/sudo apt install -yqq python3-pip
-          /usr/bin/sudo --preserve-env=http_proxy,https_proxy,no_proxy pip3 install tox
+          /usr/bin/sudo --preserve-env=http_proxy,https_proxy,no_proxy pip3 install tox==$TOX_VERSION
 
           echo "# Install Juju"
           if ! command -v juju &> /dev/null; then
