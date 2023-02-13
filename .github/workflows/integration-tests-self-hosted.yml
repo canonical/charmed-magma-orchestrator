@@ -8,7 +8,7 @@ on:
         type: string
 
 jobs:
-  orc8r-accessd-integration-test:
+  integration-test:
     name: Integration tests for ${{ inputs.charm_dir }}
     runs-on: self-hosted
     steps:
