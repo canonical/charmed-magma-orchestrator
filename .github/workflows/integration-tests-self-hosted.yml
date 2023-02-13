@@ -20,13 +20,6 @@ jobs:
           varFilePath: ./.github/variables/dependencies_versions.env
       - name: Setup operator environment
         run: |
-          echo "# Install core snap"
-          /usr/bin/sudo snap install core
-
-          echo "# Install LXD"
-          /usr/bin/sudo apt-get remove -qy lxd lxd-client || true
-          /usr/bin/sudo snap install lxd --channel=$LXD_VERSION
-
           echo "# Initialize LXD"
           /usr/bin/sudo lxd init --auto
 
