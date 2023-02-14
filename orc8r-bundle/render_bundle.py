@@ -72,12 +72,12 @@ def render_bundle(
 ) -> None:
     if not (channel and track) and not local:
         raise ValueError("Either track and channel must be specified or local set to True")
-    if local and (track and channel):
+    if local and (track or channel):
         raise ValueError("If local is true, channel and track must not be set")
     with open(template) as t:
         jinja_template = jinja2.Template(t.read(), autoescape=True)
     with open(output, "wt") as o:
-        jinja_template.stream(channel=channel, local=local).dump(o)
+        jinja_template.stream(channel=channel, local=local, track=track).dump(o)
 
 
 if __name__ == "__main__":
