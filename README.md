@@ -50,13 +50,13 @@ applications:
 
 > **Warning**: This configuration is unsecure because it uses self-signed certificates.
 
-Deploy Orchestrator:
+Deploy Orchestrator 1.6:
 
 > **Note**: Elasticsearch is not part of magma-orc8r bundle and needs to be deployed prior
 > to deploying the bundle. Elasticsearch needs to support both `http` and `https` requests.
 
 ```bash
-juju deploy magma-orc8r --overlay overlay.yaml --trust --channel=edge
+juju deploy magma-orc8r --overlay overlay.yaml --trust --channel=1.6/stable
 ```
 
 The deployment is completed when all services are in the `Active-Idle` state.
