@@ -27,7 +27,7 @@ jobs:
       charm_dir: orc8r-ctraced-operator
 
   orc8r-ctraced-charmhub-upload:
-    if: github.ref_name == 'main'
+    if: github.ref_name == '1.6'
     uses: ./.github/workflows/upload-charm.yml
     secrets: inherit
     with:
