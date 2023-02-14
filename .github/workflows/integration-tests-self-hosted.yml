@@ -9,7 +9,7 @@ on:
 
 jobs:
   integration-test:
-    name: Integration tests for ${{ inputs.charm_dir }}
+    name: Integration tests
     runs-on: self-hosted
     steps:
       - name: Checkout
@@ -70,7 +70,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: charmcraft-logs
-          path: /home/runner/snap/charmcraft/common/cache/charmcraft/log/*.log
+          path: /home/ubuntu/.local/state/charmcraft/log/*.log
 
       - name: Clean up
         if: always()
