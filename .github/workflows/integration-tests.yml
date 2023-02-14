@@ -9,7 +9,7 @@ on:
 
 jobs:
   integration-tests:
-    name: Integration tests for ${{ inputs.charm_dir }}
+    name: Integration tests
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
@@ -36,4 +36,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: charmcraft-logs
-          path: /home/runner/snap/charmcraft/common/cache/charmcraft/log/*.log
+          path: /home/ubuntu/.local/state/charmcraft/log/*.log
