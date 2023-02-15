@@ -68,7 +68,10 @@ class TestCharm(unittest.TestCase):
         """
         key_values = {}
         if root_private_key:
-            key_values["root_private_key"] = generate_private_key().decode().strip()
+            root_private_key_content = generate_private_key().decode().strip()
+            content = {"root-private-key": root_private_key_content}
+            secret_id = self.harness.add_model_secret("magma-orc8r-certifier", content)
+            key_values["root-private-key-id"] = secret_id
         if application_private_key:
             key_values["application_private_key"] = generate_private_key().decode().strip()
         if admin_operator_private_key:
@@ -78,7 +81,7 @@ class TestCharm(unittest.TestCase):
                 raise ValueError("root_private_key must be True if root_csr is True")
             key_values["root_csr"] = (
                 generate_csr(
-                    private_key=key_values["root_private_key"].encode(),
+                    private_key=root_private_key_content.encode(),
                     subject=f"*.{domain_config}",
                 )
                 .decode()
@@ -246,7 +249,11 @@ class TestCharm(unittest.TestCase):
         relation_data = self.harness.get_relation_data(
             relation_id=peer_relation_id, app_or_unit=self.harness.charm.app.name
         )
-        root_private_key = relation_data["root_private_key"]
+        root_private_key_id = relation_data["root-private-key-id"]
+        root_private_key = self.harness.model.get_secret(id=root_private_key_id).get_content()[
+            "root-private-key"
+        ]
+
         application_private_key = relation_data["application_private_key"]
         admin_operator_private_key = relation_data["admin_operator_private_key"]
         serialization.load_pem_private_key(root_private_key.encode(), password=None)

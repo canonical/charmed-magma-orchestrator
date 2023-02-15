@@ -635,10 +635,14 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         )
 
     def _generate_root_private_key(self) -> None:
-        """Generates the root private key and stores it in peer relation data."""
-        root_private_key = generate_private_key()
-        self._store_root_private_key(root_private_key.decode())
-        logger.info("Generated root private key")
+        """Generates the root private key, and stores it in a secret."""
+        if peer_relation := self.model.get_relation("replicas"):
+            root_private_key = generate_private_key()
+            content = {"root-private-key": root_private_key.decode()}
+            root_private_key_secret = self.app.add_secret(content, label="root_private_key")
+            root_private_key_secret.grant(peer_relation)
+            peer_relation.data[self.app]["root-private-key-id"] = root_private_key_secret.id
+            logger.info("Generated root private key")
 
     def _generate_application_private_keys(self) -> None:
         """Generates application private keys."""
@@ -1273,7 +1277,12 @@ class MagmaOrc8rCertifierCharm(CharmBase):
     @property
     def _root_private_key(self) -> Optional[str]:
         """Returns root private key."""
-        return self._get_value_from_peer_relation_data("root_private_key")
+        root_private_key_id = self._get_value_from_peer_relation_data("root-private-key-id")
+        if not root_private_key_id:
+            return None
+        if root_private_key_secret := self.model.get_secret(id=root_private_key_id):
+            return root_private_key_secret.get_content().get("root-private-key")
+        return None
 
     @property
     def _stored_root_csr_matches_config(self) -> bool:
