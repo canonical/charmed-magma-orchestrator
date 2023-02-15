@@ -20,7 +20,7 @@ import jinja2
 BUNDLE_TEMPLATE_NAME = "bundle.yaml.j2"
 
 
-def parse_args() -> Tuple[str, str, bool, str, str]:
+def parse_args() -> Tuple[str, str, bool, str]:
     parser = argparse.ArgumentParser(description="Render jinja2 bundle template from cli args.")
     parser.add_argument(
         "--template",
@@ -45,13 +45,6 @@ def parse_args() -> Tuple[str, str, bool, str, str]:
         choices=["edge", "beta", "candidate", "stable"],
         required=False,
     )
-    parser.add_argument(
-        "--track",
-        type=str,
-        help="track for the charms in the bundle",
-        choices=["latest", "1.6"],
-        required=False,
-    )
     bundle_args, _ = parser.parse_known_args()
 
     return (
@@ -59,7 +52,6 @@ def parse_args() -> Tuple[str, str, bool, str, str]:
         bundle_args.output,
         bundle_args.local,
         bundle_args.channel,
-        bundle_args.track,
     )
 
 
@@ -67,25 +59,23 @@ def render_bundle(
     template: str,
     output: str,
     channel: str = "",
-    track: str = "",
     local: bool = False,
 ) -> None:
-    if not (channel and track) and not local:
-        raise ValueError("Either track and channel must be specified or local set to True")
-    if local and (track or channel):
-        raise ValueError("If local is true, channel and track must not be set")
+    if not channel and not local:
+        raise ValueError("Either channel must be specified or local set to True")
+    if local and channel:
+        raise ValueError("If local is true, channel must not be set")
     with open(template) as t:
         jinja_template = jinja2.Template(t.read(), autoescape=True)
     with open(output, "wt") as o:
-        jinja_template.stream(channel=channel, local=local, track=track).dump(o)
+        jinja_template.stream(channel=channel, local=local).dump(o)
 
 
 if __name__ == "__main__":
-    arg_template, arg_output, arg_local, arg_channel, arg_track = parse_args()
+    arg_template, arg_output, arg_local, arg_channel = parse_args()
     render_bundle(
         template=arg_template,
         output=arg_output,
         local=arg_local,
         channel=arg_channel,
-        track=arg_track,
     )
