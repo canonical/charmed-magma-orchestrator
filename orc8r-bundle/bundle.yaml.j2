@@ -30,7 +30,7 @@ applications:
     {%- if local == true %}
     charm: ./magma-nms-nginx-proxy_ubuntu-22.04-amd64.charm
     resources:
-      magma-nms-nginx-proxy-image: nginx:latest
+      magma-nms-nginx-proxy-image: ghcr.io/canonical/nginx:1.23.3
     {%- else %}
     charm: magma-nms-nginx-proxy
     channel: 1.6/{{ channel|default("stable") }}
