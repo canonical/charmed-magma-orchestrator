@@ -9,15 +9,21 @@ on:
 
 jobs:
   integration-tests:
-    name: Integration tests for ${{ inputs.charm_dir }}
+    name: Integration tests
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      - name: Set Environment Variables
+        uses: tw3lveparsecs/github-actions-setvars@latest
+        with:
+          varFilePath: ./.github/variables/dependencies_versions.env
       - name: Setup operator environment
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: microk8s
+          channel: ${{ env.MICROK8S_VERSION }}
+          juju-channel: ${{ env.JUJU_VERSION }}
       - name: Run integration tests
         run: cd ${{ inputs.charm_dir }} && tox -e integration
       - name: Archive charmcraft logs
@@ -25,4 +31,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: charmcraft-logs
-          path: /home/runner/snap/charmcraft/common/cache/charmcraft/log/*.log
+          path: /home/ubuntu/.local/state/charmcraft/log/*.log

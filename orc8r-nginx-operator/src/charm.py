@@ -32,7 +32,6 @@ from lightkube.resources.core_v1 import Service
 from ops.charm import (
     CharmBase,
     ConfigChangedEvent,
-    InstallEvent,
     PebbleReadyEvent,
     RelationBrokenEvent,
     RelationJoinedEvent,
@@ -55,6 +54,7 @@ class MagmaOrc8rNginxCharm(CharmBase):
     """An instance of this object everytime an event occurs."""
 
     BASE_CERTS_PATH = "/var/opt/magma/certs"
+    CONFIG_PATH = "/etc/nginx"
     REQUIRED_RELATIONS = ["cert-certifier", "cert-controller"]
     REQUIRED_MAGMA_SERVICES_RELATIONS = ["magma-orc8r-bootstrapper", "magma-orc8r-obsidian"]
 
@@ -115,17 +115,8 @@ class MagmaOrc8rNginxCharm(CharmBase):
                 self.on[required_rel].relation_joined, self._configure_magma_orc8r_nginx
             )
 
-    def _on_install(self, event: InstallEvent) -> None:
-        """Triggerred once when charm is installed.
-
-        Args:
-            event: Juju event (InstallEvent)
-        """
-        if not self._container.can_connect():
-            logger.info("Can't connect to container - Deferring")
-            event.defer()
-            return
-        self._generate_nginx_config()
+    def _on_install(self, _) -> None:
+        """Triggerred once when charm is installed."""
         self._create_additional_orc8r_nginx_services()
 
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:
@@ -172,6 +163,10 @@ class MagmaOrc8rNginxCharm(CharmBase):
             return
         if not self._certs_are_stored:
             self.unit.status = WaitingStatus("Waiting for certificates to be available.")
+            event.defer()
+            return
+        if not self._nginx_config_is_generated:
+            self.unit.status = WaitingStatus("Waiting for nginx config to be generated.")
             event.defer()
             return
         self._configure_pebble_layer(event)
@@ -340,6 +335,13 @@ class MagmaOrc8rNginxCharm(CharmBase):
             raise ProcessExecutionError(error)
         logger.info("Successfully generated nginx config file")
 
+    @property
+    def _nginx_config_is_generated(self) -> bool:
+        """Returns whether nginx config is generated."""
+        if not self._container.can_connect():
+            return False
+        return self._container.exists(f"{self.CONFIG_PATH}/nginx.conf")
+
     def _create_additional_orc8r_nginx_services(self) -> None:
         """Creates additional K8s services.
 
@@ -375,8 +377,8 @@ class MagmaOrc8rNginxCharm(CharmBase):
                     f"Configuring pebble layer for {self._service_name}"
                 )
                 self._container.add_layer(self._container_name, layer, combine=True)
-                self._container.restart(self._service_name)
-                logger.info(f"Restarted service {self._service_name}")
+            self._container.restart(self._service_name)
+            logger.info(f"Restarted service {self._service_name}")
             self._update_relations()
             self.unit.status = ActiveStatus()
         else:
