@@ -6,9 +6,8 @@ description: |
   allows you to see the analytics and traffic flows of the wireless users through the Magma web UI.
 applications:
   fluentd:
-    charm: ./fluentd-elasticsearch_ubuntu-20.04-amd64.charm
-    resources:
-      fluentd-elasticsearch-image: gcr.io/google-containers/fluentd-elasticsearch:v2.4.0
+    charm: fluentd-elasticsearch
+    channel: edge
     scale: 1
     trust: true
     options:
@@ -23,9 +22,9 @@ applications:
     scale: 1
     trust: true
   nms-nginx-proxy:
-    charm: ./magma-nms-nginx-proxy_ubuntu-20.04-amd64.charm
+    charm: ./magma-nms-nginx-proxy_ubuntu-22.04-amd64.charm
     resources:
-      magma-nms-nginx-proxy-image: nginx:latest
+      magma-nms-nginx-proxy-image: ghcr.io/canonical/nginx:1.23.3
     scale: 1
     trust: true
   orc8r-accessd:
