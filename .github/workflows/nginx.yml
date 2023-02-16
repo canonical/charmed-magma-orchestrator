@@ -22,6 +22,7 @@ jobs:
       charm_dir: orc8r-nginx-operator
 
   orc8r-nginx-integration-test:
+    name: Integration tests
     uses: ./.github/workflows/integration-tests-self-hosted.yml
     with:
       charm_dir: orc8r-nginx-operator

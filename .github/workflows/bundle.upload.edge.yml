@@ -39,4 +39,4 @@ jobs:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
           bundle-path: ./orc8r-bundle
           github-token: "${{ secrets.GITHUB_TOKEN }}"
-          channel: channel: 1.6/"${{ steps.channel.outputs.name }}"
+          channel: 1.6/"${{ steps.channel.outputs.name }}"
