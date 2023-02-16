@@ -7,26 +7,31 @@ on:
 
 jobs:
   orc8r-certifier-lint-report:
+    name: Lint report
     uses: ./.github/workflows/lint-report.yml
     with:
       charm_dir: orc8r-certifier-operator
 
   orc8r-certifier-static-analysis:
+    name: Static analysis
     uses: ./.github/workflows/static-analysis.yml
     with:
       charm_dir: orc8r-certifier-operator
 
   orc8r-certifier-unit-tests-with-coverage:
+    name: Unit tests
     uses: ./.github/workflows/unit-tests.yml
     with:
       charm_dir: orc8r-certifier-operator
 
   orc8r-certifier-integration-test:
+    name: Integration tests
     uses: ./.github/workflows/integration-tests-self-hosted.yml
     with:
       charm_dir: orc8r-certifier-operator
 
   orc8r-certifier-charmhub-upload:
+    name: Charm upload
     if: github.ref_name == 'main'
     uses: ./.github/workflows/upload-charm.yml
     secrets: inherit
@@ -34,6 +39,7 @@ jobs:
       charm: orc8r-certifier-operator
 
   orc8r-certifier-libs-charmhub-upload:
+    name: Libs upload
     if: github.ref_name == 'main'
     uses: ./.github/workflows/upload-libs.yml
     secrets: inherit

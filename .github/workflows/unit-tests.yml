@@ -9,7 +9,6 @@ on:
 
 jobs:
   unit-tests:
-    name: Unit tests for ${{ inputs.charm_dir }}
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2

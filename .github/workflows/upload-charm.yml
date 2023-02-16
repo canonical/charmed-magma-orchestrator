@@ -20,13 +20,13 @@ jobs:
     runs-on: ${{ inputs.runner-version }}
     name: Charmhub upload ${{ inputs.charm }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Wait for integration tests to succeed
         uses: lewagon/wait-on-check-action@v1.1.2
         with:
           ref: main
-          check-name: "Integration tests"
+          check-name: "Integration tests / integration-tests"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 60
 
