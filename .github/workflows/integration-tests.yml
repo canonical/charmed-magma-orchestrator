@@ -9,7 +9,7 @@ on:
 
 jobs:
   integration-tests:
-    name: Integration tests for ${{ charm_dir }}
+    name: Integration tests for ${{ inputs.charm_dir }}
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout

@@ -9,7 +9,7 @@ on:
 
 jobs:
   integration-tests:
-    name: Integration tests for ${{ charm_dir }}
+    name: Integration tests for ${{ inputs.charm_dir }}
     runs-on: self-hosted
     steps:
       - name: Checkout
