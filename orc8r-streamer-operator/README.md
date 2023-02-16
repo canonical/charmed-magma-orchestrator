@@ -15,4 +15,3 @@ juju deploy magma-orc8r-streamer orc8r-streamer
 ## OCI Images
 
 Default: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
-
