@@ -20,7 +20,7 @@ jobs:
     runs-on: ${{ inputs.runner-version }}
     name: Charmhub upload ${{ inputs.charm }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set Environment Variables
         uses: tw3lveparsecs/github-actions-setvars@v0.2
         with:
@@ -29,7 +29,7 @@ jobs:
         uses: lewagon/wait-on-check-action@v1.1.2
         with:
           ref: 1.6
-          check-name: "Integration tests / Integration tests for orc8r-bundle"
+          check-name: "Integration tests / integration-tests"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 120
 
