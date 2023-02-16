@@ -55,6 +55,7 @@ jobs:
           done
 
   orchestrator-integration-test:
+    name: Integration tests
     uses: ./.github/workflows/integration-tests-self-hosted.yml
     with:
       charm_dir: orc8r-bundle

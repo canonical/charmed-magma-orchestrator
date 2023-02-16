@@ -9,10 +9,9 @@ on:
 
 jobs:
   lint-report:
-    name: Lint report for ${{ inputs.charm_dir }}
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Install tox
         run: pip install tox
       - name: Run tests using tox
