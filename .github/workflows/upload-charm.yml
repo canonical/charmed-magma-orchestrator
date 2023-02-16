@@ -29,9 +29,9 @@ jobs:
         uses: lewagon/wait-on-check-action@v1.1.2
         with:
           ref: 1.6
-          check-name: "Integration tests / integration-test"
+          check-name: "Integration tests / Integration tests for orc8r-bundle"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 60
+          wait-interval: 120
 
       - name: Check libraries
         uses: canonical/charming-actions/check-libraries@2.2.2
