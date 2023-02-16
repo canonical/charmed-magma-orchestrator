@@ -7,6 +7,8 @@ on:
   push:
     branches:
       - 1.6
+  schedule:
+    - cron: "0 0 * * *"
 
 jobs:
   orchestrator-lint-report:
@@ -67,6 +69,7 @@ jobs:
           done
 
   orchestrator-integration-test:
+    name: Integration tests
     uses: ./.github/workflows/integration-tests-self-hosted.yml
     with:
       charm_dir: orc8r-bundle

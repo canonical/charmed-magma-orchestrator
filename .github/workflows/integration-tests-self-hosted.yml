@@ -9,7 +9,6 @@ on:
 
 jobs:
   integration-test:
-    name: Integration tests
     runs-on: self-hosted
     steps:
       - name: Checkout

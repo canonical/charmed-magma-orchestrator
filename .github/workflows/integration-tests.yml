@@ -9,7 +9,6 @@ on:
 
 jobs:
   integration-tests:
-    name: Integration tests
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout

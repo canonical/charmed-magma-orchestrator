@@ -22,6 +22,7 @@ jobs:
       charm_dir: orc8r-streamer-operator
 
   orc8r-streamer-integration-test:
+    name: Integration tests
     uses: ./.github/workflows/integration-tests.yml
     with:
       charm_dir: orc8r-streamer-operator

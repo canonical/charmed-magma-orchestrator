@@ -22,6 +22,7 @@ jobs:
       charm_dir: nms-nginx-proxy-operator
 
   nms-nginx-proxy-integration-test:
+    name: Integration tests
     uses: ./.github/workflows/integration-tests-self-hosted.yml
     with:
       charm_dir: nms-nginx-proxy-operator
