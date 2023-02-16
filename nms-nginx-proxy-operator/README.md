@@ -31,4 +31,3 @@ juju relate nms-nginx-proxy nms-magmalte
 ## OCI Images
 
 - magma-nms-nginx-proxy-image: `ghcr.io/canonical/nginx:1.23.3`
-

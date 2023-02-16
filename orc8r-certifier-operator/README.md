@@ -59,4 +59,3 @@ user and vault-k8s (for self-signed certificates)
 ## OCI Images
 
 Default: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
-
