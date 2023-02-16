@@ -40,10 +40,6 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           charm-path: ./${{ inputs.charm }}
 
-      - name: Select charmhub channel
-        uses: canonical/charming-actions/channel@2.2.2
-        id: channel
-
       - name: Upload charm to charmhub
         id: upload
         uses: canonical/charming-actions/upload-charm@2.2.2
@@ -51,7 +47,7 @@ jobs:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
           github-token: "${{ secrets.GITHUB_TOKEN }}"
           upload-image: ${{ inputs.upload-image }}
-          channel: 1.6/"${{ steps.channel.outputs.name }}"
+          channel: 1.6/edge
           charm-path: ./${{ inputs.charm }}
           tag-prefix: magma-${{ inputs.charm }}
           charmcraft-channel: ${{ env.CHARMCRAFT_VERSION }}
