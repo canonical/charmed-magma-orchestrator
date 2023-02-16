@@ -30,3 +30,4 @@ juju relate orc8r-bootstrapper orc8r-certifier
 ## OCI Images
 
 Default: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+
