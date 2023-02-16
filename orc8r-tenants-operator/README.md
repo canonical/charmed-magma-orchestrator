@@ -18,3 +18,4 @@ The magma-orc8r-tenants service relies on a relation to `postgresql-k8s`.
 
 ## OCI Images
 Default: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+

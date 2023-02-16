@@ -57,3 +57,4 @@ juju run-action nms-magmalte/leader create-nms-admin-user \
 ## OCI Images
 
 Default: linuxfoundation.jfrog.io/magma-docker/magmalte:1.6.0
+

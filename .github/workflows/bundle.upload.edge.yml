@@ -12,31 +12,34 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+
       - name: Set Environment Variables
         uses: tw3lveparsecs/github-actions-setvars@v0.2
         with:
           varFilePath: ./.github/variables/dependencies_versions.env
+
       - name: setup python
         uses: actions/setup-python@v4
         with:
           python-version: 'pypy3.9'
+
       - name: install jinja2
         run: pip install -U Jinja2==$JINJA_VERSION
-      - name: Select charmhub channel
-        uses: canonical/charming-actions/channel@2.2.2
-        id: channel
+
       - name: render bundle.yaml
         run: |
           python orc8r-bundle/render_bundle.py \
-          --template orc8r-bundle/bundle.yaml.j2 --output orc8r-bundle/bundle.yaml --channel "${{ steps.channel.outputs.name }}"
+          --template orc8r-bundle/bundle.yaml.j2 --output orc8r-bundle/bundle.yaml --channel edge
+
       - name: copy README.md
         run: |
           cp README.md orc8r-bundle/
+
       - name: Upload bundle
         uses: canonical/charming-actions/upload-bundle@1.0.2
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
           bundle-path: ./orc8r-bundle
           github-token: "${{ secrets.GITHUB_TOKEN }}"
-          channel: 1.6/"${{ steps.channel.outputs.name }}"
+          channel: 1.6/edge
