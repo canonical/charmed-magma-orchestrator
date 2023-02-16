@@ -8,7 +8,8 @@ on:
         type: string
 
 jobs:
-  integration-test:
+  integration-tests:
+    name: Integration tests for ${{ charm_dir }}
     runs-on: self-hosted
     steps:
       - name: Checkout
