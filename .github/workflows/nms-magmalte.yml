@@ -32,6 +32,8 @@ jobs:
 
   nms-magmalte-charmhub-upload:
     name: Charm upload
+    needs:
+      - nms-magmalte-integration-test
     if: github.ref_name == 'main'
     uses: ./.github/workflows/upload-charm.yml
     secrets: inherit

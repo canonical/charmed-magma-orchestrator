@@ -32,6 +32,8 @@ jobs:
 
   orc8r-certifier-charmhub-upload:
     name: Charm upload
+    needs:
+      - orc8r-certifier-integration-test
     if: github.ref_name == 'main'
     uses: ./.github/workflows/upload-charm.yml
     secrets: inherit
@@ -40,6 +42,8 @@ jobs:
 
   orc8r-certifier-libs-charmhub-upload:
     name: Libs upload
+    needs:
+      - orc8r-certifier-integration-test
     if: github.ref_name == 'main'
     uses: ./.github/workflows/upload-libs.yml
     secrets: inherit
