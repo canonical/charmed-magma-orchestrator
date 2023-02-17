@@ -118,7 +118,7 @@ jobs:
           destination-channel: 1.6/${{ env.promote-to }}
           origin-channel: 1.6/${{ env.promote-from }}
           base-channel: ${{ env.BASE_CHANNEL }}
-          tag-prefix: magma-${{ matrix.charms }}
+          tag-prefix: magma-${{ matrix.charms }}-operator
           charm-path: ./${{ matrix.charms }}-operator
           charmcraft-channel: ${{ env.CHARMCRAFT_VERSION }}
 
@@ -162,6 +162,6 @@ jobs:
           destination-channel: 1.6/${{ env.promote-to }}
           origin-channel: 1.6/${{ env.promote-from }}
           base-channel: ${{ env.BASE_CHANNEL }}
-          tag-prefix: magma-${{ github.event.inputs.charm-name }}
+          tag-prefix: magma-${{ github.event.inputs.charm-name }}-operator
           charm-path: ./${{ github.event.inputs.charm-name }}-operator
           charmcraft-channel: ${{ env.CHARMCRAFT_VERSION }}
