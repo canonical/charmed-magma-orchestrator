@@ -15,8 +15,8 @@ containers:
 resources:
   magma-orc8r-tenants-image:
     type: oci-image
-    description: OCI image for magma-orc8r-tenants (linuxfoundation.jfrog.io/magma-docker/controller:1.6.0)
-    upstream-source: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+    description: OCI image for magma-orc8r-tenants
+    upstream-source: ghcr.io/canonical/magma-orc8r-controller:1.6.1
 
 provides:
   magma-orc8r-tenants:

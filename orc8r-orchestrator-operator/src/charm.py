@@ -153,12 +153,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                     self._service_name: {
                         "override": "replace",
                         "startup": "enabled",
-                        "command": "/usr/bin/envdir "
-                        "/var/opt/magma/envdir "
-                        "/var/opt/magma/bin/orchestrator "
-                        "-run_echo_server=true "
-                        "-logtostderr=true "
-                        "-v=0",
+                        "command": "orchestrator -run_echo_server=true -logtostderr=true -v=0",
                         "environment": self._environment_variables,
                     }
                 },
@@ -432,7 +427,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
     def _create_orchestrator_admin_user(self):
         process = self._container.exec(
             [
-                "/var/opt/magma/bin/accessc",
+                "accessc",
                 "add-existing",
                 "-admin",
                 "-cert",
