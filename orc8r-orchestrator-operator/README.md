@@ -47,4 +47,3 @@ The default log level is 0 and the full log level is 10.
 ## OCI Images
 
 Default: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
-
