@@ -115,7 +115,7 @@ jobs:
           fi
 
       - name: Set base channel
-        if: github.event.inputs.charm-name == "nms-nginx-proxy"
+        if: github.event.inputs.charm-name == 'nms-nginx-proxy'
         run: echo "BASE_CHANNEL=22.04" >> ${GITHUB_ENV}
 
       - name: Promote all Charms
@@ -159,7 +159,7 @@ jobs:
           fi
 
       - name: Set base channel
-        if: github.event.inputs.charm-name == "nms-nginx-proxy"
+        if: github.event.inputs.charm-name == 'nms-nginx-proxy'
         run: echo "BASE_CHANNEL=22.04" >> ${GITHUB_ENV}
 
       - name: Promote Charm
