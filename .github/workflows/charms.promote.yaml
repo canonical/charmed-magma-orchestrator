@@ -19,7 +19,6 @@ on:
           - all
           - orc8r-accessd
           - orc8r-analytics
-          - orc8r-base-acct
           - orc8r-bootstrapper
           - orc8r-certifier
           - orc8r-configurator
@@ -28,10 +27,7 @@ on:
           - orc8r-directoryd
           - orc8r-dispatcher
           - orc8r-eventd
-          - orc8r-feg
-          - orc8r-feg-relay
           - orc8r-ha
-          - orc8r-health
           - orc8r-lte
           - orc8r-metricsd
           - orc8r-nginx
@@ -61,7 +57,6 @@ jobs:
         charms: [
           orc8r-accessd,
           orc8r-analytics,
-          orc8r-base-acct,
           orc8r-bootstrapper,
           orc8r-certifier,
           orc8r-configurator,
@@ -70,10 +65,7 @@ jobs:
           orc8r-directoryd,
           orc8r-dispatcher,
           orc8r-eventd,
-          orc8r-feg,
-          orc8r-feg-relay,
           orc8r-ha,
-          orc8r-health,
           orc8r-lte,
           orc8r-metricsd,
           orc8r-nginx,
