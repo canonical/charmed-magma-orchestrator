@@ -17,7 +17,7 @@ resources:
   magma-orc8r-accessd-image:
     type: oci-image
     description: OCI image for magma-orc8r-accessd
-    upstream-source: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+    upstream-source: ghcr.io/canonical/magma-orc8r-controller:1.6.1
 
 provides:
   magma-orc8r-accessd:

@@ -24,13 +24,7 @@ class MagmaOrc8rDirectorydCharm(CharmBase):
             ports=[ServicePort(name="grpc", port=9180, targetPort=9100)],
             additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
         )
-        startup_command = (
-            "/usr/bin/envdir "
-            "/var/opt/magma/envdir "
-            "/var/opt/magma/bin/directoryd "
-            "-logtostderr=true "
-            "-v=0"
-        )
+        startup_command = "directoryd -logtostderr=true -v=0"
         self._orc8r_base = Orc8rBase(self, startup_command=startup_command)
 
 
