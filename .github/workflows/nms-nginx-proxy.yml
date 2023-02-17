@@ -32,6 +32,8 @@ jobs:
 
   nms-nginx-proxy-charmhub-upload:
     name: Charm upload
+    needs:
+      - nms-nginx-proxy-integration-test
     if: github.ref_name == 'main'
     uses: ./.github/workflows/upload-charm.yml
     secrets: inherit

@@ -32,6 +32,8 @@ jobs:
 
   orc8r-tenants-charmhub-upload:
     name: Charm upload
+    needs:
+      - orc8r-tenants-integration-test
     if: github.ref_name == 'main'
     uses: ./.github/workflows/upload-charm.yml
     secrets: inherit
