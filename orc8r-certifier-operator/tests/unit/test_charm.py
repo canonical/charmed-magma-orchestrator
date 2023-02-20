@@ -764,9 +764,7 @@ class TestCharm(unittest.TestCase):
                 "magma-orc8r-certifier": {
                     "override": "replace",
                     "startup": "enabled",
-                    "command": "/usr/bin/envdir "
-                    "/var/opt/magma/envdir "
-                    "/var/opt/magma/bin/certifier "
+                    "command": "certifier "
                     "-cac=/var/opt/magma/certs/certifier.pem "
                     "-cak=/var/opt/magma/certs/certifier.key "
                     "-vpnc=/var/opt/magma/certs/vpn_ca.crt "
@@ -1248,22 +1246,25 @@ class TestCharm(unittest.TestCase):
         patch_certificate_request.assert_not_called()
         patch_certificate_renewal.assert_not_called()
 
-    def test_given_application_key_not_available_when_fluentd_certificate_creation_request_then_runtime_error_is_raised(  # noqa: E501
+    def test_given_application_key_not_available_when_fluentd_certificate_creation_request_then_status_is_waiting(  # noqa: E501
         self,
     ):
         fluentd_relation_id = self.harness.add_relation("fluentd-certs", "fluentd-app")
         self.harness.add_relation_unit(fluentd_relation_id, "fluentd-app/0")
 
-        with self.assertRaises(RuntimeError):
-            self.harness.update_relation_data(
-                relation_id=fluentd_relation_id,
-                app_or_unit="fluentd-app/0",
-                key_values={
-                    "certificate_signing_requests": json.dumps(
-                        [{"certificate_signing_request": "whatever"}]
-                    )
-                },
-            )
+        self.harness.update_relation_data(
+            relation_id=fluentd_relation_id,
+            app_or_unit="fluentd-app/0",
+            key_values={
+                "certificate_signing_requests": json.dumps(
+                    [{"certificate_signing_request": "whatever"}]
+                )
+            },
+        )
+
+        assert self.harness.charm.unit.status == WaitingStatus(
+            "Waiting for application private key"
+        )
 
     @patch("charm.generate_certificate")
     def test_given_fluentd_csr_not_present_in_relation_data_when_fluentd_certificate_creation_request_then_fluentd_cert_is_not_generated(  # noqa: E501

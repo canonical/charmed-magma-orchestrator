@@ -7,26 +7,33 @@ on:
 
 jobs:
   orc8r-metricsd-lint-report:
+    name: Lint report
     uses: ./.github/workflows/lint-report.yml
     with:
       charm_dir: orc8r-metricsd-operator
 
   orc8r-metricsd-static-analysis:
+    name: Static analysis
     uses: ./.github/workflows/static-analysis.yml
     with:
       charm_dir: orc8r-metricsd-operator
 
   orc8r-metricsd-unit-tests-with-coverage:
+    name: Unit tests
     uses: ./.github/workflows/unit-tests.yml
     with:
       charm_dir: orc8r-metricsd-operator
 
   orc8r-metricsd-integration-test:
+    name: Integration tests
     uses: ./.github/workflows/integration-tests-self-hosted.yml
     with:
       charm_dir: orc8r-metricsd-operator
 
   orc8r-metricsd-charmhub-upload:
+    name: Charm upload
+    needs:
+      - orc8r-metricsd-integration-test
     if: github.ref_name == 'main'
     uses: ./.github/workflows/upload-charm.yml
     secrets: inherit

@@ -7,26 +7,33 @@ on:
 
 jobs:
   nms-magmalte-lint-report:
+    name: Lint report
     uses: ./.github/workflows/lint-report.yml
     with:
       charm_dir: nms-magmalte-operator
 
   nms-magmalte-static-analysis:
+    name: Static analysis
     uses: ./.github/workflows/static-analysis.yml
     with:
       charm_dir: nms-magmalte-operator
 
   nms-magmalte-unit-tests-with-coverage:
+    name: Unit tests
     uses: ./.github/workflows/unit-tests.yml
     with:
       charm_dir: nms-magmalte-operator
 
   nms-magmalte-integration-test:
+    name: Integration tests
     uses: ./.github/workflows/integration-tests-self-hosted.yml
     with:
       charm_dir: nms-magmalte-operator
 
   nms-magmalte-charmhub-upload:
+    name: Charm upload
+    needs:
+      - nms-magmalte-integration-test
     if: github.ref_name == 'main'
     uses: ./.github/workflows/upload-charm.yml
     secrets: inherit

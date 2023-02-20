@@ -206,12 +206,7 @@ class TestCharm(unittest.TestCase):
                     "override": "replace",
                     "summary": "magma-orc8r-metricsd",
                     "startup": "enabled",
-                    "command": "/usr/bin/envdir "
-                    "/var/opt/magma/envdir "
-                    "/var/opt/magma/bin/metricsd "
-                    "-run_echo_server=true "
-                    "-logtostderr=true "
-                    "-v=0",
+                    "command": "metricsd -run_echo_server=true -logtostderr=true -v=0",
                     "environment": {
                         "SERVICE_HOSTNAME": "magma-orc8r-metricsd",
                         "SERVICE_REGISTRY_MODE": "k8s",

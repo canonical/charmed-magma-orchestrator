@@ -30,7 +30,7 @@ applications:
     {%- if local == true %}
     charm: ./magma-nms-nginx-proxy_ubuntu-22.04-amd64.charm
     resources:
-      magma-nms-nginx-proxy-image: nginx:latest
+      magma-nms-nginx-proxy-image: ghcr.io/canonical/nginx:1.23.3
     {%- else %}
     charm: magma-nms-nginx-proxy
     channel: {{ channel|default("edge") }}
@@ -41,7 +41,7 @@ applications:
     {%- if local == true %}
     charm: ./magma-orc8r-accessd_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-accessd-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-accessd-image: ghcr.io/canonical/magma-orc8r-controller:1.6.1
     {%- else %}
     charm: magma-orc8r-accessd
     channel: {{ channel|default("edge") }}
@@ -64,7 +64,7 @@ applications:
     {%- if local == true %}
     charm: ./magma-orc8r-analytics_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-analytics-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-analytics-image: ghcr.io/canonical/magma-orc8r-controller:1.6.1
     {%- else %}
     charm: magma-orc8r-analytics
     channel: {{ channel|default("edge") }}
@@ -75,7 +75,7 @@ applications:
     {%- if local == true %}
     charm: ./magma-orc8r-bootstrapper_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-bootstrapper-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-bootstrapper-image: ghcr.io/canonical/magma-orc8r-controller:1.6.1
     {%- else %}
     charm: magma-orc8r-bootstrapper
     channel: {{ channel|default("edge") }}
@@ -86,7 +86,7 @@ applications:
     {%- if local == true %}
     charm: ./magma-orc8r-certifier_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-certifier-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-certifier-image: ghcr.io/canonical/magma-orc8r-controller:1.6.1
     {%- else %}
     charm: magma-orc8r-certifier
     channel: {{ channel|default("edge") }}
@@ -99,7 +99,7 @@ applications:
     {%- if local == true %}
     charm: ./magma-orc8r-configurator_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-configurator-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-configurator-image: ghcr.io/canonical/magma-orc8r-controller:1.6.1
     {%- else %}
     charm: magma-orc8r-configurator
     channel: {{ channel|default("edge") }}
@@ -110,7 +110,7 @@ applications:
     {%- if local == true %}
     charm: ./magma-orc8r-ctraced_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-ctraced-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-ctraced-image: ghcr.io/canonical/magma-orc8r-controller:1.6.1
     {%- else %}
     charm: magma-orc8r-ctraced
     channel: {{ channel|default("edge") }}
@@ -121,7 +121,7 @@ applications:
     {%- if local == true %}
     charm: ./magma-orc8r-device_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-device-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-device-image: ghcr.io/canonical/magma-orc8r-controller:1.6.1
     {%- else %}
     charm: magma-orc8r-device
     channel: {{ channel|default("edge") }}
@@ -132,7 +132,7 @@ applications:
     {%- if local == true %}
     charm: ./magma-orc8r-directoryd_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-directoryd-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-directoryd-image: ghcr.io/canonical/magma-orc8r-controller:1.6.1
     {%- else %}
     charm: magma-orc8r-directoryd
     channel: {{ channel|default("edge") }}
@@ -143,7 +143,7 @@ applications:
     {%- if local == true %}
     charm: ./magma-orc8r-dispatcher_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-dispatcher-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-dispatcher-image: ghcr.io/canonical/magma-orc8r-controller:1.6.1
     {%- else %}
     charm: magma-orc8r-dispatcher
     channel: {{ channel|default("edge") }}
@@ -154,7 +154,7 @@ applications:
     {%- if local == true %}
     charm: ./magma-orc8r-eventd_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-eventd-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-eventd-image: ghcr.io/canonical/magma-orc8r-controller:1.6.1
     {%- else %}
     charm: magma-orc8r-eventd
     channel: {{ channel|default("edge") }}
@@ -189,7 +189,7 @@ applications:
     {%- if local == true %}
     charm: ./magma-orc8r-metricsd_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-metricsd-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-metricsd-image: ghcr.io/canonical/magma-orc8r-controller:1.6.1
     {%- else %}
     charm: magma-orc8r-metricsd
     channel: {{ channel|default("edge") }}
@@ -211,7 +211,7 @@ applications:
     {%- if local == true %}
     charm: ./magma-orc8r-obsidian_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-obsidian-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-obsidian-image: ghcr.io/canonical/magma-orc8r-controller:1.6.1
     {%- else %}
     charm: magma-orc8r-obsidian
     channel: {{ channel|default("edge") }}
@@ -222,7 +222,7 @@ applications:
     {%- if local == true %}
     charm: ./magma-orc8r-orchestrator_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-orchestrator-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-orchestrator-image: ghcr.io/canonical/magma-orc8r-controller:1.6.1
     {%- else %}
     charm: magma-orc8r-orchestrator
     channel: {{ channel|default("edge") }}
@@ -265,7 +265,7 @@ applications:
     {%- if local == true %}
     charm: ./magma-orc8r-service-registry_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-service-registry-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-service-registry-image: ghcr.io/canonical/magma-orc8r-controller:1.6.1
     {%- else %}
     charm: magma-orc8r-service-registry
     channel: {{ channel|default("edge") }}
@@ -287,7 +287,7 @@ applications:
     {%- if local == true %}
     charm: ./magma-orc8r-state_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-state-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-state-image: ghcr.io/canonical/magma-orc8r-controller:1.6.1
     {%- else %}
     charm: magma-orc8r-state
     channel: {{ channel|default("edge") }}
@@ -298,7 +298,7 @@ applications:
     {%- if local == true %}
     charm: ./magma-orc8r-streamer_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-streamer-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-streamer-image: ghcr.io/canonical/magma-orc8r-controller:1.6.1
     {%- else %}
     charm: magma-orc8r-streamer
     channel: {{ channel|default("edge") }}
@@ -331,7 +331,7 @@ applications:
     {%- if local == true %}
     charm: ./magma-orc8r-tenants_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-tenants-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-tenants-image: ghcr.io/canonical/magma-orc8r-controller:1.6.1
     {%- else %}
     charm: magma-orc8r-tenants
     channel: {{ channel|default("edge") }}
