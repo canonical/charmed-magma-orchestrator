@@ -57,10 +57,11 @@ jobs:
           /usr/bin/bash -c "sudo usermod -a -G snap_microk8s $USER"
           /usr/bin/sg snap_microk8s -c "microk8s status --wait-ready"
           /usr/bin/sg snap_microk8s -c "sudo microk8s enable hostpath-storage dns:10.130.64.38,10.130.64.39"
+          /usr/bin/sg snap_microk8s -c "sudo microk8s disable"
           /usr/bin/sg snap_microk8s -c "sudo microk8s enable metallb:10.1.1.1-10.1.1.254"
 
           echo "# Bootstrap controller"
-          sleep 180  # Microk8s needs time to initialize properly
+          sleep 60  # Microk8s needs time to initialize properly
           /usr/bin/sg snap_microk8s -c "mkdir -p /home/ubuntu/.local/share"
           /usr/bin/sg snap_microk8s -c "juju bootstrap --debug --verbose microk8s integration-tests-$GITHUB_RUN_ID --model-default test-mode=true --model-default automatically-retry-hooks=true --model-default logging-config='<root>=DEBUG'  --bootstrap-constraints=''"
 

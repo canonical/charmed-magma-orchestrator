@@ -175,7 +175,8 @@ async def deploy_bundle(ops_test: OpsTest, bundle_path: str, overlay_file_path: 
     await ops_test.model.wait_for_idle(  # type: ignore[union-attr]
         apps=ORCHESTRATOR_APPS,
         status="active",
-        timeout=2000,
+        timeout=1800,
+        idle_period=10,
     )
 
 
