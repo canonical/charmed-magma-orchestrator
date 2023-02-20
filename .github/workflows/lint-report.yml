@@ -9,11 +9,10 @@ on:
 
 jobs:
   lint-report:
-    name: Lint report for ${{ inputs.charm_dir }}
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Set Environment Variables
         uses: tw3lveparsecs/github-actions-setvars@v0.2
         with:
