@@ -7,16 +7,19 @@ on:
 
 jobs:
   orc8r-analytics-lint-report:
+    name: Lint report
     uses: ./.github/workflows/lint-report.yml
     with:
       charm_dir: orc8r-analytics-operator
 
   orc8r-analytics-static-analysis:
+    name: Static analysis
     uses: ./.github/workflows/static-analysis.yml
     with:
       charm_dir: orc8r-analytics-operator
 
   orc8r-analytics-unit-tests-with-coverage:
+    name: Unit tests
     uses: ./.github/workflows/unit-tests.yml
     with:
       charm_dir: orc8r-analytics-operator
@@ -28,6 +31,9 @@ jobs:
       charm_dir: orc8r-analytics-operator
 
   orc8r-analytics-charmhub-upload:
+    name: Charm upload
+    needs:
+      - orc8r-analytics-integration-test
     if: github.ref_name == '1.6'
     uses: ./.github/workflows/upload-charm.yml
     secrets: inherit
