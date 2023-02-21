@@ -111,7 +111,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           destination-channel: latest/${{ env.promote-to }}
           origin-channel: latest/${{ env.promote-from }}
-          tag-prefix: magma-${{ matrix.charms }}
+          tag-prefix: magma-${{ matrix.charms }}-operator
           charm-path: ./${{ matrix.charms }}-operator
   promote:
     if: github.ref_name == 'main' && github.event.inputs.charm-name != 'all'
@@ -141,5 +141,5 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           destination-channel: latest/${{ env.promote-to }}
           origin-channel: latest/${{ env.promote-from }}
-          tag-prefix: magma-${{ github.event.inputs.charm-name }}
+          tag-prefix: magma-${{ github.event.inputs.charm-name }}-operator
           charm-path: ./${{ github.event.inputs.charm-name }}-operator

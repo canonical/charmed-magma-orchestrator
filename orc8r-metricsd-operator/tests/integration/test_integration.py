@@ -302,6 +302,6 @@ class TestOrc8rMetricsd:
         await ops_test.model.wait_for_idle(
             apps=[APPLICATION_NAME],
             status="active",
-            timeout=WAIT_FOR_STATUS_TIMEOUT,
+            timeout=60,
             wait_for_exact_units=1,
         )
