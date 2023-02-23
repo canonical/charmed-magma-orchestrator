@@ -47,5 +47,5 @@ class TestOrc8rBootstrapper:
         await ops_test.model.applications[APPLICATION_NAME].scale(1)
 
         await ops_test.model.wait_for_idle(
-            apps=[APPLICATION_NAME], status="active", timeout=1000, wait_for_exact_units=1
+            apps=[APPLICATION_NAME], status="active", timeout=60, wait_for_exact_units=1
         )
