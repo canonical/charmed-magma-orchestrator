@@ -1,8 +1,8 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-get-master-admin-credentials:
-  description: Returns the admin username and password for the master organization in NMS.
+get-host-admin-credentials:
+  description: Returns the admin username and password for the host organization in NMS.
 
 create-nms-admin-user:
   description: Create an admin user in NMS.
