@@ -22,8 +22,8 @@ containers:
 resources:
   magma-nms-magmalte-image:
     type: oci-image
-    description: OCI image for magma-nms-magmalte (linuxfoundation.jfrog.io/magma-docker/magmalte:1.6.0)
-    upstream-source: linuxfoundation.jfrog.io/magma-docker/magmalte:1.6.0
+    description: OCI image for magma-nms-magmalte (linuxfoundation.jfrog.io/magma-docker/magmalte:1.8.0)
+    upstream-source: linuxfoundation.jfrog.io/magma-docker/magmalte:1.8.0
 
 storage:
   certs:

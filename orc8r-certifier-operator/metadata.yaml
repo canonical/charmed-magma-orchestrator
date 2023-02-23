@@ -23,7 +23,7 @@ resources:
   magma-orc8r-certifier-image:
     type: oci-image
     description: OCI image for magma-orc8r-certifier
-    upstream-source: ghcr.io/canonical/magma-orc8r-controller:1.6.1
+    upstream-source: linuxfoundation.jfrog.io/magma-docker/controller:1.8.0
 
 storage:
   config:
@@ -45,6 +45,8 @@ requires:
     limit: 1
   certificates:
     interface: tls-certificates
+  magma-orc8r-obsidian:
+    interface: magma-orc8r-obsidian
 
 provides:
   cert-admin-operator:

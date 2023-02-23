@@ -24,6 +24,7 @@ class MagmaOrc8rTenantsCharm(CharmBase):
             ports=[
                 ServicePort(name="grpc", port=9180, targetPort=9110),
                 ServicePort(name="http", port=8080, targetPort=10110),
+                ServicePort(name="grpc-internal", port=9190, targetPort=9210),
             ],
             additional_labels={
                 "app.kubernetes.io/part-of": "orc8r-app",
@@ -35,7 +36,7 @@ class MagmaOrc8rTenantsCharm(CharmBase):
                 "/magma/v1/tenants/:tenants_id,"
             },
         )
-        startup_command = "tenants -run_echo_server=true -logtostderr=true -v=0"
+        startup_command = "/usr/bin/envdir /var/opt/magma/envdir /var/opt/magma/bin/tenants -run_echo_server=true -logtostderr=true -v=0"
         self._orc8r_base = Orc8rBase(self, startup_command=startup_command)
 
 

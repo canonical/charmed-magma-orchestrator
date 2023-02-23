@@ -105,7 +105,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             self._on_magma_nms_magmalte_relation_joined,
         )
         self.framework.observe(
-            self.on.get_master_admin_credentials_action, self._on_get_master_admin_credentials
+            self.on.get_host_admin_credentials_action, self._on_get_host_admin_credentials
         )
         self.framework.observe(
             self.on.create_nms_admin_user_action, self._create_nms_admin_user_action
@@ -354,10 +354,10 @@ class MagmaNmsMagmalteCharm(CharmBase):
             return
         self._configure_pebble(event)
         if self.unit.is_leader():
-            self._create_master_nms_admin_user()
+            self._create_host_nms_admin_user()
         self.unit.status = ActiveStatus()
 
-    def _create_master_nms_admin_user(self) -> None:
+    def _create_host_nms_admin_user(self) -> None:
         """Creates NMS admin user.
 
         Returns:
@@ -371,7 +371,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             try:
                 if self._admin_password:
                     self._create_nms_admin_user(
-                        self.NMS_ADMIN_USERNAME, self._admin_password, "master"
+                        self.NMS_ADMIN_USERNAME, self._admin_password, "host"
                     )
                 else:
                     logger.error(
@@ -513,7 +513,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             organization=event.params["organization"],
         )
 
-    def _on_get_master_admin_credentials(self, event: ActionEvent) -> None:
+    def _on_get_host_admin_credentials(self, event: ActionEvent) -> None:
         try:
             self._container.get_service(self._service_name)
             if not self.model.get_relation("replicas"):
@@ -536,7 +536,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             return
 
     def _create_nms_admin_user(self, email: str, password: str, organization: str) -> None:
-        """Creates Admin user for the master organization in NMS.
+        """Creates Admin user for the host organization in NMS.
 
         Args:
             email (str): New user email/login username
@@ -562,7 +562,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             ],
             timeout=30,
             environment=self._environment_variables,
-            working_dir="/usr/src/packages/magmalte",
+            working_dir="/usr/src",
         )
         try:
             process.wait_output()

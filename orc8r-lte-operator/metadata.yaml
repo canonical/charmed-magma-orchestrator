@@ -21,8 +21,8 @@ containers:
 resources:
   magma-orc8r-lte-image:
     type: oci-image
-    description: OCI image for magma-orc8r-lte (linuxfoundation.jfrog.io/magma-docker/controller:1.6.0)
-    upstream-source: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+    description: OCI image for magma-orc8r-lte (linuxfoundation.jfrog.io/magma-docker/controller:1.8.0)
+    upstream-source: linuxfoundation.jfrog.io/magma-docker/controller:1.8.0
 
 provides:
   magma-orc8r-lte:

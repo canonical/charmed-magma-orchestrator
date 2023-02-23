@@ -24,10 +24,11 @@ class MagmaOrc8rObsidianCharm(CharmBase):
             ports=[
                 ServicePort(name="grpc", port=9180, targetPort=9093),
                 ServicePort(name="http", port=8080, targetPort=9081),
+                ServicePort(name="grpc-internal", port=9190, targetPort=9193),
             ],
             additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
         )
-        startup_command = "obsidian -logtostderr=true -v=0"
+        startup_command = "/usr/bin/envdir /var/opt/magma/envdir /var/opt/magma/bin/obsidian -logtostderr=true -v=0"
         self._orc8r_base = Orc8rBase(self, startup_command=startup_command)
 
 

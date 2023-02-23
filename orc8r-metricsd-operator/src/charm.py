@@ -53,6 +53,7 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
             ports=[
                 ServicePort(name="grpc", port=9180, targetPort=9084),
                 ServicePort(name="http", port=8080, targetPort=10084),
+                ServicePort(name="grpc-internal", port=9190, targetPort=9184),
             ],
             additional_labels={
                 "app.kubernetes.io/part-of": "orc8r-app",
@@ -200,7 +201,7 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
                         "override": "replace",
                         "summary": self._service_name,
                         "startup": "enabled",
-                        "command": "metricsd -run_echo_server=true -logtostderr=true -v=0",
+                        "command": "/usr/bin/envdir /var/opt/magma/envdir /var/opt/magma/bin/metricsd -run_echo_server=true -logtostderr=true -v=0",
                         "environment": self._environment_variables,
                     }
                 },
