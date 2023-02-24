@@ -39,3 +39,4 @@ jobs:
     secrets: inherit
     with:
       charm: orc8r-analytics-operator
+      upload-image: "true"
