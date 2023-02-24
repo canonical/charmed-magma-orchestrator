@@ -26,7 +26,6 @@ jobs:
           channel: ${{ env.MICROK8S_VERSION }}
           lxd-channel: ${{ env.LXD_VERSION }}
           charmcraft-channel: ${{ env.CHARMCRAFT_VERSION }}
-          charm-channel: ${{ env.CHARM_VERSION }}
           juju-channel: ${{ env.JUJU_VERSION }}
       - name: Run integration tests
         run: cd ${{ inputs.charm_dir }} && tox -e integration

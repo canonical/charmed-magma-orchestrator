@@ -29,10 +29,10 @@ From your Ubuntu machine, create an `overlay.yaml` file that contains the follow
 applications:
   fluentd:
     options:
-    domain: <your domain name>
-    elasticsearch-url: <your elasticsearch https url>
-    fluentd-chunk-limit-size: "2M"
-    fluentd-queue-limit-length: 8
+      domain: <your domain name>
+      elasticsearch-url: <your elasticsearch https url>
+      fluentd-chunk-limit-size: "2M"
+      fluentd-queue-limit-length: 8
   orc8r-certifier:
     options:
       domain: <your domain name>
