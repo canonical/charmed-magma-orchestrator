@@ -14,4 +14,3 @@ juju deploy magma-orc8r-metricsd orc8r-metricsd
 ## OCI Images
 
 Default: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
-
