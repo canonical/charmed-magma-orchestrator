@@ -39,6 +39,7 @@ jobs:
     secrets: inherit
     with:
       charm: orc8r-certifier-operator
+      upload-image: "true"
 
   orc8r-certifier-libs-charmhub-upload:
     name: Libs upload
