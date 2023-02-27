@@ -8,6 +8,7 @@ import logging
 from typing import Optional, Union
 
 import ops.lib
+import psycopg2  # type: ignore[import]
 from charms.magma_orc8r_certifier.v0.cert_root_ca import (
     CertificateAvailableEvent as RootCACertificateAvailableEvent,
 )
@@ -176,6 +177,29 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         return self._relation_created("db")
 
     @property
+    def _db_relation_established(self) -> bool:
+        """Validates that database relation is established.
+
+        Checks that there is a relation and that credentials have been passed.
+
+        Returns:
+            bool: Whether the database relation is established.
+        """
+        db_connection_string = self._get_db_connection_string
+        if not db_connection_string:
+            return False
+        try:
+            psycopg2.connect(
+                f"dbname='{self.DB_NAME}' "
+                f"user='{db_connection_string.user}' "
+                f"host='{db_connection_string.host}' "
+                f"password='{db_connection_string.password}'"
+            ).close()
+            return True
+        except psycopg2.OperationalError:
+            return False
+
+    @property
     def _get_db_connection_string(self):
         """Returns DB connection string provided by the DB relation."""
         try:
@@ -265,16 +289,20 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for bootstrapper private key to be stored")
             event.defer()
             return
-        if not self._root_ca_is_pushed:
-            self.unit.status = WaitingStatus("Waiting for root ca to be pushed.")
-            event.defer()
-            return
         if not self._bootstrapper_private_key_is_pushed:
             self.unit.status = WaitingStatus("Waiting for bootstrapper private key to be pushed")
             event.defer()
             return
         if not self._db_relation_created:
             self.unit.status = BlockedStatus("Waiting for database relation to be created")
+            event.defer()
+            return
+        if not self._db_relation_established:
+            self.unit.status = WaitingStatus("Waiting for db relation to be ready")
+            event.defer()
+            return
+        if not self._root_ca_is_pushed:
+            self.unit.status = WaitingStatus("Waiting for root ca to be pushed.")
             event.defer()
             return
         self._configure_pebble(event)

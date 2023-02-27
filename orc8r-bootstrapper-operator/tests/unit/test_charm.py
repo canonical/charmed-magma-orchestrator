@@ -167,10 +167,13 @@ class TestCharm(unittest.TestCase):
             BlockedStatus("Waiting for database relation to be created"),
         )
 
+
+    @patch("psycopg2.connect", new=Mock())
     @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined")
     @patch("ops.model.Container.exists")
+    @patch("charm.ConnectionString")
     def test_given_root_ca_not_pushed_when_pebble_ready_then_status_is_waiting(  # noqa: E501
-        self, patch_exists, _
+        self, patch_connection_string, patch_exists, _
     ):
         patch_exists.side_effect = lambda s: s != f"{self.BASE_CERTS_PATH}/rootCA.pem"
         self.create_peer_relation_with_private_key(bootstrapper_private_key=True)
@@ -179,6 +182,7 @@ class TestCharm(unittest.TestCase):
             relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
         )
         key_values = {"master": self.TEST_DB_CONNECTION_STRING.__str__()}
+        patch_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
         self.harness.update_relation_data(
             relation_id=db_relation_id, app_or_unit="postgresql-k8s", key_values=key_values
         )
@@ -198,10 +202,12 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.exec", new=Mock())
+    @patch("psycopg2.connect", new=Mock())
     @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined")
     @patch("ops.model.Container.exists")
+    @patch("charm.ConnectionString")
     def test_given_private_key_is_stored_when_pebble_ready_then_pebble_plan_is_filled_with_workload_service_content(  # noqa: E501
-        self, patch_file_exists, _
+        self, patch_connection_string, patch_file_exists, _
     ):
         patch_file_exists.return_value = True
 
@@ -212,6 +218,7 @@ class TestCharm(unittest.TestCase):
             relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
         )
         key_values = {"master": self.TEST_DB_CONNECTION_STRING.__str__()}
+        patch_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
         self.harness.update_relation_data(
             relation_id=db_relation_id, app_or_unit="postgresql-k8s", key_values=key_values
         )
@@ -256,10 +263,12 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(expected_plan, updated_plan)
 
     @patch("ops.model.Container.exec", new=Mock())
+    @patch("psycopg2.connect", new=Mock())
     @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined")
     @patch("ops.model.Container.exists")
+    @patch("charm.ConnectionString")
     def test_given_private_key_is_stored_relations_created_and_root_ca_pushed_when_pebble_ready_then_unit_status_is_active(  # noqa: E501
-        self, patch_file_exists, _
+        self, patch_connection_string, patch_file_exists, _
     ):
         patch_file_exists.return_value = True
         self.create_peer_relation_with_private_key(bootstrapper_private_key=True)
@@ -269,6 +278,7 @@ class TestCharm(unittest.TestCase):
             relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
         )
         key_values = {"master": self.TEST_DB_CONNECTION_STRING.__str__()}
+        patch_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
         self.harness.update_relation_data(
             relation_id=db_relation_id, app_or_unit="postgresql-k8s", key_values=key_values
         )
