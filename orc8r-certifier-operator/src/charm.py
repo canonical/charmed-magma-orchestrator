@@ -1325,9 +1325,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                     self._service_name: {
                         "override": "replace",
                         "startup": "enabled",
-                        "command": "/usr/bin/envdir "
-                        "/var/opt/magma/envdir "
-                        "/var/opt/magma/bin/certifier "
+                        "command": "certifier "
                         f"-cac={self.BASE_CERTIFICATES_PATH}/certifier.pem "
                         f"-cak={self.BASE_CERTIFICATES_PATH}/certifier.key "
                         f"-vpnc={self.BASE_CERTIFICATES_PATH}/vpn_ca.crt "

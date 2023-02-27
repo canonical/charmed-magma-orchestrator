@@ -767,9 +767,7 @@ class TestCharm(unittest.TestCase):
                 "magma-orc8r-certifier": {
                     "override": "replace",
                     "startup": "enabled",
-                    "command": "/usr/bin/envdir "
-                    "/var/opt/magma/envdir "
-                    "/var/opt/magma/bin/certifier "
+                    "command": "certifier "
                     "-cac=/var/opt/magma/certs/certifier.pem "
                     "-cak=/var/opt/magma/certs/certifier.key "
                     "-vpnc=/var/opt/magma/certs/vpn_ca.crt "

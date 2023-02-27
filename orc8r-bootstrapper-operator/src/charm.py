@@ -79,9 +79,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
                     self._service_name: {
                         "override": "replace",
                         "startup": "enabled",
-                        "command": "/usr/bin/envdir "
-                        "/var/opt/magma/envdir "
-                        "/var/opt/magma/bin/bootstrapper "
+                        "command": "bootstrapper "
                         "-cak=/var/opt/magma/certs/bootstrapper.key "
                         "-logtostderr=true "
                         "-v=0",
