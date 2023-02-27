@@ -167,7 +167,6 @@ class TestCharm(unittest.TestCase):
             BlockedStatus("Waiting for database relation to be created"),
         )
 
-
     @patch("psycopg2.connect", new=Mock())
     @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined")
     @patch("ops.model.Container.exists")
