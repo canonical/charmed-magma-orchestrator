@@ -2,3 +2,4 @@ ops
 lightkube
 lightkube-models
 cryptography
+ops-lib-pgsql
