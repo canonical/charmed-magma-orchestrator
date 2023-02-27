@@ -158,7 +158,10 @@ class TestCharm(unittest.TestCase):
     def certificate(self) -> str:
         return self.get_certificate_from_file(filename="tests/unit/example.pem")
 
-    @patch("charm.KubernetesServicePatch", lambda charm, ports, additional_labels: None)
+    @patch(
+        "charm.KubernetesServicePatch",
+        lambda charm, ports, additional_annotations, additional_labels: None,
+    )
     def setUp(self):
         self.model_name = "whatever"
         self.harness = testing.Harness(MagmaOrc8rCertifierCharm)
@@ -764,12 +767,15 @@ class TestCharm(unittest.TestCase):
                 "magma-orc8r-certifier": {
                     "override": "replace",
                     "startup": "enabled",
-                    "command": "certifier "
+                    "command": "/usr/bin/envdir "
+                    "/var/opt/magma/envdir "
+                    "/var/opt/magma/bin/certifier "
                     "-cac=/var/opt/magma/certs/certifier.pem "
                     "-cak=/var/opt/magma/certs/certifier.key "
                     "-vpnc=/var/opt/magma/certs/vpn_ca.crt "
                     "-vpnk=/var/opt/magma/certs/vpn_ca.key "
                     "-logtostderr=true "
+                    "-run_echo_server=true "
                     "-v=0",
                     "environment": {
                         "DATABASE_SOURCE": f"dbname={self.TEST_DB_NAME} "
@@ -828,6 +834,7 @@ class TestCharm(unittest.TestCase):
                         "-vpnc=/var/opt/magma/certs/vpn_ca.crt "
                         "-vpnk=/var/opt/magma/certs/vpn_ca.key "
                         "-logtostderr=true "
+                        "-run_echo_server=true "
                         "-v=0",
                         "environment": {
                             "DATABASE_SOURCE": f"dbname={self.TEST_DB_NAME} "

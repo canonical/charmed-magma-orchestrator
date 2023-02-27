@@ -104,10 +104,18 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._db = pgsql.PostgreSQLClient(self, "db")
         self._service_patcher = KubernetesServicePatch(
             charm=self,
-            ports=[ServicePort(name="grpc", port=9180, targetPort=9086)],
+            ports=[
+                ServicePort(name="grpc", port=9180, targetPort=9086),
+                ServicePort(name="http", port=8080, targetPort=10089),
+                ServicePort(name="grpc-internal", port=9190, targetPort=9186),
+            ],
             additional_labels={
                 "app.kubernetes.io/part-of": "orc8r-app",
                 "orc8r.io/analytics_collector": "true",
+                "orc8r.io/obsidian_handlers": "true",
+            },
+            additional_annotations={
+                "orc8r.io/obsidian_handlers_path_prefixes": "/magma/v1/user"  # noqa: E501
             },
         )
 
@@ -1317,12 +1325,15 @@ class MagmaOrc8rCertifierCharm(CharmBase):
                     self._service_name: {
                         "override": "replace",
                         "startup": "enabled",
-                        "command": "certifier "
+                        "command": "/usr/bin/envdir "
+                        "/var/opt/magma/envdir "
+                        "/var/opt/magma/bin/certifier "
                         f"-cac={self.BASE_CERTIFICATES_PATH}/certifier.pem "
                         f"-cak={self.BASE_CERTIFICATES_PATH}/certifier.key "
                         f"-vpnc={self.BASE_CERTIFICATES_PATH}/vpn_ca.crt "
                         f"-vpnk={self.BASE_CERTIFICATES_PATH}/vpn_ca.key "
                         "-logtostderr=true "
+                        "-run_echo_server=true "
                         "-v=0",
                         "environment": {
                             "DATABASE_SOURCE": f"dbname={self.DB_NAME} "  # type: ignore[union-attr]  # noqa: E501

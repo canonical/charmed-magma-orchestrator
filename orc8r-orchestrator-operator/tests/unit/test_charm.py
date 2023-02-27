@@ -72,7 +72,14 @@ class TestCharm(unittest.TestCase):
                 "magma-orc8r-orchestrator": {
                     "startup": "enabled",
                     "override": "replace",
-                    "command": "orchestrator -run_echo_server=true -logtostderr=true -v=0",
+                    "command": (
+                        "/usr/bin/envdir "
+                        "/var/opt/magma/envdir "
+                        "/var/opt/magma/bin/orchestrator "
+                        "-run_echo_server=true "
+                        "-logtostderr=true "
+                        "-v=0"
+                    ),
                     "environment": {
                         "SERVICE_HOSTNAME": "magma-orc8r-orchestrator",
                         "SERVICE_REGISTRY_MODE": "k8s",
@@ -153,7 +160,9 @@ class TestCharm(unittest.TestCase):
         args, _ = patch_exec.call_args
         patch_exec.assert_called_once()
         call_command = [
-            "accessc",
+            "/usr/bin/envdir",
+            "/var/opt/magma/envdir",
+            "/var/opt/magma/bin/accessc",
             "add-existing",
             "-admin",
             "-cert",

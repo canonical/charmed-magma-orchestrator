@@ -78,6 +78,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             ports=[
                 ServicePort(name="grpc", port=9180, targetPort=9112),
                 ServicePort(name="http", port=8080, targetPort=10112),
+                ServicePort(name="grpc-internal", port=9190, targetPort=9212),
             ],
             additional_labels={
                 "app.kubernetes.io/part-of": "orc8r-app",
@@ -153,7 +154,14 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
                     self._service_name: {
                         "override": "replace",
                         "startup": "enabled",
-                        "command": "orchestrator -run_echo_server=true -logtostderr=true -v=0",
+                        "command": (
+                            "/usr/bin/envdir "
+                            "/var/opt/magma/envdir "
+                            "/var/opt/magma/bin/orchestrator "
+                            "-run_echo_server=true "
+                            "-logtostderr=true "
+                            "-v=0"
+                        ),
                         "environment": self._environment_variables,
                     }
                 },
@@ -427,7 +435,9 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
     def _create_orchestrator_admin_user(self):
         process = self._container.exec(
             [
-                "accessc",
+                "/usr/bin/envdir",
+                "/var/opt/magma/envdir",
+                "/var/opt/magma/bin/accessc",
                 "add-existing",
                 "-admin",
                 "-cert",
