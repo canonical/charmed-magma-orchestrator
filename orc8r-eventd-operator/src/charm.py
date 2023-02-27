@@ -49,7 +49,7 @@ class MagmaOrc8rEventdCharm(CharmBase):
             "/usr/bin/envdir "
             "/var/opt/magma/envdir "
             "/var/opt/magma/bin/eventd "
-            "-run_echo_server=true"
+            "-run_echo_server=true "
             "-logtostderr=true "
             "-v=0"
         )
