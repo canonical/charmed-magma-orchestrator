@@ -27,7 +27,6 @@ class MagmaOrc8rStateCharm(CharmBase):
             ],
             additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
         )
-        startup_command = "state -logtostderr=true -v=0"
         startup_command = (
             "/usr/bin/envdir "
             "/var/opt/magma/envdir "

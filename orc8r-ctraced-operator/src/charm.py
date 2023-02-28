@@ -34,7 +34,13 @@ class MagmaOrc8rCtracedCharm(CharmBase):
                 "orc8r.io/obsidian_handlers_path_prefixes": "/magma/v1/networks/:network_id/tracing,"  # noqa: E501
             },
         )
-        startup_command = "ctraced -run_echo_server=true -logtostderr=true -v=0"
+        startup_command = (
+            "/usr/bin/envdir "
+            "/var/opt/magma/envdir "
+            "/var/opt/magma/bin/ctraced "
+            "-run_echo_server=true "
+            "-logtostderr=true -v=0"
+        )
         self._orc8r_base = Orc8rBase(self, startup_command=startup_command)
 
 
