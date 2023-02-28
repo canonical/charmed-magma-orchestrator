@@ -49,7 +49,7 @@ class TestOrc8rBootstrapper:
             application_name="tls-certificates-operator",
             config={
                 "generate-self-signed-certificates": True,
-                "ca-common-name": "rootca.whatever",
+                "ca-common-name": "rootca.whatever.com",
             },
             channel="edge",
         )
@@ -69,7 +69,7 @@ class TestOrc8rBootstrapper:
             certifier_charm,
             resources=resources,
             application_name=CERTIFIER_APPLICATION_NAME,
-            config={"domain": "whatever"},
+            config={"domain": "whatever.com"},
             trust=True,
             series="focal",
         )
