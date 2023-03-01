@@ -18,7 +18,6 @@ APPLICATION_NAME = "orc8r-bootstrapper"
 CHARM_NAME = "magma-orc8r-bootstrapper"
 CERTIFIER_APPLICATION_NAME = "orc8r-certifier"
 CERTIFIER_CHARM_NAME = "magma-orc8r-certifier"
-CERTIFIER_CHARM_FILE_NAME = "magma-orc8r-certifier_ubuntu-20.04-amd64.charm"
 DB_APPLICATION_NAME = "postgresql-k8s"
 
 
@@ -29,14 +28,6 @@ class TestOrc8rBootstrapper:
         await self._deploy_postgresql(ops_test)
         await self._deploy_tls_certificates_operator(ops_test)
         await self._deploy_orc8r_certifier(ops_test)
-
-    @staticmethod
-    def _find_charm(charm_dir: str, charm_file_name: str) -> Optional[str]:
-        for root, _, files in os.walk(charm_dir):
-            for file in files:
-                if file == charm_file_name:
-                    return os.path.join(root, file)
-        return None
 
     @staticmethod
     async def _deploy_postgresql(ops_test):
@@ -55,11 +46,7 @@ class TestOrc8rBootstrapper:
         )
 
     async def _deploy_orc8r_certifier(self, ops_test):
-        certifier_charm = self._find_charm(
-            "../orc8r-certifier-operator", CERTIFIER_CHARM_FILE_NAME
-        )
-        if not certifier_charm:
-            certifier_charm = await ops_test.build_charm("../orc8r-certifier-operator/")
+        certifier_charm = await ops_test.build_charm("../orc8r-certifier-operator/")
         resources = {
             f"{CERTIFIER_CHARM_NAME}-image": CERTIFIER_METADATA["resources"][
                 f"{CERTIFIER_CHARM_NAME}-image"
