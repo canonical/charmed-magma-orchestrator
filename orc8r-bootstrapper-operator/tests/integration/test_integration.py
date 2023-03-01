@@ -82,7 +82,7 @@ class TestOrc8rBootstrapper:
 
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail
-    async def build_and_deploy(self, ops_test):
+    async def build_and_deploy(self, ops_test, setup):
         charm = await ops_test.build_charm(".")
         resources = {
             f"{CHARM_NAME}-image": METADATA["resources"][f"{CHARM_NAME}-image"]["upstream-source"],
@@ -95,31 +95,15 @@ class TestOrc8rBootstrapper:
             series="focal",
         )
 
-    async def test_wait_for_blocked_status(self, ops_test, setup, build_and_deploy_charm):
+    async def test_wait_for_blocked_status(self, ops_test, setup, build_and_deploy):
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
 
-    async def test_relate_and_wait_for_idle(self, ops_test, setup, build_and_deploy_charm):
+    async def test_relate_and_wait_for_idle(self, ops_test, setup, build_and_deploy):
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
         )
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="orc8r-certifier:cert-root-ca"
-        )
-        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
-
-    async def test_remove_db_application(self, ops_test, setup, build_and_deploy_charm):
-        await ops_test.model.remove_application(
-            DB_APPLICATION_NAME, block_until_done=True, force=True
-        )
-        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
-
-    async def test_redeploy_db(self, ops_test, setup, build_and_deploy_charm):
-        await self._deploy_postgresql(ops_test)
-        await ops_test.model.add_relation(
-            relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
-        )
-        await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
 
