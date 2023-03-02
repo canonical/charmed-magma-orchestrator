@@ -235,12 +235,7 @@ class MagmaOrc8rEventdCharm(CharmBase):
                         "override": "replace",
                         "summary": self._service_name,
                         "startup": "enabled",
-                        "command": "/usr/bin/envdir "
-                        "/var/opt/magma/envdir "
-                        "/var/opt/magma/bin/eventd "
-                        "-run_echo_server=true "
-                        "-logtostderr=true "
-                        "-v=0",
+                        "command": "eventd -run_echo_server=true -logtostderr=true -v=0",
                         "environment": self._environment_variables,
                     }
                 },
