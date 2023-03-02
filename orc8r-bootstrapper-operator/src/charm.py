@@ -17,7 +17,13 @@ from charms.observability_libs.v1.kubernetes_service_patch import (
     KubernetesServicePatch,
     ServicePort,
 )
-from ops.charm import CharmBase, InstallEvent, PebbleReadyEvent, RelationJoinedEvent
+from ops.charm import (
+    CharmBase,
+    InstallEvent,
+    PebbleReadyEvent,
+    RelationBrokenEvent,
+    RelationJoinedEvent,
+)
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, ModelError, Relation, WaitingStatus
 from ops.pebble import Layer
@@ -44,6 +50,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         self._container = self.unit.get_container(self._container_name)
         self._cert_root_ca = CertRootCARequires(self, self.CERT_ROOT_CA_RELATION)
         self._db = pgsql.PostgreSQLClient(self, "db")
+        self.framework.observe(self.on.db_relation_broken, self._on_database_relation_broken)
         self.framework.observe(
             self._db.on.database_relation_joined,
             self._on_database_relation_joined,
@@ -252,6 +259,16 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
             return
         self._push_bootstrapper_private_key()
 
+    def _on_database_relation_broken(self, event: RelationBrokenEvent):
+        """Event handler for database relation broken.
+
+        Args:
+            event (RelationBrokenEvent): Juju event
+        Returns:
+            None
+        """
+        self.unit.status = BlockedStatus("Waiting for db relation to be created")
+
     def _push_bootstrapper_private_key(self) -> None:
         """Pushes bootstrapper private key to workload container."""
         if not self._bootstrapper_private_key:
@@ -349,6 +366,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         """
         if self.unit.is_leader():
             event.database = self.DB_NAME
+        self._configure_magma_orc8r_bootstrapper(event)
 
     def _update_relation_active_status(self, relation: Relation, is_active: bool) -> None:
         """Updates the relation data with the active status.
