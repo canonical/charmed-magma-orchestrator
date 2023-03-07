@@ -45,14 +45,7 @@ class MagmaOrc8rEventdCharm(CharmBase):
                 "/magma/v1/events,"
             },
         )
-        startup_command = (
-            "/usr/bin/envdir "
-            "/var/opt/magma/envdir "
-            "/var/opt/magma/bin/eventd "
-            "-run_echo_server=true "
-            "-logtostderr=true "
-            "-v=0"
-        )
+        startup_command = "eventd -run_echo_server=true -logtostderr=true -v=0"
         self._orc8r_base = Orc8rBase(self, startup_command=startup_command)
         self.framework.observe(self.on.config_changed, self._on_elasticsearch_url_config_changed)
 

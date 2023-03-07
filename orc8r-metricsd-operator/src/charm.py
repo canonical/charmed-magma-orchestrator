@@ -201,14 +201,7 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
                         "override": "replace",
                         "summary": self._service_name,
                         "startup": "enabled",
-                        "command": (
-                            "/usr/bin/envdir "
-                            "/var/opt/magma/envdir "
-                            "/var/opt/magma/bin/metricsd "
-                            "-run_echo_server=true "
-                            "-logtostderr=true "
-                            "-v=0"
-                        ),
+                        "command": "metricsd -run_echo_server=true -logtostderr=true -v=0",
                         "environment": self._environment_variables,
                     }
                 },
