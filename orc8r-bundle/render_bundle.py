@@ -42,7 +42,6 @@ def parse_args() -> Tuple[str, str, bool, str]:
         "--channel",
         type=str,
         help="channel for the charms in the bundle",
-        choices=["edge", "beta", "candidate", "stable"],
         required=False,
     )
     bundle_args, _ = parser.parse_known_args()
