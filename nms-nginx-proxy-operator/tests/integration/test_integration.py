@@ -17,10 +17,10 @@ APPLICATION_NAME = "nms-nginx-proxy"
 CHARM_NAME = "magma-nms-nginx-proxy"
 CERTIFIER_APPLICATION_NAME = "orc8r-certifier"
 CERTIFIER_CHARM_NAME = "magma-orc8r-certifier"
-CERTIFIER_CHARM_FILE_NAME = "magma-orc8r-certifier_ubuntu-20.04-amd64.charm"
+CERTIFIER_CHARM_FILE_NAME = "magma-orc8r-certifier_ubuntu-22.04-amd64.charm"
 NMS_MAGMALTE_APPLICATION_NAME = "nms-magmalte"
 NMS_MAGMALTE_CHARM_NAME = "magma-nms-magmalte"
-NMS_MAGMALTE_CHARM_FILE_NAME = "magma-nms-magmalte_ubuntu-20.04-amd64.charm"
+NMS_MAGMALTE_CHARM_FILE_NAME = "magma-nms-magmalte_ubuntu-22.04-amd64.charm"
 DOMAIN = "whatever.com"
 
 

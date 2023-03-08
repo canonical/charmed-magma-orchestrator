@@ -17,7 +17,7 @@ applications:
       fluentd-queue-limit-length: 8
   nms-magmalte:
     {%- if local == true %}
-    charm: ./magma-nms-magmalte_ubuntu-20.04-amd64.charm
+    charm: ./magma-nms-magmalte_ubuntu-22.04-amd64.charm
     resources:
       magma-nms-magmalte-image: linuxfoundation.jfrog.io/magma-docker/magmalte:1.8.0
     {%- else %}
@@ -39,7 +39,7 @@ applications:
     trust: true
   orc8r-accessd:
     {%- if local == true %}
-    charm: ./magma-orc8r-accessd_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-accessd_ubuntu-22.04-amd64.charm
     resources:
       magma-orc8r-accessd-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     {%- else %}
@@ -62,7 +62,7 @@ applications:
       multitenant_label: "networkID"
   orc8r-analytics:
     {%- if local == true %}
-    charm: ./magma-orc8r-analytics_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-analytics_ubuntu-22.04-amd64.charm
     resources:
       magma-orc8r-analytics-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     {%- else %}
@@ -73,7 +73,7 @@ applications:
     trust: true
   orc8r-bootstrapper:
     {%- if local == true %}
-    charm: ./magma-orc8r-bootstrapper_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-bootstrapper_ubuntu-22.04-amd64.charm
     resources:
       magma-orc8r-bootstrapper-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     {%- else %}
@@ -84,7 +84,7 @@ applications:
     trust: true
   orc8r-certifier:
     {%- if local == true %}
-    charm: ./magma-orc8r-certifier_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-certifier_ubuntu-22.04-amd64.charm
     resources:
       magma-orc8r-certifier-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     {%- else %}
@@ -97,7 +97,7 @@ applications:
       domain: example.com
   orc8r-configurator:
     {%- if local == true %}
-    charm: ./magma-orc8r-configurator_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-configurator_ubuntu-22.04-amd64.charm
     resources:
       magma-orc8r-configurator-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     {%- else %}
@@ -108,7 +108,7 @@ applications:
     trust: true
   orc8r-ctraced:
     {%- if local == true %}
-    charm: ./magma-orc8r-ctraced_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-ctraced_ubuntu-22.04-amd64.charm
     resources:
       magma-orc8r-ctraced-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     {%- else %}
@@ -119,7 +119,7 @@ applications:
     trust: true
   orc8r-device:
     {%- if local == true %}
-    charm: ./magma-orc8r-device_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-device_ubuntu-22.04-amd64.charm
     resources:
       magma-orc8r-device-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     {%- else %}
@@ -130,7 +130,7 @@ applications:
     trust: true
   orc8r-directoryd:
     {%- if local == true %}
-    charm: ./magma-orc8r-directoryd_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-directoryd_ubuntu-22.04-amd64.charm
     resources:
       magma-orc8r-directoryd-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     {%- else %}
@@ -141,7 +141,7 @@ applications:
     trust: true
   orc8r-dispatcher:
     {%- if local == true %}
-    charm: ./magma-orc8r-dispatcher_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-dispatcher_ubuntu-22.04-amd64.charm
     resources:
       magma-orc8r-dispatcher-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     {%- else %}
@@ -152,7 +152,7 @@ applications:
     trust: true
   orc8r-eventd:
     {%- if local == true %}
-    charm: ./magma-orc8r-eventd_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-eventd_ubuntu-22.04-amd64.charm
     resources:
       magma-orc8r-eventd-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     {%- else %}
@@ -165,7 +165,7 @@ applications:
       elasticsearch-url: "orc8r-elasticsearch:1234"
   orc8r-ha:
     {%- if local == true %}
-    charm: ./magma-orc8r-ha_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-ha_ubuntu-22.04-amd64.charm
     resources:
       magma-orc8r-ha-image: linuxfoundation.jfrog.io/magma-docker/controller:1.8.0
     {%- else %}
@@ -176,7 +176,7 @@ applications:
     trust: true
   orc8r-lte:
     {%- if local == true %}
-    charm: ./magma-orc8r-lte_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-lte_ubuntu-22.04-amd64.charm
     resources:
       magma-orc8r-lte-image: linuxfoundation.jfrog.io/magma-docker/controller:1.8.0
     {%- else %}
@@ -187,7 +187,7 @@ applications:
     trust: true
   orc8r-metricsd:
     {%- if local == true %}
-    charm: ./magma-orc8r-metricsd_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-metricsd_ubuntu-22.04-amd64.charm
     resources:
       magma-orc8r-metricsd-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     {%- else %}
@@ -198,7 +198,7 @@ applications:
     trust: true
   orc8r-nginx:
     {%- if local == true %}
-    charm: ./magma-orc8r-nginx_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-nginx_ubuntu-22.04-amd64.charm
     resources:
       magma-orc8r-nginx-image: linuxfoundation.jfrog.io/magma-docker/nginx:1.8.0
     {%- else %}
@@ -209,7 +209,7 @@ applications:
     trust: true
   orc8r-obsidian:
     {%- if local == true %}
-    charm: ./magma-orc8r-obsidian_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-obsidian_ubuntu-22.04-amd64.charm
     resources:
       magma-orc8r-obsidian-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     {%- else %}
@@ -220,7 +220,7 @@ applications:
     trust: true
   orc8r-orchestrator:
     {%- if local == true %}
-    charm: ./magma-orc8r-orchestrator_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-orchestrator_ubuntu-22.04-amd64.charm
     resources:
       magma-orc8r-orchestrator-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     {%- else %}
@@ -233,7 +233,7 @@ applications:
       elasticsearch-url: "orc8r-elasticsearch:1234"
   orc8r-policydb:
     {%- if local == true %}
-    charm: ./magma-orc8r-policydb_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-policydb_ubuntu-22.04-amd64.charm
     resources:
       magma-orc8r-policydb-image: linuxfoundation.jfrog.io/magma-docker/controller:1.8.0
     {%- else %}
@@ -263,7 +263,7 @@ applications:
       multitenant_label: "networkID"
   orc8r-service-registry:
     {%- if local == true %}
-    charm: ./magma-orc8r-service-registry_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-service-registry_ubuntu-22.04-amd64.charm
     resources:
       magma-orc8r-service-registry-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     {%- else %}
@@ -274,7 +274,7 @@ applications:
     trust: true
   orc8r-smsd:
     {%- if local == true %}
-    charm: ./magma-orc8r-smsd_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-smsd_ubuntu-22.04-amd64.charm
     resources:
       magma-orc8r-smsd-image: linuxfoundation.jfrog.io/magma-docker/controller:1.8.0
     {%- else %}
@@ -285,7 +285,7 @@ applications:
     trust: true
   orc8r-state:
     {%- if local == true %}
-    charm: ./magma-orc8r-state_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-state_ubuntu-22.04-amd64.charm
     resources:
       magma-orc8r-state-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     {%- else %}
@@ -296,7 +296,7 @@ applications:
     trust: true
   orc8r-streamer:
     {%- if local == true %}
-    charm: ./magma-orc8r-streamer_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-streamer_ubuntu-22.04-amd64.charm
     resources:
       magma-orc8r-streamer-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     {%- else %}
@@ -307,7 +307,7 @@ applications:
     trust: true
   orc8r-subscriberdb:
     {%- if local == true %}
-    charm: ./magma-orc8r-subscriberdb_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-subscriberdb_ubuntu-22.04-amd64.charm
     resources:
       magma-orc8r-subscriberdb-image: linuxfoundation.jfrog.io/magma-docker/controller:1.8.0
     {%- else %}
@@ -318,7 +318,7 @@ applications:
     trust: true
   orc8r-subscriberdb-cache:
     {%- if local == true %}
-    charm: ./magma-orc8r-subscriberdb-cache_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-subscriberdb-cache_ubuntu-22.04-amd64.charm
     resources:
       magma-orc8r-subscriberdb-cache-image: linuxfoundation.jfrog.io/magma-docker/controller:1.8.0
     {%- else %}
@@ -329,7 +329,7 @@ applications:
     trust: true
   orc8r-tenants:
     {%- if local == true %}
-    charm: ./magma-orc8r-tenants_ubuntu-20.04-amd64.charm
+    charm: ./magma-orc8r-tenants_ubuntu-22.04-amd64.charm
     resources:
       magma-orc8r-tenants-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     {%- else %}
