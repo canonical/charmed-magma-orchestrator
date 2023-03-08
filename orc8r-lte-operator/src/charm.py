@@ -54,9 +54,7 @@ class MagmaOrc8rLteCharm(CharmBase):
             },
         )
         startup_command = (
-            "/usr/bin/envdir "
-            "/var/opt/magma/envdir "
-            "/var/opt/magma/bin/lte "
+            "lte "
             "-run_echo_server=true "
             "-logtostderr=true "
             "-v=0"
