@@ -241,6 +241,10 @@ relations:
   - postgresql-k8s:db
 - - orc8r-alertmanager:remote-configuration
   - orc8r-alertmanager-configurer:alertmanager
+- - orc8r-bootstrapper:db
+  - postgresql-k8s:db
+- - orc8r-bootstrapper:cert-root-ca
+  - orc8r-certifier:cert-root-ca
 - - orc8r-certifier
   - tls-certificates-operator
 - - orc8r-certifier:db

@@ -12,21 +12,6 @@ website: https://github.com/canonical/charmed-magma-orchestrator
 containers:
   magma-orc8r-accessd:
     resource: magma-orc8r-accessd-image
-    mounts:
-      - storage: certs
-        location: /var/opt/magma/certs
-      - storage: config
-        location: /var/opt/magma/configs/orc8r
-
-storage:
-  config:
-    type: filesystem
-    description: Configs storage
-    minimum-size: 1M
-  certs:
-    type: filesystem
-    description: Certs storage
-    minimum-size: 1M
 
 resources:
   magma-orc8r-accessd-image:

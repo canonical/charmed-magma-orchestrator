@@ -16,8 +16,6 @@ containers:
     mounts:
       - storage: certs
         location: /var/opt/magma/certs
-      - storage: config
-        location: /var/opt/magma/configs/orc8r
 
 resources:
   magma-orc8r-bootstrapper-image:
@@ -26,10 +24,6 @@ resources:
     upstream-source: ghcr.io/canonical/magma-orc8r-controller:1.8.0
 
 storage:
-  config:
-    type: filesystem
-    description: Configs storage
-    minimum-size: 1M
   certs:
     type: filesystem
     description: Certs storage
