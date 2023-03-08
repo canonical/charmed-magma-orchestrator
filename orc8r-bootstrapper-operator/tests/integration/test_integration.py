@@ -91,7 +91,7 @@ class TestOrc8rBootstrapper:
             resources=resources,
             application_name=APPLICATION_NAME,
             trust=True,
-            series="focal",
+            series="jammy",
         )
 
     async def test_wait_for_blocked_status(self, ops_test, setup, build_and_deploy):

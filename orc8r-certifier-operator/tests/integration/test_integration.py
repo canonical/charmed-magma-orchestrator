@@ -49,7 +49,7 @@ class TestOrc8rCertifier:
             application_name=APPLICATION_NAME,
             config={"domain": DOMAIN},
             trust=True,
-            series="focal",
+            series="jammy",
         )
 
     @pytest.mark.abort_on_fail

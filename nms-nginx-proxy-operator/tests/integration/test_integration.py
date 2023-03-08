@@ -76,7 +76,7 @@ class TestNmsNginxProxy:
             application_name=CERTIFIER_APPLICATION_NAME,
             config={"domain": DOMAIN},
             trust=True,
-            series="focal",
+            series="jammy",
         )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
@@ -117,7 +117,7 @@ class TestNmsNginxProxy:
             resources=resources,
             application_name=NMS_MAGMALTE_APPLICATION_NAME,
             trust=True,
-            series="focal",
+            series="jammy",
         )
         await ops_test.model.add_relation(
             relation1=NMS_MAGMALTE_APPLICATION_NAME, relation2="postgresql-k8s:db"

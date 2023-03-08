@@ -33,7 +33,7 @@ class TestOrc8rConfigurator:
             resources=resources,
             application_name=APPLICATION_NAME,
             trust=True,
-            series="focal",
+            series="jammy",
         )
 
     @pytest.mark.abort_on_fail

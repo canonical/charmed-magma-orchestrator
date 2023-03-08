@@ -69,7 +69,7 @@ class TestOrc8rNginx:
             application_name=CERTIFIER_APPLICATION_NAME,
             config={"domain": DOMAIN},
             trust=True,
-            series="focal",
+            series="jammy",
         )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
@@ -94,7 +94,7 @@ class TestOrc8rNginx:
             resources=resources,
             application_name=BOOTSTRAPPER_APPLICATION_NAME,
             trust=True,
-            series="focal",
+            series="jammy",
         )
         await ops_test.model.add_relation(
             relation1=BOOTSTRAPPER_APPLICATION_NAME, relation2="postgresql-k8s:db"
@@ -117,7 +117,7 @@ class TestOrc8rNginx:
             resources=resources,
             application_name=OBSIDIAN_APPLICATION_NAME,
             trust=True,
-            series="focal",
+            series="jammy",
         )
 
     @staticmethod
@@ -145,7 +145,7 @@ class TestOrc8rNginx:
             application_name=APPLICATION_NAME,
             trust=True,
             config={"domain": DOMAIN},
-            series="focal",
+            series="jammy",
         )
 
     @pytest.mark.abort_on_fail

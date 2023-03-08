@@ -30,7 +30,7 @@ class TestOrc8rEventd:
             config=CHARM_CONFIG,
             application_name=APPLICATION_NAME,
             trust=True,
-            series="focal",
+            series="jammy",
         )
 
     async def test_wait_for_idle(self, ops_test, build_and_deploy):

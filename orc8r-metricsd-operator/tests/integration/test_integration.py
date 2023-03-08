@@ -142,7 +142,7 @@ class TestOrc8rMetricsd:
             resources=resources,
             application_name=SERVICE_REGISTRY_APPLICATION_NAME,
             trust=True,
-            series="focal",
+            series="jammy",
         )
 
     async def _deploy_orc8r_certifier(self, ops_test):
@@ -162,7 +162,7 @@ class TestOrc8rMetricsd:
             application_name=CERTIFIER_APPLICATION_NAME,
             config={"domain": DOMAIN},
             trust=True,
-            series="focal",
+            series="jammy",
         )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
@@ -194,7 +194,7 @@ class TestOrc8rMetricsd:
             resources=resources,
             application_name=ACCESSD_APPLICATION_NAME,
             trust=True,
-            series="focal",
+            series="jammy",
         )
         await ops_test.model.add_relation(
             relation1=ACCESSD_APPLICATION_NAME, relation2="postgresql-k8s:db"
@@ -216,7 +216,7 @@ class TestOrc8rMetricsd:
             resources=resources,
             application_name=ORCHESTRATOR_APPLICATION_NAME,
             trust=True,
-            series="focal",
+            series="jammy",
         )
         await ops_test.model.add_relation(
             relation1=f"{ORCHESTRATOR_APPLICATION_NAME}:cert-admin-operator",
@@ -251,7 +251,7 @@ class TestOrc8rMetricsd:
             resources=resources,
             application_name=APPLICATION_NAME,
             trust=True,
-            series="focal",
+            series="jammy",
         )
 
     @pytest.mark.abort_on_fail
