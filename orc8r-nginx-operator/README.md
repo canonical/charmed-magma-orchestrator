@@ -13,6 +13,9 @@ be deployed as a bundle.
 
 ```bash
 juju deploy magma-orc8r-nginx orc8r-nginx --trust --config domain=<your domain>
+juju deploy magma-orc8r-certifier orc8r-certifier --config domain=<your domain>
+juju deploy magma-orc8r-bootstrapper orc8r-bootstrapper
+juju deploy magma-orc8r-obsidian orc8r-obsidian
 juju relate orc8r-nginx orc8r-bootstrapper
 juju relate orc8r-nginx orc8r-obsidian
 juju relate orc8r-nginx:cert-certifier orc8r-certifier:cert-certifier
