@@ -12,7 +12,8 @@ be deployed as a bundle.
 
 ```bash
 juju deploy magma-orc8r-bootstrapper orc8r-bootstrapper
-juju relate orc8r-bootstrapper orc8r-certifier
+juju deploy postgresql-k8s
+juju deploy magma-orc8r-certifier orc8r-certifier --config domain=<your domain>
 juju relate orc8r-bootstrapper postgresql-k8s:db
 juju relate orc8r-bootstrapper:cert-root-ca orc8r-certifier:cert-root-ca
 ```
@@ -23,7 +24,6 @@ juju relate orc8r-bootstrapper:cert-root-ca orc8r-certifier:cert-root-ca
 
 ### Requires
 
-- **cert-bootstrapper**: Relation that provides the bootstrapper private key.
 - **cert-root-ca**: Relation that provides the rootCA certificates.
 - **db**: Relation that provides database connectivity.
 

@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 
 import logging
-import os
 from pathlib import Path
 from typing import Optional
 
@@ -32,10 +31,8 @@ class TestOrc8rBootstrapper:
 
     @staticmethod
     def _find_charm(charm_dir: str, charm_file_name: str) -> Optional[str]:
-        for root, _, files in os.walk(charm_dir):
-            for file in files:
-                if file == charm_file_name:
-                    return os.path.join(root, file)
+        for path in Path(charm_dir).rglob(charm_file_name):
+            return str(path)
         return None
 
     @staticmethod
