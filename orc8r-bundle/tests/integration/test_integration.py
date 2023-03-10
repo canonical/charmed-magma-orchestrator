@@ -177,6 +177,7 @@ async def deploy_bundle(ops_test: OpsTest, bundle_path: str, overlay_file_path: 
         status="active",
         timeout=1800,
         idle_period=10,
+        raise_on_error=False,
     )
 
 
