@@ -1,6 +1,7 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import pathlib
 import unittest
 from unittest.mock import Mock, call, patch
 
@@ -26,11 +27,12 @@ class TestCharm(unittest.TestCase):
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
         self._container = self.harness.model.unit.get_container("magma-orc8r-nginx")
+        self._expected_config_file = pathlib.Path(__file__).parent / "nginx.conf"
 
-    @patch("lightkube.core.client.GenericSyncClient", new=Mock())
+    @patch("lightkube.core.client.GenericSyncClient", new=Mock)
     @patch("lightkube.core.client.Client.get")
     @patch("lightkube.core.client.Client.create")
-    @patch("ops.model.Container.exec", new_callable=Mock)
+    @patch("ops.model.Container.exec")
     def test_given_additional_k8s_services_not_created_when_on_install_then_services_are_created(
         self, patched_exec, patch_create, patch_get
     ):
@@ -121,7 +123,7 @@ class TestCharm(unittest.TestCase):
 
         patch_create.assert_has_calls(calls=calls)
 
-    @patch("ops.model.Container.exec", Mock())
+    @patch("ops.model.Container.exec", new=Mock)
     def test_given_no_relations_created_when_pebble_ready_event_emitted_then_status_is_blocked(
         self,
     ):
@@ -138,7 +140,7 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.exists")
-    @patch("ops.model.Container.exec", Mock())
+    @patch("ops.model.Container.exec", new=Mock)
     def test_given_cert_certifier_relation_not_created_when_pebble_ready_event_emitted_then_status_is_blocked(  # noqa: E501
         self, patch_file_exists
     ):
@@ -162,7 +164,7 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.exists")
-    @patch("ops.model.Container.exec", Mock())
+    @patch("ops.model.Container.exec", new=Mock)
     def test_given_cert_controller_relation_not_created_when_pebble_ready_event_emitted_then_status_is_blocked(  # noqa: E501
         self, patch_file_exists
     ):
@@ -186,7 +188,7 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.exists")
-    @patch("ops.model.Container.exec", Mock())
+    @patch("ops.model.Container.exec", new=Mock)
     def test_given_magma_orc8r_bootstrapper_relation_not_created_when_pebble_ready_event_emitted_then_status_is_blocked(  # noqa: E501
         self, patch_file_exists
     ):
@@ -210,7 +212,7 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.exists")
-    @patch("ops.model.Container.exec", Mock())
+    @patch("ops.model.Container.exec", new=Mock)
     def test_given_magma_orc8r_obsidian_relation_not_created_when_pebble_ready_event_emitted_then_status_is_blocked(  # noqa: E501
         self, patch_file_exists
     ):
@@ -234,7 +236,7 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.exists")
-    @patch("ops.model.Container.exec", new_callable=Mock)
+    @patch("ops.model.Container.exec")
     def test_given_pebble_ready_when_obsidian_relation_broken_then_status_is_blocked(  # noqa: E501
         self, patched_exec, patch_file_exists
     ):
@@ -254,7 +256,7 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.exists")
-    @patch("ops.model.Container.exec", new_callable=Mock)
+    @patch("ops.model.Container.exec")
     def test_given_pebble_ready_when_bootstrapper_relation_broken_then_status_is_blocked(  # noqa: E501
         self, patched_exec, patch_file_exists
     ):
@@ -274,7 +276,7 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.exists")
-    @patch("ops.model.Container.exec", Mock())
+    @patch("ops.model.Container.exec", new=Mock)
     def test_given_magma_orc8r_obsidian_relation_not_ready_when_pebble_ready_event_emitted_then_status_is_waiting(  # noqa: E501
         self, patch_file_exists
     ):
@@ -302,7 +304,7 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.exists")
-    @patch("ops.model.Container.exec", Mock())
+    @patch("ops.model.Container.exec", new=Mock)
     def test_given_magma_orc8r_bootstrapper_relation_not_ready_when_pebble_ready_event_emitted_then_status_is_waiting(  # noqa: E501
         self, patch_file_exists
     ):
@@ -330,12 +332,9 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.exists")
-    @patch("ops.model.Container.exec", new_callable=Mock)
     def test_given_all_relations_created_and_ready_and_nginx_services_are_created_when_pebble_ready_event_emitted_then_pebble_layer_is_configured(  # noqa: E501
-        self, patched_exec, patch_file_exists
+        self, patch_file_exists
     ):
-        patched_exec.return_value = MockExec()
-        patch_file_exists.return_value = True
         self.harness.update_config(key_values={"domain": "whatever.com"})
         self._create_all_relations()
         expected_plan = {
@@ -344,10 +343,6 @@ class TestCharm(unittest.TestCase):
                     "override": "replace",
                     "startup": "enabled",
                     "command": "nginx -g 'daemon off;'",
-                    "environment": {
-                        "SERVICE_REGISTRY_MODE": "k8s",
-                        "SERVICE_REGISTRY_NAMESPACE": self.namespace,
-                    },
                 }
             },
         }
@@ -358,7 +353,7 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(expected_plan, updated_plan)
 
     @patch("ops.model.Container.exists")
-    @patch("ops.model.Container.exec", new_callable=Mock)
+    @patch("ops.model.Container.exec")
     def test_given_all_relations_created_and_ready_and_nginx_services_are_created_when_pebble_ready_event_emitted_then_status_is_active(  # noqa: E501
         self, patched_exec, patch_file_exists
     ):
@@ -383,9 +378,8 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.exists")
-    @patch("ops.model.Container.exec", new_callable=Mock)
-    @patch("ops.model.Container.push", Mock())
-    @patch("ops.model.Container.exec", Mock())
+    @patch("ops.model.Container.exec")
+    @patch("ops.model.Container.push", new=Mock)
     def test_given_orc8r_nginx_service_running_when_magma_orc8r_nginx_relation_joined_then_service_active_status_in_the_relation_data_bag_is_true(  # noqa: E501
         self, patched_exec, patch_file_exists
     ):
@@ -466,9 +460,9 @@ class TestCharm(unittest.TestCase):
             path="/var/opt/magma/certs/rootCA.pem", source=test_rootca_cert
         )
 
-    @patch("ops.model.Container.exec")
+    @patch("ops.model.Container.push")
     def test_given_valid_domain_config_set_when_config_changed_then_nginx_config_file_is_created(
-        self, patch_exec
+        self, patched_push
     ):
         self.harness.set_can_connect(container=self._container, val=True)
 
@@ -476,18 +470,8 @@ class TestCharm(unittest.TestCase):
         key_values = {"domain": domain}
         self.harness.update_config(key_values=key_values)
 
-        patch_exec.assert_called_with(
-            command=["/usr/local/bin/generate_nginx_configs.py"],
-            environment={
-                "PROXY_BACKENDS": f"{self.namespace}.svc.cluster.local",
-                "CONTROLLER_HOSTNAME": f"controller.{domain}",
-                "RESOLVER": "kube-dns.kube-system.svc.cluster.local valid=10s",
-                "SERVICE_REGISTRY_MODE": "k8s",
-                "SSL_CERTIFICATE": "/var/opt/magma/certs/controller.crt",
-                "SSL_CERTIFICATE_KEY": "/var/opt/magma/certs/controller.key",
-                "SSL_CLIENT_CERTIFICATE": "/var/opt/magma/certs/certifier.pem",
-            },
-        )
+        config_content = patched_push.call_args.kwargs["source"]
+        assert config_content == self._expected_config_file.read_text().strip()
 
     @patch("ops.model.Container.exists")
     @patch("ops.model.Container.exec")
@@ -531,7 +515,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.restart")
     @patch("ops.model.Container.exists")
-    @patch("ops.model.Container.exec", Mock())
+    @patch("ops.model.Container.push", new=Mock)
     def test_given_workload_container_without_pebble_layer_when_pebble_ready_then_nginx_service_is_reloaded(  # noqa: E501
         self, patched_file_exists, patched_restart
     ):
@@ -541,10 +525,6 @@ class TestCharm(unittest.TestCase):
                     "override": "replace",
                     "startup": "enabled",
                     "command": "nginx",
-                    "environment": {
-                        "SERVICE_REGISTRY_MODE": "k8s",
-                        "SERVICE_REGISTRY_NAMESPACE": self.namespace,
-                    },
                 }
             },
         }

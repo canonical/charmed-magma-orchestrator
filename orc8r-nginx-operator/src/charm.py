@@ -5,6 +5,7 @@
 """Proxies traffic between nms and obsidian."""
 
 import logging
+import pathlib
 import re
 from typing import List, Optional, Union
 
@@ -25,6 +26,7 @@ from charms.magma_orchestrator_interface.v0.magma_orchestrator_interface import 
 )
 from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServicePatch
 from httpx import HTTPStatusError
+from jinja2 import Environment, FileSystemLoader
 from lightkube import Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
@@ -320,22 +322,16 @@ class MagmaOrc8rNginxCharm(CharmBase):
         """Generates nginx config to /etc/nginx/nginx.conf."""
         logger.info("Generating nginx config file...")
         domain_name = self.model.config.get("domain")
-        process = self._container.exec(
-            command=["/usr/local/bin/generate_nginx_configs.py"],
-            environment={
-                "PROXY_BACKENDS": f"{self._namespace}.svc.cluster.local",
-                "CONTROLLER_HOSTNAME": f"controller.{domain_name}",
-                "RESOLVER": "kube-dns.kube-system.svc.cluster.local valid=10s",
-                "SERVICE_REGISTRY_MODE": "k8s",
-                "SSL_CERTIFICATE": f"{self.BASE_CERTS_PATH}/controller.crt",
-                "SSL_CERTIFICATE_KEY": f"{self.BASE_CERTS_PATH}/controller.key",
-                "SSL_CLIENT_CERTIFICATE": f"{self.BASE_CERTS_PATH}/certifier.pem",
-            },
-        )
-        try:
-            process.wait_output()
-        except ExecError as error:
-            raise ProcessExecutionError(error)
+        context = {
+            "base_certs_path": self.BASE_CERTS_PATH,
+            "backend": f"{self._namespace}.svc.cluster.local",
+            "controller_hostname": f"controller.{domain_name}",
+            "resolver": "kube-dns.kube-system.svc.cluster.local valid=10s",
+        }
+        env = Environment(loader=FileSystemLoader(pathlib.Path(__file__).parent), autoescape=False)
+        template = env.get_template("nginx.conf.j2")
+        config = template.render(context)
+        self._container.push(path=f"{self.CONFIG_PATH}/nginx.conf", source=config)
         logger.info("Successfully generated nginx config file")
 
     @property
@@ -634,10 +630,6 @@ class MagmaOrc8rNginxCharm(CharmBase):
                         "override": "replace",
                         "startup": "enabled",
                         "command": "nginx -g 'daemon off;'",
-                        "environment": {
-                            "SERVICE_REGISTRY_MODE": "k8s",
-                            "SERVICE_REGISTRY_NAMESPACE": self._namespace,
-                        },
                     }
                 },
             }

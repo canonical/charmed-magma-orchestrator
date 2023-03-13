@@ -2,8 +2,8 @@
 
 ## Description
 
-magma-orc8r-nginx deploys an **nginx** web server that proxies communication between NMS and 
-Orchestrator. Visit [Magma Architecture Overview](https://docs.magmacore.org/docs/orc8r/architecture_overview) to 
+magma-orc8r-nginx deploys an **nginx** web server that proxies communication between NMS and
+Orchestrator. Visit [Magma Architecture Overview](https://docs.magmacore.org/docs/orc8r/architecture_overview) to
 learn more.
 
 This charm is part of [Charmed Magma Orchestrator](https://charmhub.io/magma-orc8r/) and should
@@ -35,5 +35,4 @@ juju relate orc8r-nginx:cert-controller orc8r-certifier:cert-controller
 
 ## OCI Images
 
-Default: linuxfoundation.jfrog.io/magma-docker/nginx:1.8.0
-
+Default: ghcr.io/canonical/nginx:1.23.3
