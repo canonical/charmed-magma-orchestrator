@@ -53,6 +53,7 @@ class MagmaOrc8rMetricsdCharm(CharmBase):
             ports=[
                 ServicePort(name="grpc", port=9180, targetPort=9084),
                 ServicePort(name="http", port=8080, targetPort=10084),
+                ServicePort(name="grpc-internal", port=9190, targetPort=9184),
             ],
             additional_labels={
                 "app.kubernetes.io/part-of": "orc8r-app",

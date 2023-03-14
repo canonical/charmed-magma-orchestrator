@@ -26,7 +26,7 @@ jobs:
 
   orc8r-bootstrapper-integration-test:
     name: Integration tests
-    uses: ./.github/workflows/integration-tests.yml
+    uses: ./.github/workflows/integration-tests-self-hosted.yml
     with:
       charm_dir: orc8r-bootstrapper-operator
 

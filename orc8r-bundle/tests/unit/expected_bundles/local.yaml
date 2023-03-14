@@ -18,7 +18,7 @@ applications:
   nms-magmalte:
     charm: ./magma-nms-magmalte_ubuntu-20.04-amd64.charm
     resources:
-      magma-nms-magmalte-image: linuxfoundation.jfrog.io/magma-docker/magmalte:1.6.0
+      magma-nms-magmalte-image: linuxfoundation.jfrog.io/magma-docker/magmalte:1.8.0
     scale: 1
     trust: true
   nms-nginx-proxy:
@@ -30,7 +30,7 @@ applications:
   orc8r-accessd:
     charm: ./magma-orc8r-accessd_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-accessd-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-accessd-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     scale: 1
     trust: true
   orc8r-alertmanager:
@@ -48,19 +48,19 @@ applications:
   orc8r-analytics:
     charm: ./magma-orc8r-analytics_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-analytics-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-analytics-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     scale: 1
     trust: true
   orc8r-bootstrapper:
     charm: ./magma-orc8r-bootstrapper_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-bootstrapper-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-bootstrapper-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     scale: 1
     trust: true
   orc8r-certifier:
     charm: ./magma-orc8r-certifier_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-certifier-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-certifier-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     scale: 1
     trust: true
     options:
@@ -68,37 +68,37 @@ applications:
   orc8r-configurator:
     charm: ./magma-orc8r-configurator_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-configurator-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-configurator-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     scale: 1
     trust: true
   orc8r-ctraced:
     charm: ./magma-orc8r-ctraced_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-ctraced-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-ctraced-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     scale: 1
     trust: true
   orc8r-device:
     charm: ./magma-orc8r-device_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-device-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-device-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     scale: 1
     trust: true
   orc8r-directoryd:
     charm: ./magma-orc8r-directoryd_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-directoryd-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-directoryd-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     scale: 1
     trust: true
   orc8r-dispatcher:
     charm: ./magma-orc8r-dispatcher_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-dispatcher-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-dispatcher-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     scale: 1
     trust: true
   orc8r-eventd:
     charm: ./magma-orc8r-eventd_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-eventd-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-eventd-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     scale: 1
     trust: true
     options:
@@ -106,37 +106,37 @@ applications:
   orc8r-ha:
     charm: ./magma-orc8r-ha_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-ha-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-ha-image: linuxfoundation.jfrog.io/magma-docker/controller:1.8.0
     scale: 1
     trust: true
   orc8r-lte:
     charm: ./magma-orc8r-lte_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-lte-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-lte-image: linuxfoundation.jfrog.io/magma-docker/controller:1.8.0
     scale: 1
     trust: true
   orc8r-metricsd:
     charm: ./magma-orc8r-metricsd_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-metricsd-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-metricsd-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     scale: 1
     trust: true
   orc8r-nginx:
     charm: ./magma-orc8r-nginx_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-nginx-image: linuxfoundation.jfrog.io/magma-docker/nginx:1.6.0
+      magma-orc8r-nginx-image: linuxfoundation.jfrog.io/magma-docker/nginx:1.8.0
     scale: 1
     trust: true
   orc8r-obsidian:
     charm: ./magma-orc8r-obsidian_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-obsidian-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-obsidian-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     scale: 1
     trust: true
   orc8r-orchestrator:
     charm: ./magma-orc8r-orchestrator_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-orchestrator-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-orchestrator-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     scale: 1
     trust: true
     options:
@@ -144,7 +144,7 @@ applications:
   orc8r-policydb:
     charm: ./magma-orc8r-policydb_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-policydb-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-policydb-image: linuxfoundation.jfrog.io/magma-docker/controller:1.8.0
     scale: 1
     trust: true
   orc8r-prometheus:
@@ -169,43 +169,43 @@ applications:
   orc8r-service-registry:
     charm: ./magma-orc8r-service-registry_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-service-registry-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-service-registry-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     scale: 1
     trust: true
   orc8r-smsd:
     charm: ./magma-orc8r-smsd_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-smsd-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-smsd-image: linuxfoundation.jfrog.io/magma-docker/controller:1.8.0
     scale: 1
     trust: true
   orc8r-state:
     charm: ./magma-orc8r-state_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-state-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-state-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     scale: 1
     trust: true
   orc8r-streamer:
     charm: ./magma-orc8r-streamer_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-streamer-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-streamer-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     scale: 1
     trust: true
   orc8r-subscriberdb:
     charm: ./magma-orc8r-subscriberdb_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-subscriberdb-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-subscriberdb-image: linuxfoundation.jfrog.io/magma-docker/controller:1.8.0
     scale: 1
     trust: true
   orc8r-subscriberdb-cache:
     charm: ./magma-orc8r-subscriberdb-cache_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-subscriberdb-cache-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-subscriberdb-cache-image: linuxfoundation.jfrog.io/magma-docker/controller:1.8.0
     scale: 1
     trust: true
   orc8r-tenants:
     charm: ./magma-orc8r-tenants_ubuntu-20.04-amd64.charm
     resources:
-      magma-orc8r-tenants-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+      magma-orc8r-tenants-image: ghcr.io/canonical/magma-orc8r-controller:1.8.0
     scale: 1
     trust: true
   orc8r-user-grafana:
@@ -241,6 +241,10 @@ relations:
   - postgresql-k8s:db
 - - orc8r-alertmanager:remote-configuration
   - orc8r-alertmanager-configurer:alertmanager
+- - orc8r-bootstrapper:db
+  - postgresql-k8s:db
+- - orc8r-bootstrapper:cert-root-ca
+  - orc8r-certifier:cert-root-ca
 - - orc8r-certifier
   - tls-certificates-operator
 - - orc8r-certifier:db

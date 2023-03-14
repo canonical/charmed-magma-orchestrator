@@ -96,6 +96,12 @@ class TestOrc8rNginx:
             trust=True,
             series="focal",
         )
+        await ops_test.model.add_relation(
+            relation1=BOOTSTRAPPER_APPLICATION_NAME, relation2="postgresql-k8s:db"
+        )
+        await ops_test.model.add_relation(
+            relation1=BOOTSTRAPPER_APPLICATION_NAME, relation2="orc8r-certifier:cert-root-ca"
+        )
 
     async def _deploy_orc8r_obsidian(self, ops_test):
         obsidian_charm = self._find_charm("../orc8r-obsidian-operator", OBSIDIAN_CHARM_FILE_NAME)

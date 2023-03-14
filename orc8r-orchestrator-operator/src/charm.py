@@ -78,6 +78,7 @@ class MagmaOrc8rOrchestratorCharm(CharmBase):
             ports=[
                 ServicePort(name="grpc", port=9180, targetPort=9112),
                 ServicePort(name="http", port=8080, targetPort=10112),
+                ServicePort(name="grpc-internal", port=9190, targetPort=9212),
             ],
             additional_labels={
                 "app.kubernetes.io/part-of": "orc8r-app",

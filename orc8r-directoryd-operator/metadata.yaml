@@ -17,7 +17,7 @@ resources:
   magma-orc8r-directoryd-image:
     type: oci-image
     description: OCI image for magma-orc8r-directoryd
-    upstream-source: ghcr.io/canonical/magma-orc8r-controller:1.6.1
+    upstream-source: ghcr.io/canonical/magma-orc8r-controller:1.8.0
 
 provides:
   magma-orc8r-directoryd:

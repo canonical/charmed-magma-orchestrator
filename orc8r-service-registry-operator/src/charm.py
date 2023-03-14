@@ -21,7 +21,10 @@ class MagmaOrc8rServiceRegistry(CharmBase):
         super().__init__(*args)
         self._service_patcher = KubernetesServicePatch(
             charm=self,
-            ports=[ServicePort(name="grpc", port=9180)],
+            ports=[
+                ServicePort(name="grpc", port=9180),
+                ServicePort(name="grpc-internal", port=9190),
+            ],
             additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
         )
         startup_command = "service_registry -logtostderr=true -v=0"

@@ -327,7 +327,7 @@ class TestCharm(unittest.TestCase):
         self,
     ):
         action_event = Mock()
-        self.harness.charm._on_get_master_admin_credentials(action_event)
+        self.harness.charm._on_get_host_admin_credentials(action_event)
         self.assertEqual(
             action_event.fail.call_args,
             [("Workload service is not yet running",)],
@@ -338,7 +338,7 @@ class TestCharm(unittest.TestCase):
     def test_given_relations_not_created_and_unit_is_not_leader_when_juju_action_then_get_admin_credentials_fails(  # noqa: E501
         self, action_event
     ):
-        self.harness.charm._on_get_master_admin_credentials(action_event)
+        self.harness.charm._on_get_host_admin_credentials(action_event)
         self.harness.set_leader(False)
         self.assertEqual(
             action_event.fail.call_args,
@@ -351,7 +351,7 @@ class TestCharm(unittest.TestCase):
         self, action_event
     ):
         self.harness.remove_relation(self.peer_relation_id)
-        self.harness.charm._on_get_master_admin_credentials(action_event)
+        self.harness.charm._on_get_host_admin_credentials(action_event)
 
         self.assertEqual(
             action_event.fail.call_args,
@@ -369,7 +369,7 @@ class TestCharm(unittest.TestCase):
             key_values={"admin_password": "password"},
         )
 
-        self.harness.charm._on_get_master_admin_credentials(action_event)
+        self.harness.charm._on_get_host_admin_credentials(action_event)
 
         self.assertEqual(
             action_event.set_results.call_args,
@@ -388,7 +388,7 @@ class TestCharm(unittest.TestCase):
         )
 
         self.harness.set_leader(False)
-        self.harness.charm._on_get_master_admin_credentials(action_event)
+        self.harness.charm._on_get_host_admin_credentials(action_event)
 
         self.assertEqual(
             action_event.set_results.call_args,
@@ -420,7 +420,7 @@ class TestCharm(unittest.TestCase):
     @patch("ops.model.Container.exists")
     @patch("psycopg2.connect", new=Mock())
     @patch("charm.ConnectionString")
-    @patch("charm.MagmaNmsMagmalteCharm._create_master_nms_admin_user")
+    @patch("charm.MagmaNmsMagmalteCharm._create_host_nms_admin_user")
     @patch("charm.MagmaNmsMagmalteCharm._grafana_url", new_callable=PropertyMock)
     @patch("ops.model.Container.restart")
     def test_given_unchanged_pebble_plan_when_configure_pebble_then_container_is_restarted(

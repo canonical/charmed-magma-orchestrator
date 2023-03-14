@@ -21,7 +21,7 @@ resources:
   magma-orc8r-bootstrapper-image:
     type: oci-image
     description: OCI image for magma-orc8r-bootstrapper
-    upstream-source: ghcr.io/canonical/magma-orc8r-controller:1.6.1
+    upstream-source: ghcr.io/canonical/magma-orc8r-controller:1.8.0
 
 storage:
   certs:
@@ -32,6 +32,14 @@ storage:
 provides:
   magma-orc8r-bootstrapper:
     interface: magma-orc8r-bootstrapper
+
+requires:
+  db:
+    interface: pgsql
+    limit: 1
+  cert-root-ca:
+    interface: cert-root-ca
+    limit: 1
 
 peers:
   replicas:

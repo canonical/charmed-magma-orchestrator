@@ -17,8 +17,8 @@ containers:
 resources:
   magma-orc8r-obsidian-image:
     type: oci-image
-    description: OCI image for magma-orc8r-nginx
-    upstream-source: ghcr.io/canonical/magma-orc8r-controller:1.6.1
+    description: OCI image for magma-orc8r-obsidian
+    upstream-source: ghcr.io/canonical/magma-orc8r-controller:1.8.0
 
 provides:
   magma-orc8r-obsidian:

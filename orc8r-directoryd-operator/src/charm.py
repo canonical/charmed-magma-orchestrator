@@ -21,7 +21,10 @@ class MagmaOrc8rDirectorydCharm(CharmBase):
         super().__init__(*args)
         self._service_patcher = KubernetesServicePatch(
             charm=self,
-            ports=[ServicePort(name="grpc", port=9180, targetPort=9100)],
+            ports=[
+                ServicePort(name="grpc", port=9180, targetPort=9100),
+                ServicePort(name="grpc-internal", port=9190, targetPort=9102),
+            ],
             additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
         )
         startup_command = "directoryd -logtostderr=true -v=0"
