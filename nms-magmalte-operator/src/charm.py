@@ -554,7 +554,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         logger.info("Creating admin user for NMS")
         process = self._container.exec(
             [
-                "/usr/local/bin/yarn",
+                "yarn",
                 "setAdminPassword",
                 organization,
                 email,

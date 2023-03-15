@@ -263,7 +263,7 @@ class TestCharm(unittest.TestCase):
         args, _ = mock_exec.call_args
         mock_exec.assert_called_once()
         call_command = [
-            "/usr/local/bin/yarn",
+            "yarn",
             "setAdminPassword",
             "test-org",
             "test@test.test",
