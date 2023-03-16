@@ -461,7 +461,7 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.push")
-    def test_given_valid_domain_config_set_when_config_changed_then_nginx_config_file_is_created(
+    def test_given_valid_domain_config_set_when_config_changed_then_nginx_config_file_is_pushed(
         self, patched_push
     ):
         self.harness.set_can_connect(container=self._container, val=True)
