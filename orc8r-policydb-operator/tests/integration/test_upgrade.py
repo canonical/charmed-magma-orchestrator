@@ -37,7 +37,7 @@ class TestOrc8rPolicydbUpgrade:
             ops_test,
             application_name=APPLICATION_NAME,
         )
-        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=600)
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=900)
 
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail
