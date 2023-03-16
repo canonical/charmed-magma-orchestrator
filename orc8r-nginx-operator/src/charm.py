@@ -59,6 +59,9 @@ class MagmaOrc8rNginxCharm(CharmBase):
     CONFIG_PATH = "/etc/nginx"
     REQUIRED_RELATIONS = ["cert-certifier", "cert-controller"]
     REQUIRED_MAGMA_SERVICES_RELATIONS = ["magma-orc8r-bootstrapper", "magma-orc8r-obsidian"]
+    CLIENTCERT_PORT = 8443
+    OPEN_PORT = 8444
+    API_PORT = 9443
 
     def __init__(self, *args):
         """Initializes all event that need to be observed."""
@@ -73,9 +76,9 @@ class MagmaOrc8rNginxCharm(CharmBase):
             charm=self,
             ports=[
                 ServicePort(name="health", port=80),
-                ServicePort(name="clientcert", port=8443),
-                ServicePort(name="open", port=8444),
-                ServicePort(name="api", port=443, targetPort=9443),
+                ServicePort(name="clientcert", port=self.CLIENTCERT_PORT),
+                ServicePort(name="open", port=self.OPEN_PORT),
+                ServicePort(name="api", port=443, targetPort=self.API_PORT),
             ],
             service_type="LoadBalancer",
             service_name="orc8r-nginx-proxy",
@@ -327,6 +330,9 @@ class MagmaOrc8rNginxCharm(CharmBase):
             "backend": f"{self._namespace}.svc.cluster.local",
             "controller_hostname": f"controller.{domain_name}",
             "resolver": "kube-dns.kube-system.svc.cluster.local valid=10s",
+            "open_port": self.OPEN_PORT,
+            "clientcert_port": self.CLIENTCERT_PORT,
+            "api_port": self.API_PORT,
         }
         env = Environment(loader=FileSystemLoader(pathlib.Path(__file__).parent), autoescape=False)
         template = env.get_template("nginx.conf.j2")
@@ -456,12 +462,12 @@ class MagmaOrc8rNginxCharm(CharmBase):
                         ServicePort(
                             name="open-legacy",
                             port=443,
-                            targetPort=8444,
+                            targetPort=self.OPEN_PORT,
                         ),
                         ServicePort(
                             name="open",
-                            port=8444,
-                            targetPort=8444,
+                            port=self.OPEN_PORT,
+                            targetPort=self.OPEN_PORT,
                         ),
                     ],
                     type="LoadBalancer",
@@ -489,12 +495,12 @@ class MagmaOrc8rNginxCharm(CharmBase):
                         ServicePort(
                             name="clientcert-legacy",
                             port=443,
-                            targetPort=8443,
+                            targetPort=self.CLIENTCERT_PORT,
                         ),
                         ServicePort(
                             name="clientcert",
-                            port=8443,
-                            targetPort=8443,
+                            port=self.CLIENTCERT_PORT,
+                            targetPort=self.CLIENTCERT_PORT,
                         ),
                     ],
                     type="LoadBalancer",
