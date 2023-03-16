@@ -1,8 +1,8 @@
 # Route53 Integrator
 
 ## Summary
-Route53 is AWS's domain name service. This script aims at configuring Route53 for the correct 
-Magma Orchestrator services to be accessible using domain names. The script creates a hosted Zone 
+Route53 is AWS's domain name service. This script aims at configuring Route53 for the correct
+Magma Orchestrator services to be accessible using domain names. The script creates a hosted Zone
 and the following A records
 - `api.<your domain>`
 - `bootstrapper-controller.<your domain>`
@@ -21,8 +21,8 @@ orc8r-clientcert-nginx               LoadBalancer   10.152.183.201   a93a2c577f3
 orc8r-nginx-proxy                    LoadBalancer   10.152.183.110   aa63d9dbebba644a49f8f149e2f72c78-40891796.us-east-1.elb.amazonaws.com    80:32035/TCP,8443:30130/TCP,8444:31694/TCP,443:30794/TCP   24h
 ```
 
-Note that in your cluster, the `CLUSTER-IP` and `EXTERNAL-IP` fields you'll see will be different 
-from those here. 
+Note that in your cluster, the `CLUSTER-IP` and `EXTERNAL-IP` fields you'll see will be different
+from those here.
 
 Here is the association between the record names and Kubernetes service that will
 be created by the script:
@@ -37,7 +37,7 @@ be created by the script:
 
 ## Usage
 
-All you need to do is install the pip libraries located in the `requirements.txt` file and run the 
+All you need to do is install the pip libraries located in the `requirements.txt` file and run the
 script using a Python3 interpreter.
 
 ```bash

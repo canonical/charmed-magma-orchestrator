@@ -81,3 +81,4 @@ juju run-action nms-magmalte/0 get-master-admin-credentials --wait
 
 Confirm successful deployment by visiting `https://master.nms.<your domain>` and logging in
 with the `admin-username` and `admin-password` outputted here.
+

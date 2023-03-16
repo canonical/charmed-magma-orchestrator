@@ -16,3 +16,4 @@ juju deploy magma-orc8r-feg  orc8r-feg --trust
 ## OCI Images
 
 Default: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
+

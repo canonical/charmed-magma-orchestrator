@@ -18,3 +18,4 @@ juju relate orc8r-policydb postgresql-k8s:db
 ## OCI Images
 
 Default: linuxfoundation.jfrog.io/magma-docker/controller:1.8.0
+
