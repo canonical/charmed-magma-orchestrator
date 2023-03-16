@@ -12,7 +12,7 @@ on:
 
 jobs:
   libs-charmhub-upload:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     name: Upload ${{ inputs.charm }} libs to charmhub
     steps:
       - uses: actions/checkout@v3
