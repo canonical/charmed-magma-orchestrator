@@ -1,4 +1,4 @@
-ops==2.0.0
+ops
 ops-lib-pgsql
 psycopg2-binary  # Package only used for testing, charm uses charm-binary-python-packages from charmcraft.yaml
 lightkube
