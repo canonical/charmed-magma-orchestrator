@@ -20,13 +20,13 @@ APPLICATION_NAME = "orc8r-nginx"
 CHARM_NAME = "magma-orc8r-nginx"
 CERTIFIER_APPLICATION_NAME = "orc8r-certifier"
 CERTIFIER_CHARM_NAME = "magma-orc8r-certifier"
-CERTIFIER_CHARM_FILE_NAME = "magma-orc8r-certifier_ubuntu-20.04-amd64.charm"
+CERTIFIER_CHARM_FILE_NAME = "magma-orc8r-certifier_ubuntu-22.04-amd64.charm"
 BOOTSTRAPPER_APPLICATION_NAME = "orc8r-bootstrapper"
 BOOTSTRAPPER_CHARM_NAME = "magma-orc8r-bootstrapper"
-BOOTSTRAPPER_CHARM_FILE_NAME = "magma-orc8r-bootstrapper_ubuntu-20.04-amd64.charm"
+BOOTSTRAPPER_CHARM_FILE_NAME = "magma-orc8r-bootstrapper_ubuntu-22.04-amd64.charm"
 OBSIDIAN_APPLICATION_NAME = "orc8r-obsidian"
 OBSIDIAN_CHARM_NAME = "magma-orc8r-obsidian"
-OBSIDIAN_CHARM_FILE_NAME = "magma-orc8r-obsidian_ubuntu-20.04-amd64.charm"
+OBSIDIAN_CHARM_FILE_NAME = "magma-orc8r-obsidian_ubuntu-22.04-amd64.charm"
 DOMAIN = "example.com"
 
 
@@ -69,7 +69,7 @@ class TestOrc8rNginx:
             application_name=CERTIFIER_APPLICATION_NAME,
             config={"domain": DOMAIN},
             trust=True,
-            series="focal",
+            series="jammy",
         )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
@@ -94,7 +94,7 @@ class TestOrc8rNginx:
             resources=resources,
             application_name=BOOTSTRAPPER_APPLICATION_NAME,
             trust=True,
-            series="focal",
+            series="jammy",
         )
         await ops_test.model.add_relation(
             relation1=BOOTSTRAPPER_APPLICATION_NAME, relation2="postgresql-k8s:db"
@@ -117,7 +117,7 @@ class TestOrc8rNginx:
             resources=resources,
             application_name=OBSIDIAN_APPLICATION_NAME,
             trust=True,
-            series="focal",
+            series="jammy",
         )
 
     @staticmethod
@@ -145,7 +145,7 @@ class TestOrc8rNginx:
             application_name=APPLICATION_NAME,
             trust=True,
             config={"domain": DOMAIN},
-            series="focal",
+            series="jammy",
         )
 
     @pytest.mark.abort_on_fail

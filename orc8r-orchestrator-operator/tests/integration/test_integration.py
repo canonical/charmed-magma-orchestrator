@@ -19,13 +19,13 @@ APPLICATION_NAME = "orc8r-orchestrator"
 CHARM_NAME = "magma-orc8r-orchestrator"
 CERTIFIER_APPLICATION_NAME = "orc8r-certifier"
 CERTIFIER_CHARM_NAME = "magma-orc8r-certifier"
-CERTIFIER_CHARM_FILE_NAME = "magma-orc8r-certifier_ubuntu-20.04-amd64.charm"
+CERTIFIER_CHARM_FILE_NAME = "magma-orc8r-certifier_ubuntu-22.04-amd64.charm"
 ACCESSD_APPLICATION_NAME = "orc8r-accessd"
 ACCESSD_CHARM_NAME = "magma-orc8r-accessd"
-ACCESSD_CHARM_FILE_NAME = "magma-orc8r-accessd_ubuntu-20.04-amd64.charm"
+ACCESSD_CHARM_FILE_NAME = "magma-orc8r-accessd_ubuntu-22.04-amd64.charm"
 SERVICE_REGISTRY_APPLICATION_NAME = "orc8r-service-registry"
 SERVICE_REGISTRY_CHARM_NAME = "magma-orc8r-service-registry"
-SERVICE_REGISTRY_CHARM_FILE_NAME = "magma-orc8r-service-registry_ubuntu-20.04-amd64.charm"
+SERVICE_REGISTRY_CHARM_FILE_NAME = "magma-orc8r-service-registry_ubuntu-22.04-amd64.charm"
 DOMAIN = "whatever.com"
 
 
@@ -91,7 +91,7 @@ class TestOrchestrator:
             resources=resources,
             application_name=SERVICE_REGISTRY_APPLICATION_NAME,
             trust=True,
-            series="focal",
+            series="jammy",
         )
 
     async def _deploy_orc8r_accessd(self, ops_test):
@@ -108,7 +108,7 @@ class TestOrchestrator:
             resources=resources,
             application_name=ACCESSD_APPLICATION_NAME,
             trust=True,
-            series="focal",
+            series="jammy",
         )
         await ops_test.model.add_relation(
             relation1=ACCESSD_APPLICATION_NAME, relation2="postgresql-k8s:db"
@@ -131,7 +131,7 @@ class TestOrchestrator:
             application_name=CERTIFIER_APPLICATION_NAME,
             config={"domain": DOMAIN},
             trust=True,
-            series="focal",
+            series="jammy",
         )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
@@ -152,7 +152,7 @@ class TestOrchestrator:
             resources=resources,
             application_name=APPLICATION_NAME,
             trust=True,
-            series="focal",
+            series="jammy",
         )
 
     @pytest.mark.abort_on_fail

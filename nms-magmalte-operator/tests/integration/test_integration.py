@@ -18,7 +18,7 @@ APPLICATION_NAME = "nms-magmalte"
 CHARM_NAME = "magma-nms-magmalte"
 CERTIFIER_APPLICATION_NAME = "orc8r-certifier"
 CERTIFIER_CHARM_NAME = "magma-orc8r-certifier"
-CERTIFIER_CHARM_FILE_NAME = "magma-orc8r-certifier_ubuntu-20.04-amd64.charm"
+CERTIFIER_CHARM_FILE_NAME = "magma-orc8r-certifier_ubuntu-22.04-amd64.charm"
 DOMAIN = "whatever.com"
 DB_APPLICATION_NAME = "postgresql-k8s"
 
@@ -74,7 +74,7 @@ class TestNmsMagmaLTE:
             application_name=CERTIFIER_APPLICATION_NAME,
             config={"domain": DOMAIN},
             trust=True,
-            series="focal",
+            series="jammy",
         )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
@@ -113,7 +113,7 @@ class TestNmsMagmaLTE:
             resources=resources,
             application_name=APPLICATION_NAME,
             trust=True,
-            series="focal",
+            series="jammy",
         )
 
     async def test_wait_for_blocked_status(self, ops_test, setup, build_and_deploy_charm):
