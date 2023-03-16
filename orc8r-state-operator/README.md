@@ -15,7 +15,7 @@ juju relate orc8r-state postgresql-k8s:db
 
 ## Relations
 
-The magma-orc8r-state service relies on a relation to a Database. 
+The magma-orc8r-state service relies on a relation to a Database.
 
 The current setup has only been tested with relation to the `postgresql-k8s` charm.
 

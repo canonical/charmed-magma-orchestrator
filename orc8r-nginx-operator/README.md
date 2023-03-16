@@ -36,3 +36,4 @@ juju relate orc8r-nginx:cert-controller orc8r-certifier:cert-controller
 ## OCI Images
 
 Default: linuxfoundation.jfrog.io/magma-docker/nginx:1.8.0
+

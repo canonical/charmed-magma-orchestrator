@@ -24,3 +24,4 @@ The current setup has only been tested with relation to the `postgresql-k8s` cha
 ## OCI Images
 
 Default: linuxfoundation.jfrog.io/magma-docker/controller:1.8.0
+

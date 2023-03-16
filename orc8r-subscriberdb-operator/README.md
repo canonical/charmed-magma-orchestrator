@@ -15,7 +15,7 @@ juju relate orc8r-subscriberdb postgresql-k8s:db
 
 ## Relations
 
-The magma-orc8r-subscriberdb service relies on a relation to a Database. 
+The magma-orc8r-subscriberdb service relies on a relation to a Database.
 
 The current setup has only been tested with relation to the `postgresql-k8s` charm.
 
