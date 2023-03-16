@@ -92,13 +92,15 @@ applications:
     options:
       elasticsearch-url: "orc8r-elasticsearch:1234"
   orc8r-ha:
-    charm: ../orc8r-ha-operator/magma-orc8r-ha_ubuntu-20.04-amd64.charm
+    charm: magma-orc8r-ha
+    channel: stable
     scale: 1
     trust: true
     resources:
       magma-orc8r-ha-image: sanchezfdezjavier/magma-lte-controller:1.8.0
   orc8r-lte:
-    charm: ../orc8r-lte-operator/magma-orc8r-lte_ubuntu-20.04-amd64.charm
+    charm: magma-orc8r-lte
+    channel: stable
     resource: 
     scale: 1
     trust: true
@@ -127,7 +129,8 @@ applications:
     options:
       elasticsearch-url: "orc8r-elasticsearch:1234"
   orc8r-policydb:
-    charm: ../orc8r-policydb-operator/magma-orc8r-policydb_ubuntu-20.04-amd64.charm
+    charm: magma-orc8r-policydb
+    channel: stable
     scale: 1
     trust: true
     resources:
@@ -157,7 +160,8 @@ applications:
     scale: 1
     trust: true
   orc8r-smsd:
-    charm: ../orc8r-smsd-operator/magma-orc8r-smsd_ubuntu-20.04-amd64.charm
+    charm: magma-orc8r-smsd
+    channel: stable
     scale: 1
     trust: true
     resources:
@@ -173,13 +177,15 @@ applications:
     scale: 1
     trust: true
   orc8r-subscriberdb:
-    charm: ../orc8r-subscriberdb-operator/magma-orc8r-subscriberdb_ubuntu-20.04-amd64.charm
+    charm: magma-orc8r-subscriberdb
+    channel: stable
     scale: 1
     trust: true
     resources:
       magma-orc8r-subscriberdb-image: sanchezfdezjavier/magma-lte-controller:1.8.0
   orc8r-subscriberdb-cache:
-    charm: ../orc8r-subscriberdb-cache-operator/magma-orc8r-subscriberdb-cache_ubuntu-20.04-amd64.charm
+    charm: magma-orc8r-subscriberdb-cache
+    channel: stable
     scale: 1
     trust: true
     resources:
