@@ -9,7 +9,7 @@ on:
 
 jobs:
   orc8r-bundle-charmhub-upload:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: checkout code
         uses: actions/checkout@v3

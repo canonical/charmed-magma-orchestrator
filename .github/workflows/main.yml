@@ -11,7 +11,7 @@ on:
 jobs:
   orchestrator-lint-report:
     name: Lint report
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
@@ -26,7 +26,7 @@ jobs:
 
   orchestrator-static-analysis:
     name: Static analysis
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
@@ -41,7 +41,7 @@ jobs:
 
   orchestrator-unit-tests-with-coverage:
     name: Unit tests
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
