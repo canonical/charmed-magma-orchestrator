@@ -16,6 +16,8 @@ from ops.main import main
 class MagmaOrc8rStateCharm(CharmBase):
     """An instance of this object everytime an event occurs."""
 
+    STARTUP_COMMAND = "state -logtostderr=true -v=0"
+
     def __init__(self, *args):
         """Uses the Orc8rBase library to manage events."""
         super().__init__(*args)
@@ -27,8 +29,7 @@ class MagmaOrc8rStateCharm(CharmBase):
             ],
             additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
         )
-        startup_command = "state -logtostderr=true -v=0"
-        self._orc8r_base = Orc8rBase(self, startup_command=startup_command)
+        self._orc8r_base = Orc8rBase(self, startup_command=self.STARTUP_COMMAND)
 
 
 if __name__ == "__main__":

@@ -16,6 +16,8 @@ from ops.main import main
 class MagmaOrc8rCtracedCharm(CharmBase):
     """Creates a new instance of this object for each event."""
 
+    STARTUP_COMMAND = "ctraced -run_echo_server=true -logtostderr=true -v=0"
+
     def __init__(self, *args):
         """Uses the Orc8rBase library to manage events."""
         super().__init__(*args)
@@ -23,8 +25,8 @@ class MagmaOrc8rCtracedCharm(CharmBase):
             charm=self,
             ports=[
                 ServicePort(name="grpc", port=9180, targetPort=9118),
-                ServicePort(name="http", port=8080, targetPort=10118),
                 ServicePort(name="grpc-internal", port=9190, targetPort=9218),
+                ServicePort(name="http", port=8080, targetPort=10118),
             ],
             additional_labels={
                 "app.kubernetes.io/part-of": "orc8r-app",
@@ -35,8 +37,7 @@ class MagmaOrc8rCtracedCharm(CharmBase):
                 "orc8r.io/obsidian_handlers_path_prefixes": "/magma/v1/networks/:network_id/tracing,"  # noqa: E501
             },
         )
-        startup_command = "ctraced -run_echo_server=true -logtostderr=true -v=0"
-        self._orc8r_base = Orc8rBase(self, startup_command=startup_command)
+        self._orc8r_base = Orc8rBase(self, startup_command=self.STARTUP_COMMAND)
 
 
 if __name__ == "__main__":
