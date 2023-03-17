@@ -5,6 +5,7 @@
 """Proxies traffic between nms and obsidian."""
 
 import logging
+import pathlib
 import re
 from typing import List, Optional, Union
 
@@ -25,6 +26,7 @@ from charms.magma_orchestrator_interface.v0.magma_orchestrator_interface import 
 )
 from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServicePatch
 from httpx import HTTPStatusError
+from jinja2 import Environment, FileSystemLoader
 from lightkube import Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
@@ -57,6 +59,9 @@ class MagmaOrc8rNginxCharm(CharmBase):
     CONFIG_PATH = "/etc/nginx"
     REQUIRED_RELATIONS = ["cert-certifier", "cert-controller"]
     REQUIRED_MAGMA_SERVICES_RELATIONS = ["magma-orc8r-bootstrapper", "magma-orc8r-obsidian"]
+    CLIENTCERT_PORT = 8443
+    OPEN_PORT = 8444
+    API_PORT = 9443
 
     def __init__(self, *args):
         """Initializes all event that need to be observed."""
@@ -71,9 +76,9 @@ class MagmaOrc8rNginxCharm(CharmBase):
             charm=self,
             ports=[
                 ServicePort(name="health", port=80),
-                ServicePort(name="clientcert", port=8443),
-                ServicePort(name="open", port=8444),
-                ServicePort(name="api", port=443, targetPort=9443),
+                ServicePort(name="clientcert", port=self.CLIENTCERT_PORT),
+                ServicePort(name="open", port=self.OPEN_PORT),
+                ServicePort(name="api", port=443, targetPort=self.API_PORT),
             ],
             service_type="LoadBalancer",
             service_name="orc8r-nginx-proxy",
@@ -320,22 +325,19 @@ class MagmaOrc8rNginxCharm(CharmBase):
         """Generates nginx config to /etc/nginx/nginx.conf."""
         logger.info("Generating nginx config file...")
         domain_name = self.model.config.get("domain")
-        process = self._container.exec(
-            command=["/usr/local/bin/generate_nginx_configs.py"],
-            environment={
-                "PROXY_BACKENDS": f"{self._namespace}.svc.cluster.local",
-                "CONTROLLER_HOSTNAME": f"controller.{domain_name}",
-                "RESOLVER": "kube-dns.kube-system.svc.cluster.local valid=10s",
-                "SERVICE_REGISTRY_MODE": "k8s",
-                "SSL_CERTIFICATE": f"{self.BASE_CERTS_PATH}/controller.crt",
-                "SSL_CERTIFICATE_KEY": f"{self.BASE_CERTS_PATH}/controller.key",
-                "SSL_CLIENT_CERTIFICATE": f"{self.BASE_CERTS_PATH}/certifier.pem",
-            },
-        )
-        try:
-            process.wait_output()
-        except ExecError as error:
-            raise ProcessExecutionError(error)
+        context = {
+            "base_certs_path": self.BASE_CERTS_PATH,
+            "backend": f"{self._namespace}.svc.cluster.local",
+            "controller_hostname": f"controller.{domain_name}",
+            "resolver": "kube-dns.kube-system.svc.cluster.local valid=10s",
+            "open_port": self.OPEN_PORT,
+            "clientcert_port": self.CLIENTCERT_PORT,
+            "api_port": self.API_PORT,
+        }
+        env = Environment(loader=FileSystemLoader(pathlib.Path(__file__).parent), autoescape=False)
+        template = env.get_template("nginx.conf.j2")
+        config = template.render(context)
+        self._container.push(path=f"{self.CONFIG_PATH}/nginx.conf", source=config)
         logger.info("Successfully generated nginx config file")
 
     @property
@@ -460,12 +462,12 @@ class MagmaOrc8rNginxCharm(CharmBase):
                         ServicePort(
                             name="open-legacy",
                             port=443,
-                            targetPort=8444,
+                            targetPort=self.OPEN_PORT,
                         ),
                         ServicePort(
                             name="open",
-                            port=8444,
-                            targetPort=8444,
+                            port=self.OPEN_PORT,
+                            targetPort=self.OPEN_PORT,
                         ),
                     ],
                     type="LoadBalancer",
@@ -493,12 +495,12 @@ class MagmaOrc8rNginxCharm(CharmBase):
                         ServicePort(
                             name="clientcert-legacy",
                             port=443,
-                            targetPort=8443,
+                            targetPort=self.CLIENTCERT_PORT,
                         ),
                         ServicePort(
                             name="clientcert",
-                            port=8443,
-                            targetPort=8443,
+                            port=self.CLIENTCERT_PORT,
+                            targetPort=self.CLIENTCERT_PORT,
                         ),
                     ],
                     type="LoadBalancer",
@@ -634,10 +636,6 @@ class MagmaOrc8rNginxCharm(CharmBase):
                         "override": "replace",
                         "startup": "enabled",
                         "command": "nginx -g 'daemon off;'",
-                        "environment": {
-                            "SERVICE_REGISTRY_MODE": "k8s",
-                            "SERVICE_REGISTRY_NAMESPACE": self._namespace,
-                        },
                     }
                 },
             }
