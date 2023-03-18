@@ -35,9 +35,7 @@ class MagmaOrc8rSmsdCharm(CharmBase):
             },
         )
         startup_command = (
-            "/usr/bin/envdir "
-            "/var/opt/magma/envdir "
-            "/var/opt/magma/bin/smsd "
+            "smsd "
             "-logtostderr=true "
             "-run_echo_server=true "
             "-v=0"

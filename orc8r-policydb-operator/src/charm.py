@@ -37,9 +37,7 @@ class MagmaOrc8rPolicydbCharm(CharmBase):
             },
         )
         startup_command = (
-            "/usr/bin/envdir "
-            "/var/opt/magma/envdir "
-            "/var/opt/magma/bin/policydb "
+            "policydb "
             "-run_echo_server=true "
             "-logtostderr=true "
             "-v=0"
