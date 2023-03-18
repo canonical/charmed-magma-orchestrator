@@ -40,12 +40,7 @@ class MagmaOrc8rSubscriberdbCharm(CharmBase):
                 "/magma/v1/lte/:network_id/subscribers_v2,",
             },
         )
-        startup_command = (
-            "subscriberdb "
-            "-run_echo_server=true "
-            "-logtostderr=true "
-            "-v=0"
-        )
+        startup_command = "subscriberdb " "-run_echo_server=true " "-logtostderr=true " "-v=0"
         self._orc8r_base = Orc8rBase(self, startup_command=startup_command)
 
 
