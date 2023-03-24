@@ -14,4 +14,3 @@ juju deploy magma-orc8r-ha orc8r-ha
 ## OCI Images
 
 Default: linuxfoundation.jfrog.io/magma-docker/controller:1.8.0
-
