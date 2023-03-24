@@ -39,4 +39,3 @@ jobs:
     secrets: inherit
     with:
       charm: orc8r-streamer-operator
-      upload-image: "true"
