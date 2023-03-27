@@ -19,7 +19,7 @@ applications:
     {%- if local == true %}
     charm: ./magma-nms-magmalte_ubuntu-22.04-amd64.charm
     resources:
-      magma-nms-magmalte-image: linuxfoundation.jfrog.io/magma-docker/magmalte:1.8.0
+      magma-nms-magmalte-image: ghcr.io/canonical/magma-orc8r-nms-magmalte:1.8.0
     {%- else %}
     charm: magma-nms-magmalte
     channel: {{ channel|default("edge") }}
