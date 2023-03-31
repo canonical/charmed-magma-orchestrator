@@ -43,6 +43,13 @@ jobs:
             /usr/bin/sudo snap refresh juju --classic --channel=$JUJU_VERSION
           fi
 
+          echo "# Install juju-crashdump"
+          if ! command -v juju-crashdump &> /dev/null; then
+            /usr/bin/sudo snap install juju-crashdump --classic --channel=latest
+          else
+            /usr/bin/sudo snap refresh juju-crashdump --classic --channel=latest
+          fi
+
           echo "# Install charmcraft"
           /usr/bin/sudo snap install charmcraft --classic --channel=latest/stable
 
@@ -73,6 +80,12 @@ jobs:
         with:
           name: charmcraft-logs
           path: /home/ubuntu/.local/state/charmcraft/log/*.log
+      - name: Archive juju crashdump
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: juju-crashdump
+          path: ${{ inputs.charm_dir }}/juju-crashdump-*.tar.xz
 
       - name: Clean up
         if: always()
