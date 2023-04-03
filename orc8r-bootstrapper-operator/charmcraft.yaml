@@ -14,5 +14,6 @@ parts:
       - libssl-dev
       - rustc
       - cargo
+      - pkg-config
     charm-binary-python-packages:
       - psycopg2-binary
