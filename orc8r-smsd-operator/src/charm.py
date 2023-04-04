@@ -35,7 +35,7 @@ class MagmaOrc8rSmsdCharm(CharmBase):
                 "orc8r.io/obsidian_handlers_path_prefixes": "/magma/v1/lte/:network_id/sms"
             },
         )
-        startup_command = "smsd " "-logtostderr=true " "-run_echo_server=true " "-v=0"
+        startup_command = "smsd -logtostderr=true -run_echo_server=true -v=0"
         self._orc8r_base = Orc8rBase(self, startup_command=startup_command)
 
 

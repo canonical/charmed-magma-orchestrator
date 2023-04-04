@@ -17,7 +17,7 @@ containers:
 resources:
   magma-orc8r-ha-image:
     type: oci-image
-    description: OCI image for magma-orc8r-ha (ghcr.io/canonical/magma-lte-controller:1.8.0)
+    description: OCI image for magma-orc8r-ha
     upstream-source: ghcr.io/canonical/magma-lte-controller:1.8.0
 
 provides:

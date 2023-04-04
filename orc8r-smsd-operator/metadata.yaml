@@ -15,7 +15,7 @@ containers:
 resources:
   magma-orc8r-smsd-image:
     type: oci-image
-    description: OCI image for magma-orc8r-smsd (ghcr.io/canonical/magma-lte-controller:1.8.0)
+    description: OCI image for magma-orc8r-smsd
     upstream-source: ghcr.io/canonical/magma-lte-controller:1.8.0
 
 provides:

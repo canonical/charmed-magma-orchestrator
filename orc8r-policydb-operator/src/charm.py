@@ -37,7 +37,7 @@ class MagmaOrc8rPolicydbCharm(CharmBase):
                 "/magma/v1/networks/:network_id/rating_groups"
             },
         )
-        startup_command = "policydb " "-run_echo_server=true " "-logtostderr=true " "-v=0"
+        startup_command = "policydb -run_echo_server=true -logtostderr=true -v=0"
         self._orc8r_base = Orc8rBase(self, startup_command=startup_command)
 
 
