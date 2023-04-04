@@ -28,9 +28,7 @@ class MagmaOrc8rSubscriberdbcacheCharm(CharmBase):
             additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
         )
         startup_command = (
-            "/usr/bin/envdir "
-            "/var/opt/magma/envdir "
-            "/var/opt/magma/bin/subscriberdb_cache "
+            "subscriberdb_cache "
             "-run_echo_server=true "
             "-logtostderr=true "
             "-v=0"

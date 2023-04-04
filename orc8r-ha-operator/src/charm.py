@@ -25,9 +25,7 @@ class MagmaOrc8rHACharm(CharmBase):
             additional_labels={"app.kubernetes.io/part-of": "orc8r-app"},
         )
         startup_command = (
-            "/usr/bin/envdir "
-            "/var/opt/magma/envdir "
-            "/var/opt/magma/bin/ha "
+            "ha "
             "-logtostderr=true "
             "-v=0"
         )

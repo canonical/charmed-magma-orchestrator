@@ -17,8 +17,8 @@ containers:
 resources:
   magma-orc8r-policydb-image:
     type: oci-image
-    description: OCI image for magma-orc8r-policydb
-    upstream-source: linuxfoundation.jfrog.io/magma-docker/controller:1.8.0
+    description: OCI image for magma-orc8r-policydb (ghcr.io/canonical/magma-lte-controller:1.8.0)
+    upstream-source: ghcr.io/canonical/magma-lte-controller:1.8.0
 
 provides:
   magma-orc8r-policydb:
