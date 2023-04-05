@@ -106,13 +106,13 @@ applications:
   orc8r-ha:
     charm: ./magma-orc8r-ha_ubuntu-22.04-amd64.charm
     resources:
-      magma-orc8r-ha-image: linuxfoundation.jfrog.io/magma-docker/controller:1.8.0
+      magma-orc8r-ha-image: ghcr.io/canonical/magma-lte-controller:1.8.0
     scale: 1
     trust: true
   orc8r-lte:
     charm: ./magma-orc8r-lte_ubuntu-22.04-amd64.charm
     resources:
-      magma-orc8r-lte-image: linuxfoundation.jfrog.io/magma-docker/controller:1.8.0
+      magma-orc8r-lte-image: ghcr.io/canonical/magma-lte-controller:1.8.0
     scale: 1
     trust: true
   orc8r-metricsd:
@@ -144,7 +144,7 @@ applications:
   orc8r-policydb:
     charm: ./magma-orc8r-policydb_ubuntu-22.04-amd64.charm
     resources:
-      magma-orc8r-policydb-image: linuxfoundation.jfrog.io/magma-docker/controller:1.8.0
+      magma-orc8r-policydb-image: ghcr.io/canonical/magma-lte-controller:1.8.0
     scale: 1
     trust: true
   orc8r-prometheus:
@@ -175,7 +175,7 @@ applications:
   orc8r-smsd:
     charm: ./magma-orc8r-smsd_ubuntu-22.04-amd64.charm
     resources:
-      magma-orc8r-smsd-image: linuxfoundation.jfrog.io/magma-docker/controller:1.8.0
+      magma-orc8r-smsd-image: ghcr.io/canonical/magma-lte-controller:1.8.0
     scale: 1
     trust: true
   orc8r-state:
@@ -193,13 +193,13 @@ applications:
   orc8r-subscriberdb:
     charm: ./magma-orc8r-subscriberdb_ubuntu-22.04-amd64.charm
     resources:
-      magma-orc8r-subscriberdb-image: linuxfoundation.jfrog.io/magma-docker/controller:1.8.0
+      magma-orc8r-subscriberdb-image: ghcr.io/canonical/magma-lte-controller:1.8.0
     scale: 1
     trust: true
   orc8r-subscriberdb-cache:
     charm: ./magma-orc8r-subscriberdb-cache_ubuntu-22.04-amd64.charm
     resources:
-      magma-orc8r-subscriberdb-cache-image: linuxfoundation.jfrog.io/magma-docker/controller:1.8.0
+      magma-orc8r-subscriberdb-cache-image: ghcr.io/canonical/magma-lte-controller:1.8.0
     scale: 1
     trust: true
   orc8r-tenants:
