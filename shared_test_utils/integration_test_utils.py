@@ -141,9 +141,9 @@ async def deploy_prometheus_k8s_operator(ops_test):
         relation1="prometheus-k8s:grafana-source", relation2="grafana-k8s"
     )
 
-async def deploy_nms_magmalte(self, ops_test):
+async def deploy_nms_magmalte(ops_test):
     """Deploys nms-magmalte-operator charm."""
-    magmalte_charm = self.find_charm(
+    magmalte_charm = find_charm(
         "../nms-magmalte-operator", NMS_MAGMALTE_CHARM_FILE_NAME)
     if not magmalte_charm:
         magmalte_charm = await ops_test.build_charm("../nms-magmalte-operator/")
@@ -157,7 +157,7 @@ async def deploy_nms_magmalte(self, ops_test):
         resources=resources,
         application_name=NMS_MAGMALTE_APPLICATION_NAME,
         trust=True,
-        series="focal",
+        series="jammy",
     )
     await ops_test.model.add_relation(
         relation1=NMS_MAGMALTE_APPLICATION_NAME, relation2="postgresql-k8s:db"
@@ -197,7 +197,7 @@ async def deploy_alertmanager_configurer(ops_test):
         application_name="orc8r-alertmanager-configurer",
         channel="edge",
         trust=True,
-        series="focal",
+        series="jammy",
     )
     await ops_test.model.add_relation(
         relation1="orc8r-alertmanager-configurer:alertmanager",
@@ -205,9 +205,9 @@ async def deploy_alertmanager_configurer(ops_test):
     )
 
 
-async def deploy_orc8r_service_registry(self, ops_test):
+async def deploy_orc8r_service_registry(ops_test):
     """Deploys orc8r-service-registry-operator charm"""
-    service_registry_charm = self.find_charm(
+    service_registry_charm = find_charm(
         "../orc8r-service-registry-operator", SERVICE_REGISTRY_CHARM_FILE_NAME
         )
     if not service_registry_charm:
@@ -224,13 +224,13 @@ async def deploy_orc8r_service_registry(self, ops_test):
         resources=resources,
         application_name=SERVICE_REGISTRY_APPLICATION_NAME,
         trust=True,
-        series="focal",
+        series="jammy",
     )
 
 
-async def deploy_orc8r_accessd(self, ops_test):
+async def deploy_orc8r_accessd(ops_test):
     """Deploys orc8r-accessd-operator charm"""
-    accessd_charm = self.find_charm(
+    accessd_charm = find_charm(
         "../orc8r-accessd-operator", ACCESSD_CHARM_FILE_NAME)
     if not accessd_charm:
         accessd_charm = await ops_test.build_charm("../orc8r-accessd-operator/")
@@ -244,15 +244,15 @@ async def deploy_orc8r_accessd(self, ops_test):
         resources=resources,
         application_name=ACCESSD_APPLICATION_NAME,
         trust=True,
-        series="focal",
+        series="jammy",
     )
     await ops_test.model.add_relation(
         relation1=ACCESSD_APPLICATION_NAME, relation2="postgresql-k8s:db"
     )
 
-async def deploy_orc8r_orchestrator(self, ops_test):
+async def deploy_orc8r_orchestrator(ops_test):
     """Deploys orc8r-orchestrator-operator charm"""
-    orchestrator_charm = self.find_charm(
+    orchestrator_charm = find_charm(
         "../orc8r-orchestrator-operator", ORCHESTRATOR_CHARM_FILE_NAME
     )
     if not orchestrator_charm:
@@ -267,7 +267,7 @@ async def deploy_orc8r_orchestrator(self, ops_test):
         resources=resources,
         application_name=ORCHESTRATOR_APPLICATION_NAME,
         trust=True,
-        series="focal",
+        series="jammy",
     )
     await ops_test.model.add_relation(
         relation1=f"{ORCHESTRATOR_APPLICATION_NAME}:cert-admin-operator",
@@ -290,9 +290,9 @@ async def deploy_orc8r_orchestrator(self, ops_test):
         relation2="orc8r-service-registry:magma-orc8r-service-registry",
     )
 
-async def deploy_bootstrapper(self, ops_test):
+async def deploy_bootstrapper(ops_test):
     """Deploys orc8r-bootstrapper-operator charm"""
-    bootstrapper_charm = self.find_charm(
+    bootstrapper_charm = find_charm(
         "../orc8r-bootstrapper-operator", BOOTSTRAPPER_CHARM_FILE_NAME
     )
     if not bootstrapper_charm:
@@ -307,7 +307,7 @@ async def deploy_bootstrapper(self, ops_test):
         resources=resources,
         application_name=BOOTSTRAPPER_APPLICATION_NAME,
         trust=True,
-        series="focal",
+        series="jammy",
     )
     await ops_test.model.add_relation(
         relation1=BOOTSTRAPPER_APPLICATION_NAME, relation2="postgresql-k8s:db"
@@ -316,9 +316,9 @@ async def deploy_bootstrapper(self, ops_test):
         relation1=BOOTSTRAPPER_APPLICATION_NAME, relation2="orc8r-certifier:cert-root-ca"
     )
 
-async def deploy_orc8r_obsidian(self, ops_test):
+async def deploy_orc8r_obsidian(ops_test):
     """Deploys orc8r-obsidian-operator charm"""
-    obsidian_charm = self.find_charm("../orc8r-obsidian-operator", OBSIDIAN_CHARM_FILE_NAME)
+    obsidian_charm = find_charm("../orc8r-obsidian-operator", OBSIDIAN_CHARM_FILE_NAME)
     if not obsidian_charm:
         obsidian_charm = await ops_test.build_charm("../orc8r-obsidian-operator/")
     resources = {
@@ -331,5 +331,5 @@ async def deploy_orc8r_obsidian(self, ops_test):
         resources=resources,
         application_name=OBSIDIAN_APPLICATION_NAME,
         trust=True,
-        series="focal",
+        series="jammy",
     )
