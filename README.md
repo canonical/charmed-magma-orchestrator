@@ -67,7 +67,7 @@ Retrieve the PFX package and password that contains the certificates to authenti
 
 ```bash
 juju scp --container="magma-orc8r-certifier" orc8r-certifier/0:/var/opt/magma/certs/admin_operator.pfx admin_operator.pfx
-juju run orc8r-certifier/leader get-pfx-package-password
+juju run-action orc8r-certifier/leader get-pfx-package-password --wait
 ```
 
 > The pfx package was copied to your current working directory and can now be loaded in your browser.
@@ -77,7 +77,7 @@ juju run orc8r-certifier/leader get-pfx-package-password
 Retrieve the services that need to be exposed:
 
 ```bash
-juju run orc8r-orchestrator/leader get-load-balancer-services
+juju run-action orc8r-orchestrator/leader get-load-balancer-services --wait
 ```
 
 In your domain registrar, create A records for the following Kubernetes services:
@@ -92,11 +92,11 @@ In your domain registrar, create A records for the following Kubernetes services
 
 ## Verify the deployment
 
-Get the master organization's username and password:
+Get the host organization's username and password:
 
 ```bash
-juju run nms-magmalte/leader get-master-admin-credentials
+juju run-action nms-magmalte/leader get-host-admin-credentials --wait
 ```
 
-Confirm successful deployment by visiting `https://master.nms.<your domain>` and logging in
+Confirm successful deployment by visiting `https://host.nms.<your domain>` and logging in
 with the `admin-username` and `admin-password` outputted here.
