@@ -27,10 +27,10 @@ juju relate nms-magmalte orc8r-certifier
 
 ## Actions
 
-### get-master-admin-credentials
+### get-host-admin-credentials
 
 ```bash
-juju run-action nms-magmalte/leader get-master-admin-credentials --wait
+juju run-action nms-magmalte/leader get-host-admin-credentials --wait
 ```
 
 ### create-nms-admin-user
