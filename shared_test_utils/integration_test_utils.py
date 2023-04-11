@@ -101,7 +101,7 @@ async def deploy_orc8r_certifier(ops_test):
         application_name=CERTIFIER_APPLICATION_NAME,
         config={"domain": "whatever.com"},
         trust=True,
-        series="focal",
+        series="jammy",
     )
     await ops_test.model.add_relation(
         relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
