@@ -31,7 +31,6 @@ class TestNmsNginxProxy:
     @pytest.mark.abort_on_fail
     async def build_and_deploy_charm(self, ops_test, setup):
         charm = await ops_test.build_charm(".")
-        integration_utils.deploy_tested_charm(APPLICATION_NAME)
         resources = {
             f"{CHARM_NAME}-image": METADATA["resources"][f"{CHARM_NAME}-image"]["upstream-source"],
         }
