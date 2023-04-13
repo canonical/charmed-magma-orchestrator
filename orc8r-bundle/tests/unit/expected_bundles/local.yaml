@@ -218,7 +218,7 @@ applications:
     trust: true
   postgresql-k8s:
     charm: postgresql-k8s
-    series: kubernetes
+    series: focal
     channel: stable
     scale: 1
     trust: true
@@ -227,87 +227,87 @@ applications:
     channel: edge
     scale: 1
 relations:
-- - fluentd
-  - orc8r-certifier:fluentd-certs
-- - nms-magmalte
-  - orc8r-certifier
-- - nms-magmalte:db
-  - postgresql-k8s:db
-- - nms-nginx-proxy
-  - orc8r-certifier
-- - nms-nginx-proxy:magma-nms-magmalte
-  - nms-magmalte:magma-nms-magmalte
-- - orc8r-accessd:db
-  - postgresql-k8s:db
-- - orc8r-alertmanager:remote-configuration
-  - orc8r-alertmanager-configurer:alertmanager
-- - orc8r-bootstrapper:db
-  - postgresql-k8s:db
-- - orc8r-bootstrapper:cert-root-ca
-  - orc8r-certifier:cert-root-ca
-- - orc8r-certifier
-  - tls-certificates-operator
-- - orc8r-certifier:db
-  - postgresql-k8s:db
-- - orc8r-configurator:db
-  - postgresql-k8s:db
-- - orc8r-ctraced:db
-  - postgresql-k8s:db
-- - orc8r-device:db
-  - postgresql-k8s:db
-- - orc8r-directoryd:db
-  - postgresql-k8s:db
-- - orc8r-lte:db
-  - postgresql-k8s:db
-- - orc8r-metricsd:alertmanager-k8s
-  - orc8r-alertmanager:alerting
-- - orc8r-metricsd:alertmanager-configurer-k8s
-  - orc8r-alertmanager-configurer:alertmanager-configurer
-- - orc8r-metricsd:magma-orc8r-orchestrator
-  - orc8r-orchestrator:magma-orc8r-orchestrator
-- - orc8r-metricsd:prometheus-k8s
-  - orc8r-prometheus:self-metrics-endpoint
-- - orc8r-metricsd:prometheus-configurer-k8s
-  - orc8r-prometheus-configurer:prometheus-configurer
-- - orc8r-nginx:magma-orc8r-bootstrapper
-  - orc8r-bootstrapper:magma-orc8r-bootstrapper
-- - orc8r-nginx:cert-certifier
-  - orc8r-certifier:cert-certifier
-- - orc8r-nginx:cert-controller
-  - orc8r-certifier:cert-controller
-- - orc8r-nginx:cert-root-ca
-  - orc8r-certifier:cert-root-ca
-- - orc8r-nginx:magma-orc8r-obsidian
-  - orc8r-obsidian:magma-orc8r-obsidian
-- - orc8r-orchestrator:cert-admin-operator
-  - orc8r-certifier:cert-admin-operator
-- - orc8r-orchestrator:magma-orc8r-certifier
-  - orc8r-certifier:magma-orc8r-certifier
-- - orc8r-orchestrator:magma-orc8r-accessd
-  - orc8r-accessd:magma-orc8r-accessd
-- - orc8r-orchestrator:magma-orc8r-service-registry
-  - orc8r-service-registry:magma-orc8r-service-registry
-- - orc8r-orchestrator:metrics-endpoint
-  - orc8r-prometheus-cache:metrics-endpoint
-- - orc8r-policydb:db
-  - postgresql-k8s:db
-- - orc8r-prometheus:alertmanager
-  - orc8r-alertmanager:alerting
-- - orc8r-prometheus:metrics-endpoint
-  - orc8r-prometheus-cache:metrics-endpoint
-- - orc8r-prometheus-configurer:prometheus
-  - orc8r-prometheus:receive-remote-write
-- - orc8r-smsd:db
-  - postgresql-k8s:db
-- - orc8r-state:db
-  - postgresql-k8s:db
-- - orc8r-subscriberdb-cache:db
-  - postgresql-k8s:db
-- - orc8r-subscriberdb:db
-  - postgresql-k8s:db
-- - orc8r-tenants:db
-  - postgresql-k8s:db
-- - orc8r-user-grafana:grafana-source
-  - orc8r-prometheus:grafana-source
-- - orc8r-user-grafana:grafana-auth
-  - nms-magmalte:grafana-auth
+  - - fluentd
+    - orc8r-certifier:fluentd-certs
+  - - nms-magmalte
+    - orc8r-certifier
+  - - nms-magmalte:db
+    - postgresql-k8s:db
+  - - nms-nginx-proxy
+    - orc8r-certifier
+  - - nms-nginx-proxy:magma-nms-magmalte
+    - nms-magmalte:magma-nms-magmalte
+  - - orc8r-accessd:db
+    - postgresql-k8s:db
+  - - orc8r-alertmanager:remote-configuration
+    - orc8r-alertmanager-configurer:alertmanager
+  - - orc8r-bootstrapper:db
+    - postgresql-k8s:db
+  - - orc8r-bootstrapper:cert-root-ca
+    - orc8r-certifier:cert-root-ca
+  - - orc8r-certifier
+    - tls-certificates-operator
+  - - orc8r-certifier:db
+    - postgresql-k8s:db
+  - - orc8r-configurator:db
+    - postgresql-k8s:db
+  - - orc8r-ctraced:db
+    - postgresql-k8s:db
+  - - orc8r-device:db
+    - postgresql-k8s:db
+  - - orc8r-directoryd:db
+    - postgresql-k8s:db
+  - - orc8r-lte:db
+    - postgresql-k8s:db
+  - - orc8r-metricsd:alertmanager-k8s
+    - orc8r-alertmanager:alerting
+  - - orc8r-metricsd:alertmanager-configurer-k8s
+    - orc8r-alertmanager-configurer:alertmanager-configurer
+  - - orc8r-metricsd:magma-orc8r-orchestrator
+    - orc8r-orchestrator:magma-orc8r-orchestrator
+  - - orc8r-metricsd:prometheus-k8s
+    - orc8r-prometheus:self-metrics-endpoint
+  - - orc8r-metricsd:prometheus-configurer-k8s
+    - orc8r-prometheus-configurer:prometheus-configurer
+  - - orc8r-nginx:magma-orc8r-bootstrapper
+    - orc8r-bootstrapper:magma-orc8r-bootstrapper
+  - - orc8r-nginx:cert-certifier
+    - orc8r-certifier:cert-certifier
+  - - orc8r-nginx:cert-controller
+    - orc8r-certifier:cert-controller
+  - - orc8r-nginx:cert-root-ca
+    - orc8r-certifier:cert-root-ca
+  - - orc8r-nginx:magma-orc8r-obsidian
+    - orc8r-obsidian:magma-orc8r-obsidian
+  - - orc8r-orchestrator:cert-admin-operator
+    - orc8r-certifier:cert-admin-operator
+  - - orc8r-orchestrator:magma-orc8r-certifier
+    - orc8r-certifier:magma-orc8r-certifier
+  - - orc8r-orchestrator:magma-orc8r-accessd
+    - orc8r-accessd:magma-orc8r-accessd
+  - - orc8r-orchestrator:magma-orc8r-service-registry
+    - orc8r-service-registry:magma-orc8r-service-registry
+  - - orc8r-orchestrator:metrics-endpoint
+    - orc8r-prometheus-cache:metrics-endpoint
+  - - orc8r-policydb:db
+    - postgresql-k8s:db
+  - - orc8r-prometheus:alertmanager
+    - orc8r-alertmanager:alerting
+  - - orc8r-prometheus:metrics-endpoint
+    - orc8r-prometheus-cache:metrics-endpoint
+  - - orc8r-prometheus-configurer:prometheus
+    - orc8r-prometheus:receive-remote-write
+  - - orc8r-smsd:db
+    - postgresql-k8s:db
+  - - orc8r-state:db
+    - postgresql-k8s:db
+  - - orc8r-subscriberdb-cache:db
+    - postgresql-k8s:db
+  - - orc8r-subscriberdb:db
+    - postgresql-k8s:db
+  - - orc8r-tenants:db
+    - postgresql-k8s:db
+  - - orc8r-user-grafana:grafana-source
+    - orc8r-prometheus:grafana-source
+  - - orc8r-user-grafana:grafana-auth
+    - nms-magmalte:grafana-auth
