@@ -8,13 +8,13 @@ on:
         type: string
 
 jobs:
-  integration-test:
+  integration-tests:
     runs-on: self-hosted
     steps:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Set Environment Variables
-        uses: tw3lveparsecs/github-actions-setvars@latest
+        uses: tw3lveparsecs/github-actions-setvars@v0.2
         with:
           varFilePath: ./.github/variables/dependencies_versions.env
       - name: Setup operator environment
@@ -34,7 +34,7 @@ jobs:
           echo "# Install tox"
           /usr/bin/sudo apt update -yqq
           /usr/bin/sudo apt install -yqq python3-pip
-          /usr/bin/sudo --preserve-env=http_proxy,https_proxy,no_proxy pip3 install tox
+          /usr/bin/sudo --preserve-env=http_proxy,https_proxy,no_proxy pip3 install tox==$TOX_VERSION
 
           echo "# Install Juju"
           if ! command -v juju &> /dev/null; then
@@ -51,7 +51,7 @@ jobs:
           fi
 
           echo "# Install charmcraft"
-          /usr/bin/sudo snap install charmcraft --classic --channel=latest/stable
+          /usr/bin/sudo snap install charmcraft --classic --channel=$CHARMCRAFT_VERSION
 
           echo "# Install microk8s"
           if ! command -v microk8s &> /dev/null; then
@@ -71,7 +71,6 @@ jobs:
           sleep 60  # Microk8s needs time to initialize properly
           /usr/bin/sg snap_microk8s -c "mkdir -p /home/ubuntu/.local/share"
           /usr/bin/sg snap_microk8s -c "juju bootstrap --debug --verbose microk8s integration-tests-$GITHUB_RUN_ID --model-default test-mode=true --model-default automatically-retry-hooks=true --model-default logging-config='<root>=DEBUG'  --bootstrap-constraints=''"
-
       - name: Run integration tests
         run: cd ${{ inputs.charm_dir }} && tox -e integration
       - name: Archive charmcraft logs
@@ -80,14 +79,13 @@ jobs:
         with:
           name: charmcraft-logs
           path: /home/ubuntu/.local/state/charmcraft/log/*.log
-      - name: Archive juju crashdump
+        - name: Archive juju crashdump
         if: failure()
         uses: actions/upload-artifact@v3
         with:
           name: juju-crashdump
           path: ${{ inputs.charm_dir }}/juju-crashdump-*.tar.xz
-
       - name: Clean up
         if: always()
         run: |
-          juju kill-controller --no-prompt integration-tests-$GITHUB_RUN_ID -t0
+          yes | juju kill-controller integration-tests-$GITHUB_RUN_ID -t0
