@@ -16,5 +16,5 @@ create-nms-admin-user:
     organization:
       type: string
       description: organization (ex. org-1)
-      default: master
+      default: host
   required: [email, password]
