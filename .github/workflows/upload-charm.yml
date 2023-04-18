@@ -17,28 +17,33 @@ jobs:
     name: Charmhub upload ${{ inputs.charm }}
     steps:
       - uses: actions/checkout@v3
+      - name: Set Environment Variables
+        uses: tw3lveparsecs/github-actions-setvars@v0.2
+        with:
+          varFilePath: ./.github/variables/dependencies_versions.env
 
       - name: Check libraries
-        uses: canonical/charming-actions/check-libraries@2.2.2
+        uses: canonical/charming-actions/check-libraries@2.2.5
         with:
           credentials: ${{ secrets.CHARMCRAFT_AUTH }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           charm-path: ./${{ inputs.charm }}
 
       - name: Select charmhub channel
-        uses: canonical/charming-actions/channel@2.2.2
+        uses: canonical/charming-actions/channel@2.2.5
         id: channel
 
       - name: Upload charm to charmhub
         id: upload
-        uses: canonical/charming-actions/upload-charm@2.2.2
+        uses: canonical/charming-actions/upload-charm@2.2.5
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
           github-token: "${{ secrets.GITHUB_TOKEN }}"
           upload-image: "true"
-          channel: "${{ steps.channel.outputs.name }}"
+          channel: 1.8/edge
           charm-path: ./${{ inputs.charm }}
           tag-prefix: magma-${{ inputs.charm }}
+          charmcraft-channel: ${{ env.CHARMCRAFT_VERSION }}
 
       - name: Chmod charmcraft logs
         if: steps.upload.conclusion == 'failure'

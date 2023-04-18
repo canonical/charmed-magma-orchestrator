@@ -34,7 +34,7 @@ jobs:
     name: Charm upload
     needs:
       - orc8r-smsd-integration-test
-    if: github.ref_name == 'main'
+    if: github.ref_name == '1.8'
     uses: ./.github/workflows/upload-charm.yml
     secrets: inherit
     with:

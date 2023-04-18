@@ -1,21 +1,27 @@
-name: main-branch
+name: 1.8
 
 on:
   pull_request:
     branches:
-      - main
+      - 1.8
   push:
     branches:
-      - main
+      - 1.8
+  schedule:
+    - cron: "0 0 * * *"
 
 jobs:
   orchestrator-lint-report:
     name: Lint report
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      - name: Set Environment Variables
+        uses: tw3lveparsecs/github-actions-setvars@v0.2
+        with:
+          varFilePath: ./.github/variables/dependencies_versions.env
       - name: Install tox
-        run: pip install tox
+        run: pip install tox==$TOX_VERSION
       - name: Run tests using tox
         run: |
           set -eux
@@ -28,9 +34,13 @@ jobs:
     name: Static analysis
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      - name: Set Environment Variables
+        uses: tw3lveparsecs/github-actions-setvars@v0.2
+        with:
+          varFilePath: ./.github/variables/dependencies_versions.env
       - name: Install tox
-        run: pip install tox
+        run: pip install tox==$TOX_VERSION
       - name: Run tests using tox
         run: |
           set -eux
@@ -43,9 +53,13 @@ jobs:
     name: Unit tests
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      - name: Set Environment Variables
+        uses: tw3lveparsecs/github-actions-setvars@v0.2
+        with:
+          varFilePath: ./.github/variables/dependencies_versions.env
       - name: Install tox
-        run: pip install tox
+        run: pip install tox==$TOX_VERSION
       - name: Run tests using tox
         run: |
           set -eux

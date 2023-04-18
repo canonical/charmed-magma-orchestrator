@@ -11,8 +11,14 @@ jobs:
   static-analysis:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set Environment Variables
+        uses: tw3lveparsecs/github-actions-setvars@v0.2
+        with:
+          varFilePath: ./.github/variables/dependencies_versions.env
       - name: Install tox
-        run: pip install tox
+        run: pip install tox==$TOX_VERSION
       - name: Run tests using tox
         run: cd ${{ inputs.charm_dir }} && tox -e static
+
