@@ -40,11 +40,16 @@ class TestCharm(unittest.TestCase):
     )
     TEST_DOMAIN_NAME = "test.domain.com"
     GRAFANA_URLS = ["auth-requirer:3000"]
+    DATABASE_DATABAG = {
+        "database": "test_db_name",
+        "endpoints": "123.456.679.012:1234",
+        "username": "test_db_user",
+        "password": "aaaBBBcccDDDeee",
+    }
 
     @patch(
         "charm.KubernetesServicePatch", lambda charm, ports, service_name, additional_labels: None
     )
-    @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._mirror_appdata", new=Mock())
     def setUp(self):
         self.namespace = "whatever"
         self.harness = testing.Harness(MagmaNmsMagmalteCharm)
@@ -65,12 +70,10 @@ class TestCharm(unittest.TestCase):
         postgres_port: str,
     ):
         db_event = Mock()
-        db_event.master = Mock()
-        db_event.master.dbname = postgres_db_name
-        db_event.master.user = postgres_username
-        db_event.master.password = postgres_password
-        db_event.master.host = postgres_host
-        db_event.master.port = postgres_port
+        db_event.database = postgres_db_name
+        db_event.username = postgres_username
+        db_event.password = postgres_password
+        db_event.host = f"{postgres_host}:{postgres_port}"
         return db_event
 
     def test_given_db_relation_not_created_when_pebble_ready_then_unit_is_in_blocked_state(  # noqa: E501
@@ -133,10 +136,11 @@ class TestCharm(unittest.TestCase):
             postgres_host,
             postgres_port,
         )
-        self.harness.charm._on_database_relation_joined(db_event)
+        self.harness.charm._on_magma_nms_magmalte_pebble_ready(db_event)
 
         self.assertEqual(db_event.database, self.TEST_DB_NAME)
 
+    @patch("ops.model.Container.get_service", new=Mock())
     @patch("ops.model.Container.exec", new=Mock())
     @patch("ops.model.Container.exists")
     @patch("psycopg2.connect", new=Mock())
@@ -147,13 +151,16 @@ class TestCharm(unittest.TestCase):
     ):
         grafana_url_mock.return_value = self.GRAFANA_URLS[0]
         patch_file_exists.return_value = True
+        container = self.harness.model.unit.get_container("magma-nms-magmalte")
+        self.harness.set_can_connect(container=container, val=True)
         db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
         )
-        key_values = {"master": str(self.TEST_DB_CONNECTION_STRING)}
         self.harness.update_relation_data(
-            relation_id=db_relation_id, key_values=key_values, app_or_unit="postgresql-k8s"
+            relation_id=db_relation_id,
+            key_values=self.DATABASE_DATABAG,
+            app_or_unit="postgresql-k8s",
         )
         patch_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
 
@@ -203,20 +210,24 @@ class TestCharm(unittest.TestCase):
     ):
         grafana_url_mock.return_value = self.GRAFANA_URLS[0]
         patch_exists.return_value = True
+        container = self.harness.model.unit.get_container("magma-nms-magmalte")
+        self.harness.set_can_connect(container=container, val=True)
         patch_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
         )
         db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
-        key_values = {"master": str(self.TEST_DB_CONNECTION_STRING)}
         self.harness.update_relation_data(
-            relation_id=db_relation_id, key_values=key_values, app_or_unit="postgresql-k8s"
+            relation_id=db_relation_id,
+            key_values=self.DATABASE_DATABAG,
+            app_or_unit="postgresql-k8s",
         )
 
         self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
 
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
 
+    @patch("ops.model.Container.get_service", new=Mock())
     @patch("ops.model.Container.exec", new=Mock())
     @patch("ops.model.Container.exists")
     @patch("psycopg2.connect", new=Mock())
@@ -227,17 +238,19 @@ class TestCharm(unittest.TestCase):
         event = Mock()
         event.urls = self.GRAFANA_URLS
         self.harness.charm._on_grafana_urls_available(event=event)
+        container = self.harness.model.unit.get_container("magma-nms-magmalte")
+        self.harness.set_can_connect(container=container, val=True)
         patch_exists.return_value = True
         patch_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
         )
         db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
-        key_values = {"master": str(self.TEST_DB_CONNECTION_STRING)}
         self.harness.update_relation_data(
-            relation_id=db_relation_id, key_values=key_values, app_or_unit="postgresql-k8s"
+            relation_id=db_relation_id,
+            key_values=self.DATABASE_DATABAG,
+            app_or_unit="postgresql-k8s",
         )
-        self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
 
         self.harness.remove_relation(db_relation_id)
         self.assertEqual(
@@ -437,9 +450,10 @@ class TestCharm(unittest.TestCase):
         container = self.harness.model.unit.get_container(service_name)
         self.harness.set_can_connect(container=container, val=True)
         db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
-        key_values = {"master": str(self.TEST_DB_CONNECTION_STRING)}
         self.harness.update_relation_data(
-            relation_id=db_relation_id, key_values=key_values, app_or_unit="postgresql-k8s"
+            relation_id=db_relation_id,
+            key_values=self.DATABASE_DATABAG,
+            app_or_unit="postgresql-k8s",
         )
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
@@ -495,9 +509,10 @@ class TestCharm(unittest.TestCase):
         grafana_url_mock.return_value = self.GRAFANA_URLS[0]
         patch_exists.return_value = True
         db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
-        key_values = {"master": str(self.TEST_DB_CONNECTION_STRING)}
         self.harness.update_relation_data(
-            relation_id=db_relation_id, key_values=key_values, app_or_unit="postgresql-k8s"
+            relation_id=db_relation_id,
+            key_values=self.DATABASE_DATABAG,
+            app_or_unit="postgresql-k8s",
         )
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
@@ -530,6 +545,7 @@ class TestCharm(unittest.TestCase):
             "False",
         )
 
+    @patch("ops.model.Container.get_service", new=Mock())
     @patch("ops.model.Container.exec", new=Mock())
     @patch("ops.model.Container.exists")
     @patch("psycopg2.connect", new=Mock())
@@ -541,14 +557,17 @@ class TestCharm(unittest.TestCase):
         app_name = self.harness.model.app.name
         grafana_url_mock.return_value = self.GRAFANA_URLS[0]
         patch_exists.return_value = True
+        container = self.harness.model.unit.get_container("magma-nms-magmalte")
+        self.harness.set_can_connect(container=container, val=True)
         patch_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
         )
         db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
-        key_values = {"master": str(self.TEST_DB_CONNECTION_STRING)}
         self.harness.update_relation_data(
-            relation_id=db_relation_id, key_values=key_values, app_or_unit="postgresql-k8s"
+            relation_id=db_relation_id,
+            key_values=self.DATABASE_DATABAG,
+            app_or_unit="postgresql-k8s",
         )
         self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
 

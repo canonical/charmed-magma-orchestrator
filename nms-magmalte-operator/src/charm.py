@@ -15,8 +15,8 @@ import string
 import time
 from typing import Optional, Union
 
-import ops.lib
 import psycopg2  # type: ignore[import]
+from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 from charms.grafana_k8s.v0.grafana_auth import (
     GrafanaAuthProxyProvider,
     UrlsAvailableEvent,
@@ -45,11 +45,10 @@ from ops.model import (
     Relation,
     WaitingStatus,
 )
-from ops.pebble import ExecError, Layer
+from ops.pebble import ConnectionError, ExecError, Layer
 from pgconnstr import ConnectionString  # type: ignore[import]
 
 logger = logging.getLogger(__name__)
-pgsql = ops.lib.use("pgsql", 1, "postgresql-charmers@lists.launchpad.net")
 
 
 class ServiceNotRunningError(Exception):
@@ -74,7 +73,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         super().__init__(*args)
         self._container_name = self._service_name = "magma-nms-magmalte"
         self._container = self.unit.get_container(self._container_name)
-        self._db = pgsql.PostgreSQLClient(self, "db")
+        self._database = DatabaseRequires(self, relation_name="db", database_name=self.DB_NAME)
         self.admin_operator = CertAdminOperatorRequires(self, self.CERT_ADMIN_OPERATOR_RELATION)
         self._service_patcher = KubernetesServicePatch(
             charm=self,
@@ -97,7 +96,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             self.on.magma_nms_magmalte_pebble_ready, self._on_magma_nms_magmalte_pebble_ready
         )
         self.framework.observe(
-            self._db.on.database_relation_joined, self._on_database_relation_joined
+            self._database.on.database_created, self._on_magma_nms_magmalte_pebble_ready
         )
         self.framework.observe(self.on.db_relation_broken, self._on_database_relation_broken)
         self.framework.observe(
@@ -229,8 +228,14 @@ class MagmaNmsMagmalteCharm(CharmBase):
             ConnectionString: pgconnstr ConnectionString object.
         """
         try:
-            db_relation = self.model.get_relation("db")
-            return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[union-attr, index]  # noqa: E501
+            relation_data = next(iter(self._database.fetch_relation_data().values()))
+            connection_info = {
+                "dbname": relation_data["database"],
+                "user": relation_data["username"],
+                "password": relation_data["password"],
+                "host": relation_data["endpoints"],
+            }
+            return ConnectionString(**connection_info)
         except (AttributeError, KeyError):
             return None
 
@@ -385,26 +390,6 @@ class MagmaNmsMagmalteCharm(CharmBase):
         logger.info(message)
         raise TimeoutError(message)
 
-    def _on_database_relation_joined(self, event: RelationJoinedEvent) -> None:
-        """Event handler for database relation change.
-
-        - Sets the event.database field on the database joined event.
-        - Required because setting the database name is only possible
-          from inside the event handler per https://github.com/canonical/ops-lib-pgsql/issues/2
-        - Sets our database parameters based on what was provided
-          in the relation event.
-
-        Args:
-            event (RelationJoinedEvent): Juju event
-
-        Returns:
-            None
-        """
-        if not self.unit.is_leader():
-            return
-        event.database = self.DB_NAME  # type: ignore[attr-defined]
-        self._on_magma_nms_magmalte_pebble_ready(event)
-
     def _on_database_relation_broken(self, event: RelationBrokenEvent):
         """Event handler for database relation broken.
 
@@ -528,7 +513,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
                     "admin-password": self._admin_password,
                 }
             )
-        except (ops.model.ModelError, ops.pebble.ConnectionError):
+        except (ModelError, ConnectionError):
             event.fail("Workload service is not yet running")
             return
         except Exception as e:

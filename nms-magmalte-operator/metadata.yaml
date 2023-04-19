@@ -43,7 +43,7 @@ provides:
 
 requires:
   db:
-    interface: pgsql
+    interface: postgresql_client
     limit: 1
   cert-admin-operator:
     interface: cert-admin-operator
