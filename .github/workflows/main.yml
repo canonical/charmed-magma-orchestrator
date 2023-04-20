@@ -7,13 +7,15 @@ on:
   push:
     branches:
       - 1.6
+  schedule:
+    - cron: "0 0 * * *"
 
 jobs:
   orchestrator-lint-report:
     name: Lint report
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set Environment Variables
         uses: tw3lveparsecs/github-actions-setvars@v0.2
         with:
@@ -32,7 +34,7 @@ jobs:
     name: Static analysis
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set Environment Variables
         uses: tw3lveparsecs/github-actions-setvars@v0.2
         with:
@@ -51,7 +53,7 @@ jobs:
     name: Unit tests
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set Environment Variables
         uses: tw3lveparsecs/github-actions-setvars@v0.2
         with:
@@ -67,6 +69,7 @@ jobs:
           done
 
   orchestrator-integration-test:
+    name: Integration tests
     uses: ./.github/workflows/integration-tests-self-hosted.yml
     with:
       charm_dir: orc8r-bundle

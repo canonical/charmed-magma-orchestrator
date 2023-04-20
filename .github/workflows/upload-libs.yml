@@ -15,18 +15,10 @@ jobs:
     runs-on: ubuntu-20.04
     name: Upload ${{ inputs.charm }} libs to charmhub
     steps:
-      - uses: actions/checkout@v2
-
-      - name: Wait for integration tests to succeed
-        uses: lewagon/wait-on-check-action@v1.1.2
-        with:
-          ref: 1.6
-          check-name: "Integration tests"
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 60
+      - uses: actions/checkout@v3
 
       - name: Check libraries
-        uses: canonical/charming-actions/check-libraries@2.0.0-rc
+        uses: canonical/charming-actions/check-libraries@2.2.2
         with:
           credentials: ${{ secrets.CHARMCRAFT_AUTH }}
           github-token: ${{ secrets.GITHUB_TOKEN }}

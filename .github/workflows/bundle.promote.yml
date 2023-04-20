@@ -5,12 +5,13 @@ on:
     inputs:
       promotion:
         type: choice
-        description: Channel to promote to
+        description: Promotion process
         required: true
         options:
-          - beta
-          - candidate
-          - stable
+          - 1.6/edge -> 1.6/beta
+          - 1.6/beta -> 1.6/candidate
+          - 1.6/candidate -> 1.6/stable
+          - 1.6/stable -> latest/stable
 
 jobs:
   orc8r-bundle-charmhub-upload:
@@ -18,17 +19,19 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Set target channel
         env:
-          PROMOTE_FROM: ${{ github.event.inputs.promotion }}
+          PROMOTION: ${{ github.event.inputs.promotion }}
         run: |
-          if [ "${PROMOTE_FROM}" == "beta" ]; then
-          echo "promote-to=beta" >> ${GITHUB_ENV}
-          elif [ "${PROMOTE_FROM}" == "candidate" ]; then
-          echo "promote-to=candidate" >> ${GITHUB_ENV}
-          elif [ "${PROMOTE_FROM}" == "stable" ]; then
-          echo "promote-to=stable" >> ${GITHUB_ENV}
+          if [ "${PROMOTION}" == "1.6/edge -> 1.6/beta" ]; then
+          echo "promote-to=1.6/beta" >> ${GITHUB_ENV}
+          elif [ "${PROMOTION}" == "1.6/beta -> 1.6/candidate" ]; then
+          echo "promote-to=1.6/candidate" >> ${GITHUB_ENV}
+          elif [ "${PROMOTION}" == "1.6/candidate -> 1.6/stable" ]; then
+          echo "promote-to=1.6/stable" >> ${GITHUB_ENV}
+          elif [ "${PROMOTION}" == "1.6/stable -> latest/stable" ]; then
+          echo "promote-to=latest/stable" >> ${GITHUB_ENV}
           fi
       - name: setup python
         uses: actions/setup-python@v4
@@ -49,4 +52,4 @@ jobs:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
           bundle-path: ./orc8r-bundle
           github-token: "${{ secrets.GITHUB_TOKEN }}"
-          channel: 1.6/${{ env.promote-to }}
+          channel: ${{ env.promote-to }}

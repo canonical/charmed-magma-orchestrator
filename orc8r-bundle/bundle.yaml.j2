@@ -22,7 +22,7 @@ applications:
       magma-nms-magmalte-image: linuxfoundation.jfrog.io/magma-docker/magmalte:1.6.0
     {%- else %}
     charm: magma-nms-magmalte
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -33,7 +33,7 @@ applications:
       magma-nms-nginx-proxy-image: ghcr.io/canonical/nginx:1.23.3
     {%- else %}
     charm: magma-nms-nginx-proxy
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -44,7 +44,7 @@ applications:
       magma-orc8r-accessd-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
     {%- else %}
     charm: magma-orc8r-accessd
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -67,7 +67,7 @@ applications:
       magma-orc8r-analytics-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
     {%- else %}
     charm: magma-orc8r-analytics
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -78,7 +78,7 @@ applications:
       magma-orc8r-bootstrapper-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
     {%- else %}
     charm: magma-orc8r-bootstrapper
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -89,7 +89,7 @@ applications:
       magma-orc8r-certifier-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
     {%- else %}
     charm: magma-orc8r-certifier
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -102,7 +102,7 @@ applications:
       magma-orc8r-configurator-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
     {%- else %}
     charm: magma-orc8r-configurator
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -113,7 +113,7 @@ applications:
       magma-orc8r-ctraced-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
     {%- else %}
     charm: magma-orc8r-ctraced
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -124,7 +124,7 @@ applications:
       magma-orc8r-device-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
     {%- else %}
     charm: magma-orc8r-device
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -135,7 +135,7 @@ applications:
       magma-orc8r-directoryd-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
     {%- else %}
     charm: magma-orc8r-directoryd
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -146,7 +146,7 @@ applications:
       magma-orc8r-dispatcher-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
     {%- else %}
     charm: magma-orc8r-dispatcher
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -157,7 +157,7 @@ applications:
       magma-orc8r-eventd-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
     {%- else %}
     charm: magma-orc8r-eventd
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -170,7 +170,7 @@ applications:
       magma-orc8r-ha-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
     {%- else %}
     charm: magma-orc8r-ha
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -181,7 +181,7 @@ applications:
       magma-orc8r-lte-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
     {%- else %}
     charm: magma-orc8r-lte
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -192,7 +192,7 @@ applications:
       magma-orc8r-metricsd-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
     {%- else %}
     charm: magma-orc8r-metricsd
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -203,7 +203,7 @@ applications:
       magma-orc8r-nginx-image: linuxfoundation.jfrog.io/magma-docker/nginx:1.6.0
     {%- else %}
     charm: magma-orc8r-nginx
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -214,7 +214,7 @@ applications:
       magma-orc8r-obsidian-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
     {%- else %}
     charm: magma-orc8r-obsidian
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -225,7 +225,7 @@ applications:
       magma-orc8r-orchestrator-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
     {%- else %}
     charm: magma-orc8r-orchestrator
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -238,7 +238,7 @@ applications:
       magma-orc8r-policydb-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
     {%- else %}
     charm: magma-orc8r-policydb
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -268,7 +268,7 @@ applications:
       magma-orc8r-service-registry-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
     {%- else %}
     charm: magma-orc8r-service-registry
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -279,7 +279,7 @@ applications:
       magma-orc8r-smsd-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
     {%- else %}
     charm: magma-orc8r-smsd
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -290,7 +290,7 @@ applications:
       magma-orc8r-state-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
     {%- else %}
     charm: magma-orc8r-state
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -301,7 +301,7 @@ applications:
       magma-orc8r-streamer-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
     {%- else %}
     charm: magma-orc8r-streamer
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -312,7 +312,7 @@ applications:
       magma-orc8r-subscriberdb-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
     {%- else %}
     charm: magma-orc8r-subscriberdb
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -323,7 +323,7 @@ applications:
       magma-orc8r-subscriberdb-cache-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
     {%- else %}
     charm: magma-orc8r-subscriberdb-cache
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true
@@ -334,7 +334,7 @@ applications:
       magma-orc8r-tenants-image: linuxfoundation.jfrog.io/magma-docker/controller:1.6.0
     {%- else %}
     charm: magma-orc8r-tenants
-    channel: 1.6/{{ channel|default("stable") }}
+    channel: {{ channel|default("stable") }}
     {%- endif %}
     scale: 1
     trust: true

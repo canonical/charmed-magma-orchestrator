@@ -29,10 +29,10 @@ From your Ubuntu machine, create an `overlay.yaml` file that contains the follow
 applications:
   fluentd:
     options:
-    domain: <your domain name>
-    elasticsearch-url: <your elasticsearch https url>
-    fluentd-chunk-limit-size: "2M"
-    fluentd-queue-limit-length: 8
+      domain: <your domain name>
+      elasticsearch-url: <your elasticsearch https url>
+      fluentd-chunk-limit-size: "2M"
+      fluentd-queue-limit-length: 8
   orc8r-certifier:
     options:
       domain: <your domain name>
@@ -50,13 +50,13 @@ applications:
 
 > **Warning**: This configuration is unsecure because it uses self-signed certificates.
 
-Deploy Orchestrator:
+Deploy Orchestrator 1.6:
 
 > **Note**: Elasticsearch is not part of magma-orc8r bundle and needs to be deployed prior
 > to deploying the bundle. Elasticsearch needs to support both `http` and `https` requests.
 
 ```bash
-juju deploy magma-orc8r --overlay overlay.yaml --trust --channel=edge
+juju deploy magma-orc8r --overlay overlay.yaml --trust --channel=1.6/stable
 ```
 
 The deployment is completed when all services are in the `Active-Idle` state.
@@ -67,7 +67,7 @@ Retrieve the PFX package and password that contains the certificates to authenti
 
 ```bash
 juju scp --container="magma-orc8r-certifier" orc8r-certifier/0:/var/opt/magma/certs/admin_operator.pfx admin_operator.pfx
-juju run-action orc8r-certifier/leader get-pfx-package-password --wait
+juju run-action orc8r-certifier/leader get-pfx-package-password
 ```
 
 > The pfx package was copied to your current working directory and can now be loaded in your browser.
@@ -77,7 +77,7 @@ juju run-action orc8r-certifier/leader get-pfx-package-password --wait
 Retrieve the services that need to be exposed:
 
 ```bash
-juju run-action orc8r-orchestrator/leader get-load-balancer-services --wait
+juju run-action orc8r-orchestrator/leader get-load-balancer-services
 ```
 
 In your domain registrar, create A records for the following Kubernetes services:
@@ -95,7 +95,7 @@ In your domain registrar, create A records for the following Kubernetes services
 Get the master organization's username and password:
 
 ```bash
-juju run-action nms-magmalte/leader get-master-admin-credentials --wait
+juju run-action nms-magmalte/leader get-master-admin-credentials
 ```
 
 Confirm successful deployment by visiting `https://master.nms.<your domain>` and logging in

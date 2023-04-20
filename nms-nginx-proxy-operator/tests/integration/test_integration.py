@@ -56,7 +56,6 @@ class TestNmsNginxProxy:
                 "generate-self-signed-certificates": True,
                 "ca-common-name": f"rootca.{DOMAIN}",
             },
-            channel="edge",
         )
 
     async def _deploy_orc8r_certifier(self, ops_test):
@@ -90,14 +89,13 @@ class TestNmsNginxProxy:
         await ops_test.model.deploy(
             "grafana-k8s",
             application_name="grafana-k8s",
-            channel="edge",
             trust=True,
         )
 
     @staticmethod
     async def _deploy_prometheus_k8s_operator(ops_test):
         await ops_test.model.deploy(
-            "prometheus-k8s", application_name="prometheus-k8s", channel="edge", trust=True
+            "prometheus-k8s", application_name="prometheus-k8s", trust=True
         )
         await ops_test.model.add_relation(
             relation1="prometheus-k8s:grafana-source", relation2="grafana-k8s"
@@ -171,5 +169,5 @@ class TestNmsNginxProxy:
         await ops_test.model.applications[APPLICATION_NAME].scale(1)
 
         await ops_test.model.wait_for_idle(
-            apps=[APPLICATION_NAME], status="active", timeout=1000, wait_for_exact_units=1
+            apps=[APPLICATION_NAME], status="active", timeout=60, wait_for_exact_units=1
         )
