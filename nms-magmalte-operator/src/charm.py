@@ -92,12 +92,8 @@ class MagmaNmsMagmalteCharm(CharmBase):
         self._grafana_auth_provider = GrafanaAuthProxyProvider(
             self, auto_sign_up=False, relation_name=self.GRAFANA_AUTH_RELATION
         )
-        self.framework.observe(
-            self.on.magma_nms_magmalte_pebble_ready, self._configure_workload
-        )
-        self.framework.observe(
-            self._database.on.database_created, self._configure_workload
-        )
+        self.framework.observe(self.on.magma_nms_magmalte_pebble_ready, self._configure_workload)
+        self.framework.observe(self._database.on.database_created, self._configure_workload)
         self.framework.observe(self.on.db_relation_broken, self._on_database_relation_broken)
         self.framework.observe(
             self.on.magma_nms_magmalte_relation_joined,
