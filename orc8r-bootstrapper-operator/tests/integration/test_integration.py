@@ -73,7 +73,7 @@ class TestOrc8rBootstrapper:
             series="jammy",
         )
         await ops_test.model.add_relation(
-            relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
+            relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:postgresql_client"
         )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="tls-certificates-operator"
@@ -99,7 +99,7 @@ class TestOrc8rBootstrapper:
 
     async def test_relate_and_wait_for_idle(self, ops_test, setup, build_and_deploy):
         await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
+            relation1=APPLICATION_NAME, relation2="postgresql-k8s:postgresql_client"
         )
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="orc8r-certifier:cert-root-ca"
@@ -115,10 +115,10 @@ class TestOrc8rBootstrapper:
     async def test_redeploy_db(self, ops_test, setup, build_and_deploy):
         await self._deploy_postgresql(ops_test)
         await ops_test.model.add_relation(
-            relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
+            relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:postgresql_client"
         )
         await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
+            relation1=APPLICATION_NAME, relation2="postgresql-k8s:postgresql_client"
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
 
