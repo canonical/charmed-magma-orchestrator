@@ -92,7 +92,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
                             "SERVICE_HOSTNAME": "magma-orc8r-bootstrapper",
                             "SERVICE_REGISTRY_MODE": "k8s",
                             "SERVICE_REGISTRY_NAMESPACE": self._namespace,
-                            "DATABASE_SOURCE": f"dbname={self.DB_NAME} "
+                            "DATABASE_SOURCE": f"dbname={self.DB_NAME} "  # type: ignore[union-attr] # noqa: E501
                             f"user={self._get_db_connection_string.user} "
                             f"password={self._get_db_connection_string.password} "
                             f"host={self._get_db_connection_string.host} "
@@ -207,7 +207,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         """Returns DB connection string provided by the DB relation.
 
         Returns:
-            ConnectionString: pgconnstr ConnectionString object.
+            Optional[ConnectionString]: pgconnstr ConnectionString object.
         """
         try:
             relation_data = next(iter(self._database.fetch_relation_data().values()))
@@ -219,7 +219,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
             }
             return ConnectionString(**connection_info)
         except (AttributeError, KeyError):
-            return
+            return None
 
     def _on_root_ca_certificate_available(self, event: RootCACertificateAvailableEvent) -> None:
         """Triggered when rootCA certificate is available.
