@@ -62,7 +62,7 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation_unit(self.peer_relation_id, self.harness.charm.unit.name)
 
     @staticmethod
-    def _fake_db_event(
+    def _fake_db_created_event(
         postgres_db_name: str,
         postgres_username: str,
         postgres_password: str,
@@ -73,7 +73,7 @@ class TestCharm(unittest.TestCase):
         db_event.database = postgres_db_name
         db_event.username = postgres_username
         db_event.password = postgres_password
-        db_event.host = f"{postgres_host}:{postgres_port}"
+        db_event.endpoints = f"{postgres_host}:{postgres_port}"
         return db_event
 
     def test_given_db_relation_not_created_when_pebble_ready_then_unit_is_in_blocked_state(  # noqa: E501
@@ -119,7 +119,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("charm.MagmaNmsMagmalteCharm.DB_NAME", new_callable=PropertyMock)
     @patch("ops.model.Unit.is_leader", Mock())
-    def test_given_pod_is_leader_when_database_relation_joined_event_then_database_is_set_correctly(  # noqa: E501
+    def test_given_pod_is_leader_when_database_created_event_then_database_is_set_correctly(  # noqa: E501
         self, mock_db_name
     ):
         mock_db_name.return_value = self.TEST_DB_NAME
@@ -129,14 +129,14 @@ class TestCharm(unittest.TestCase):
         postgres_username = "yeast"
         postgres_port = self.TEST_DB_PORT
 
-        db_event = self._fake_db_event(
+        db_event = self._fake_db_created_event(
             postgres_db_name,
             postgres_username,
             postgres_password,
             postgres_host,
             postgres_port,
         )
-        self.harness.charm._on_magma_nms_magmalte_pebble_ready(db_event)
+        self.harness.charm._configure_workload(db_event)
 
         self.assertEqual(db_event.database, self.TEST_DB_NAME)
 

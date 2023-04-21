@@ -93,10 +93,10 @@ class MagmaNmsMagmalteCharm(CharmBase):
             self, auto_sign_up=False, relation_name=self.GRAFANA_AUTH_RELATION
         )
         self.framework.observe(
-            self.on.magma_nms_magmalte_pebble_ready, self._on_magma_nms_magmalte_pebble_ready
+            self.on.magma_nms_magmalte_pebble_ready, self._configure_workload
         )
         self.framework.observe(
-            self._database.on.database_created, self._on_magma_nms_magmalte_pebble_ready
+            self._database.on.database_created, self._configure_workload
         )
         self.framework.observe(self.on.db_relation_broken, self._on_database_relation_broken)
         self.framework.observe(
@@ -311,9 +311,9 @@ class MagmaNmsMagmalteCharm(CharmBase):
         self._container.push(
             path=f"{self.BASE_CERTS_PATH}/admin_operator.key.pem", source=event.private_key
         )
-        self._on_magma_nms_magmalte_pebble_ready(event)
+        self._configure_workload(event)
 
-    def _on_magma_nms_magmalte_pebble_ready(
+    def _configure_workload(
         self,
         event: Union[
             PebbleReadyEvent, CertificateAvailableEvent, UrlsAvailableEvent, RelationJoinedEvent
@@ -596,7 +596,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         """
         app_data = self.model.get_relation("replicas").data[self.app]  # type: ignore[union-attr]  # noqa: E501
         app_data.update({"grafana_url": event.urls[0]})
-        self._on_magma_nms_magmalte_pebble_ready(event)
+        self._configure_workload(event)
 
     def _on_grafana_relation_broken(self, event: RelationBrokenEvent):
         self.unit.status = BlockedStatus("Waiting for grafana relation to be created")
