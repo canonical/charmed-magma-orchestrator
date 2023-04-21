@@ -9,7 +9,6 @@ summary: |
   bootstrapper manages the certificate bootstrapping process for newly registered gateways and
   gateways whose cert has expired
 website: https://github.com/canonical/charmed-magma-orchestrator
-
 containers:
   magma-orc8r-bootstrapper:
     resource: magma-orc8r-bootstrapper-image
@@ -35,7 +34,7 @@ provides:
 
 requires:
   db:
-    interface: pgsql
+    interface: postgresql_client
     limit: 1
   cert-root-ca:
     interface: cert-root-ca

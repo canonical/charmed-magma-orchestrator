@@ -7,8 +7,8 @@
 import logging
 from typing import Optional, Union
 
-import ops.lib
 import psycopg2  # type: ignore[import]
+from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 from charms.magma_orc8r_certifier.v0.cert_root_ca import (
     CertificateAvailableEvent as RootCACertificateAvailableEvent,
 )
@@ -33,11 +33,9 @@ from private_key import generate_private_key
 
 logger = logging.getLogger(__name__)
 
-pgsql = ops.lib.use("pgsql", 1, "postgresql-charmers@lists.launchpad.net")
-
 
 class MagmaOrc8rBootstrapperCharm(CharmBase):
-    """Main class that is instantiated everytime an event occurs."""
+    """Main class that is instantiated every time an event occurs."""
 
     DB_NAME = "magma_dev"
     BASE_CERTS_PATH = "/var/opt/magma/certs"
@@ -49,11 +47,11 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         self._container_name = self._service_name = "magma-orc8r-bootstrapper"
         self._container = self.unit.get_container(self._container_name)
         self._cert_root_ca = CertRootCARequires(self, self.CERT_ROOT_CA_RELATION)
-        self._db = pgsql.PostgreSQLClient(self, "db")
+        self._database = DatabaseRequires(self, relation_name="db", database_name=self.DB_NAME)
         self.framework.observe(self.on.db_relation_broken, self._on_database_relation_broken)
         self.framework.observe(
-            self._db.on.database_relation_joined,
-            self._on_database_relation_joined,
+            self._database.on.database_created,
+            self._configure_magma_orc8r_bootstrapper,
         )
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(
@@ -205,11 +203,21 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
             return False
 
     @property
-    def _get_db_connection_string(self):
-        """Returns DB connection string provided by the DB relation."""
+    def _get_db_connection_string(self) -> Optional[ConnectionString]:
+        """Returns DB connection string provided by the DB relation.
+
+        Returns:
+            ConnectionString: pgconnstr ConnectionString object.
+        """
         try:
-            db_relation = self.model.get_relation("db")
-            return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[union-attr, index]  # noqa: E501
+            relation_data = next(iter(self._database.fetch_relation_data().values()))
+            connection_info = {
+                "dbname": relation_data["database"],
+                "user": relation_data["username"],
+                "password": relation_data["password"],
+                "host": relation_data["endpoints"],
+            }
+            return ConnectionString(**connection_info)
         except (AttributeError, KeyError):
             return
 
@@ -352,19 +360,6 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         if not self._service_is_running:
             event.defer()
             return
-
-    def _on_database_relation_joined(self, event):
-        """Event handler for database relation change.
-
-        - Sets the event.database field on the database joined event.
-        - Required because setting the database name is only possible
-          from inside the event handler per https://github.com/canonical/ops-lib-pgsql/issues/2
-        - Sets our database parameters based on what was provided
-          in the relation event.
-        """
-        if self.unit.is_leader():
-            event.database = self.DB_NAME
-        self._configure_magma_orc8r_bootstrapper(event)
 
     def _update_relation_active_status(self, relation: Relation, is_active: bool) -> None:
         """Updates the relation data with the active status.
