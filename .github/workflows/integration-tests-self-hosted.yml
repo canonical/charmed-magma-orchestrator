@@ -79,7 +79,7 @@ jobs:
         with:
           name: charmcraft-logs
           path: /home/ubuntu/.local/state/charmcraft/log/*.log
-        - name: Archive juju crashdump
+      - name: Archive juju crashdump
         if: failure()
         uses: actions/upload-artifact@v3
         with:
