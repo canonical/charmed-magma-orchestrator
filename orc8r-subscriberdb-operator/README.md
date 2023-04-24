@@ -1,6 +1,7 @@
 # magma-orc8r-subscriberdb
 
 ## Description
+
 magma-orc8r-subscriberdb manages subscribers via a northbound CRUD API and a southbound subscriber stream.
 
 ## Usage
@@ -8,7 +9,7 @@ magma-orc8r-subscriberdb manages subscribers via a northbound CRUD API and a sou
 ```bash
 juju deploy postgresql-k8s
 juju deploy magma-orc8r-subscriberdb orc8r-subscriberdb
-juju relate orc8r-subscriberdb postgresql-k8s:db
+juju relate orc8r-subscriberdb postgresql-k8s:database
 ```
 
 **IMPORTANT**: For now, deploying this charm must be done with an alias as shown above.
@@ -22,4 +23,3 @@ The current setup has only been tested with relation to the `postgresql-k8s` cha
 ## OCI Images
 
 Default: ghcr.io/canonical/magma-lte-controller:1.8.0
-

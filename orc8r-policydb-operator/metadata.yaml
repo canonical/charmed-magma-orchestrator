@@ -9,7 +9,6 @@ summary: |
   policydb is an Orchestrator's service which manages subscriber policies via a northbound CRUD API
       and a southbound policy stream
 website: https://github.com/canonical/charmed-magma-orchestrator
-
 containers:
   magma-orc8r-policydb:
     resource: magma-orc8r-policydb-image
@@ -26,6 +25,6 @@ provides:
     limit: 1
 
 requires:
-  db:
-    interface: pgsql
+  database:
+    interface: postgresql_client
     limit: 1
