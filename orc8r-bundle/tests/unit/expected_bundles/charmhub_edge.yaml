@@ -192,7 +192,7 @@ applications:
     trust: true
   postgresql-k8s:
     charm: postgresql-k8s
-    channel: 14/beta
+    channel: 14/stable
     scale: 1
     trust: true
   tls-certificates-operator:
