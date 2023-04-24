@@ -104,7 +104,9 @@ class TestCharm(unittest.TestCase):
     ):
         patch_exists.return_value = True
         self.create_peer_relation_with_private_key(bootstrapper_private_key=False)
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
         self.harness.add_relation_unit(
             relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
         )
@@ -133,7 +135,9 @@ class TestCharm(unittest.TestCase):
     ):
         patch_exists.return_value = True
         self.create_peer_relation_with_private_key(bootstrapper_private_key=True)
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
         self.harness.add_relation_unit(
             relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
         )
@@ -179,7 +183,9 @@ class TestCharm(unittest.TestCase):
     ):
         patch_exists.side_effect = lambda s: s != f"{self.BASE_CERTS_PATH}/rootCA.pem"
         self.create_peer_relation_with_private_key(bootstrapper_private_key=True)
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
         self.harness.add_relation_unit(
             relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
         )
@@ -215,7 +221,9 @@ class TestCharm(unittest.TestCase):
 
         self.create_peer_relation_with_private_key(bootstrapper_private_key=True)
 
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
         self.harness.add_relation_unit(
             relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
         )
@@ -273,7 +281,9 @@ class TestCharm(unittest.TestCase):
         patch_file_exists.return_value = True
         self.create_peer_relation_with_private_key(bootstrapper_private_key=True)
 
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
         self.harness.add_relation_unit(
             relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
         )

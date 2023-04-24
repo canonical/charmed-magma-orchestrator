@@ -33,7 +33,7 @@ provides:
     interface: magma-orc8r-bootstrapper
 
 requires:
-  db:
+  database:
     interface: postgresql_client
     limit: 1
   cert-root-ca:

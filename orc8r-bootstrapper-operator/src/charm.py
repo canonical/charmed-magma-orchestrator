@@ -47,8 +47,11 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         self._container_name = self._service_name = "magma-orc8r-bootstrapper"
         self._container = self.unit.get_container(self._container_name)
         self._cert_root_ca = CertRootCARequires(self, self.CERT_ROOT_CA_RELATION)
-        self._database = DatabaseRequires(self, relation_name="db", database_name=self.DB_NAME)
-        self.framework.observe(self.on.db_relation_broken, self._on_database_relation_broken)
+        self._database = DatabaseRequires(
+            self, relation_name="database", database_name=self.DB_NAME
+        )
+        # TODO:
+        # self.framework.observe(self.on.db_relation_broken, self._on_database_relation_broken)
         self.framework.observe(
             self._database.on.database_created,
             self._configure_magma_orc8r_bootstrapper,
@@ -177,7 +180,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
 
         That there is a relation and that credentials have been passed.
         """
-        return self._relation_created("db")
+        return self._relation_created("database")
 
     @property
     def _db_relation_established(self) -> bool:
