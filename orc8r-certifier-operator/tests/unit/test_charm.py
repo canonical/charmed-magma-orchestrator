@@ -644,7 +644,7 @@ class TestCharm(unittest.TestCase):
         self,
     ):
         self.harness.update_config(key_values={"domain": "whatever.com"})
-        self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        self.harness.add_relation(relation_name="database", remote_app="postgresql-k8s")
 
         self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
 
@@ -663,7 +663,9 @@ class TestCharm(unittest.TestCase):
     ):
         patch_file_exists.return_value = True
         self.harness.update_config(key_values={"domain": "whatever.com"})
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
         certificates_relation_id = self.harness.add_relation(
             relation_name="certificates", remote_app="vault-k8s"
         )
@@ -691,7 +693,7 @@ class TestCharm(unittest.TestCase):
         self,
     ):
         self.harness.update_config(key_values={"domain": "whatever.com"})
-        self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        self.harness.add_relation(relation_name="database", remote_app="postgresql-k8s")
         self.harness.add_relation(
             relation_name="certificates", remote_app="tls-certificates-provider"
         )
@@ -710,7 +712,9 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation(
             relation_name="certificates", remote_app="tls-certificates-provider"
         )
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
         self.harness.add_relation_unit(
             relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
         )
@@ -733,7 +737,9 @@ class TestCharm(unittest.TestCase):
     ):
         patch_file_exists.return_value = True
         self.harness.update_config(key_values={"domain": "whatever.com"})
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
         certificates_relation_id = self.harness.add_relation(
             relation_name="certificates", remote_app="vault-k8s"
         )
@@ -791,7 +797,9 @@ class TestCharm(unittest.TestCase):
         patch_file_exists.return_value = True
         self.harness.update_config(key_values={"domain": "whatever.com"})
         self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
         certificates_relation_id = self.harness.add_relation(
             relation_name="certificates", remote_app="vault-k8s"
         )

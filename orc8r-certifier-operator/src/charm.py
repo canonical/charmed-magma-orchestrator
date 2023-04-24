@@ -101,7 +101,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._container_name = self._service_name = "magma-orc8r-certifier"
         self.provided_relation_name = "magma-orc8r-certifier"
         self._container = self.unit.get_container(self._container_name)
-        self._database = DatabaseRequires(self, relation_name="db", database_name=self.DB_NAME)
+        self._database = DatabaseRequires(
+            self, relation_name="database", database_name=self.DB_NAME
+        )
         self._service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[
@@ -1143,7 +1145,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         Returns:
             bool: Whether required relation
         """
-        return self._relation_created("db")
+        return self._relation_created("database")
 
     @property
     def _certificates_relation_created(self) -> bool:
