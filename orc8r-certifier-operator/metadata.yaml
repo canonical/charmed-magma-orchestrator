@@ -39,7 +39,7 @@ peers:
     interface: orc8r-certifier-replica
 
 requires:
-  db:
+  database:
     interface: postgresql_client
     limit: 1
   certificates:

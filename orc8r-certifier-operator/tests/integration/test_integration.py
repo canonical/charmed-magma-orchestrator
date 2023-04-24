@@ -21,8 +21,16 @@ class TestOrc8rCertifier:
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail
     async def setup(self, ops_test):
-        await ops_test.model.deploy("postgresql-k8s", application_name=DB_APPLICATION_NAME)
+        await self._deploy_postgresql(ops_test)
         await self._deploy_tls_certificates_operator(ops_test)
+
+    @staticmethod
+    async def _deploy_postgresql(ops_test):
+        await ops_test.model.deploy(
+            "postgresql-k8s",
+            application_name=DB_APPLICATION_NAME,
+            channel="14/stable",
+        )
 
     @staticmethod
     async def _deploy_tls_certificates_operator(ops_test):
@@ -58,7 +66,7 @@ class TestOrc8rCertifier:
 
     async def test_build_and_deploy(self, ops_test, setup, build_and_deploy):
         await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
+            relation1=APPLICATION_NAME, relation2="postgresql-k8s:database"
         )
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="tls-certificates-operator"
@@ -74,7 +82,7 @@ class TestOrc8rCertifier:
     async def test_redeploy_db(self, ops_test, setup, build_and_deploy):
         await ops_test.model.deploy("postgresql-k8s", application_name=DB_APPLICATION_NAME)
         await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
+            relation1=APPLICATION_NAME, relation2="postgresql-k8s:database"
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
 
