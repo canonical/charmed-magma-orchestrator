@@ -11,9 +11,10 @@ import secrets
 import string
 from typing import Optional, Union
 
-import ops.lib
+import ops
 import psycopg2  # type: ignore[import]
 import yaml
+from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 from charms.magma_orc8r_certifier.v0.cert_admin_operator import (
     CertAdminOperatorProvides,
 )
@@ -73,7 +74,6 @@ from ops.pebble import Layer
 from pgconnstr import ConnectionString  # type: ignore[import]
 
 logger = logging.getLogger(__name__)
-pgsql = ops.lib.use("pgsql", 1, "postgresql-charmers@lists.launchpad.net")
 
 
 class MagmaOrc8rCertifierCharm(CharmBase):
@@ -101,7 +101,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._container_name = self._service_name = "magma-orc8r-certifier"
         self.provided_relation_name = "magma-orc8r-certifier"
         self._container = self.unit.get_container(self._container_name)
-        self._db = pgsql.PostgreSQLClient(self, "db")
+        self._database = DatabaseRequires(self, relation_name="db", database_name=self.DB_NAME)
         self._service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[
@@ -128,11 +128,13 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
         # Relation events
         self.framework.observe(
-            self._db.on.database_relation_joined, self._on_database_relation_joined
+            self._database.on.database_created,
+            self._on_database_relation_joined,  # TODO: This should be a different event?
         )
-        self.framework.observe(
-            self._db.on.database_relation_broken, self._on_database_relation_broken
-        )
+        # TODO: Handle relation broken event when the new data platform lib supports it.
+        # self.framework.observe(
+        #     self._db.on.database_relation_broken, self._on_database_relation_broken
+        # )
         self.framework.observe(
             self.on.certificates_relation_created, self._on_certificates_relation_created
         )
@@ -1378,8 +1380,14 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             ConnectionString: Database connection object.
         """
         try:
-            db_relation = self.model.get_relation("db")
-            return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[union-attr, index]  # noqa: E501
+            relation_data = next(iter(self._database.fetch_relation_data().values()))
+            connection_info = {
+                "dbname": relation_data["database"],
+                "user": relation_data["username"],
+                "password": relation_data["password"],
+                "host": relation_data["endpoints"],
+            }
+            return ConnectionString(**connection_info)
         except (AttributeError, KeyError):
             return None
 
