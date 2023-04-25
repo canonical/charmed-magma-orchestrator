@@ -218,7 +218,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
                 "dbname": relation_data["database"],
                 "user": relation_data["username"],
                 "password": relation_data["password"],
-                "host": relation_data["endpoints"],
+                "host": relation_data["endpoints"].split(":")[0],
             }
             return ConnectionString(**connection_info)
         except (AttributeError, KeyError):
