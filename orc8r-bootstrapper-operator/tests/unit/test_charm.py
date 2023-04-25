@@ -58,7 +58,7 @@ class TestCharm(unittest.TestCase):
     )
     DATABASE_DATABAG = {
         "database": "test_db_name",
-        "endpoints": "123.456.679.012:1234",
+        "endpoints": "123.456.789.012:1234",
         "username": "test_db_user",
         "password": "aaaBBBcccDDDeee",
     }
@@ -213,9 +213,8 @@ class TestCharm(unittest.TestCase):
     @patch("ops.model.Container.exec", new=Mock())
     @patch("psycopg2.connect", new=Mock())
     @patch("ops.model.Container.exists")
-    @patch("charm.ConnectionString")
     def test_given_private_key_is_stored_when_pebble_ready_then_pebble_plan_is_filled_with_workload_service_content(  # noqa: E501
-        self, patch_connection_string, patch_file_exists
+        self, patch_file_exists
     ):
         patch_file_exists.return_value = True
 
@@ -227,7 +226,6 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation_unit(
             relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
         )
-        patch_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
         self.harness.update_relation_data(
             relation_id=db_relation_id,
             app_or_unit="postgresql-k8s",
@@ -413,4 +411,28 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(
             self.harness.charm.unit.status,
             WaitingStatus("Waiting for leader to generate bootstrapper private key"),
+        )
+
+    @patch("psycopg2.connect", new=Mock())
+    def test_given_pebble_ready_when_database_relation_broken_then_status_is_blocked(
+        self,
+    ):
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
+        self.harness.add_relation_unit(
+            relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
+        )
+        self.harness.update_relation_data(
+            relation_id=db_relation_id,
+            app_or_unit="postgresql-k8s",
+            key_values=self.DATABASE_DATABAG,
+        )
+        self.harness.container_pebble_ready(container_name="magma-orc8r-bootstrapper")
+
+        self.harness.remove_relation(db_relation_id)
+
+        self.assertEqual(
+            self.harness.charm.unit.status,
+            BlockedStatus("Waiting for database relation to be created"),
         )

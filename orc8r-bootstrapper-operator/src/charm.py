@@ -50,8 +50,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         self._database = DatabaseRequires(
             self, relation_name="database", database_name=self.DB_NAME
         )
-        # TODO:
-        # self.framework.observe(self.on.db_relation_broken, self._on_database_relation_broken)
+        self.framework.observe(self.on.database_relation_broken, self._on_database_relation_broken)
         self.framework.observe(
             self._database.on.database_created,
             self._configure_magma_orc8r_bootstrapper,
@@ -219,6 +218,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
                 "user": relation_data["username"],
                 "password": relation_data["password"],
                 "host": relation_data["endpoints"].split(":")[0],
+                "port": relation_data["endpoints"].split(":")[1].split(",")[0],
             }
             return ConnectionString(**connection_info)
         except (AttributeError, KeyError):
@@ -276,7 +276,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
         Returns:
             None
         """
-        self.unit.status = BlockedStatus("Waiting for db relation to be created")
+        self.unit.status = BlockedStatus("Waiting for database relation to be created")
 
     def _push_bootstrapper_private_key(self) -> None:
         """Pushes bootstrapper private key to workload container."""
@@ -324,7 +324,7 @@ class MagmaOrc8rBootstrapperCharm(CharmBase):
             event.defer()
             return
         if not self._db_relation_established:
-            self.unit.status = WaitingStatus("Waiting for db relation to be ready")
+            self.unit.status = WaitingStatus("Waiting for database relation to be ready")
             event.defer()
             return
         if not self._root_ca_is_pushed:
