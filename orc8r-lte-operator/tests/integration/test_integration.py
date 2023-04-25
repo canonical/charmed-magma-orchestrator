@@ -51,7 +51,7 @@ class TestOrc8rLte:
 
     async def test_relate_and_wait_for_idle(self, ops_test, setup, build_and_deploy):
         await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2=f"{DB_APPLICATION_NAME}:db"
+            relation1=APPLICATION_NAME, relation2=f"{DB_APPLICATION_NAME}:database"
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
 

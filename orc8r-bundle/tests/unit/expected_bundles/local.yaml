@@ -236,7 +236,7 @@ relations:
     - orc8r-certifier
   - - nms-nginx-proxy:magma-nms-magmalte
     - nms-magmalte:magma-nms-magmalte
-  - - orc8r-accessd:database
+  - - orc8r-accessd:db
     - postgresql-k8s:database
   - - orc8r-alertmanager:remote-configuration
     - orc8r-alertmanager-configurer:alertmanager
@@ -248,15 +248,15 @@ relations:
     - tls-certificates-operator
   - - orc8r-certifier:db
     - postgresql-k8s:db
-  - - orc8r-configurator:database
+  - - orc8r-configurator:db
     - postgresql-k8s:database
-  - - orc8r-ctraced:database
+  - - orc8r-ctraced:db
     - postgresql-k8s:database
-  - - orc8r-device:database
+  - - orc8r-device:db
     - postgresql-k8s:database
-  - - orc8r-directoryd:database
+  - - orc8r-directoryd:db
     - postgresql-k8s:database
-  - - orc8r-lte:database
+  - - orc8r-lte:db
     - postgresql-k8s:database
   - - orc8r-metricsd:alertmanager-k8s
     - orc8r-alertmanager:alerting
@@ -288,7 +288,7 @@ relations:
     - orc8r-service-registry:magma-orc8r-service-registry
   - - orc8r-orchestrator:metrics-endpoint
     - orc8r-prometheus-cache:metrics-endpoint
-  - - orc8r-policydb:database
+  - - orc8r-policydb:db
     - postgresql-k8s:database
   - - orc8r-prometheus:alertmanager
     - orc8r-alertmanager:alerting
@@ -296,15 +296,15 @@ relations:
     - orc8r-prometheus-cache:metrics-endpoint
   - - orc8r-prometheus-configurer:prometheus
     - orc8r-prometheus:receive-remote-write
-  - - orc8r-smsd:database
+  - - orc8r-smsd:db
     - postgresql-k8s:database
-  - - orc8r-state:database
+  - - orc8r-state:db
     - postgresql-k8s:database
-  - - orc8r-subscriberdb-cache:database
+  - - orc8r-subscriberdb-cache:db
     - postgresql-k8s:database
-  - - orc8r-subscriberdb:database
+  - - orc8r-subscriberdb:db
     - postgresql-k8s:database
-  - - orc8r-tenants:database
+  - - orc8r-tenants:db
     - postgresql-k8s:database
   - - orc8r-user-grafana:grafana-source
     - orc8r-prometheus:grafana-source

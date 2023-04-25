@@ -28,7 +28,7 @@ provides:
     limit: 1
 
 requires:
-  database:
+  db:
     interface: postgresql_client
     limit: 1
 
