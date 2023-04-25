@@ -27,4 +27,3 @@ charmcraft pack
 ## OCI Images
 
 Default: ghcr.io/canonical/magma-orc8r-controller:1.8.0
-

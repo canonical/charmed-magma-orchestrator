@@ -18,3 +18,4 @@ The magma-orc8r-tenants service relies on a relation to `postgresql-k8s`.
 
 ## OCI Images
 Default: ghcr.io/canonical/magma-orc8r-controller:1.8.0
+

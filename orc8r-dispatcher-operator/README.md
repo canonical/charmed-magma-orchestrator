@@ -14,4 +14,3 @@ juju deploy magma-orc8r-dispatcher orc8r-dispatcher
 ## OCI Images
 
 Default: ghcr.io/canonical/magma-orc8r-controller:1.8.0
-

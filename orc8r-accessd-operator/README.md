@@ -24,4 +24,3 @@ The current setup has only been tested with relation to the `postgresql-k8s` cha
 ## OCI Images
 
 Default: ghcr.io/canonical/magma-orc8r-controller:1.8.0
-
