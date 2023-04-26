@@ -14,4 +14,3 @@ juju deploy magma-orc8r-ha orc8r-ha
 ## OCI Images
 
 Default: ghcr.io/canonical/magma-lte-controller:1.8.0
-

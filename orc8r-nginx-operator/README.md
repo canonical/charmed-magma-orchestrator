@@ -36,4 +36,3 @@ juju relate orc8r-nginx:cert-controller orc8r-certifier:cert-controller
 ## OCI Images
 
 Default: ghcr.io/canonical/nginx:1.23.3
-
