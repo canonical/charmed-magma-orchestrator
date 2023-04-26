@@ -652,10 +652,6 @@ class TestCharm(unittest.TestCase):
             "Waiting for certificates relation to be created"
         )
 
-    # TODO: Handle relation broken event when supported.
-    @pytest.mark.xfail(
-        reason="Currently the new postgres lib does not support relation broken events https://github.com/canonical/data-platform-libs/pull/11/files"  # noqa: E501
-    )
     @patch("psycopg2.connect", new=Mock())
     @patch("ops.model.Container.exists")
     def test_given_pebble_ready_when_db_relation_broken_then_status_is_blocked(  # noqa: E501

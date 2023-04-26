@@ -131,12 +131,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         # Relation events
         self.framework.observe(
             self._database.on.database_created,
-            self._on_database_relation_joined,  # TODO: This should be a different event?
+            self._on_database_relation_joined,
         )
-        # TODO: Handle relation broken event when the new data platform lib supports it.
-        # self.framework.observe(
-        #     self._db.on.database_relation_broken, self._on_database_relation_broken
-        # )
+        self.framework.observe(self.on.database_relation_broken, self._on_database_relation_broken)
         self.framework.observe(
             self.on.certificates_relation_created, self._on_certificates_relation_created
         )
