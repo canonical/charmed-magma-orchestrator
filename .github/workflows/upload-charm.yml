@@ -29,10 +29,6 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           charm-path: ./${{ inputs.charm }}
 
-      - name: Select charmhub channel
-        uses: canonical/charming-actions/channel@2.2.5
-        id: channel
-
       - name: Upload charm to charmhub
         id: upload
         uses: canonical/charming-actions/upload-charm@2.2.5
