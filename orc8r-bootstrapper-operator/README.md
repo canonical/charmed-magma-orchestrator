@@ -34,4 +34,3 @@ juju relate orc8r-bootstrapper:cert-root-ca orc8r-certifier:cert-root-ca
 ## OCI Images
 
 Default: ghcr.io/canonical/magma-orc8r-controller:1.8.0
-
