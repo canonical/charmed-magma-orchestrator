@@ -18,4 +18,3 @@ juju relate orc8r-policydb postgresql-k8s:db
 ## OCI Images
 
 Default: ghcr.io/canonical/magma-lte-controller:1.8.0
-

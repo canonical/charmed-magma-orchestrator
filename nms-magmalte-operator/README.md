@@ -57,3 +57,4 @@ juju run-action nms-magmalte/leader create-nms-admin-user \
 ## OCI Images
 
 Default: ghcr.io/canonical/magma-orc8r-nms-magmalte:1.8.0
+

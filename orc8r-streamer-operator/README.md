@@ -15,3 +15,4 @@ juju deploy magma-orc8r-streamer orc8r-streamer
 ## OCI Images
 
 Default: ghcr.io/canonical/magma-orc8r-controller:1.8.0
+
