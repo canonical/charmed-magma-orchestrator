@@ -73,7 +73,7 @@ class TestOrc8rNginx:
             series="jammy",
         )
         await ops_test.model.add_relation(
-            relation1=CERTIFIER_APPLICATION_NAME, relation2=f"{DB_APPLICATION_NAME}:database"
+            relation1=CERTIFIER_APPLICATION_NAME, relation2=f"{DB_APPLICATION_NAME}:db"
         )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="tls-certificates-operator"
