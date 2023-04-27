@@ -7,7 +7,6 @@ from unittest.mock import Mock, PropertyMock, call, patch
 from ops import testing
 from ops.model import ActiveStatus, BlockedStatus
 from ops.pebble import ExecError
-from pgconnstr import ConnectionString  # type: ignore[import]
 
 from charm import MagmaNmsMagmalteCharm, ServiceNotRunningError
 
@@ -29,20 +28,13 @@ class MockExec:
 
 class TestCharm(unittest.TestCase):
     TEST_DB_NAME = MagmaNmsMagmalteCharm.DB_NAME
+    TEST_DB_HOST = "123.456.679.012"
     TEST_DB_PORT = "1234"
-    TEST_DB_CONNECTION_STRING = ConnectionString(
-        "dbname=test_db_name "
-        "fallback_application_name=whatever "
-        "host=123.456.789.012 "
-        "password=aaaBBBcccDDDeee "
-        "port=1234 "
-        "user=test_db_user"
-    )
     TEST_DOMAIN_NAME = "test.domain.com"
     GRAFANA_URLS = ["auth-requirer:3000"]
     DATABASE_DATABAG = {
         "database": "test_db_name",
-        "endpoints": "123.456.679.012:1234",
+        "endpoints": f"{TEST_DB_HOST}:{TEST_DB_PORT}",
         "username": "test_db_user",
         "password": "aaaBBBcccDDDeee",
     }
@@ -144,10 +136,9 @@ class TestCharm(unittest.TestCase):
     @patch("ops.model.Container.exec", new=Mock())
     @patch("ops.model.Container.exists")
     @patch("psycopg2.connect", new=Mock())
-    @patch("charm.ConnectionString")
     @patch("charm.MagmaNmsMagmalteCharm._grafana_url", new_callable=PropertyMock)
     def test_given_relations_are_created_and_certs_are_stored_and_grafana_urls_are_available_when_pebble_ready_then_pebble_plan_is_filled_with_magma_nms_magmalte_service_content(  # noqa: E501
-        self, grafana_url_mock, patch_connection_string, patch_file_exists
+        self, grafana_url_mock, patch_file_exists
     ):
         grafana_url_mock.return_value = self.GRAFANA_URLS[0]
         patch_file_exists.return_value = True
@@ -162,7 +153,6 @@ class TestCharm(unittest.TestCase):
             key_values=self.DATABASE_DATABAG,
             app_or_unit="postgresql-k8s",
         )
-        patch_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
 
         self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
         expected_plan = {
@@ -171,8 +161,8 @@ class TestCharm(unittest.TestCase):
                     "startup": "enabled",
                     "override": "replace",
                     "command": f"/usr/local/bin/wait-for-it.sh -s -t 30 "
-                    f"{self.TEST_DB_CONNECTION_STRING.host}:"
-                    f"{self.TEST_DB_CONNECTION_STRING.port} -- "
+                    f"{self.TEST_DB_HOST}:"
+                    f"{self.TEST_DB_PORT} -- "
                     f"yarn run start:prod",
                     "environment": {
                         "API_CERT_FILENAME": "/run/secrets/admin_operator.pem",
@@ -180,11 +170,11 @@ class TestCharm(unittest.TestCase):
                         "API_HOST": f"orc8r-nginx-proxy.{self.namespace}.svc.cluster.local",
                         "PORT": "8081",
                         "HOST": "0.0.0.0",
-                        "MYSQL_HOST": self.TEST_DB_CONNECTION_STRING.host,
-                        "MYSQL_PORT": self.TEST_DB_CONNECTION_STRING.port,
+                        "MYSQL_HOST": self.TEST_DB_HOST,
+                        "MYSQL_PORT": self.TEST_DB_PORT,
                         "MYSQL_DB": self.TEST_DB_NAME,
-                        "MYSQL_USER": self.TEST_DB_CONNECTION_STRING.user,
-                        "MYSQL_PASS": self.TEST_DB_CONNECTION_STRING.password,
+                        "MYSQL_USER": self.DATABASE_DATABAG["username"],
+                        "MYSQL_PASS": self.DATABASE_DATABAG["password"],
                         "MAPBOX_ACCESS_TOKEN": "",
                         "MYSQL_DIALECT": "postgres",
                         "PUPPETEER_SKIP_DOWNLOAD": "true",
@@ -200,19 +190,16 @@ class TestCharm(unittest.TestCase):
     @patch("ops.model.Container.exec", new=Mock())
     @patch("ops.model.Container.exists")
     @patch("psycopg2.connect", new=Mock())
-    @patch("charm.ConnectionString")
     @patch("charm.MagmaNmsMagmalteCharm._grafana_url", new_callable=PropertyMock)
     def test_given_relations_are_created_and_certs_are_stored_and_grafana_urls_are_available_when_pebble_ready_then_charm_goes_to_active_state(  # noqa: E501
         self,
         grafana_url_mock,
-        patch_connection_string,
         patch_exists,
     ):
         grafana_url_mock.return_value = self.GRAFANA_URLS[0]
         patch_exists.return_value = True
         container = self.harness.model.unit.get_container("magma-nms-magmalte")
         self.harness.set_can_connect(container=container, val=True)
-        patch_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
         )
@@ -231,9 +218,8 @@ class TestCharm(unittest.TestCase):
     @patch("ops.model.Container.exec", new=Mock())
     @patch("ops.model.Container.exists")
     @patch("psycopg2.connect", new=Mock())
-    @patch("charm.ConnectionString")
     def test_given_pebble_ready_when_db_relation_broken_then_status_is_blocked(  # noqa: E501
-        self, patch_connection_string, patch_exists
+        self, patch_exists
     ):
         event = Mock()
         event.urls = self.GRAFANA_URLS
@@ -241,7 +227,6 @@ class TestCharm(unittest.TestCase):
         container = self.harness.model.unit.get_container("magma-nms-magmalte")
         self.harness.set_can_connect(container=container, val=True)
         patch_exists.return_value = True
-        patch_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
         )
@@ -466,8 +451,8 @@ class TestCharm(unittest.TestCase):
                     "override": "replace",
                     "startup": "enabled",
                     "command": f"/usr/local/bin/wait-for-it.sh -s -t 30 "
-                    f"{self.TEST_DB_CONNECTION_STRING.host}:"
-                    f"{self.TEST_DB_CONNECTION_STRING.port} --"
+                    f"{self.TEST_DB_HOST}:"
+                    f"{self.TEST_DB_PORT} --"
                     "-- yarn run start:prod",
                     "environment": {
                         "API_CERT_FILENAME": "/run/secrets/admin_operator.pem",
@@ -475,11 +460,11 @@ class TestCharm(unittest.TestCase):
                         "API_HOST": f"orc8r-nginx-proxy.{self.namespace}.svc.cluster.local",
                         "PORT": str(8081),
                         "HOST": "0.0.0.0",
-                        "MYSQL_HOST": str(self.TEST_DB_CONNECTION_STRING.host),
-                        "MYSQL_PORT": str(self.TEST_DB_CONNECTION_STRING.port),
+                        "MYSQL_HOST": str(self.TEST_DB_HOST),
+                        "MYSQL_PORT": str(self.TEST_DB_PORT),
                         "MYSQL_DB": "magma_dev",
-                        "MYSQL_USER": str(self.TEST_DB_CONNECTION_STRING.user),
-                        "MYSQL_PASS": str(self.TEST_DB_CONNECTION_STRING.password),
+                        "MYSQL_USER": str(self.DATABASE_DATABAG["username"]),
+                        "MYSQL_PASS": str(self.DATABASE_DATABAG["password"]),
                         "MAPBOX_ACCESS_TOKEN": "",
                         "MYSQL_DIALECT": "postgres",
                         "PUPPETEER_SKIP_DOWNLOAD": "true",
@@ -549,17 +534,15 @@ class TestCharm(unittest.TestCase):
     @patch("ops.model.Container.exec", new=Mock())
     @patch("ops.model.Container.exists")
     @patch("psycopg2.connect", new=Mock())
-    @patch("charm.ConnectionString")
     @patch("charm.MagmaNmsMagmalteCharm._grafana_url", new_callable=PropertyMock)
     def test_given_nms_magmalte_service_running_when_magma_nms_magmalte_relation_joined_then_service_active_status_in_the_relation_data_bag_is_true(  # noqa: E501
-        self, grafana_url_mock, patch_connection_string, patch_exists
+        self, grafana_url_mock, patch_exists
     ):
         app_name = self.harness.model.app.name
         grafana_url_mock.return_value = self.GRAFANA_URLS[0]
         patch_exists.return_value = True
         container = self.harness.model.unit.get_container("magma-nms-magmalte")
         self.harness.set_can_connect(container=container, val=True)
-        patch_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
         )
