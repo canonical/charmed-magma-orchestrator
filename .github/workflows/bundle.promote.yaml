@@ -47,7 +47,7 @@ jobs:
         run: |
           cp README.md orc8r-bundle/
       - name: Upload bundle
-        uses: canonical/charming-actions/upload-bundle@1.0.2
+        uses: canonical/charming-actions/upload-bundle@2.2.5
         with:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
           bundle-path: ./orc8r-bundle
