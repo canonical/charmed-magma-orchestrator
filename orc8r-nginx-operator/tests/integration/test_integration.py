@@ -51,7 +51,9 @@ class TestOrc8rNginx:
 
     @staticmethod
     async def _deploy_postgresql(ops_test):
-        await ops_test.model.deploy(DB_APPLICATION_NAME, application_name=DB_APPLICATION_NAME, channel="14/stable")
+        await ops_test.model.deploy(
+            DB_APPLICATION_NAME, application_name=DB_APPLICATION_NAME, channel="14/stable"
+        )
 
     async def _deploy_orc8r_certifier(self, ops_test):
         certifier_charm = self._find_charm(
