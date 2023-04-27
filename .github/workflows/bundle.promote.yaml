@@ -1,0 +1,55 @@
+name: Upload orc8r-bundle to a specific channel
+
+on:
+  workflow_dispatch:
+    inputs:
+      promotion:
+        type: choice
+        description: Promotion process
+        required: true
+        options:
+          - edge -> beta
+          - beta -> candidate
+          - candidate -> stable
+          - stable -> latest/stable
+
+jobs:
+  orc8r-bundle-charmhub-upload:
+    if: (github.ref_name == '1.6' || github.ref_name == '1.8')
+    runs-on: ubuntu-22.04
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v3
+      - name: Set target channel
+        env:
+          PROMOTION: ${{ github.event.inputs.promotion }}
+        run: |
+          if [ "${PROMOTION}" == "edge -> beta" ]; then
+          echo "promote-to=${{ github.ref_name }}/beta" >> ${GITHUB_ENV}
+          elif [ "${PROMOTION}" == "beta -> candidate" ]; then
+          echo "promote-to=${{ github.ref_name }}/candidate" >> ${GITHUB_ENV}
+          elif [ "${PROMOTION}" == "candidate -> stable" ]; then
+          echo "promote-to=${{ github.ref_name }}/stable" >> ${GITHUB_ENV}
+          elif [ "${PROMOTION}" == "stable -> latest/stable" ]; then
+          echo "promote-to=latest/stable" >> ${GITHUB_ENV}
+          fi
+      - name: setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 'pypy3.9'
+      - name: install jinja2
+        run: pip install -U Jinja2
+      - name: render bundle.yaml
+        run: |
+          python orc8r-bundle/render_bundle.py \
+          --template orc8r-bundle/bundle.yaml.j2 --output orc8r-bundle/bundle.yaml --channel ${{ env.promote-to }}
+      - name: copy README.md
+        run: |
+          cp README.md orc8r-bundle/
+      - name: Upload bundle
+        uses: canonical/charming-actions/upload-bundle@1.0.2
+        with:
+          credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
+          bundle-path: ./orc8r-bundle
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          channel: ${{ env.promote-to }}
