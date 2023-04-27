@@ -9,7 +9,6 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from ops import testing
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
-from pgconnstr import ConnectionString  # type: ignore[import]
 
 from charm import MagmaOrc8rBootstrapperCharm
 
@@ -47,18 +46,11 @@ class TestCharm(unittest.TestCase):
     BASE_CERTS_PATH = "/var/opt/magma/certs"
     CERT_ROOT_CA_RELATION = "cert-root-ca"
     TEST_DB_NAME = MagmaOrc8rBootstrapperCharm.DB_NAME
+    TEST_DB_ADDRESS = "123.456.789.012"
     TEST_DB_PORT = "1234"
-    TEST_DB_CONNECTION_STRING = ConnectionString(
-        "dbname=test_db_name "
-        "fallback_application_name=whatever "
-        "host=123.456.789.012 "
-        "password=aaaBBBcccDDDeee "
-        "port=1234 "
-        "user=test_db_user"
-    )
     DATABASE_DATABAG = {
         "database": "test_db_name",
-        "endpoints": "123.456.789.012:1234",
+        "endpoints": f"{TEST_DB_ADDRESS}:{TEST_DB_PORT}",
         "username": "test_db_user",
         "password": "aaaBBBcccDDDeee",
     }
@@ -252,9 +244,9 @@ class TestCharm(unittest.TestCase):
                         "SERVICE_REGISTRY_MODE": "k8s",
                         "SERVICE_REGISTRY_NAMESPACE": self.namespace,
                         "DATABASE_SOURCE": f"dbname={self.TEST_DB_NAME} "
-                        f"user={self.TEST_DB_CONNECTION_STRING.user} "
-                        f"password={self.TEST_DB_CONNECTION_STRING.password} "
-                        f"host={self.TEST_DB_CONNECTION_STRING.host} "
+                        f"user={self.DATABASE_DATABAG['username']} "
+                        f"password={self.DATABASE_DATABAG['password']} "
+                        f"host={self.TEST_DB_ADDRESS} "
                         f"port={self.TEST_DB_PORT} "
                         f"sslmode=disable",
                         "SQL_DRIVER": "postgres",
