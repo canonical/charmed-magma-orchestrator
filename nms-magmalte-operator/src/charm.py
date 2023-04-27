@@ -73,7 +73,9 @@ class MagmaNmsMagmalteCharm(CharmBase):
         super().__init__(*args)
         self._container_name = self._service_name = "magma-nms-magmalte"
         self._container = self.unit.get_container(self._container_name)
-        self._database = DatabaseRequires(self, relation_name="db", database_name=self.DB_NAME)
+        self._database = DatabaseRequires(
+            self, relation_name="database", database_name=self.DB_NAME
+        )
         self.admin_operator = CertAdminOperatorRequires(self, self.CERT_ADMIN_OPERATOR_RELATION)
         self._service_patcher = KubernetesServicePatch(
             charm=self,
@@ -94,7 +96,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         )
         self.framework.observe(self.on.magma_nms_magmalte_pebble_ready, self._configure_workload)
         self.framework.observe(self._database.on.database_created, self._configure_workload)
-        self.framework.observe(self.on.db_relation_broken, self._on_database_relation_broken)
+        self.framework.observe(self.on.database_relation_broken, self._on_database_relation_broken)
         self.framework.observe(
             self.on.magma_nms_magmalte_relation_joined,
             self._on_magma_nms_magmalte_relation_joined,
@@ -252,7 +254,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         Returns:
             bool: True/False
         """
-        return self._relation_created("db")
+        return self._relation_created("database")
 
     @property
     def _cert_admin_operator_relation_created(self) -> bool:
@@ -327,7 +329,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             None
         """
         if not self._db_relation_created:
-            self.unit.status = BlockedStatus("Waiting for db relation to be created")
+            self.unit.status = BlockedStatus("Waiting for database relation to be created")
             event.defer()
             return
         if not self._cert_admin_operator_relation_created:
@@ -343,7 +345,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
             event.defer()
             return
         if not self._db_relation_established:
-            self.unit.status = WaitingStatus("Waiting for db relation to be ready")
+            self.unit.status = WaitingStatus("Waiting for database relation to be ready")
             event.defer()
             return
         if not self._certs_are_stored:
@@ -395,7 +397,7 @@ class MagmaNmsMagmalteCharm(CharmBase):
         Returns:
             None
         """
-        self.unit.status = BlockedStatus("Waiting for db relation to be created")
+        self.unit.status = BlockedStatus("Waiting for database relation to be created")
 
     def _on_magma_nms_magmalte_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Triggered when requirers join the nms_magmalte relation.

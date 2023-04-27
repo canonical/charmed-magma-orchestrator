@@ -68,7 +68,7 @@ class TestCharm(unittest.TestCase):
         db_event.endpoints = f"{postgres_host}:{postgres_port}"
         return db_event
 
-    def test_given_db_relation_not_created_when_pebble_ready_then_unit_is_in_blocked_state(  # noqa: E501
+    def test_given_database_relation_not_created_when_pebble_ready_then_unit_is_in_blocked_state(  # noqa: E501
         self,
     ):
         self.harness.add_relation(
@@ -78,13 +78,13 @@ class TestCharm(unittest.TestCase):
 
         self.assertEqual(
             self.harness.charm.unit.status,
-            BlockedStatus("Waiting for db relation to be created"),
+            BlockedStatus("Waiting for database relation to be created"),
         )
 
     def test_given_cert_admin_operator_relation_not_created_when_pebble_ready_then_unit_is_in_blocked_state(  # noqa: E501
         self,
     ):
-        self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        self.harness.add_relation(relation_name="database", remote_app="postgresql-k8s")
 
         self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
 
@@ -99,7 +99,7 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
         )
-        self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        self.harness.add_relation(relation_name="database", remote_app="postgresql-k8s")
         self.harness.remove_relation(self.grafana_auth_rel_id)
 
         self.harness.container_pebble_ready(container_name="magma-nms-magmalte")
@@ -144,7 +144,9 @@ class TestCharm(unittest.TestCase):
         patch_file_exists.return_value = True
         container = self.harness.model.unit.get_container("magma-nms-magmalte")
         self.harness.set_can_connect(container=container, val=True)
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
         )
@@ -203,7 +205,9 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
         )
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
         self.harness.update_relation_data(
             relation_id=db_relation_id,
             key_values=self.DATABASE_DATABAG,
@@ -218,7 +222,7 @@ class TestCharm(unittest.TestCase):
     @patch("ops.model.Container.exec", new=Mock())
     @patch("ops.model.Container.exists")
     @patch("psycopg2.connect", new=Mock())
-    def test_given_pebble_ready_when_db_relation_broken_then_status_is_blocked(  # noqa: E501
+    def test_given_pebble_ready_when_database_relation_broken_then_status_is_blocked(  # noqa: E501
         self, patch_exists
     ):
         event = Mock()
@@ -230,7 +234,9 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
         )
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
         self.harness.update_relation_data(
             relation_id=db_relation_id,
             key_values=self.DATABASE_DATABAG,
@@ -239,7 +245,8 @@ class TestCharm(unittest.TestCase):
 
         self.harness.remove_relation(db_relation_id)
         self.assertEqual(
-            self.harness.charm.unit.status, BlockedStatus("Waiting for db relation to be created")
+            self.harness.charm.unit.status,
+            BlockedStatus("Waiting for database relation to be created"),
         )
 
     @patch("ops.model.Container.get_service", new=Mock())
@@ -434,7 +441,9 @@ class TestCharm(unittest.TestCase):
         patch_exists.return_value = True
         container = self.harness.model.unit.get_container(service_name)
         self.harness.set_can_connect(container=container, val=True)
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
         self.harness.update_relation_data(
             relation_id=db_relation_id,
             key_values=self.DATABASE_DATABAG,
@@ -493,7 +502,9 @@ class TestCharm(unittest.TestCase):
         service_name = "magma-nms-magmalte"
         grafana_url_mock.return_value = self.GRAFANA_URLS[0]
         patch_exists.return_value = True
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
         self.harness.update_relation_data(
             relation_id=db_relation_id,
             key_values=self.DATABASE_DATABAG,
@@ -546,7 +557,9 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation(
             relation_name="cert-admin-operator", remote_app="magma-orc8r-certifier"
         )
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
         self.harness.update_relation_data(
             relation_id=db_relation_id,
             key_values=self.DATABASE_DATABAG,
