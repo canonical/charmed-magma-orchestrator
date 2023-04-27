@@ -1,0 +1,172 @@
+name: Promote Charm
+
+on:
+  workflow_dispatch:
+    inputs:
+      promotion:
+        type: choice
+        description: Promotion process
+        required: true
+        options:
+          - edge -> beta
+          - beta -> candidate
+          - candidate -> stable
+          - stable -> latest/stable
+      charm-name:
+        type: choice
+        description: 'Charm Name'
+        required: true
+        options:
+          - all
+          - orc8r-accessd
+          - orc8r-analytics
+          - orc8r-bootstrapper
+          - orc8r-certifier
+          - orc8r-configurator
+          - orc8r-ctraced
+          - orc8r-device
+          - orc8r-directoryd
+          - orc8r-dispatcher
+          - orc8r-eventd
+          - orc8r-ha
+          - orc8r-lte
+          - orc8r-metricsd
+          - orc8r-nginx
+          - nms-magmalte
+          - nms-nginx-proxy
+          - orc8r-obsidian
+          - orc8r-orchestrator
+          - orc8r-policydb
+          - orc8r-service-registry
+          - orc8r-smsd
+          - orc8r-state
+          - orc8r-streamer
+          - orc8r-subscriberdb-cache
+          - orc8r-subscriberdb
+          - orc8r-tenants
+
+env:
+  BASE_CHANNEL: 22.04
+
+jobs:
+  promote-all:
+    if: (github.ref_name == '1.6' || github.ref_name == '1.8') && github.event.inputs.charm-name == 'all'
+    name: Promote All Charms
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        charms: [
+          orc8r-accessd,
+          orc8r-analytics,
+          orc8r-bootstrapper,
+          orc8r-certifier,
+          orc8r-configurator,
+          orc8r-ctraced,
+          orc8r-device,
+          orc8r-directoryd,
+          orc8r-dispatcher,
+          orc8r-eventd,
+          orc8r-ha,
+          orc8r-lte,
+          orc8r-metricsd,
+          orc8r-nginx,
+          nms-magmalte,
+          nms-nginx-proxy,
+          orc8r-obsidian,
+          orc8r-orchestrator,
+          orc8r-policydb,
+          orc8r-service-registry,
+          orc8r-smsd,
+          orc8r-state,
+          orc8r-streamer,
+          orc8r-subscriberdb-cache,
+          orc8r-subscriberdb,
+          orc8r-tenants,
+        ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set Environment Variables
+        uses: tw3lveparsecs/github-actions-setvars@v0.2
+        with:
+          varFilePath: ./.github/variables/dependencies_versions.env
+
+      - name: Set target channel
+        env:
+          PROMOTION: ${{ github.event.inputs.promotion }}
+        run: |
+          if [ "${PROMOTION}" == "edge -> beta" ]; then
+            echo "promote-from=${{ github.ref_name }}/edge" >> ${GITHUB_ENV}
+            echo "promote-to=${{ github.ref_name }}/beta" >> ${GITHUB_ENV}
+          elif [ "${PROMOTION}" == "beta -> candidate" ]; then
+            echo "promote-from=${{ github.ref_name }}/beta" >> ${GITHUB_ENV}
+            echo "promote-to=${{ github.ref_name }}/candidate" >> ${GITHUB_ENV}
+          elif [ "${PROMOTION}" == "candidate -> stable" ]; then
+            echo "promote-from=${{ github.ref_name }}/candidate" >> ${GITHUB_ENV}
+            echo "promote-to=${{ github.ref_name }}/stable" >> ${GITHUB_ENV}
+          elif [ "${PROMOTION}" == "stable -> latest/stable" ]; then
+            echo "promote-from=${{ github.ref_name }}/stable" >> ${GITHUB_ENV}
+            echo "promote-to=latest/stable" >> ${GITHUB_ENV}
+          fi
+      - name: Set base channel
+        if: matrix.charms == 'nms-nginx-proxy'
+        run: echo "BASE_CHANNEL=22.04" >> ${GITHUB_ENV}
+
+      - name: Promote all Charms
+        uses: canonical/charming-actions/release-charm@2.2.5
+        with:
+          credentials: ${{ secrets.CHARMCRAFT_AUTH }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          destination-channel: ${{ env.promote-to }}
+          origin-channel: ${{ env.promote-from }}
+          base-channel: ${{ env.BASE_CHANNEL }}
+          tag-prefix: magma-${{ matrix.charms }}-operator
+          charm-path: ./${{ matrix.charms }}-operator
+          charmcraft-channel: ${{ env.CHARMCRAFT_VERSION }}
+
+  promote:
+    if: (github.ref_name == '1.6' || github.ref_name == '1.8') && github.event.inputs.charm-name == 'all'
+    name: Promote Charm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set Environment Variables
+        uses: tw3lveparsecs/github-actions-setvars@v0.2
+        with:
+          varFilePath: ./.github/variables/dependencies_versions.env
+
+      - name: Set target channel
+        env:
+          PROMOTION: ${{ github.event.inputs.promotion }}
+        run: |
+          if [ "${PROMOTION}" == "edge -> beta" ]; then
+            echo "promote-from=${{ github.ref_name }}/edge" >> ${GITHUB_ENV}
+            echo "promote-to=${{ github.ref_name }}/beta" >> ${GITHUB_ENV}
+          elif [ "${PROMOTION}" == "beta -> candidate" ]; then
+            echo "promote-from=${{ github.ref_name }}/beta" >> ${GITHUB_ENV}
+            echo "promote-to=${{ github.ref_name }}/candidate" >> ${GITHUB_ENV}
+          elif [ "${PROMOTION}" == "candidate -> stable" ]; then
+            echo "promote-from=${{ github.ref_name }}/candidate" >> ${GITHUB_ENV}
+            echo "promote-to=${{ github.ref_name }}/stable" >> ${GITHUB_ENV}
+          elif [ "${PROMOTION}" == "stable -> latest/stable" ]; then
+            echo "promote-from=${{ github.ref_name }}/stable" >> ${GITHUB_ENV}
+            echo "promote-to=latest/stable" >> ${GITHUB_ENV}
+          fi
+      - name: Set base channel
+        if: github.event.inputs.charm-name == 'nms-nginx-proxy'
+        run: echo "BASE_CHANNEL=22.04" >> ${GITHUB_ENV}
+
+      - name: Promote Charm
+        uses: canonical/charming-actions/release-charm@2.2.5
+        with:
+          credentials: ${{ secrets.CHARMCRAFT_AUTH }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          destination-channel: ${{ env.promote-to }}
+          origin-channel: ${{ env.promote-from }}
+          base-channel: ${{ env.BASE_CHANNEL }}
+          tag-prefix: magma-${{ github.event.inputs.charm-name }}-operator
+          charm-path: ./${{ github.event.inputs.charm-name }}-operator
+          charmcraft-channel: ${{ env.CHARMCRAFT_VERSION }}
