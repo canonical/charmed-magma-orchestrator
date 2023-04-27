@@ -20,7 +20,7 @@ class TestOrc8rPolicyDB:
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail
     async def setup(self, ops_test):
-        self._deploy_postgresql(ops_test)
+        await self._deploy_postgresql(ops_test)
 
     @staticmethod
     async def _deploy_postgresql(ops_test):

@@ -13,7 +13,6 @@ summary: |
   on the gateway, so these can be then later sent to Orchestrator. These events will be sent
   to ElasticSearch where they can be queried.
 website: https://github.com/canonical/charmed-magma-orchestrator
-
 containers:
   magma-orc8r-eventd:
     resource: magma-orc8r-eventd-image
