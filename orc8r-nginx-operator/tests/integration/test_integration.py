@@ -29,6 +29,7 @@ OBSIDIAN_APPLICATION_NAME = "orc8r-obsidian"
 OBSIDIAN_CHARM_NAME = "magma-orc8r-obsidian"
 OBSIDIAN_CHARM_FILE_NAME = "magma-orc8r-obsidian_ubuntu-22.04-amd64.charm"
 DOMAIN = "example.com"
+DB_APPLICATION_NAME = "postgresql-k8s"
 
 
 class TestOrc8rNginx:
@@ -52,7 +53,9 @@ class TestOrc8rNginx:
     @staticmethod
     async def _deploy_postgresql(ops_test):
         await ops_test.model.deploy(
-            DB_APPLICATION_NAME, application_name=DB_APPLICATION_NAME, channel="14/stable"
+            "postgresql-k8s",
+            application_name=DB_APPLICATION_NAME,
+            channel="14/stable",
         )
 
     async def _deploy_orc8r_certifier(self, ops_test):
@@ -75,7 +78,7 @@ class TestOrc8rNginx:
             series="jammy",
         )
         await ops_test.model.add_relation(
-            relation1=CERTIFIER_APPLICATION_NAME, relation2=f"{DB_APPLICATION_NAME}:db"
+            relation1=CERTIFIER_APPLICATION_NAME, relation2=f"{DB_APPLICATION_NAME}:database"
         )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="tls-certificates-operator"

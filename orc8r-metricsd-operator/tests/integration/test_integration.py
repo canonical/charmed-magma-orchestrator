@@ -35,6 +35,7 @@ SERVICE_REGISTRY_CHARM_NAME = "magma-orc8r-service-registry"
 SERVICE_REGISTRY_CHARM_FILE_NAME = "magma-orc8r-service-registry_ubuntu-22.04-amd64.charm"
 DOMAIN = "whatever.com"
 WAIT_FOR_STATUS_TIMEOUT = 5 * 60
+DB_APPLICATION_NAME = "postgresql-k8s"
 
 
 class TestOrc8rMetricsd:
@@ -64,7 +65,11 @@ class TestOrc8rMetricsd:
 
     @staticmethod
     async def _deploy_postgresql(ops_test):
-        await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
+        await ops_test.model.deploy(
+            "postgresql-k8s",
+            application_name=DB_APPLICATION_NAME,
+            channel="14/stable",
+        )
 
     @staticmethod
     async def _deploy_alertmanager(ops_test):
@@ -165,7 +170,7 @@ class TestOrc8rMetricsd:
             series="jammy",
         )
         await ops_test.model.add_relation(
-            relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
+            relation1=CERTIFIER_APPLICATION_NAME, relation2=f"{DB_APPLICATION_NAME}:database"
         )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="tls-certificates-operator"
@@ -197,7 +202,7 @@ class TestOrc8rMetricsd:
             series="jammy",
         )
         await ops_test.model.add_relation(
-            relation1=ACCESSD_APPLICATION_NAME, relation2="postgresql-k8s:db"
+            relation1=ACCESSD_APPLICATION_NAME, relation2=f"{DB_APPLICATION_NAME}:db"
         )
 
     async def _deploy_orc8r_orchestrator(self, ops_test):
