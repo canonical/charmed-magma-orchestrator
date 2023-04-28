@@ -57,19 +57,11 @@ class TestNmsMagmaLTE:
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
 
     async def test_remove_db_application(self, ops_test, setup, build_and_deploy_charm):
-        await ops_test.model.remove_application(
-            integration_utils.DB_APPLICATION_NAME, block_until_done=True, force=True
-        )
+        await integration_utils.remove_postgresql(ops_test)
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
 
     async def test_redeploy_db(self, ops_test, setup, build_and_deploy_charm):
-        await integration_utils.deploy_postgresql(ops_test)
-        await ops_test.model.add_relation(
-            relation1=integration_utils.CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
-        )
-        await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
-        )
+        await integration_utils.redeploy_and_relate_postgresql(ops_test)
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
 
     async def test_scale_up(self, ops_test, setup, build_and_deploy_charm):

@@ -5,49 +5,9 @@
 
 from pathlib import Path
 from typing import Optional
+from integration_constatns import *
 
 import yaml
-
-CERTIFIER_METADATA = yaml.safe_load(
-    Path("../orc8r-certifier-operator/metadata.yaml").read_text())
-NMS_MAGMALTE_METADATA = yaml.safe_load(
-    Path("../nms-magmalte-operator/metadata.yaml").read_text())
-ORCHESTRATOR_METADATA = yaml.safe_load(
-    Path("../orc8r-orchestrator-operator/metadata.yaml").read_text()
-)
-ACCESSD_METADATA = yaml.safe_load(
-    Path("../orc8r-accessd-operator/metadata.yaml").read_text())
-SERVICE_REGISTRY_METADATA = yaml.safe_load(
-    Path("../orc8r-service-registry-operator/metadata.yaml").read_text()
-)
-BOOTSTRAPPER_METADATA = yaml.safe_load(
-    Path("../orc8r-bootstrapper-operator/metadata.yaml").read_text()
-)
-OBSIDIAN_METADATA = yaml.safe_load(
-    Path("../orc8r-obsidian-operator/metadata.yaml").read_text())
-
-CERTIFIER_APPLICATION_NAME = "orc8r-certifier"
-CERTIFIER_CHARM_NAME = "magma-orc8r-certifier"
-CERTIFIER_CHARM_FILE_NAME = "magma-orc8r-certifier_ubuntu-22.04-amd64.charm"
-DB_APPLICATION_NAME = "postgresql-k8s"
-NMS_MAGMALTE_APPLICATION_NAME = "nms-magmalte"
-NMS_MAGMALTE_CHARM_NAME = "magma-nms-magmalte"
-NMS_MAGMALTE_CHARM_FILE_NAME = "magma-nms-magmalte_ubuntu-22.04-amd64.charm"
-ORCHESTRATOR_APPLICATION_NAME = "orc8r-orchestrator"
-ORCHESTRATOR_CHARM_NAME = "magma-orc8r-orchestrator"
-ORCHESTRATOR_CHARM_FILE_NAME = "magma-orc8r-orchestrator_ubuntu-22.04-amd64.charm"
-ACCESSD_APPLICATION_NAME = "orc8r-accessd"
-ACCESSD_CHARM_NAME = "magma-orc8r-accessd"
-ACCESSD_CHARM_FILE_NAME = "magma-orc8r-accessd_ubuntu-22.04-amd64.charm"
-SERVICE_REGISTRY_APPLICATION_NAME = "orc8r-service-registry"
-SERVICE_REGISTRY_CHARM_NAME = "magma-orc8r-service-registry"
-SERVICE_REGISTRY_CHARM_FILE_NAME = "magma-orc8r-service-registry_ubuntu-22.04-amd64.charm"
-BOOTSTRAPPER_APPLICATION_NAME = "orc8r-bootstrapper"
-BOOTSTRAPPER_CHARM_NAME = "magma-orc8r-bootstrapper"
-BOOTSTRAPPER_CHARM_FILE_NAME = "magma-orc8r-bootstrapper_ubuntu-22.04-amd64.charm"
-OBSIDIAN_APPLICATION_NAME = "orc8r-obsidian"
-OBSIDIAN_CHARM_NAME = "magma-orc8r-obsidian"
-OBSIDIAN_CHARM_FILE_NAME = "magma-orc8r-obsidian_ubuntu-22.04-amd64.charm"
 
 def find_charm(charm_dir: str, charm_file_name: str) -> Optional[str]:
     """Locates a specific charm.
@@ -333,3 +293,28 @@ async def deploy_orc8r_obsidian(ops_test):
         trust=True,
         series="jammy",
     )
+
+async def remove_postgresql(ops_test):
+    await ops_test.model.remove_application(
+            DB_APPLICATION_NAME, block_until_done=True, force=True
+    )
+
+async def redeploy_and_relate_postgresql(ops_test):
+    await deploy_postgresql(ops_test)
+    for requirer in [
+        CERTIFIER_APPLICATION_NAME,
+        NMS_MAGMALTE_APPLICATION_NAME,
+        ACCESSD_APPLICATION_NAME,
+        BOOTSTRAPPER_APPLICATION_NAME
+        ]:
+        if _application_is_deployed(ops_test, requirer):
+            await ops_test.model.add_relation(
+                relation1=requirer, relation2="postgresql-k8s:db"
+            )
+
+def _application_is_deployed(ops_test, app_name):
+    try:
+        ops_test.model.get_app(app_name)
+        return True
+    except:
+        return False
