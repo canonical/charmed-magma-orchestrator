@@ -27,7 +27,7 @@ class TestOrc8rCertifier:
     @staticmethod
     async def _deploy_postgresql(ops_test):
         await ops_test.model.deploy(
-            "postgresql-k8s",
+            DB_APPLICATION_NAME,
             application_name=DB_APPLICATION_NAME,
             channel="14/stable",
         )
@@ -73,14 +73,16 @@ class TestOrc8rCertifier:
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
 
+    @pytest.mark.xfail(reason="https://warthogs.atlassian.net/browse/DPE-1470")
     async def test_remove_db_application(self, ops_test, setup, build_and_deploy):
         await ops_test.model.remove_application(
             DB_APPLICATION_NAME, block_until_done=True, force=True
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
 
+    @pytest.mark.xfail(reason="https://warthogs.atlassian.net/browse/DPE-1470")
     async def test_redeploy_db(self, ops_test, setup, build_and_deploy):
-        await ops_test.model.deploy(DB_APPLICATION_NAME, application_name=DB_APPLICATION_NAME)
+        await self._deploy_postgresql(ops_test)
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2=f"{DB_APPLICATION_NAME}:database"
         )

@@ -22,25 +22,17 @@ from cryptography.hazmat.primitives.serialization import pkcs12
 from ops import testing
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from ops.pebble import Layer, PathError
-from pgconnstr import ConnectionString  # type: ignore[import]
 
 from charm import MagmaOrc8rCertifierCharm
 
 
 class TestCharm(unittest.TestCase):
     TEST_DB_NAME = MagmaOrc8rCertifierCharm.DB_NAME
+    TEST_DB_ADDRESS = "123.456.789.012"
     TEST_DB_PORT = "1234"
-    TEST_DB_CONNECTION_STRING = ConnectionString(
-        "dbname=test_db_name "
-        "fallback_application_name=whatever "
-        "host=123.456.789.012 "
-        "password=aaaBBBcccDDDeee "
-        f"port={TEST_DB_PORT} "
-        "user=test_db_user"
-    )
     DATABASE_DATABAG = {
         "database": "test_db_name",
-        "endpoints": f"123.456.789.012:{TEST_DB_PORT}",
+        "endpoints": f"{TEST_DB_ADDRESS}:{TEST_DB_PORT}",
         "username": "test_db_user",
         "password": "aaaBBBcccDDDeee",
     }
@@ -208,7 +200,7 @@ class TestCharm(unittest.TestCase):
                 postgres_host,
                 postgres_port,
             )
-            self.harness.charm._on_database_relation_joined(db_event)
+            self.harness.charm._configure_pebble(db_event)
         self.assertEqual(db_event.database, self.TEST_DB_NAME)
 
     @patch("ops.model.Container.push")
@@ -697,13 +689,14 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
 
         assert self.harness.charm.unit.status == WaitingStatus(
-            "Waiting for db relation to be ready"
+            "Waiting for database relation to be ready"
         )
 
     @patch("psycopg2.connect", new=Mock())
     def test_given_private_keys_not_pushed_when_on_pebble_ready_certifier_then_status_is_waiting(
         self,
     ):
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
         self.harness.update_config(key_values={"domain": "whatever.com"})
         self.harness.add_relation(
             relation_name="certificates", remote_app="tls-certificates-provider"
@@ -768,9 +761,9 @@ class TestCharm(unittest.TestCase):
                     "-v=0",
                     "environment": {
                         "DATABASE_SOURCE": f"dbname={self.TEST_DB_NAME} "
-                        f"user={self.TEST_DB_CONNECTION_STRING.user} "
-                        f"password={self.TEST_DB_CONNECTION_STRING.password} "
-                        f"host={self.TEST_DB_CONNECTION_STRING.host}:{self.TEST_DB_CONNECTION_STRING.port} "  # noqa: W505, E501
+                        f"user={self.DATABASE_DATABAG['username']} "
+                        f"password={self.DATABASE_DATABAG['password']} "
+                        f"host={self.TEST_DB_ADDRESS} "  # noqa: W505, E501
                         f"sslmode=disable",
                         "SQL_DRIVER": "postgres",
                         "SQL_DIALECT": "psql",
@@ -827,9 +820,9 @@ class TestCharm(unittest.TestCase):
                         "-v=0",
                         "environment": {
                             "DATABASE_SOURCE": f"dbname={self.TEST_DB_NAME} "
-                            f"user={self.TEST_DB_CONNECTION_STRING.user} "
-                            f"password={self.TEST_DB_CONNECTION_STRING.password} "
-                            f"host={self.TEST_DB_CONNECTION_STRING.host} "
+                            f"user={self.DATABASE_DATABAG['username']} "
+                            f"password={self.DATABASE_DATABAG['password']} "
+                            f"host={self.TEST_DB_ADDRESS} "
                             f"sslmode=disable",
                             "SQL_DRIVER": "postgres",
                             "SQL_DIALECT": "psql",
