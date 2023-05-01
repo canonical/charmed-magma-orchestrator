@@ -11,6 +11,10 @@ jobs:
   integration-tests:
     runs-on: ubuntu-22.04
     steps:
+      - name: |
+      echo "Microk8s version: ${{ env.MICROK8S_VERSION }}"
+      echo "Juju version: ${{ env.JUJU_VERSION }}"
+
       - name: Checkout
         uses: actions/checkout@v3
       - name: Set Environment Variables
