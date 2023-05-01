@@ -302,14 +302,7 @@ async def redeploy_and_relate_postgresql(ops_test):
     """Deploys the database charm and relates it to all charms that require it."""
     await deploy_postgresql(ops_test)
     for requirer in DB_REQUIRER_ORC8R_CHARMS:
-        if _application_is_deployed(ops_test, requirer):
+        if requirer in ops_test.model.applications:
             await ops_test.model.add_relation(
                 relation1=requirer, relation2="postgresql-k8s:db"
             )
-
-def _application_is_deployed(ops_test, app_name):
-    try:
-        ops_test.model.get_app(app_name)
-        return True
-    except:
-        return False
