@@ -1,0 +1,18 @@
+juju==3.0.4
+black
+coverage[toml]
+flake8
+flake8-builtins
+flake8-copyright
+flake8-docstrings
+isort
+Jinja2
+mypy
+pep8-naming
+pyproject-flake8
+pytest
+pytest-operator
+types-PyYAML
+types-setuptools
+types-toml
+-e ../shared_test_utils/
