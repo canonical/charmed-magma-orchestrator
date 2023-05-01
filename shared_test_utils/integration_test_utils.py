@@ -7,8 +7,6 @@ from pathlib import Path
 from typing import Optional
 from integration_constatns import *
 
-import yaml
-
 def find_charm(charm_dir: str, charm_file_name: str) -> Optional[str]:
     """Locates a specific charm.
 
@@ -295,18 +293,15 @@ async def deploy_orc8r_obsidian(ops_test):
     )
 
 async def remove_postgresql(ops_test):
+    """Removes the database charm."""
     await ops_test.model.remove_application(
             DB_APPLICATION_NAME, block_until_done=True, force=True
     )
 
 async def redeploy_and_relate_postgresql(ops_test):
+    """Deploys the database charm and relates it to all charms that require it."""
     await deploy_postgresql(ops_test)
-    for requirer in [
-        CERTIFIER_APPLICATION_NAME,
-        NMS_MAGMALTE_APPLICATION_NAME,
-        ACCESSD_APPLICATION_NAME,
-        BOOTSTRAPPER_APPLICATION_NAME
-        ]:
+    for requirer in DB_REQUIRER_ORC8R_CHARMS:
         if _application_is_deployed(ops_test, requirer):
             await ops_test.model.add_relation(
                 relation1=requirer, relation2="postgresql-k8s:db"

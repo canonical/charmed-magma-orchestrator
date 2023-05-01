@@ -56,10 +56,12 @@ class TestNmsMagmaLTE:
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
 
+    @pytest.mark.abort_on_fail
     async def test_remove_db_application(self, ops_test, setup, build_and_deploy_charm):
         await integration_utils.remove_postgresql(ops_test)
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
 
+    @pytest.mark.abort_on_fail
     async def test_redeploy_db(self, ops_test, setup, build_and_deploy_charm):
         await integration_utils.redeploy_and_relate_postgresql(ops_test)
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
