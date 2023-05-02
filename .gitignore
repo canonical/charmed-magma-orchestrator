@@ -7,3 +7,6 @@
 
 # Charmcraft
 *.charm
+
+# Local package
+*.egg-info
