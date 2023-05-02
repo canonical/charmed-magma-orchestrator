@@ -27,18 +27,31 @@ def find_charm(charm_dir: str, charm_file_name: str) -> Optional[str]:
         return None
 
 
-async def deploy_postgresql(ops_test, channel="14/stable"):
-    """Deploys postgresql charm."""
+async def deploy_postgresql(ops_test, channel="14/stable") -> None:
+    """Deploys postgresql charm.
+
+    Args:
+        ops_test
+        channel (str): channel from which the charm will be deployed
+    """
     await ops_test.model.deploy(
-        "postgresql-k8s", application_name=itest_const.DB_APPLICATION_NAME
+        itest_const.DB_CHARM_NAME, application_name=itest_const.DB_CHARM_NAME
     )
 
 
-async def deploy_tls_certificates_operator(ops_test, channel="latest/stable"):
-    """Deploys tls-certificates-operator charm."""
+async def deploy_tls_certificates_operator(
+    ops_test,
+    channel="latest/stable",
+) -> None:
+    """Deploys tls-certificates-operator charm.
+
+    Args:
+        ops_test (OpsTest)
+        channel (str): channel from which the charm will be deployed
+    """
     await ops_test.model.deploy(
-        "tls-certificates-operator",
-        application_name="tls-certificates-operator",
+        itest_const.TLS_CERTIFICATES_CHARM_NAME,
+        application_name=itest_const.TLS_CERTIFICATES_CHARM_NAME,
         config={
             "generate-self-signed-certificates": True,
             "ca-common-name": "rootca.whatever.com",
@@ -47,8 +60,12 @@ async def deploy_tls_certificates_operator(ops_test, channel="latest/stable"):
     )
 
 
-async def deploy_orc8r_certifier(ops_test):
-    """Deploys orc8r-certifier-operator charm."""
+async def deploy_orc8r_certifier(ops_test) -> None:
+    """Deploys orc8r-certifier-operator charm.
+
+    Args:
+        ops_test (OpsTest)
+    """
     certifier_charm = find_charm(
         "../orc8r-certifier-operator", itest_const.CERTIFIER_CHARM_FILE_NAME
     )
@@ -75,54 +92,83 @@ async def deploy_orc8r_certifier(ops_test):
     )
     await ops_test.model.add_relation(
         relation1=itest_const.CERTIFIER_APPLICATION_NAME,
-        relation2="postgresql-k8s:db",
+        relation2=f"{itest_const.DB_CHARM_NAME}:db",
     )
     await ops_test.model.add_relation(
         relation1=itest_const.CERTIFIER_APPLICATION_NAME,
-        relation2="tls-certificates-operator",
+        relation2=itest_const.TLS_CERTIFICATES_CHARM_NAME,
     )
 
 
-async def deploy_grafana_k8s_operator(ops_test, channel="latest/stable"):
-    """Deploys grafana-k8 charm."""
+async def deploy_grafana_k8s_operator(
+    ops_test,
+    channel="latest/stable",
+) -> None:
+    """Deploys grafana-k8 charm.
+
+    Args:
+        ops_test (OpsTest)
+        channel (str): channel from which the charm will be deployed
+    """
     await ops_test.model.deploy(
-        "grafana-k8s",
-        application_name="grafana-k8s",
+        itest_const.GRAFANA_K8S_CHARM_NAME,
+        application_name=itest_const.GRAFANA_K8S_CHARM_NAME,
         channel=channel,
         trust=True,
     )
 
 
-async def deploy_prometheus_configurer(ops_test, channel="latest/stable"):
-    """Deploys prometheus-configurer-k8s charm."""
+async def deploy_prometheus_configurer(
+    ops_test,
+    channel="latest/stable",
+) -> None:
+    """Deploys prometheus-configurer-k8s charm.
+
+    Args:
+        ops_test (OpsTest)
+        channel (str): channel from which the charm will be deployed
+    """
     await ops_test.model.deploy(
-        "prometheus-configurer-k8s",
-        application_name="orc8r-prometheus-configurer",
+        itest_const.PROMETHEUS_CONFIGURER_K8S_CHARM_NAME,
+        application_name=itest_const.PROMETHEUS_CONFIGURER_K8S_CHARM_NAME,
         channel=channel,
         trust=True,
     )
     await ops_test.model.add_relation(
-        relation1="orc8r-prometheus-configurer",
-        relation2="orc8r-prometheus:receive-remote-write",
+        relation1=itest_const.PROMETHEUS_CONFIGURER_K8S_CHARM_NAME,
+        relation2=f"{itest_const.PROMETHEUS_K8S_CHARM_NAME}:\
+            receive-remote-write",
     )
 
 
-async def deploy_prometheus_k8s_operator(ops_test, channel="latest/stable"):
-    """Deploys prometheus-k8s charm."""
+async def deploy_prometheus_k8s_operator(
+    ops_test,
+    channel="latest/stable",
+) -> None:
+    """Deploys prometheus-k8s charm.
+
+    Args:
+        ops_test (OpsTest)
+        channel (str): channel from which the charm will be deployed
+    """
     await ops_test.model.deploy(
-        "prometheus-k8s",
-        application_name="prometheus-k8s",
+        itest_const.PROMETHEUS_K8S_CHARM_NAME,
+        application_name=itest_const.PROMETHEUS_K8S_CHARM_NAME,
         channel=channel,
         trust=True,
     )
     await ops_test.model.add_relation(
-        relation1="prometheus-k8s:grafana-source",
-        relation2="grafana-k8s",
+        relation1=f"{itest_const.PROMETHEUS_K8S_CHARM_NAME}:grafana-source",
+        relation2=itest_const.GRAFANA_K8S_CHARM_NAME,
     )
 
 
-async def deploy_nms_magmalte(ops_test):
-    """Deploys nms-magmalte-operator charm."""
+async def deploy_nms_magmalte(ops_test) -> None:
+    """Deploys nms-magmalte-operator charm.
+
+    Args:
+        ops_test (OpsTest)
+    """
     magmalte_charm = find_charm(
         "../nms-magmalte-operator",
         itest_const.NMS_MAGMALTE_CHARM_FILE_NAME,
@@ -150,55 +196,81 @@ async def deploy_nms_magmalte(ops_test):
     )
     await ops_test.model.add_relation(
         relation1=itest_const.NMS_MAGMALTE_APPLICATION_NAME,
-        relation2="postgresql-k8s:db",
+        relation2=f"{itest_const.DB_CHARM_NAME}:db",
     )
     await ops_test.model.add_relation(
         relation1=itest_const.NMS_MAGMALTE_APPLICATION_NAME,
-        relation2="orc8r-certifier:cert-admin-operator",
+        relation2=f"{itest_const.CERTIFIER_APPLICATION_NAME}:\
+            cert-admin-operator",
     )
     await ops_test.model.add_relation(
-        relation1=f"{itest_const.NMS_MAGMALTE_APPLICATION_NAME}:grafana-auth",
-        relation2="grafana-k8s",
+        relation1=f"{itest_const.NMS_MAGMALTE_APPLICATION_NAME}:\
+            grafana-auth",
+        relation2=itest_const.GRAFANA_K8S_CHARM_NAME,
     )
 
 
-async def deploy_prometheus_cache(ops_test, channel="latest/stable"):
-    """Deploys "prometheus-edge-hub" charm."""
+async def deploy_prometheus_cache(ops_test, channel="latest/stable") -> None:
+    """Deploys "prometheus-edge-hub" charm.
+
+    Args:
+        ops_test (OpsTest)
+        channel (str): channel from which the charm will be deployed
+    """
     await ops_test.model.deploy(
-        "prometheus-edge-hub",
-        application_name="orc8r-prometheus-cache",
+        itest_const.PROMETHEUS_CACHE_CHARM_NAME,
+        application_name=itest_const.PROMETHEUS_CACHE_APPLICATION_NAME,
         channel=channel,
         trust=True,
     )
 
 
-async def deploy_alertmanager(ops_test, channel="latest/stable"):
-    """Deploys alertmanager-k8s charm."""
+async def deploy_alertmanager(ops_test, channel="latest/stable") -> None:
+    """Deploys alertmanager-k8s charm.
+
+    Args:
+        ops_test (OpsTest)
+        channel (str): channel from which the charm will be deployed
+    """
     await ops_test.model.deploy(
-        "alertmanager-k8s",
-        application_name="orc8r-alertmanager",
+        itest_const.ALERTMANAGER_K8S_CHARM_NAME,
+        application_name=itest_const.ALERTMANAGER_K8S_CHARM_NAME,
         channel=channel,
         trust=True,
     )
 
 
-async def deploy_alertmanager_configurer(ops_test, channel="latest/stable"):
-    """Deploys alertmanager-configurer-k8s charm."""
+async def deploy_alertmanager_configurer(
+    ops_test,
+    channel="latest/stable",
+) -> None:
+    """Deploys alertmanager-configurer-k8s charm.
+
+    Args:
+        ops_test (OpsTest)
+        channel (str): channel from which the charm will be deployed
+    """
     await ops_test.model.deploy(
-        "alertmanager-configurer-k8s",
-        application_name="orc8r-alertmanager-configurer",
+        itest_const.ALERTMANAGER_CONFIGURER_CHARM_NAME,
+        application_name=itest_const.ALERTMANAGER_CONFIGURER_CHARM_NAME,
         channel=channel,
         trust=True,
         series="jammy",
     )
     await ops_test.model.add_relation(
-        relation1="orc8r-alertmanager-configurer:alertmanager",
-        relation2="orc8r-alertmanager:remote-configuration",
+        relation1=f"{itest_const.ALERTMANAGER_CONFIGURER_CHARM_NAME}:\
+            alertmanager",
+        relation2=f"{itest_const.ALERTMANAGER_K8S_CHARM_NAME}:\
+            remote-configuration",
     )
 
 
-async def deploy_orc8r_service_registry(ops_test):
-    """Deploys orc8r-service-registry-operator charm."""
+async def deploy_orc8r_service_registry(ops_test) -> None:
+    """Deploys orc8r-service-registry-operator charm.
+
+    Args:
+        ops_test (OpsTest)
+    """
     service_registry_charm = find_charm(
         "../orc8r-service-registry-operator",
         itest_const.SERVICE_REGISTRY_CHARM_FILE_NAME,
@@ -225,8 +297,12 @@ async def deploy_orc8r_service_registry(ops_test):
     )
 
 
-async def deploy_orc8r_accessd(ops_test):
-    """Deploys orc8r-accessd-operator charm."""
+async def deploy_orc8r_accessd(ops_test) -> None:
+    """Deploys orc8r-accessd-operator charm.
+
+    Args:
+        ops_test (OpsTest)
+    """
     accessd_charm = find_charm(
         "../orc8r-accessd-operator", itest_const.ACCESSD_CHARM_FILE_NAME
     )
@@ -252,12 +328,16 @@ async def deploy_orc8r_accessd(ops_test):
     )
     await ops_test.model.add_relation(
         relation1=itest_const.ACCESSD_APPLICATION_NAME,
-        relation2="postgresql-k8s:db",
+        relation2=f"{itest_const.DB_CHARM_NAME}:db",
     )
 
 
-async def deploy_orc8r_orchestrator(ops_test):
-    """Deploys orc8r-orchestrator-operator charm."""
+async def deploy_orc8r_orchestrator(ops_test) -> None:
+    """Deploys orc8r-orchestrator-operator charm.
+
+    Args:
+        ops_test (OpsTest)
+    """
     orchestrator_charm = find_charm(
         "../orc8r-orchestrator-operator",
         itest_const.ORCHESTRATOR_CHARM_FILE_NAME,
@@ -265,7 +345,7 @@ async def deploy_orc8r_orchestrator(ops_test):
     if not orchestrator_charm:
         orchestrator_charm = await ops_test.build_charm(
             "../orc8r-orchestrator-operator/"
-        )  # noqa: E501
+        )
     resources = {
         f"{itest_const.ORCHESTRATOR_CHARM_NAME}-image": itest_const.ORCHESTRATOR_METADATA[  # noqa: E501
             "resources"
@@ -290,27 +370,35 @@ async def deploy_orc8r_orchestrator(ops_test):
     await ops_test.model.add_relation(
         relation1=f"{itest_const.ORCHESTRATOR_APPLICATION_NAME}:\
             magma-orc8r-certifier",
-        relation2="orc8r-certifier:magma-orc8r-certifier",
+        relation2=f"{itest_const.CERTIFIER_APPLICATION_NAME}:\
+            magma-orc8r-certifier",
     )
     await ops_test.model.add_relation(
         relation1=f"{itest_const.ORCHESTRATOR_APPLICATION_NAME}:\
             metrics-endpoint",
-        relation2="orc8r-prometheus-cache:metrics-endpoint",
+        relation2=f"{itest_const.PROMETHEUS_CACHE_APPLICATION_NAME}:\
+            metrics-endpoint",
     )
     await ops_test.model.add_relation(
         relation1=f"{itest_const.ORCHESTRATOR_APPLICATION_NAME}:\
             magma-orc8r-accessd",
-        relation2="orc8r-accessd:magma-orc8r-accessd",
+        relation2=f"{itest_const.ACCESSD_APPLICATION_NAME}:\
+            magma-orc8r-accessd",
     )
     await ops_test.model.add_relation(
         relation1=f"{itest_const.ORCHESTRATOR_APPLICATION_NAME}:\
             magma-orc8r-service-registry",
-        relation2="orc8r-service-registry:magma-orc8r-service-registry",
+        relation2=f"{itest_const.SERVICE_REGISTRY_APPLICATION_NAME}:\
+            magma-orc8r-service-registry",
     )
 
 
-async def deploy_bootstrapper(ops_test):
-    """Deploys orc8r-bootstrapper-operator charm."""
+async def deploy_bootstrapper(ops_test) -> None:
+    """Deploys orc8r-bootstrapper-operator charm.
+
+    Args:
+        ops_test (OpsTest)
+    """
     bootstrapper_charm = find_charm(
         "../orc8r-bootstrapper-operator",
         itest_const.BOOTSTRAPPER_CHARM_FILE_NAME,
@@ -318,7 +406,7 @@ async def deploy_bootstrapper(ops_test):
     if not bootstrapper_charm:
         bootstrapper_charm = await ops_test.build_charm(
             "../orc8r-bootstrapper-operator/"
-        )  # noqa: E501
+        )
     resources = {
         f"{itest_const.BOOTSTRAPPER_CHARM_NAME}-image": itest_const.BOOTSTRAPPER_METADATA[  # noqa: E501
             "resources"
@@ -337,16 +425,20 @@ async def deploy_bootstrapper(ops_test):
     )
     await ops_test.model.add_relation(
         relation1=itest_const.BOOTSTRAPPER_APPLICATION_NAME,
-        relation2="postgresql-k8s:db",
+        relation2=f"{itest_const.DB_CHARM_NAME}:db",
     )
     await ops_test.model.add_relation(
         relation1=itest_const.BOOTSTRAPPER_APPLICATION_NAME,
-        relation2="orc8r-certifier:cert-root-ca",
+        relation2=f"{itest_const.CERTIFIER_APPLICATION_NAME}:cert-root-ca",
     )
 
 
-async def deploy_orc8r_obsidian(ops_test):
-    """Deploys orc8r-obsidian-operator charm."""
+async def deploy_orc8r_obsidian(ops_test) -> None:
+    """Deploys orc8r-obsidian-operator charm.
+
+    Args:
+        ops_test (OpsTest)
+    """
     obsidian_charm = find_charm(
         "../orc8r-obsidian-operator", itest_const.OBSIDIAN_CHARM_FILE_NAME
     )
@@ -372,21 +464,29 @@ async def deploy_orc8r_obsidian(ops_test):
     )
 
 
-async def remove_postgresql(ops_test):
-    """Remove the database charm."""
+async def remove_postgresql(ops_test) -> None:
+    """Remove the database charm.
+
+    Args:
+        ops_test (OpsTest)
+    """
     await ops_test.model.remove_application(
-        itest_const.DB_APPLICATION_NAME, block_until_done=True, force=True
+        itest_const.DB_CHARM_NAME, block_until_done=True, force=True
     )
 
 
-async def redeploy_and_relate_postgresql(ops_test):
+async def redeploy_and_relate_postgresql(ops_test) -> None:
     """Deploys the database charm.
 
     Relates the db to all charms that require it in the test.
+
+    Args:
+        ops_test (OpsTest)
     """
     await deploy_postgresql(ops_test)
     for requirer in itest_const.DB_REQUIRER_ORC8R_CHARMS:
         if requirer in ops_test.model.applications:
             await ops_test.model.add_relation(
-                relation1=requirer, relation2="postgresql-k8s:db"
+                relation1=requirer,
+                relation2=f"{itest_const.DB_CHARM_NAME}:db",
             )
