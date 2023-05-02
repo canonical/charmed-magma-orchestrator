@@ -14,7 +14,7 @@ from ops.main import main
 
 
 class MagmaOrc8rConfiguratorCharm(CharmBase):
-    """Creates a new instance of this object for each event. """
+    """Creates a new instance of this object for each event."""
 
     def __init__(self, *args):
         """Uses the Orc8rBase library to manage events."""
