@@ -192,7 +192,7 @@ applications:
     trust: true
   postgresql-k8s:
     charm: postgresql-k8s
-    channel: 14/beta
+    channel: 14/stable
     scale: 1
     trust: true
   tls-certificates-operator:
@@ -214,8 +214,8 @@ relations:
     - postgresql-k8s:database
   - - orc8r-alertmanager:remote-configuration
     - orc8r-alertmanager-configurer:alertmanager
-  - - orc8r-bootstrapper:db
-    - postgresql-k8s:db
+  - - orc8r-bootstrapper:database
+    - postgresql-k8s:database
   - - orc8r-bootstrapper:cert-root-ca
     - orc8r-certifier:cert-root-ca
   - - orc8r-certifier
