@@ -1,0 +1,25 @@
+name: shared test utils
+
+on:
+  push:
+    paths:
+      - "shared-test-utils/**"
+
+jobs:
+  lint-report:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd shared-test-utils && tox -e lint
+
+  static-analysis:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests using tox
+        run: cd shared-test-utils && tox -e static
