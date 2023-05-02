@@ -11,9 +11,10 @@ import secrets
 import string
 from typing import Optional, Union
 
-import ops.lib
+import ops
 import psycopg2  # type: ignore[import]
 import yaml
+from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 from charms.magma_orc8r_certifier.v0.cert_admin_operator import (
     CertAdminOperatorProvides,
 )
@@ -73,7 +74,6 @@ from ops.pebble import Layer
 from pgconnstr import ConnectionString  # type: ignore[import]
 
 logger = logging.getLogger(__name__)
-pgsql = ops.lib.use("pgsql", 1, "postgresql-charmers@lists.launchpad.net")
 
 
 class MagmaOrc8rCertifierCharm(CharmBase):
@@ -101,7 +101,9 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self._container_name = self._service_name = "magma-orc8r-certifier"
         self.provided_relation_name = "magma-orc8r-certifier"
         self._container = self.unit.get_container(self._container_name)
-        self._db = pgsql.PostgreSQLClient(self, "db")
+        self._database = DatabaseRequires(
+            self, relation_name="database", database_name=self.DB_NAME
+        )
         self._service_patcher = KubernetesServicePatch(
             charm=self,
             ports=[
@@ -123,16 +125,15 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(
-            self.on.magma_orc8r_certifier_pebble_ready, self._on_magma_orc8r_certifier_pebble_ready
+            self.on.magma_orc8r_certifier_pebble_ready, self._configure_magma_orc8r_certifier
         )
 
         # Relation events
         self.framework.observe(
-            self._db.on.database_relation_joined, self._on_database_relation_joined
+            self._database.on.database_created,
+            self._configure_magma_orc8r_certifier,
         )
-        self.framework.observe(
-            self._db.on.database_relation_broken, self._on_database_relation_broken
-        )
+        self.framework.observe(self.on.database_relation_broken, self._on_database_relation_broken)
         self.framework.observe(
             self.on.certificates_relation_created, self._on_certificates_relation_created
         )
@@ -245,7 +246,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
         else:
             self._on_non_leader_config_changed(event)
 
-    def _on_magma_orc8r_certifier_pebble_ready(
+    def _configure_magma_orc8r_certifier(
         self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationJoinedEvent]
     ) -> None:
         """Juju event triggered when pebble is ready.
@@ -269,7 +270,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             event.defer()
             return
         if not self._db_relation_established:
-            self.unit.status = WaitingStatus("Waiting for db relation to be ready")
+            self.unit.status = WaitingStatus("Waiting for database relation to be ready")
             event.defer()
             return
         if not self._root_private_key_is_pushed:
@@ -288,27 +289,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for root certificates to be pushed")
             event.defer()
             return
-        self._configure_magma_orc8r_certifier(event)
-
-    def _on_database_relation_joined(self, event: RelationJoinedEvent) -> None:
-        """Event handler for database relation change.
-
-        - Sets the event.database field on the database joined event.
-        - Required because setting the database name is only possible
-          from inside the event handler per https://github.com/canonical/ops-lib-pgsql/issues/2
-        - Sets our database parameters based on what was provided
-          in the relation event.
-
-        Args:
-            event (RelationJoinedEvent): Juju relation joined event
-
-        Returns:
-            None
-        """
-        if not self.unit.is_leader():
-            return
-        event.database = self.DB_NAME  # type: ignore[attr-defined]
-        self._on_magma_orc8r_certifier_pebble_ready(event)
+        self._configure_pebble(event)
 
     def _on_database_relation_broken(self, event: RelationBrokenEvent):
         """Event handler for database relation broken.
@@ -587,7 +568,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             self._publish_controller_certificate(event)
         if self.model.relations.get("cert-root-ca"):
             self._publish_root_ca_certificate(event)
-        self._on_magma_orc8r_certifier_pebble_ready(event)
+        self._configure_magma_orc8r_certifier(event)
 
     def _on_certificate_expiring(
         self,
@@ -830,7 +811,7 @@ class MagmaOrc8rCertifierCharm(CharmBase):
             return
         self._push_application_certificates()
 
-    def _configure_magma_orc8r_certifier(
+    def _configure_pebble(
         self, event: Union[PebbleReadyEvent, CertificateAvailableEvent, RelationJoinedEvent]
     ) -> None:
         """Adds layer to pebble config if the proposed config is different from the current one.
@@ -1136,12 +1117,12 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     @property
     def _db_relation_created(self) -> bool:
-        """Checks whether db relation is created.
+        """Checks whether database relation is created.
 
         Returns:
             bool: Whether required relation
         """
-        return self._relation_created("db")
+        return self._relation_created("database")
 
     @property
     def _certificates_relation_created(self) -> bool:
@@ -1372,14 +1353,21 @@ class MagmaOrc8rCertifierCharm(CharmBase):
 
     @property
     def _get_db_connection_string(self) -> Optional[ConnectionString]:
-        """Returns DB connection string provided by the DB relation.
+        """Returns DB connection string provided by the database relation.
 
         Returns:
             ConnectionString: Database connection object.
         """
         try:
-            db_relation = self.model.get_relation("db")
-            return ConnectionString(db_relation.data[db_relation.app]["master"])  # type: ignore[union-attr, index]  # noqa: E501
+            relation_data = next(iter(self._database.fetch_relation_data().values()))
+            connection_info = {
+                "dbname": relation_data["database"],
+                "user": relation_data["username"],
+                "password": relation_data["password"],
+                "host": relation_data["endpoints"].split(":")[0],
+                "port": relation_data["endpoints"].split(":")[1].split(",")[0],
+            }
+            return ConnectionString(**connection_info)
         except (AttributeError, KeyError):
             return None
 

@@ -13,6 +13,7 @@ METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 CERTIFIER_METADATA = yaml.safe_load(Path("../orc8r-certifier-operator/metadata.yaml").read_text())
 NMS_MAGMALTE_METADATA = yaml.safe_load(Path("../nms-magmalte-operator/metadata.yaml").read_text())
 
+DB_APPLICATION_NAME = "postgresql-k8s"
 APPLICATION_NAME = "nms-nginx-proxy"
 CHARM_NAME = "magma-nms-nginx-proxy"
 CERTIFIER_APPLICATION_NAME = "orc8r-certifier"
@@ -45,7 +46,11 @@ class TestNmsNginxProxy:
 
     @staticmethod
     async def _deploy_postgresql(ops_test):
-        await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
+        await ops_test.model.deploy(
+            "postgresql-k8s",
+            application_name=DB_APPLICATION_NAME,
+            channel="14/stable",
+        )
 
     @staticmethod
     async def _deploy_tls_certificates_operator(ops_test):
@@ -79,7 +84,7 @@ class TestNmsNginxProxy:
             series="jammy",
         )
         await ops_test.model.add_relation(
-            relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
+            relation1=CERTIFIER_APPLICATION_NAME, relation2=f"{DB_APPLICATION_NAME}:database"
         )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="tls-certificates-operator"
@@ -120,7 +125,7 @@ class TestNmsNginxProxy:
             series="jammy",
         )
         await ops_test.model.add_relation(
-            relation1=NMS_MAGMALTE_APPLICATION_NAME, relation2="postgresql-k8s:db"
+            relation1=NMS_MAGMALTE_APPLICATION_NAME, relation2=f"{DB_APPLICATION_NAME}:db"
         )
         await ops_test.model.add_relation(
             relation1=NMS_MAGMALTE_APPLICATION_NAME,

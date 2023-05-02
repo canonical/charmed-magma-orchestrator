@@ -9,7 +9,6 @@ summary: |
   magma-orc8r-certifier maintains and verifies signed client certificates and their associated
   identities.
 website: https://github.com/canonical/charmed-magma-orchestrator
-
 containers:
   magma-orc8r-certifier:
     resource: magma-orc8r-certifier-image
@@ -40,8 +39,8 @@ peers:
     interface: orc8r-certifier-replica
 
 requires:
-  db:
-    interface: pgsql
+  database:
+    interface: postgresql_client
     limit: 1
   certificates:
     interface: tls-certificates

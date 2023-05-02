@@ -246,8 +246,8 @@ relations:
     - orc8r-certifier:cert-root-ca
   - - orc8r-certifier
     - tls-certificates-operator
-  - - orc8r-certifier:db
-    - postgresql-k8s:db
+  - - orc8r-certifier:database
+    - postgresql-k8s:database
   - - orc8r-configurator:database
     - postgresql-k8s:database
   - - orc8r-ctraced:database
