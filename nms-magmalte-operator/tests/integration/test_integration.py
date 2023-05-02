@@ -149,7 +149,7 @@ class TestNmsMagmaLTE:
         await ops_test.model.wait_for_idle(
             apps=[APPLICATION_NAME], status="active", timeout=60, wait_for_exact_units=1
         )
-        
+
     @pytest.mark.xfail(reason="Postgres bug https://warthogs.atlassian.net/browse/DPE-1470")
     async def test_remove_db_application(self, ops_test, setup, build_and_deploy_charm):
         await ops_test.model.remove_application(
