@@ -54,7 +54,6 @@ class TestNmsMagmaLTE:
                 "generate-self-signed-certificates": True,
                 "ca-common-name": f"rootca.{DOMAIN}",
             },
-            channel="edge",
         )
 
     async def _deploy_orc8r_certifier(self, ops_test):
@@ -88,14 +87,13 @@ class TestNmsMagmaLTE:
         await ops_test.model.deploy(
             "grafana-k8s",
             application_name="grafana-k8s",
-            channel="edge",
             trust=True,
         )
 
     @staticmethod
     async def _deploy_prometheus_k8s_operator(ops_test):
         await ops_test.model.deploy(
-            "prometheus-k8s", application_name="prometheus-k8s", channel="edge", trust=True
+            "prometheus-k8s", application_name="prometheus-k8s", trust=True
         )
         await ops_test.model.add_relation(
             relation1="prometheus-k8s:grafana-source", relation2="grafana-k8s"

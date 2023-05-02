@@ -7,7 +7,7 @@ description: |
 applications:
   fluentd:
     charm: fluentd-elasticsearch
-    channel: edge
+    channel: stable
     scale: 1
     trust: true
     options:
@@ -35,12 +35,12 @@ applications:
     trust: true
   orc8r-alertmanager:
     charm: alertmanager-k8s
-    channel: edge
+    channel: stable
     scale: 1
     trust: true
   orc8r-alertmanager-configurer:
     charm: alertmanager-configurer-k8s
-    channel: edge
+    channel: stable
     scale: 1
     trust: true
     options:
@@ -149,19 +149,19 @@ applications:
     trust: true
   orc8r-prometheus:
     charm: prometheus-k8s
-    channel: edge
+    channel: stable
     scale: 1
     trust: true
   orc8r-prometheus-cache:
     charm: prometheus-edge-hub
-    channel: edge
+    channel: stable
     scale: 1
     trust: true
     options:
       metrics_count_limit: 500000
   orc8r-prometheus-configurer:
     charm: prometheus-configurer-k8s
-    channel: edge
+    channel: stable
     scale: 1
     trust: true
     options:
@@ -210,7 +210,7 @@ applications:
     trust: true
   orc8r-user-grafana:
     charm: grafana-k8s
-    channel: edge
+    channel: stable
     options:
       web_external_url: "/grafana"
       enable_auto_assign_org: false
@@ -223,7 +223,7 @@ applications:
     trust: true
   tls-certificates-operator:
     charm: tls-certificates-operator
-    channel: edge
+    channel: stable
     scale: 1
 relations:
   - - fluentd
