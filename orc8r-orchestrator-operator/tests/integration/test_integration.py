@@ -61,7 +61,6 @@ class TestOrchestrator:
                 "generate-self-signed-certificates": True,
                 "ca-common-name": f"rootca.{DOMAIN}",
             },
-            channel="edge",
         )
 
     @staticmethod
@@ -69,7 +68,6 @@ class TestOrchestrator:
         await ops_test.model.deploy(
             "prometheus-edge-hub",
             application_name="orc8r-prometheus-cache",
-            channel="edge",
             trust=True,
         )
 
