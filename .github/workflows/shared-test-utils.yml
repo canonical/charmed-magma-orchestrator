@@ -3,7 +3,7 @@ name: shared test utils
 on:
   push:
     paths:
-      - "shared-test-utils/**"
+      - "shared_test_utils/**"
 
 jobs:
   lint-report:
@@ -13,7 +13,7 @@ jobs:
       - name: Install tox
         run: pip install tox
       - name: Run tests using tox
-        run: cd shared-test-utils && tox -e lint
+        run: cd shared_test_utils && tox -e lint
 
   static-analysis:
     runs-on: ubuntu-22.04
@@ -22,4 +22,4 @@ jobs:
       - name: Install tox
         run: pip install tox
       - name: Run tests using tox
-        run: cd shared-test-utils && tox -e static
+        run: cd shared_test_utils && tox -e static

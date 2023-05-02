@@ -15,4 +15,4 @@ pytest-operator
 types-PyYAML
 types-setuptools
 types-toml
--e ../shared-test-utils/
+-e ../shared_test_utils/
