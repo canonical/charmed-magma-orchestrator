@@ -21,10 +21,10 @@ class TestNmsNginxProxy:
     @pytest.mark.abort_on_fail
     async def setup(self, ops_test):
         await integration_utils.deploy_postgresql(ops_test)
-        await integration_utils.deploy_tls_certificates_operator(ops_test)
+        await integration_utils.deploy_tls_certificates_operator(ops_test, channel="edge")
         await integration_utils.deploy_orc8r_certifier(ops_test)
-        await integration_utils.deploy_grafana_k8s_operator(ops_test)
-        await integration_utils.deploy_prometheus_k8s_operator(ops_test)
+        await integration_utils.deploy_grafana_k8s_operator(ops_test, channel="edge")
+        await integration_utils.deploy_prometheus_k8s_operator(ops_test, channel="edge")
         await integration_utils.deploy_nms_magmalte(ops_test)
 
     @pytest.fixture(scope="module")

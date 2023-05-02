@@ -27,14 +27,14 @@ def find_charm(charm_dir: str, charm_file_name: str) -> Optional[str]:
         return None
 
 
-async def deploy_postgresql(ops_test):
+async def deploy_postgresql(ops_test, channel="14/stable"):
     """Deploys postgresql charm."""
     await ops_test.model.deploy(
         "postgresql-k8s", application_name=itest_const.DB_APPLICATION_NAME
     )
 
 
-async def deploy_tls_certificates_operator(ops_test):
+async def deploy_tls_certificates_operator(ops_test, channel="latest/stable"):
     """Deploys tls-certificates-operator charm."""
     await ops_test.model.deploy(
         "tls-certificates-operator",
@@ -43,7 +43,7 @@ async def deploy_tls_certificates_operator(ops_test):
             "generate-self-signed-certificates": True,
             "ca-common-name": "rootca.whatever.com",
         },
-        channel="edge",
+        channel=channel,
     )
 
 
@@ -83,22 +83,22 @@ async def deploy_orc8r_certifier(ops_test):
     )
 
 
-async def deploy_grafana_k8s_operator(ops_test):
+async def deploy_grafana_k8s_operator(ops_test, channel="latest/stable"):
     """Deploys grafana-k8 charm."""
     await ops_test.model.deploy(
         "grafana-k8s",
         application_name="grafana-k8s",
-        channel="edge",
+        channel=channel,
         trust=True,
     )
 
 
-async def deploy_prometheus_configurer(ops_test):
+async def deploy_prometheus_configurer(ops_test, channel="latest/stable"):
     """Deploys prometheus-configurer-k8s charm."""
     await ops_test.model.deploy(
         "prometheus-configurer-k8s",
         application_name="orc8r-prometheus-configurer",
-        channel="edge",
+        channel=channel,
         trust=True,
     )
     await ops_test.model.add_relation(
@@ -107,12 +107,12 @@ async def deploy_prometheus_configurer(ops_test):
     )
 
 
-async def deploy_prometheus_k8s_operator(ops_test):
+async def deploy_prometheus_k8s_operator(ops_test, channel="latest/stable"):
     """Deploys prometheus-k8s charm."""
     await ops_test.model.deploy(
         "prometheus-k8s",
         application_name="prometheus-k8s",
-        channel="edge",
+        channel=channel,
         trust=True,
     )
     await ops_test.model.add_relation(
@@ -162,32 +162,32 @@ async def deploy_nms_magmalte(ops_test):
     )
 
 
-async def deploy_prometheus_cache(ops_test):
+async def deploy_prometheus_cache(ops_test, channel="latest/stable"):
     """Deploys "prometheus-edge-hub" charm."""
     await ops_test.model.deploy(
         "prometheus-edge-hub",
         application_name="orc8r-prometheus-cache",
-        channel="edge",
+        channel=channel,
         trust=True,
     )
 
 
-async def deploy_alertmanager(ops_test):
+async def deploy_alertmanager(ops_test, channel="latest/stable"):
     """Deploys alertmanager-k8s charm."""
     await ops_test.model.deploy(
         "alertmanager-k8s",
         application_name="orc8r-alertmanager",
-        channel="edge",
+        channel=channel,
         trust=True,
     )
 
 
-async def deploy_alertmanager_configurer(ops_test):
+async def deploy_alertmanager_configurer(ops_test, channel="latest/stable"):
     """Deploys alertmanager-configurer-k8s charm."""
     await ops_test.model.deploy(
         "alertmanager-configurer-k8s",
         application_name="orc8r-alertmanager-configurer",
-        channel="edge",
+        channel=channel,
         trust=True,
         series="jammy",
     )
