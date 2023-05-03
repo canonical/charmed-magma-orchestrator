@@ -160,8 +160,9 @@ class TestOrchestrator:
 
     @pytest.mark.abort_on_fail
     async def test_wait_for_blocked_status(self, ops_test, setup, build_and_deploy):
-        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=60)
 
+    @pytest.mark.abort_on_fail
     async def test_relate_and_wait_for_idle(self, ops_test, setup, build_and_deploy):
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="orc8r-certifier:cert-admin-operator"
@@ -179,15 +180,17 @@ class TestOrchestrator:
             relation1=APPLICATION_NAME,
             relation2="orc8r-service-registry:magma-orc8r-service-registry",
         )
-        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=60)
 
+    @pytest.mark.abort_on_fail
     async def test_scale_up(self, ops_test, setup, build_and_deploy):
         await ops_test.model.applications[APPLICATION_NAME].scale(2)
 
         await ops_test.model.wait_for_idle(
-            apps=[APPLICATION_NAME], status="active", timeout=1000, wait_for_exact_units=2
+            apps=[APPLICATION_NAME], status="active", timeout=60, wait_for_exact_units=2
         )
 
+    @pytest.mark.abort_on_fail
     @pytest.mark.xfail(reason="Bug in Juju: https://bugs.launchpad.net/juju/+bug/1977582")
     async def test_scale_down(self, ops_test, setup, build_and_deploy):
         await ops_test.model.applications[APPLICATION_NAME].scale(1)
