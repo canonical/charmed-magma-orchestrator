@@ -30,7 +30,7 @@ jobs:
       - name: render bundle.yaml
         run: |
           python orc8r-bundle/render_bundle.py \
-          --template orc8r-bundle/bundle.yaml.j2 --output orc8r-bundle/bundle.yaml --channel edge
+          --template orc8r-bundle/bundle.yaml.j2 --output orc8r-bundle/bundle.yaml --channel 1.8/edge
 
       - name: copy README.md
         run: |
