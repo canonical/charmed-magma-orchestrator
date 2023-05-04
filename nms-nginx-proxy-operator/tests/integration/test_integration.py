@@ -125,7 +125,7 @@ class TestNmsNginxProxy:
             series="jammy",
         )
         await ops_test.model.add_relation(
-            relation1=NMS_MAGMALTE_APPLICATION_NAME, relation2=f"{DB_APPLICATION_NAME}:db"
+            relation1=NMS_MAGMALTE_APPLICATION_NAME, relation2=f"{DB_APPLICATION_NAME}:database"
         )
         await ops_test.model.add_relation(
             relation1=NMS_MAGMALTE_APPLICATION_NAME,
