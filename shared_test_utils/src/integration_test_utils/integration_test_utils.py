@@ -7,7 +7,7 @@
 from pathlib import Path
 from typing import Optional
 
-import integration_constants as itest_const
+import integration_test_utils.integration_constants as itest_const
 
 
 def find_charm(charm_dir: str, charm_file_name: str) -> Optional[str]:
