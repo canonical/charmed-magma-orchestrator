@@ -8,7 +8,6 @@ description: |
 summary: |
   magma-orc8r-directoryd stores subscriber identity and location.
 website: https://github.com/canonical/charmed-magma-orchestrator
-
 containers:
   magma-orc8r-directoryd:
     resource: magma-orc8r-directoryd-image
@@ -25,6 +24,6 @@ provides:
     limit: 1
 
 requires:
-  db:
-    interface: pgsql
+  database:
+    interface: postgresql_client
     limit: 1

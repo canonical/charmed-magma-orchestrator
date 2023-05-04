@@ -4,7 +4,7 @@
 
 """Maintains configurations and metadata for devices in the network."""
 
-from charms.magma_orc8r_libs.v0.orc8r_base_db import Orc8rBase
+from charms.magma_orc8r_libs.v1.orc8r_base_db import Orc8rBase
 from charms.observability_libs.v1.kubernetes_service_patch import (
     KubernetesServicePatch,
     ServicePort,

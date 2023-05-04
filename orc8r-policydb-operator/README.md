@@ -2,7 +2,7 @@
 
 ## Description
 
-magma-orc8r-policydb manages subscriber policies via a northbound CRUD API and a southbound 
+magma-orc8r-policydb manages subscriber policies via a northbound CRUD API and a southbound
 policy stream. It belongs to Magma's LTE module.
 
 ## Usage
@@ -10,7 +10,7 @@ policy stream. It belongs to Magma's LTE module.
 ```bash
 juju deploy postgresql-k8s
 juju deploy magma-orc8r-policydb orc8r-policydb
-juju relate orc8r-policydb postgresql-k8s:db
+juju relate orc8r-policydb postgresql-k8s:database
 ```
 
 **IMPORTANT**: For now, deploying this charm must be done with an alias as shown above.

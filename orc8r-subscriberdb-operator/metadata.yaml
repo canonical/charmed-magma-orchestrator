@@ -7,7 +7,6 @@ description: |
 summary: |
   magma-orc8r-subscriberdb manages subscribers via a northbound CRUD API and a southbound subscriber stream.
 website: https://github.com/canonical/charmed-magma-orchestrator
-
 containers:
   magma-orc8r-subscriberdb:
     resource: magma-orc8r-subscriberdb-image
@@ -24,6 +23,6 @@ provides:
     limit: 1
 
 requires:
-  db:
-    interface: pgsql
+  database:
+    interface: postgresql_client
     limit: 1

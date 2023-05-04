@@ -9,7 +9,6 @@ summary: |
   magma-orc8r-configurator maintains configurations and metadata for networks and network entity
     structures
 website: https://github.com/canonical/charmed-magma-orchestrator
-
 containers:
   magma-orc8r-configurator:
     resource: magma-orc8r-configurator-image
@@ -26,6 +25,6 @@ provides:
     limit: 1
 
 requires:
-  db:
-    interface: pgsql
+  database:
+    interface: postgresql_client
     limit: 1

@@ -20,6 +20,7 @@ SERVICE_REGISTRY_METADATA = yaml.safe_load(
 )
 
 APPLICATION_NAME = "orc8r-metricsd"
+DB_APPLICATION_NAME = "postgresql-k8s"
 CHARM_NAME = "magma-orc8r-metricsd"
 CERTIFIER_APPLICATION_NAME = "orc8r-certifier"
 CERTIFIER_CHARM_NAME = "magma-orc8r-certifier"
@@ -202,7 +203,7 @@ class TestOrc8rMetricsd:
             series="jammy",
         )
         await ops_test.model.add_relation(
-            relation1=ACCESSD_APPLICATION_NAME, relation2=f"{DB_APPLICATION_NAME}:db"
+            relation1=ACCESSD_APPLICATION_NAME, relation2=f"{DB_APPLICATION_NAME}:database"
         )
 
     async def _deploy_orc8r_orchestrator(self, ops_test):
