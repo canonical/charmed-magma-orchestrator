@@ -74,7 +74,7 @@ async def deploy_orc8r_certifier(ops_test) -> None:
     if not certifier_charm:
         certifier_charm = await ops_test.build_charm(
             "../orc8r-certifier-operator/"
-        )
+        )  # noqa: E501
     resources = {
         f"{itest_const.CERTIFIER_CHARM_NAME}-image": itest_const.CERTIFIER_METADATA[  # noqa: E501
             "resources"
