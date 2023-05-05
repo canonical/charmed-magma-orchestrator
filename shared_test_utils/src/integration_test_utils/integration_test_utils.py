@@ -38,6 +38,7 @@ async def deploy_postgresql(ops_test, channel="latest/stable") -> None:
         itest_const.DB_CHARM_NAME,
         application_name=itest_const.DB_CHARM_NAME,
         channel=channel,
+        trust=True,
     )
 
 
@@ -198,7 +199,7 @@ async def deploy_nms_magmalte(ops_test) -> None:
     )
     await ops_test.model.add_relation(
         relation1=itest_const.NMS_MAGMALTE_APPLICATION_NAME,
-        relation2=f"{itest_const.DB_CHARM_NAME}:db",
+        relation2=f"{itest_const.DB_CHARM_NAME}:database",
     )
     await ops_test.model.add_relation(
         relation1=itest_const.NMS_MAGMALTE_APPLICATION_NAME,

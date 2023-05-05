@@ -42,8 +42,8 @@ provides:
     interface: grafana_auth
 
 requires:
-  db:
-    interface: pgsql
+  database:
+    interface: postgresql_client
     limit: 1
   cert-admin-operator:
     interface: cert-admin-operator

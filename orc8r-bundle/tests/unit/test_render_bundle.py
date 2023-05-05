@@ -41,7 +41,7 @@ def test_given_channel_is_edge_when_render_bundle_then_bundle_is_rendered_correc
     with open("tests/unit/expected_bundles/charmhub_edge.yaml") as expected_bundle_file:
         expected_bundle = expected_bundle_file.read()
 
-    assert rendered_bundle == expected_bundle
+    assert rendered_bundle == expected_bundle.strip()
 
 
 def test_given_local_charms_when_render_bundle_then_bundle_is_rendered_correctly():
@@ -57,4 +57,4 @@ def test_given_local_charms_when_render_bundle_then_bundle_is_rendered_correctly
     with open("tests/unit/expected_bundles/local.yaml") as expected_bundle_file:
         expected_bundle = expected_bundle_file.read()
 
-    assert rendered_bundle == expected_bundle
+    assert rendered_bundle == expected_bundle.strip()

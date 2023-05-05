@@ -46,8 +46,7 @@ class TestNmsMagmaLTE:
 
     async def test_relate_and_wait_for_idle(self, ops_test, setup, build_and_deploy_charm):
         await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME,
-            relation2="postgresql-k8s:db",
+            relation1=APPLICATION_NAME, relation2="postgresql-k8s:database"
         )
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME,
