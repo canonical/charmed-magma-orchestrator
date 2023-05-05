@@ -28,6 +28,7 @@ class TestOrc8rTenants:
             "postgresql-k8s",
             application_name=DB_APPLICATION_NAME,
             channel="14/stable",
+            trust=True,
         )
 
     @pytest.fixture(scope="module")
