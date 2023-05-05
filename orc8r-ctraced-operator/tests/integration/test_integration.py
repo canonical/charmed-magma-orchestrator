@@ -28,6 +28,7 @@ class TestOrc8rCtraced:
             DB_APPLICATION_NAME,
             application_name=DB_APPLICATION_NAME,
             channel="14/stable",
+            trust=True,
         )
 
     @pytest.fixture(scope="module")
