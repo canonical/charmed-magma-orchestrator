@@ -27,7 +27,7 @@ def find_charm(charm_dir: str, charm_file_name: str) -> Optional[str]:
         return None
 
 
-async def deploy_postgresql(ops_test, channel="14/stable") -> None:
+async def deploy_postgresql(ops_test, channel="latest/stable") -> None:
     """Deploys postgresql charm.
 
     Args:
@@ -35,7 +35,9 @@ async def deploy_postgresql(ops_test, channel="14/stable") -> None:
         channel (str): channel from which the charm will be deployed
     """
     await ops_test.model.deploy(
-        itest_const.DB_CHARM_NAME, application_name=itest_const.DB_CHARM_NAME
+        itest_const.DB_CHARM_NAME,
+        application_name=itest_const.DB_CHARM_NAME,
+        channel=channel,
     )
 
 
@@ -72,7 +74,7 @@ async def deploy_orc8r_certifier(ops_test) -> None:
     if not certifier_charm:
         certifier_charm = await ops_test.build_charm(
             "../orc8r-certifier-operator/"
-        )  # noqa: E501
+        )
     resources = {
         f"{itest_const.CERTIFIER_CHARM_NAME}-image": itest_const.CERTIFIER_METADATA[  # noqa: E501
             "resources"
@@ -92,7 +94,7 @@ async def deploy_orc8r_certifier(ops_test) -> None:
     )
     await ops_test.model.add_relation(
         relation1=itest_const.CERTIFIER_APPLICATION_NAME,
-        relation2=f"{itest_const.DB_CHARM_NAME}:db",
+        relation2=f"{itest_const.DB_CHARM_NAME}:database",
     )
     await ops_test.model.add_relation(
         relation1=itest_const.CERTIFIER_APPLICATION_NAME,
@@ -328,7 +330,7 @@ async def deploy_orc8r_accessd(ops_test) -> None:
     )
     await ops_test.model.add_relation(
         relation1=itest_const.ACCESSD_APPLICATION_NAME,
-        relation2=f"{itest_const.DB_CHARM_NAME}:db",
+        relation2=f"{itest_const.DB_CHARM_NAME}:database",
     )
 
 
@@ -425,7 +427,7 @@ async def deploy_bootstrapper(ops_test) -> None:
     )
     await ops_test.model.add_relation(
         relation1=itest_const.BOOTSTRAPPER_APPLICATION_NAME,
-        relation2=f"{itest_const.DB_CHARM_NAME}:db",
+        relation2=f"{itest_const.DB_CHARM_NAME}:database",
     )
     await ops_test.model.add_relation(
         relation1=itest_const.BOOTSTRAPPER_APPLICATION_NAME,
@@ -488,5 +490,5 @@ async def redeploy_and_relate_postgresql(ops_test) -> None:
         if requirer in ops_test.model.applications:
             await ops_test.model.add_relation(
                 relation1=requirer,
-                relation2=f"{itest_const.DB_CHARM_NAME}:db",
+                relation2=f"{itest_const.DB_CHARM_NAME}:database",
             )

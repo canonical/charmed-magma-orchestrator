@@ -20,7 +20,7 @@ class TestNmsMagmaLTE:
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail
     async def setup(self, ops_test):
-        await integration_utils.deploy_postgresql(ops_test)
+        await integration_utils.deploy_postgresql(ops_test, channel="14/stable")
         await integration_utils.deploy_tls_certificates_operator(ops_test, channel="edge")
         await integration_utils.deploy_orc8r_certifier(ops_test)
         await integration_utils.deploy_grafana_k8s_operator(ops_test, channel="edge")
@@ -76,18 +76,10 @@ class TestNmsMagmaLTE:
 
     @pytest.mark.xfail(reason="Postgres bug https://warthogs.atlassian.net/browse/DPE-1470")
     async def test_remove_db_application(self, ops_test, setup, build_and_deploy_charm):
-        await ops_test.model.remove_application(
-            DB_APPLICATION_NAME, block_until_done=True, force=True
-        )
+        await integration_utils.remove_postgresql(ops_test)
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=60)
 
     @pytest.mark.xfail(reason="Postgres bug https://warthogs.atlassian.net/browse/DPE-1470")
     async def test_redeploy_db(self, ops_test, setup, build_and_deploy_charm):
-        await self._deploy_postgresql(ops_test)
-        await ops_test.model.add_relation(
-            relation1=CERTIFIER_APPLICATION_NAME, relation2=f"{DB_APPLICATION_NAME}:database"
-        )
-        await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
-        )
+        await integration_utils.redeploy_and_relate_postgresql(ops_test)
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=60)
