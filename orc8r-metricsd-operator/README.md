@@ -14,4 +14,3 @@ juju deploy magma-orc8r-metricsd orc8r-metricsd
 ## OCI Images
 
 Default: ghcr.io/canonical/magma-orc8r-controller:1.8.0
-

@@ -27,6 +27,7 @@ SERVICE_REGISTRY_APPLICATION_NAME = "orc8r-service-registry"
 SERVICE_REGISTRY_CHARM_NAME = "magma-orc8r-service-registry"
 SERVICE_REGISTRY_CHARM_FILE_NAME = "magma-orc8r-service-registry_ubuntu-22.04-amd64.charm"
 DOMAIN = "whatever.com"
+DB_APPLICATION_NAME = "postgresql-k8s"
 
 
 class TestOrchestrator:
@@ -50,7 +51,12 @@ class TestOrchestrator:
 
     @staticmethod
     async def _deploy_postgresql(ops_test):
-        await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
+        await ops_test.model.deploy(
+            DB_APPLICATION_NAME,
+            application_name=DB_APPLICATION_NAME,
+            channel="14/stable",
+            trust=True,
+        )
 
     @staticmethod
     async def _deploy_tls_certificates_operator(ops_test):
@@ -111,7 +117,7 @@ class TestOrchestrator:
             series="jammy",
         )
         await ops_test.model.add_relation(
-            relation1=ACCESSD_APPLICATION_NAME, relation2="postgresql-k8s:db"
+            relation1=ACCESSD_APPLICATION_NAME, relation2=f"{DB_APPLICATION_NAME}:database"
         )
 
     async def _deploy_orc8r_certifier(self, ops_test):
@@ -134,7 +140,7 @@ class TestOrchestrator:
             series="jammy",
         )
         await ops_test.model.add_relation(
-            relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
+            relation1=CERTIFIER_APPLICATION_NAME, relation2=f"{DB_APPLICATION_NAME}:database"
         )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="tls-certificates-operator"
@@ -157,8 +163,9 @@ class TestOrchestrator:
 
     @pytest.mark.abort_on_fail
     async def test_wait_for_blocked_status(self, ops_test, setup, build_and_deploy):
-        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=500)
 
+    @pytest.mark.abort_on_fail
     async def test_relate_and_wait_for_idle(self, ops_test, setup, build_and_deploy):
         await ops_test.model.add_relation(
             relation1=APPLICATION_NAME, relation2="orc8r-certifier:cert-admin-operator"
@@ -176,19 +183,21 @@ class TestOrchestrator:
             relation1=APPLICATION_NAME,
             relation2="orc8r-service-registry:magma-orc8r-service-registry",
         )
-        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=500)
 
+    @pytest.mark.abort_on_fail
     async def test_scale_up(self, ops_test, setup, build_and_deploy):
         await ops_test.model.applications[APPLICATION_NAME].scale(2)
 
         await ops_test.model.wait_for_idle(
-            apps=[APPLICATION_NAME], status="active", timeout=1000, wait_for_exact_units=2
+            apps=[APPLICATION_NAME], status="active", timeout=500, wait_for_exact_units=2
         )
 
+    @pytest.mark.abort_on_fail
     @pytest.mark.xfail(reason="Bug in Juju: https://bugs.launchpad.net/juju/+bug/1977582")
     async def test_scale_down(self, ops_test, setup, build_and_deploy):
         await ops_test.model.applications[APPLICATION_NAME].scale(1)
 
         await ops_test.model.wait_for_idle(
-            apps=[APPLICATION_NAME], status="active", timeout=60, wait_for_exact_units=1
+            apps=[APPLICATION_NAME], status="active", timeout=500, wait_for_exact_units=1
         )

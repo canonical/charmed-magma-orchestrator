@@ -5,14 +5,14 @@ set -euo pipefail
 function fetch_orc8r_base_lib() {
   charm="$1"
     pushd "${charm}-operator/"
-    charmcraft fetch-lib charms.magma_orc8r_libs.v0.orc8r_base
+    charmcraft fetch-lib charms.magma_orc8r_libs.v1.orc8r_base
     popd
 }
 
 function fetch_orc8r_base_db_lib() {
   charm="$1"
     pushd "${charm}-operator/"
-    charmcraft fetch-lib charms.magma_orc8r_libs.v0.orc8r_base_db
+    charmcraft fetch-lib charms.magma_orc8r_libs.v1.orc8r_base_db
     popd
 }
 

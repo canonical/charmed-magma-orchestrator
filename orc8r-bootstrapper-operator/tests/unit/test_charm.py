@@ -9,7 +9,6 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from ops import testing
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
-from pgconnstr import ConnectionString  # type: ignore[import]
 
 from charm import MagmaOrc8rBootstrapperCharm
 
@@ -47,15 +46,14 @@ class TestCharm(unittest.TestCase):
     BASE_CERTS_PATH = "/var/opt/magma/certs"
     CERT_ROOT_CA_RELATION = "cert-root-ca"
     TEST_DB_NAME = MagmaOrc8rBootstrapperCharm.DB_NAME
+    TEST_DB_ADDRESS = "123.456.789.012"
     TEST_DB_PORT = "1234"
-    TEST_DB_CONNECTION_STRING = ConnectionString(
-        "dbname=test_db_name "
-        "fallback_application_name=whatever "
-        "host=123.456.789.012 "
-        "password=aaaBBBcccDDDeee "
-        "port=1234 "
-        "user=test_db_user"
-    )
+    DATABASE_DATABAG = {
+        "database": "test_db_name",
+        "endpoints": f"{TEST_DB_ADDRESS}:{TEST_DB_PORT}",
+        "username": "test_db_user",
+        "password": "aaaBBBcccDDDeee",
+    }
 
     def create_peer_relation_with_private_key(
         self, bootstrapper_private_key: bool = False
@@ -92,18 +90,19 @@ class TestCharm(unittest.TestCase):
         self.harness.begin()
         self.maxDiff = None
 
-    @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined")
     @patch("ops.model.Container.exists")
     def test_given_private_key_not_stored_when_pebble_ready_then_status_is_waiting(  # noqa: E501
-        self, patch_exists, _
+        self, patch_exists
     ):
         patch_exists.return_value = True
         self.create_peer_relation_with_private_key(bootstrapper_private_key=False)
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
         self.harness.add_relation_unit(
             relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
         )
-        key_values = {"master": self.TEST_DB_CONNECTION_STRING.__str__()}
+        key_values = {"master": self.DATABASE_DATABAG.__str__()}
         self.harness.update_relation_data(
             relation_id=db_relation_id, app_or_unit="postgresql-k8s", key_values=key_values
         )
@@ -122,20 +121,22 @@ class TestCharm(unittest.TestCase):
             WaitingStatus("Waiting for bootstrapper private key to be stored"),
         )
 
-    @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined")
     @patch("ops.model.Container.exists")
     def test_given_root_ca_relation_not_created_when_pebble_ready_then_status_is_blocked(  # noqa: E501
-        self, patch_exists, _
+        self, patch_exists
     ):
         patch_exists.return_value = True
         self.create_peer_relation_with_private_key(bootstrapper_private_key=True)
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
         self.harness.add_relation_unit(
             relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
         )
-        key_values = {"master": self.TEST_DB_CONNECTION_STRING.__str__()}
         self.harness.update_relation_data(
-            relation_id=db_relation_id, app_or_unit="postgresql-k8s", key_values=key_values
+            relation_id=db_relation_id,
+            app_or_unit="postgresql-k8s",
+            key_values=self.DATABASE_DATABAG,
         )
 
         self.harness.container_pebble_ready(container_name="magma-orc8r-bootstrapper")
@@ -145,10 +146,9 @@ class TestCharm(unittest.TestCase):
             BlockedStatus(f"Waiting for {self.CERT_ROOT_CA_RELATION} relation to be created"),
         )
 
-    @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined")
     @patch("ops.model.Container.exists")
     def test_given_db_relation_not_created_when_pebble_ready_then_status_is_waiting(  # noqa: E501
-        self, patch_exists, _
+        self, patch_exists
     ):
         patch_exists.return_value = True
         self.create_peer_relation_with_private_key(bootstrapper_private_key=True)
@@ -168,22 +168,22 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("psycopg2.connect", new=Mock())
-    @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined")
     @patch("ops.model.Container.exists")
-    @patch("charm.ConnectionString")
     def test_given_root_ca_not_pushed_when_pebble_ready_then_status_is_waiting(  # noqa: E501
-        self, patch_connection_string, patch_exists, _
+        self, patch_exists
     ):
         patch_exists.side_effect = lambda s: s != f"{self.BASE_CERTS_PATH}/rootCA.pem"
         self.create_peer_relation_with_private_key(bootstrapper_private_key=True)
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
         self.harness.add_relation_unit(
             relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
         )
-        key_values = {"master": self.TEST_DB_CONNECTION_STRING.__str__()}
-        patch_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
         self.harness.update_relation_data(
-            relation_id=db_relation_id, app_or_unit="postgresql-k8s", key_values=key_values
+            relation_id=db_relation_id,
+            app_or_unit="postgresql-k8s",
+            key_values=self.DATABASE_DATABAG,
         )
 
         root_ca_relation_id = self.harness.add_relation(
@@ -202,24 +202,24 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.exec", new=Mock())
     @patch("psycopg2.connect", new=Mock())
-    @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined")
     @patch("ops.model.Container.exists")
-    @patch("charm.ConnectionString")
     def test_given_private_key_is_stored_when_pebble_ready_then_pebble_plan_is_filled_with_workload_service_content(  # noqa: E501
-        self, patch_connection_string, patch_file_exists, _
+        self, patch_file_exists
     ):
         patch_file_exists.return_value = True
 
         self.create_peer_relation_with_private_key(bootstrapper_private_key=True)
 
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
         self.harness.add_relation_unit(
             relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
         )
-        key_values = {"master": self.TEST_DB_CONNECTION_STRING.__str__()}
-        patch_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
         self.harness.update_relation_data(
-            relation_id=db_relation_id, app_or_unit="postgresql-k8s", key_values=key_values
+            relation_id=db_relation_id,
+            app_or_unit="postgresql-k8s",
+            key_values=self.DATABASE_DATABAG,
         )
 
         root_ca_relation_id = self.harness.add_relation(
@@ -244,9 +244,9 @@ class TestCharm(unittest.TestCase):
                         "SERVICE_REGISTRY_MODE": "k8s",
                         "SERVICE_REGISTRY_NAMESPACE": self.namespace,
                         "DATABASE_SOURCE": f"dbname={self.TEST_DB_NAME} "
-                        f"user={self.TEST_DB_CONNECTION_STRING.user} "
-                        f"password={self.TEST_DB_CONNECTION_STRING.password} "
-                        f"host={self.TEST_DB_CONNECTION_STRING.host} "
+                        f"user={self.DATABASE_DATABAG['username']} "
+                        f"password={self.DATABASE_DATABAG['password']} "
+                        f"host={self.TEST_DB_ADDRESS} "
                         f"port={self.TEST_DB_PORT} "
                         f"sslmode=disable",
                         "SQL_DRIVER": "postgres",
@@ -261,23 +261,23 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.exec", new=Mock())
     @patch("psycopg2.connect", new=Mock())
-    @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined")
     @patch("ops.model.Container.exists")
-    @patch("charm.ConnectionString")
     def test_given_private_key_is_stored_relations_created_and_root_ca_pushed_when_pebble_ready_then_unit_status_is_active(  # noqa: E501
-        self, patch_connection_string, patch_file_exists, _
+        self, patch_file_exists
     ):
         patch_file_exists.return_value = True
         self.create_peer_relation_with_private_key(bootstrapper_private_key=True)
 
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
         self.harness.add_relation_unit(
             relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
         )
-        key_values = {"master": self.TEST_DB_CONNECTION_STRING.__str__()}
-        patch_connection_string.return_value = self.TEST_DB_CONNECTION_STRING
         self.harness.update_relation_data(
-            relation_id=db_relation_id, app_or_unit="postgresql-k8s", key_values=key_values
+            relation_id=db_relation_id,
+            app_or_unit="postgresql-k8s",
+            key_values=self.DATABASE_DATABAG,
         )
 
         root_ca_relation_id = self.harness.add_relation(
@@ -291,7 +291,6 @@ class TestCharm(unittest.TestCase):
 
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
 
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("ops.model.Container.get_service", new=Mock())
     def test_given_magma_orc8r_bootstrapper_service_running_when_magma_orc8r_bootstrapper_relation_joined_event_emitted_then_active_key_in_relation_data_is_set_to_true(  # noqa: E501
         self,
@@ -310,7 +309,6 @@ class TestCharm(unittest.TestCase):
             {"active": "True"},
         )
 
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("ops.model.Container.get_service", new=Mock())
     def test_given_magma_orc8r_bootstrapper_service_not_running_when_magma_orc8r_bootstrapper_relation_joined_event_emitted_then_active_key_in_relation_data_is_set_to_false(  # noqa: E501
         self,
@@ -329,7 +327,6 @@ class TestCharm(unittest.TestCase):
             {"active": "False"},
         )
 
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("ops.model.Container.push")
     def test_given_unit_is_leader_and_replicas_relation_is_created_when_on_install_then_bootstrapper_private_key_is_stored(  # noqa: E501
         self, _
@@ -350,7 +347,6 @@ class TestCharm(unittest.TestCase):
             relation_data["bootstrapper_private_key"].encode(), password=None
         )
 
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("ops.model.Container.push")
     def test_given_unit_is_leader_and_replicas_relation_is_created_when_on_install_then_bootstrapper_private_key_is_pushed_to_workload(  # noqa: E501
         self, patch_push
@@ -403,4 +399,28 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(
             self.harness.charm.unit.status,
             WaitingStatus("Waiting for leader to generate bootstrapper private key"),
+        )
+
+    @patch("psycopg2.connect", new=Mock())
+    def test_given_pebble_ready_when_database_relation_broken_then_status_is_blocked(
+        self,
+    ):
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
+        self.harness.add_relation_unit(
+            relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
+        )
+        self.harness.update_relation_data(
+            relation_id=db_relation_id,
+            app_or_unit="postgresql-k8s",
+            key_values=self.DATABASE_DATABAG,
+        )
+        self.harness.container_pebble_ready(container_name="magma-orc8r-bootstrapper")
+
+        self.harness.remove_relation(db_relation_id)
+
+        self.assertEqual(
+            self.harness.charm.unit.status,
+            BlockedStatus("Waiting for database relation to be created"),
         )

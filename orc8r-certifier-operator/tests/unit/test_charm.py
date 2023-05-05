@@ -22,22 +22,20 @@ from cryptography.hazmat.primitives.serialization import pkcs12
 from ops import testing
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from ops.pebble import Layer, PathError
-from pgconnstr import ConnectionString  # type: ignore[import]
 
 from charm import MagmaOrc8rCertifierCharm
 
 
 class TestCharm(unittest.TestCase):
     TEST_DB_NAME = MagmaOrc8rCertifierCharm.DB_NAME
+    TEST_DB_ADDRESS = "123.456.789.012"
     TEST_DB_PORT = "1234"
-    TEST_DB_CONNECTION_STRING = ConnectionString(
-        "dbname=test_db_name "
-        "fallback_application_name=whatever "
-        "host=123.456.789.012 "
-        "password=aaaBBBcccDDDeee "
-        "port=1234 "
-        "user=test_db_user"
-    )
+    DATABASE_DATABAG = {
+        "database": "test_db_name",
+        "endpoints": f"{TEST_DB_ADDRESS}:{TEST_DB_PORT}",
+        "username": "test_db_user",
+        "password": "aaaBBBcccDDDeee",
+    }
 
     def create_peer_relation_with_certificates(  # noqa: C901
         self,
@@ -179,15 +177,12 @@ class TestCharm(unittest.TestCase):
         postgres_port: str,
     ):
         db_event = Mock()
-        db_event.master = Mock()
-        db_event.master.dbname = postgres_db_name
-        db_event.master.user = postgres_username
-        db_event.master.password = postgres_password
-        db_event.master.host = postgres_host
-        db_event.master.port = postgres_port
+        db_event.database = postgres_db_name
+        db_event.username = postgres_username
+        db_event.password = postgres_password
+        db_event.endpoints = f"{postgres_host}:{postgres_port}"
         return db_event
 
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     def test_given_pod_is_leader_when_database_relation_joined_event_then_database_is_set_correctly(  # noqa: E501
         self,
     ):
@@ -205,10 +200,9 @@ class TestCharm(unittest.TestCase):
                 postgres_host,
                 postgres_port,
             )
-            self.harness.charm._on_database_relation_joined(db_event)
+            self.harness.charm._configure_pebble(db_event)
         self.assertEqual(db_event.database, self.TEST_DB_NAME)
 
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("ops.model.Container.push")
     def test_given_can_connect_to_container_when_on_install_then_metricsd_config_file_is_created(
         self, patch_push
@@ -236,7 +230,6 @@ class TestCharm(unittest.TestCase):
         assert self.harness.charm.unit.status == WaitingStatus("Waiting for container to be ready")
 
     @patch("ops.model.Container.push", new=Mock())
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     def test_given_private_keys_are_not_stored_and_unit_is_leader_when_on_install_then_private_keys_are_generated(  # noqa: E501
         self,
     ):
@@ -257,7 +250,6 @@ class TestCharm(unittest.TestCase):
         serialization.load_pem_private_key(admin_operator_private_key.encode(), password=None)
 
     @patch("ops.model.Container.push")
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     def test_given_private_keys_are_not_stored_and_unit_is_leader_when_on_install_then_private_keys_are_pushed_to_workload(  # noqa: E501
         self, patch_push
     ):
@@ -311,7 +303,6 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.push")
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     def test_given_private_keys_and_certificates_are_stored_and_unit_is_not_leader_when_on_install_then_private_keys_are_pushed_to_workload(  # noqa: E501
         self, patch_push
     ):
@@ -355,7 +346,6 @@ class TestCharm(unittest.TestCase):
         serialization.load_pem_private_key(call_list[7].kwargs["source"].encode(), password=None)
         serialization.load_pem_private_key(call_list[8].kwargs["source"].encode(), password=None)
 
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     def test_given_config_not_valid_when_on_config_changed_then_status_is_blocked(
         self,
     ):
@@ -366,7 +356,6 @@ class TestCharm(unittest.TestCase):
 
         assert self.harness.charm.unit.status == BlockedStatus("Config 'domain' is not valid")
 
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     def test_given_root_private_key_not_stored_when_on_config_changed_then_status_is_waiting(
         self,
     ):
@@ -379,7 +368,6 @@ class TestCharm(unittest.TestCase):
             "Waiting for root private key to be generated"
         )
 
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     def test_given_cant_connect_to_container_when_on_config_changed_then_status_is_waiting(
         self,
     ):
@@ -389,7 +377,6 @@ class TestCharm(unittest.TestCase):
 
         assert self.harness.charm.unit.status == WaitingStatus("Waiting for container to be ready")
 
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("charm.generate_csr")
     @patch("charm.generate_pfx_package")
     @patch("charm.generate_certificate")
@@ -450,7 +437,6 @@ class TestCharm(unittest.TestCase):
         "charms.tls_certificates_interface.v1.tls_certificates.TLSCertificatesRequiresV1.request_certificate_creation",  # noqa: E501,W505
         new=Mock(),
     )
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     def test_given_private_keys_are_stored_when_on_config_changed_then_root_csr_is_generated_and_stored_in_relation_data(  # noqa: E501
         self,
         patch_generate_csr,
@@ -478,7 +464,6 @@ class TestCharm(unittest.TestCase):
         )
         assert relation_data["root_csr"] == generated_csr.decode().strip()
 
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("charm.generate_csr")
     def test_given_unit_is_leader_and_root_csr_is_stored_when_on_config_changed_then_root_csr_is_not_regenerated(  # noqa: E501
         self,
@@ -493,7 +478,6 @@ class TestCharm(unittest.TestCase):
 
         patch_generate_csr.assert_not_called()
 
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     def test_given_unit_is_leader_and_application_private_keys_not_stored_when_on_config_changed_then_status_is_waiting(  # noqa: E501
         self,
     ):
@@ -514,7 +498,6 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.push", new=Mock())
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     def test_given_unit_is_leader_and_application_certificates_not_stored_when_on_config_changed_then_application_certificates_are_generated(  # noqa: E501
         self,
     ):
@@ -549,7 +532,6 @@ class TestCharm(unittest.TestCase):
     @patch(
         "charms.tls_certificates_interface.v1.tls_certificates.TLSCertificatesRequiresV1.request_certificate_creation",  # noqa: E501,W505
     )
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     def test_given_unit_is_leader_and_certificates_are_stored_when_on_config_changed_then_no_certificate_request_is_made(  # noqa: E501
         self, patch_certificate_creation, patch_certificate_renewal, patch_push
     ):
@@ -572,7 +554,6 @@ class TestCharm(unittest.TestCase):
         patch_certificate_creation.assert_not_called()
         patch_certificate_renewal.assert_not_called()
 
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("ops.model.Container.push")
     def test_given_unit_is_not_leader_and_csr_is_not_stored_when_on_config_changed_then_status_is_waiting(  # noqa: E501
         self,
@@ -589,7 +570,6 @@ class TestCharm(unittest.TestCase):
             "Waiting for leader to generate a root csr"
         )
 
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("ops.model.Container.push")
     def test_given_unit_is_not_leader_and_and_application_certificates_are_not_stored_when_on_config_changed_then_status_is_waiting(  # noqa: E501
         self,
@@ -608,7 +588,6 @@ class TestCharm(unittest.TestCase):
             "Waiting for leader to generate application certificates"
         )
 
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     def test_given_unit_is_not_leader_and_stored_root_csr_doesnt_match_config_when_on_config_changed_then_status_is_waiting(  # noqa: E501
         self,
     ):
@@ -633,7 +612,6 @@ class TestCharm(unittest.TestCase):
             "Waiting for leader to generate a root csr"
         )
 
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     def test_given_default_domain_config_when_on_config_changed_then_status_is_blocked(self):
         key_values = {"domain": ""}
         self.harness.set_leader(is_leader=True)
@@ -658,7 +636,7 @@ class TestCharm(unittest.TestCase):
         self,
     ):
         self.harness.update_config(key_values={"domain": "whatever.com"})
-        self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        self.harness.add_relation(relation_name="database", remote_app="postgresql-k8s")
 
         self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
 
@@ -668,13 +646,14 @@ class TestCharm(unittest.TestCase):
 
     @patch("psycopg2.connect", new=Mock())
     @patch("ops.model.Container.exists")
-    @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined")
     def test_given_pebble_ready_when_db_relation_broken_then_status_is_blocked(  # noqa: E501
-        self, _, patch_file_exists
+        self, patch_file_exists
     ):
         patch_file_exists.return_value = True
         self.harness.update_config(key_values={"domain": "whatever.com"})
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
         certificates_relation_id = self.harness.add_relation(
             relation_name="certificates", remote_app="vault-k8s"
         )
@@ -684,9 +663,10 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation_unit(
             relation_id=certificates_relation_id, remote_unit_name="vault-k8s/0"
         )
-        key_values = {"master": self.TEST_DB_CONNECTION_STRING.__str__()}
         self.harness.update_relation_data(
-            relation_id=db_relation_id, app_or_unit="postgresql-k8s", key_values=key_values
+            relation_id=db_relation_id,
+            app_or_unit="postgresql-k8s",
+            key_values=self.DATABASE_DATABAG,
         )
 
         self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
@@ -701,7 +681,7 @@ class TestCharm(unittest.TestCase):
         self,
     ):
         self.harness.update_config(key_values={"domain": "whatever.com"})
-        self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        self.harness.add_relation(relation_name="database", remote_app="postgresql-k8s")
         self.harness.add_relation(
             relation_name="certificates", remote_app="tls-certificates-provider"
         )
@@ -709,26 +689,28 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
 
         assert self.harness.charm.unit.status == WaitingStatus(
-            "Waiting for db relation to be ready"
+            "Waiting for database relation to be ready"
         )
 
     @patch("psycopg2.connect", new=Mock())
-    @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined", new=Mock())
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     def test_given_private_keys_not_pushed_when_on_pebble_ready_certifier_then_status_is_waiting(
         self,
     ):
+        self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
         self.harness.update_config(key_values={"domain": "whatever.com"})
         self.harness.add_relation(
             relation_name="certificates", remote_app="tls-certificates-provider"
         )
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
         self.harness.add_relation_unit(
             relation_id=db_relation_id, remote_unit_name="postgresql-k8s/0"
         )
-        key_values = {"master": self.TEST_DB_CONNECTION_STRING.__str__()}
         self.harness.update_relation_data(
-            relation_id=db_relation_id, app_or_unit="postgresql-k8s", key_values=key_values
+            relation_id=db_relation_id,
+            app_or_unit="postgresql-k8s",
+            key_values=self.DATABASE_DATABAG,
         )
 
         self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
@@ -739,13 +721,14 @@ class TestCharm(unittest.TestCase):
 
     @patch("psycopg2.connect", new=Mock())
     @patch("ops.model.Container.exists")
-    @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined")
     def test_given_relations_are_created_and_certificates_are_stored_when_pebble_ready_then_plan_is_filled_with_magma_orc8r_certifier_service_content(  # noqa: E501
-        self, _, patch_file_exists
+        self, patch_file_exists
     ):
         patch_file_exists.return_value = True
         self.harness.update_config(key_values={"domain": "whatever.com"})
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
         certificates_relation_id = self.harness.add_relation(
             relation_name="certificates", remote_app="vault-k8s"
         )
@@ -755,9 +738,10 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation_unit(
             relation_id=certificates_relation_id, remote_unit_name="vault-k8s/0"
         )
-        key_values = {"master": self.TEST_DB_CONNECTION_STRING.__str__()}
         self.harness.update_relation_data(
-            relation_id=db_relation_id, app_or_unit="postgresql-k8s", key_values=key_values
+            relation_id=db_relation_id,
+            app_or_unit="postgresql-k8s",
+            key_values=self.DATABASE_DATABAG,
         )
 
         self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
@@ -777,9 +761,9 @@ class TestCharm(unittest.TestCase):
                     "-v=0",
                     "environment": {
                         "DATABASE_SOURCE": f"dbname={self.TEST_DB_NAME} "
-                        f"user={self.TEST_DB_CONNECTION_STRING.user} "
-                        f"password={self.TEST_DB_CONNECTION_STRING.password} "
-                        f"host={self.TEST_DB_CONNECTION_STRING.host} "
+                        f"user={self.DATABASE_DATABAG['username']} "
+                        f"password={self.DATABASE_DATABAG['password']} "
+                        f"host={self.TEST_DB_ADDRESS} "  # noqa: W505, E501
                         f"sslmode=disable",
                         "SQL_DRIVER": "postgres",
                         "SQL_DIALECT": "psql",
@@ -796,14 +780,15 @@ class TestCharm(unittest.TestCase):
 
     @patch("psycopg2.connect", new=Mock())
     @patch("ops.model.Container.exists")
-    @patch("pgsql.opslib.pgsql.client.PostgreSQLClient._on_joined")
     def test_given_relations_are_created_and_certificates_are_stored_and_pebble_plan_already_in_place_when_pebble_ready_then_status_is_active(  # noqa: E501
-        self, _, patch_file_exists
+        self, patch_file_exists
     ):
         patch_file_exists.return_value = True
         self.harness.update_config(key_values={"domain": "whatever.com"})
         self.harness.set_can_connect(container="magma-orc8r-certifier", val=True)
-        db_relation_id = self.harness.add_relation(relation_name="db", remote_app="postgresql-k8s")
+        db_relation_id = self.harness.add_relation(
+            relation_name="database", remote_app="postgresql-k8s"
+        )
         certificates_relation_id = self.harness.add_relation(
             relation_name="certificates", remote_app="vault-k8s"
         )
@@ -813,9 +798,10 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation_unit(
             relation_id=certificates_relation_id, remote_unit_name="vault-k8s/0"
         )
-        key_values = {"master": self.TEST_DB_CONNECTION_STRING.__str__()}
         self.harness.update_relation_data(
-            relation_id=db_relation_id, app_or_unit="postgresql-k8s", key_values=key_values
+            relation_id=db_relation_id,
+            app_or_unit="postgresql-k8s",
+            key_values=self.DATABASE_DATABAG,
         )
 
         layer = Layer(
@@ -834,9 +820,9 @@ class TestCharm(unittest.TestCase):
                         "-v=0",
                         "environment": {
                             "DATABASE_SOURCE": f"dbname={self.TEST_DB_NAME} "
-                            f"user={self.TEST_DB_CONNECTION_STRING.user} "
-                            f"password={self.TEST_DB_CONNECTION_STRING.password} "
-                            f"host={self.TEST_DB_CONNECTION_STRING.host} "
+                            f"user={self.DATABASE_DATABAG['username']} "
+                            f"password={self.DATABASE_DATABAG['password']} "
+                            f"host={self.TEST_DB_ADDRESS} "
                             f"sslmode=disable",
                             "SQL_DRIVER": "postgres",
                             "SQL_DIALECT": "psql",
@@ -855,7 +841,6 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready(container_name="magma-orc8r-certifier")
         assert self.harness.charm.unit.status == ActiveStatus()
 
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch(
         "charms.tls_certificates_interface.v1.tls_certificates.TLSCertificatesRequiresV1.request_certificate_creation"  # noqa: E501,W505
     )
@@ -878,7 +863,6 @@ class TestCharm(unittest.TestCase):
             certificate_signing_request=key_values["root_csr"].encode()
         )
 
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch(
         "charms.tls_certificates_interface.v1.tls_certificates.TLSCertificatesRequiresV1.request_certificate_creation"  # noqa: E501,W505
     )
@@ -897,7 +881,6 @@ class TestCharm(unittest.TestCase):
 
         self.assertEqual(0, patch_request_certificates.call_count)
 
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch(
         "charms.tls_certificates_interface.v1.tls_certificates.TLSCertificatesRequiresV1.request_certificate_creation"  # noqa: E501,W505
     )
@@ -920,7 +903,6 @@ class TestCharm(unittest.TestCase):
 
         patch_request_certificates.assert_not_called()
 
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("ops.model.Container.push")
     def test_given_unit_is_leader_and_stored_root_csr_is_the_same_as_in_certificates_relation_when_certificate_available_then_certificate_and_key_are_pushed_to_workload(  # noqa: E501
         self, patch_push
@@ -948,7 +930,6 @@ class TestCharm(unittest.TestCase):
 
     @patch("charms.magma_orc8r_certifier.v0.cert_root_ca.CertRootCAProvides.set_certificate")
     @patch("ops.model.Container.pull")
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("ops.model.Container.push", Mock())
     def test_given_unit_is_leader_and_stored_root_csr_is_the_same_as_in_certificates_relation_and_cert_root_ca_relation_is_present_when_certificate_available_then_root_ca_cert_is_pushed_to_the_relation_data(  # noqa: E501
         self, patched_pull, patched_set_certificate
@@ -975,7 +956,6 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("charms.magma_orc8r_certifier.v0.cert_root_ca.CertRootCAProvides.set_certificate")
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("ops.model.Container.push", Mock())
     def test_given_unit_is_leader_and_stored_root_csr_is_the_same_as_in_certificates_relation_and_cert_root_ca_relation_is_not_present_when_certificate_available_then_root_ca_cert_is_not_pushed_to_the_relation_data(  # noqa: E501
         self, patched_set_certificate
@@ -1001,7 +981,6 @@ class TestCharm(unittest.TestCase):
         "charms.magma_orc8r_certifier.v0.cert_controller.CertControllerProvides.set_certificate"
     )
     @patch("ops.model.Container.pull")
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("ops.model.Container.push", Mock())
     def test_given_unit_is_leader_and_stored_root_csr_is_the_same_as_in_certificates_relation_and_cert_controller_relation_is_present_when_certificate_available_then_controller_cert_is_pushed_to_the_relation_data(  # noqa: E501
         self, patched_pull, patched_set_certificate
@@ -1036,7 +1015,6 @@ class TestCharm(unittest.TestCase):
     @patch(
         "charms.magma_orc8r_certifier.v0.cert_controller.CertControllerProvides.set_certificate"
     )
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("ops.model.Container.push", Mock())
     def test_given_unit_is_leader_and_stored_root_csr_is_the_same_as_in_certificates_relation_and_cert_controller_relation_is_not_present_when_certificate_available_then_controller_cert_is_not_pushed_to_the_relation_data(  # noqa: E501
         self, patched_set_certificate
@@ -1169,7 +1147,6 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("charm.generate_csr")
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch(
         "charms.tls_certificates_interface.v1.tls_certificates.TLSCertificatesRequiresV1.request_certificate_renewal",  # noqa: E501,W505
     )
@@ -1197,7 +1174,6 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("charm.generate_csr")
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch(
         "charms.tls_certificates_interface.v1.tls_certificates.TLSCertificatesRequiresV1.request_certificate_creation",  # noqa: E501,W505
     )
@@ -1221,7 +1197,6 @@ class TestCharm(unittest.TestCase):
         patch_certificate_request.assert_called_with(certificate_signing_request=new_csr)
 
     @patch("charm.generate_csr")
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch(
         "charms.tls_certificates_interface.v1.tls_certificates.TLSCertificatesRequiresV1.request_certificate_creation",  # noqa: E501,W505
     )
@@ -1314,7 +1289,6 @@ class TestCharm(unittest.TestCase):
 
     @patch("charm.generate_certificate")
     @patch("charm.TLSCertificatesProvidesV1.set_relation_certificate", Mock())
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     def test_given_application_key_and_cert_available_and_valid_fluentd_csr_in_the_relation_data_when_fluentd_certificate_creation_request_then_fluentd_cert_is_generated(  # noqa: E501
         self, patched_generate_certificate
     ):
@@ -1347,7 +1321,6 @@ class TestCharm(unittest.TestCase):
 
     @patch("charm.TLSCertificatesProvidesV1.set_relation_certificate")
     @patch("charm.generate_certificate")
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     def test_given_application_key_and_cert_available_and_valid_fluentd_csr_in_the_relation_data_when_fluentd_certificate_creation_request_then_fluentd_cert_is_set_in_the_relation(  # noqa: E501
         self, patched_generate_certificate, patched_set_relation_certificate
     ):
@@ -1384,7 +1357,6 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.push", Mock())
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("ops.model.Container.pull")
     @patch(
         "charms.magma_orc8r_certifier.v0.cert_admin_operator.CertAdminOperatorProvides.set_certificate"  # noqa: E501, W505
@@ -1447,7 +1419,6 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.push", Mock())
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("ops.model.Container.pull")
     @patch("charms.magma_orc8r_certifier.v0.cert_certifier.CertCertifierProvides.set_certificate")
     def test_given_certifier_certificate_when_certificate_is_regenerated_then_certificate_is_set_in_cert_certifier_lib_for_each_relation(  # noqa: E501
@@ -1487,7 +1458,6 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.push")
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("ops.model.Container.pull")
     @patch(
         "charms.magma_orc8r_certifier.v0.cert_admin_operator.CertAdminOperatorProvides.set_certificate"  # noqa: E501, W505
@@ -1546,7 +1516,6 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.push")
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("ops.model.Container.pull")
     @patch("charms.magma_orc8r_certifier.v0.cert_certifier.CertCertifierProvides.set_certificate")
     def test_given_certifier_certificate_when_certificate_regeneration_then_certifier_certificate_is_set_in_admin_operator_lib_for_each_relation(  # noqa: E501
@@ -1588,7 +1557,6 @@ class TestCharm(unittest.TestCase):
     @patch("charm.generate_certificate")
     @patch("charm.generate_pfx_package")
     @patch("charm.TLSCertificatesProvidesV1.set_relation_certificate", Mock())
-    @patch("charm.pgsql.PostgreSQLClient._mirror_appdata", new=Mock())
     @patch("ops.model.Container.push", Mock())
     def test_given_application_key_and_cert_available_and_valid_fluentd_csr_in_the_relation_data_when_new_certifier_pem_then_fluentd_cert_is_generated(  # noqa: E501
         self, patched_generate_pfx_package, patched_generate_certificate

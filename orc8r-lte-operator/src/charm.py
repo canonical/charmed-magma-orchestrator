@@ -2,9 +2,9 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Provides Mconfigs for configuration of LTE-related gateway service configurations."""
+"""Provides configs for configuration of LTE-related gateway service configurations."""
 
-from charms.magma_orc8r_libs.v0.orc8r_base_db import Orc8rBase
+from charms.magma_orc8r_libs.v1.orc8r_base_db import Orc8rBase
 from charms.observability_libs.v1.kubernetes_service_patch import (
     KubernetesServicePatch,
     ServicePort,
@@ -14,7 +14,7 @@ from ops.main import main
 
 
 class MagmaOrc8rLteCharm(CharmBase):
-    """An instance of this object everytime an event occurs."""
+    """An instance of this object every time an event occurs."""
 
     BASE_CONFIG_PATH = "/var/opt/magma/configs/orc8r"
 

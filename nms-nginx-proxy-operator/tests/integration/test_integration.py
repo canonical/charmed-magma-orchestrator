@@ -12,6 +12,7 @@ METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 CERTIFIER_METADATA = yaml.safe_load(Path("../orc8r-certifier-operator/metadata.yaml").read_text())
 NMS_MAGMALTE_METADATA = yaml.safe_load(Path("../nms-magmalte-operator/metadata.yaml").read_text())
 
+DB_APPLICATION_NAME = "postgresql-k8s"
 APPLICATION_NAME = "nms-nginx-proxy"
 CHARM_NAME = "magma-nms-nginx-proxy"
 

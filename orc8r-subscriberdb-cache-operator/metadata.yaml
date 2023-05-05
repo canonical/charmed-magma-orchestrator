@@ -7,7 +7,6 @@ description: |
 summary: |
   magma-orc8r-subscriberdb-cache is a cache for the subscriberdb service.
 website: https://github.com/canonical/charmed-magma-orchestrator
-
 containers:
   magma-orc8r-subscriberdb-cache:
     resource: magma-orc8r-subscriberdb-cache-image
@@ -24,6 +23,6 @@ provides:
     limit: 1
 
 requires:
-  db:
-    interface: pgsql
+  database:
+    interface: postgresql_client
     limit: 1

@@ -16,6 +16,7 @@ BOOTSTRAPPER_METADATA = yaml.safe_load(
 )
 OBSIDIAN_METADATA = yaml.safe_load(Path("../orc8r-obsidian-operator/metadata.yaml").read_text())
 
+DB_APPLICATION_NAME = "postgresql-k8s"
 APPLICATION_NAME = "orc8r-nginx"
 CHARM_NAME = "magma-orc8r-nginx"
 CERTIFIER_APPLICATION_NAME = "orc8r-certifier"
@@ -28,6 +29,7 @@ OBSIDIAN_APPLICATION_NAME = "orc8r-obsidian"
 OBSIDIAN_CHARM_NAME = "magma-orc8r-obsidian"
 OBSIDIAN_CHARM_FILE_NAME = "magma-orc8r-obsidian_ubuntu-22.04-amd64.charm"
 DOMAIN = "example.com"
+DB_APPLICATION_NAME = "postgresql-k8s"
 
 
 class TestOrc8rNginx:
@@ -50,7 +52,11 @@ class TestOrc8rNginx:
 
     @staticmethod
     async def _deploy_postgresql(ops_test):
-        await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
+        await ops_test.model.deploy(
+            "postgresql-k8s",
+            application_name=DB_APPLICATION_NAME,
+            channel="14/stable",
+        )
 
     async def _deploy_orc8r_certifier(self, ops_test):
         certifier_charm = self._find_charm(
@@ -72,7 +78,7 @@ class TestOrc8rNginx:
             series="jammy",
         )
         await ops_test.model.add_relation(
-            relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
+            relation1=CERTIFIER_APPLICATION_NAME, relation2=f"{DB_APPLICATION_NAME}:database"
         )
         await ops_test.model.add_relation(
             relation1=CERTIFIER_APPLICATION_NAME, relation2="tls-certificates-operator"
@@ -97,7 +103,7 @@ class TestOrc8rNginx:
             series="jammy",
         )
         await ops_test.model.add_relation(
-            relation1=BOOTSTRAPPER_APPLICATION_NAME, relation2="postgresql-k8s:db"
+            relation1=BOOTSTRAPPER_APPLICATION_NAME, relation2=f"{DB_APPLICATION_NAME}:database"
         )
         await ops_test.model.add_relation(
             relation1=BOOTSTRAPPER_APPLICATION_NAME, relation2="orc8r-certifier:cert-root-ca"

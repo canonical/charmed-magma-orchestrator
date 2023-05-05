@@ -14,7 +14,7 @@ be deployed as a bundle.
 juju deploy postgresql-k8s
 juju deploy vault-k8s
 juju deploy magma-orc8r-certifier --config domain=example.com orc8r-certifier
-juju relate orc8r-certifier postgresql-k8s:db
+juju relate orc8r-certifier postgresql-k8s:database
 juju relate orc8r-certifier vault-k8s
 ```
 
@@ -38,7 +38,7 @@ The pfx package can now be loaded in your browser.
 
 ## Configuration
 
-- **domain** - Domain for self-signed certificate generation. 
+- **domain** - Domain for self-signed certificate generation.
 
 ## Relations
 
@@ -52,9 +52,9 @@ The pfx package can now be loaded in your browser.
 
 ### Requires
 
-- **db**: Validation was done using `postgresql-k8s`
-- **tls-certificates**: Relations supported are tls-certificates-operator for certificates provided by 
-user and vault-k8s (for self-signed certificates)
+- **database**: Validation was done using `postgresql-k8s`
+- **tls-certificates**: Relations supported are tls-certificates-operator for certificates provided by
+  user and vault-k8s (for self-signed certificates)
 
 ## OCI Images
 

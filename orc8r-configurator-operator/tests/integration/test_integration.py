@@ -13,13 +13,22 @@ METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 
 APPLICATION_NAME = "orc8r-configurator"
 CHARM_NAME = "magma-orc8r-configurator"
+DB_APPLICATION_NAME = "postgresql-k8s"
 
 
 class TestOrc8rConfigurator:
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail
     async def setup(self, ops_test):
-        await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
+        await self._deploy_postgresql(ops_test)
+
+    @staticmethod
+    async def _deploy_postgresql(ops_test):
+        await ops_test.model.deploy(
+            DB_APPLICATION_NAME,
+            application_name=DB_APPLICATION_NAME,
+            channel="14/stable",
+        )
 
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail
@@ -42,7 +51,7 @@ class TestOrc8rConfigurator:
 
     async def test_relate_and_wait_for_idle(self, ops_test, setup, build_and_deploy):
         await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
+            relation1=APPLICATION_NAME, relation2=f"{DB_APPLICATION_NAME}:database"
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
 
