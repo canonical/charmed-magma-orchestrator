@@ -27,7 +27,7 @@ def find_charm(charm_dir: str, charm_file_name: str) -> Optional[str]:
         return None
 
 
-async def deploy_postgresql(ops_test, channel="latest/stable") -> None:
+async def deploy_postgresql(ops_test, channel: str = "latest/stable") -> None:
     """Deploys postgresql charm.
 
     Args:
@@ -44,7 +44,7 @@ async def deploy_postgresql(ops_test, channel="latest/stable") -> None:
 
 async def deploy_tls_certificates_operator(
     ops_test,
-    channel="latest/stable",
+    channel: str = "latest/stable",
 ) -> None:
     """Deploys tls-certificates-operator charm.
 
@@ -105,7 +105,7 @@ async def deploy_orc8r_certifier(ops_test) -> None:
 
 async def deploy_grafana_k8s_operator(
     ops_test,
-    channel="latest/stable",
+    channel: str = "latest/stable",
 ) -> None:
     """Deploys grafana-k8 charm.
 
@@ -123,7 +123,7 @@ async def deploy_grafana_k8s_operator(
 
 async def deploy_prometheus_configurer(
     ops_test,
-    channel="latest/stable",
+    channel: str = "latest/stable",
 ) -> None:
     """Deploys prometheus-configurer-k8s charm.
 
@@ -146,7 +146,7 @@ async def deploy_prometheus_configurer(
 
 async def deploy_prometheus_k8s_operator(
     ops_test,
-    channel="latest/stable",
+    channel: str = "latest/stable",
 ) -> None:
     """Deploys prometheus-k8s charm.
 
@@ -179,8 +179,8 @@ async def deploy_nms_magmalte(ops_test) -> None:
 
     if not magmalte_charm:
         magmalte_charm = await ops_test.build_charm(
-            "../nms-magmalte-operator/"
-        )  # noqa: E501
+            "../nms-magmalte-operator/",
+        )
     resources = {
         f"{itest_const.NMS_MAGMALTE_CHARM_NAME}-image": itest_const.NMS_MAGMALTE_METADATA[  # noqa: E501
             "resources"
@@ -213,8 +213,11 @@ async def deploy_nms_magmalte(ops_test) -> None:
     )
 
 
-async def deploy_prometheus_cache(ops_test, channel="latest/stable") -> None:
-    """Deploys "prometheus-edge-hub" charm.
+async def deploy_prometheus_cache(
+    ops_test,
+    channel: str = "latest/stable",
+) -> None:
+    """Deploys prometheus-edge-hub charm.
 
     Args:
         ops_test (OpsTest)
@@ -228,7 +231,10 @@ async def deploy_prometheus_cache(ops_test, channel="latest/stable") -> None:
     )
 
 
-async def deploy_alertmanager(ops_test, channel="latest/stable") -> None:
+async def deploy_alertmanager(
+    ops_test,
+    channel: str = "latest/stable",
+) -> None:
     """Deploys alertmanager-k8s charm.
 
     Args:
@@ -245,7 +251,7 @@ async def deploy_alertmanager(ops_test, channel="latest/stable") -> None:
 
 async def deploy_alertmanager_configurer(
     ops_test,
-    channel="latest/stable",
+    channel: str = "latest/stable",
 ) -> None:
     """Deploys alertmanager-configurer-k8s charm.
 
@@ -280,7 +286,7 @@ async def deploy_orc8r_service_registry(ops_test) -> None:
     )
     if not service_registry_charm:
         service_registry_charm = await ops_test.build_charm(
-            "../orc8r-service-registry-operator"
+            "../orc8r-service-registry-operator",
         )
     resources = {
         f"{itest_const.SERVICE_REGISTRY_CHARM_NAME}-image": itest_const.SERVICE_REGISTRY_METADATA[  # noqa: E501
@@ -311,8 +317,8 @@ async def deploy_orc8r_accessd(ops_test) -> None:
     )
     if not accessd_charm:
         accessd_charm = await ops_test.build_charm(
-            "../orc8r-accessd-operator/"
-        )  # noqa: E501
+            "../orc8r-accessd-operator/",
+        )
     resources = {
         f"{itest_const.ACCESSD_CHARM_NAME}-image": itest_const.ACCESSD_METADATA[  # noqa: E501
             "resources"
@@ -408,7 +414,7 @@ async def deploy_bootstrapper(ops_test) -> None:
     )
     if not bootstrapper_charm:
         bootstrapper_charm = await ops_test.build_charm(
-            "../orc8r-bootstrapper-operator/"
+            "../orc8r-bootstrapper-operator/",
         )
     resources = {
         f"{itest_const.BOOTSTRAPPER_CHARM_NAME}-image": itest_const.BOOTSTRAPPER_METADATA[  # noqa: E501
@@ -447,8 +453,8 @@ async def deploy_orc8r_obsidian(ops_test) -> None:
     )
     if not obsidian_charm:
         obsidian_charm = await ops_test.build_charm(
-            "../orc8r-obsidian-operator/"
-        )  # noqa: E501
+            "../orc8r-obsidian-operator/",
+        )
     resources = {
         f"{itest_const.OBSIDIAN_CHARM_NAME}-image": itest_const.OBSIDIAN_METADATA[  # noqa: E501
             "resources"
