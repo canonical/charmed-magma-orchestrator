@@ -7,7 +7,7 @@ from tempfile import NamedTemporaryFile
 from typing import Iterator
 
 import requests  # type: ignore[import]
-import urllib3
+import urllib3  # type: ignore[import]
 from cryptography.hazmat.primitives.serialization import (
     Encoding,
     NoEncryption,
