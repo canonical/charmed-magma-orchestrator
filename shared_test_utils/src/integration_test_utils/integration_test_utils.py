@@ -144,8 +144,7 @@ async def deploy_prometheus_configurer(
     )
     await ops_test.model.add_relation(  # type: ignore[union-attr]
         relation1=itest_const.PROMETHEUS_CONFIGURER_K8S_CHARM_NAME,
-        relation2=f"{itest_const.PROMETHEUS_K8S_CHARM_NAME}:\
-            receive-remote-write",
+        relation2=f"{itest_const.PROMETHEUS_K8S_CHARM_NAME}:receive-remote-write",  # noqa: E501
     )
 
 
@@ -208,12 +207,10 @@ async def deploy_nms_magmalte(ops_test: OpsTest) -> None:
     )
     await ops_test.model.add_relation(  # type: ignore[union-attr]
         relation1=itest_const.NMS_MAGMALTE_APPLICATION_NAME,
-        relation2=f"{itest_const.CERTIFIER_APPLICATION_NAME}:\
-            cert-admin-operator",
+        relation2=f"{itest_const.CERTIFIER_APPLICATION_NAME}:cert-admin-operator",  # noqa: E501
     )
     await ops_test.model.add_relation(  # type: ignore[union-attr]
-        relation1=f"{itest_const.NMS_MAGMALTE_APPLICATION_NAME}:\
-            grafana-auth",
+        relation1=f"{itest_const.NMS_MAGMALTE_APPLICATION_NAME}:grafana-auth",  # noqa: E501
         relation2=itest_const.GRAFANA_K8S_CHARM_NAME,
     )
 
@@ -272,10 +269,8 @@ async def deploy_alertmanager_configurer(
         series="jammy",
     )
     await ops_test.model.add_relation(  # type: ignore[union-attr]
-        relation1=f"{itest_const.ALERTMANAGER_CONFIGURER_CHARM_NAME}:\
-            alertmanager",
-        relation2=f"{itest_const.ALERTMANAGER_K8S_CHARM_NAME}:\
-            remote-configuration",
+        relation1=f"{itest_const.ALERTMANAGER_CONFIGURER_CHARM_NAME}:alertmanager",  # noqa: E501
+        relation2=f"{itest_const.ALERTMANAGER_K8S_CHARM_NAME}:remote-configuration",  # noqa: E501
     )
 
 
@@ -377,33 +372,24 @@ async def deploy_orc8r_orchestrator(ops_test: OpsTest) -> None:
         series="jammy",
     )
     await ops_test.model.add_relation(  # type: ignore[union-attr]
-        relation1=f"{itest_const.ORCHESTRATOR_APPLICATION_NAME}:\
-            cert-admin-operator",
+        relation1=f"{itest_const.ORCHESTRATOR_APPLICATION_NAME}:cert-admin-operator",  # noqa: E501
         relation2="orc8r-certifier:cert-admin-operator",
     )
     await ops_test.model.add_relation(  # type: ignore[union-attr]
-        relation1=f"{itest_const.ORCHESTRATOR_APPLICATION_NAME}:\
-            magma-orc8r-certifier",
-        relation2=f"{itest_const.CERTIFIER_APPLICATION_NAME}:\
-            magma-orc8r-certifier",
+        relation1=f"{itest_const.ORCHESTRATOR_APPLICATION_NAME}:magma-orc8r-certifier",  # noqa: E501
+        relation2=f"{itest_const.CERTIFIER_APPLICATION_NAME}:magma-orc8r-certifier",  # noqa: E501
     )
     await ops_test.model.add_relation(  # type: ignore[union-attr]
-        relation1=f"{itest_const.ORCHESTRATOR_APPLICATION_NAME}:\
-            metrics-endpoint",
-        relation2=f"{itest_const.PROMETHEUS_CACHE_APPLICATION_NAME}:\
-            metrics-endpoint",
+        relation1=f"{itest_const.ORCHESTRATOR_APPLICATION_NAME}:metrics-endpoint",  # noqa: E501
+        relation2=f"{itest_const.PROMETHEUS_CACHE_APPLICATION_NAME}:metrics-endpoint",  # noqa: E501
     )
     await ops_test.model.add_relation(  # type: ignore[union-attr]
-        relation1=f"{itest_const.ORCHESTRATOR_APPLICATION_NAME}:\
-            magma-orc8r-accessd",
-        relation2=f"{itest_const.ACCESSD_APPLICATION_NAME}:\
-            magma-orc8r-accessd",
+        relation1=f"{itest_const.ORCHESTRATOR_APPLICATION_NAME}:magma-orc8r-accessd",  # noqa: E501
+        relation2=f"{itest_const.ACCESSD_APPLICATION_NAME}:magma-orc8r-accessd",  # noqa: E501
     )
     await ops_test.model.add_relation(  # type: ignore[union-attr]
-        relation1=f"{itest_const.ORCHESTRATOR_APPLICATION_NAME}:\
-            magma-orc8r-service-registry",
-        relation2=f"{itest_const.SERVICE_REGISTRY_APPLICATION_NAME}:\
-            magma-orc8r-service-registry",
+        relation1=f"{itest_const.ORCHESTRATOR_APPLICATION_NAME}:magma-orc8r-service-registry",  # noqa: E501
+        relation2=f"{itest_const.SERVICE_REGISTRY_APPLICATION_NAME}:magma-orc8r-service-registry",  # noqa: E501
     )
 
 
