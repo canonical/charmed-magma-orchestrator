@@ -54,6 +54,7 @@ class TestOrc8rNginx:
             "postgresql-k8s",
             application_name="postgresql-k8s",
             channel="14/stable",
+            trust=True,
         )
 
     async def _deploy_orc8r_certifier(self, ops_test):

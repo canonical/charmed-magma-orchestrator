@@ -68,6 +68,7 @@ class TestOrc8rMetricsd:
             "postgresql-k8s",
             application_name="postgresql-k8s",
             channel="14/stable",
+            trust=True,
         )
 
     @staticmethod

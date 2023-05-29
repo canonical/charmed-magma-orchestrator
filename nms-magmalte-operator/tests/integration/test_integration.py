@@ -47,6 +47,7 @@ class TestNmsMagmaLTE:
             DB_APPLICATION_NAME,
             application_name=DB_APPLICATION_NAME,
             channel="14/stable",
+            trust=True,
         )
 
     @staticmethod
