@@ -19,7 +19,11 @@ class TestOrc8rConfigurator:
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail
     async def setup(self, ops_test):
-        await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
+        await ops_test.model.deploy(
+            "postgresql-k8s",
+            application_name="postgresql-k8s",
+            channel="14/stable",
+        )
 
     @pytest.fixture(scope="module")
     @pytest.mark.abort_on_fail

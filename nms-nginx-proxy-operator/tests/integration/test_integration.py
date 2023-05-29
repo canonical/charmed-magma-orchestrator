@@ -45,7 +45,11 @@ class TestNmsNginxProxy:
 
     @staticmethod
     async def _deploy_postgresql(ops_test):
-        await ops_test.model.deploy("postgresql-k8s", application_name="postgresql-k8s")
+        await ops_test.model.deploy(
+            "postgresql-k8s",
+            application_name="postgresql-k8s",
+            channel="14/stable",
+        )
 
     @staticmethod
     async def _deploy_tls_certificates_operator(ops_test):

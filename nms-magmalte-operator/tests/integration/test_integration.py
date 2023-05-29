@@ -43,7 +43,11 @@ class TestNmsMagmaLTE:
 
     @staticmethod
     async def _deploy_postgresql(ops_test):
-        await ops_test.model.deploy("postgresql-k8s", application_name=DB_APPLICATION_NAME)
+        await ops_test.model.deploy(
+            DB_APPLICATION_NAME,
+            application_name=DB_APPLICATION_NAME,
+            channel="14/stable",
+        )
 
     @staticmethod
     async def _deploy_tls_certificates_operator(ops_test):
