@@ -134,22 +134,6 @@ class TestNmsMagmaLTE:
         )
         await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
 
-    async def test_remove_db_application(self, ops_test, setup, build_and_deploy_charm):
-        await ops_test.model.remove_application(
-            DB_APPLICATION_NAME, block_until_done=True, force=True
-        )
-        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
-
-    async def test_redeploy_db(self, ops_test, setup, build_and_deploy_charm):
-        await self._deploy_postgresql(ops_test)
-        await ops_test.model.add_relation(
-            relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
-        )
-        await ops_test.model.add_relation(
-            relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
-        )
-        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
-
     async def test_scale_up(self, ops_test, setup, build_and_deploy_charm):
         await ops_test.model.applications[APPLICATION_NAME].scale(2)
 
@@ -164,3 +148,21 @@ class TestNmsMagmaLTE:
         await ops_test.model.wait_for_idle(
             apps=[APPLICATION_NAME], status="active", timeout=60, wait_for_exact_units=1
         )
+
+    @pytest.mark.xfail(reason="Postgrest bug https://warthogs.atlassian.net/browse/DPE-1470")
+    async def test_remove_db_application(self, ops_test, setup, build_and_deploy_charm):
+        await ops_test.model.remove_application(
+            DB_APPLICATION_NAME, block_until_done=True, force=True
+        )
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked", timeout=1000)
+
+    @pytest.mark.xfail(reason="Postgrest bug https://warthogs.atlassian.net/browse/DPE-1470")
+    async def test_redeploy_db(self, ops_test, setup, build_and_deploy_charm):
+        await self._deploy_postgresql(ops_test)
+        await ops_test.model.add_relation(
+            relation1=CERTIFIER_APPLICATION_NAME, relation2="postgresql-k8s:db"
+        )
+        await ops_test.model.add_relation(
+            relation1=APPLICATION_NAME, relation2="postgresql-k8s:db"
+        )
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="active", timeout=1000)
