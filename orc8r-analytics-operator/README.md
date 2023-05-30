@@ -16,3 +16,4 @@ juju deploy magma-orc8r-analytics orc8r-analytics
 
 Default: ghcr.io/canonical/magma-orc8r-controller:1.8.0
 
+
